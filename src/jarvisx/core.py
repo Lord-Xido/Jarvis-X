@@ -2,7 +2,7 @@ from .registers import Registers
 from .memory import Memory
 from .decoder import Decoder
 from .executor import Executor
-from .ledger import OmegaLedger
+from .ledger_store import PersistentLedger
 from .ethics import LambdaShield
 from .reflex import ReflexEngine
 from .sandbox import Sandbox
