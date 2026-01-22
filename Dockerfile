@@ -5,4 +5,5 @@ RUN pip install -r requirements.txt
 COPY src/ ./src/
 COPY setup.py .
 RUN pip install .
-CMD ["jarvisx"]
+EXPOSE 8080 5000 9000
+CMD ["jarvisx", "api"]
