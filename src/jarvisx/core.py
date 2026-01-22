@@ -15,7 +15,7 @@ class CodexVM:
         self.mem = Memory()
         self.decoder = Decoder()
         self.executor = Executor(self.regs)
-        self.ledger = OmegaLedger()
+        self.ledger = PersistentLedger()
         self.ethics = LambdaShield()
         self.reflex = ReflexEngine()
         self.sandbox = Sandbox()
