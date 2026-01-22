@@ -1,0 +1,4 @@
+SET Ψ 42
+SET Φ 100
+ADD A Ψ Φ
+HALT
