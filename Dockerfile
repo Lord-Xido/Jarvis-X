@@ -5,5 +5,5 @@ RUN pip install -r requirements.txt
 COPY src/ ./src/
 COPY setup.py .
 RUN pip install .
-EXPOSE 8080 5000 9000
-CMD ["jarvisx", "api"]
+EXPOSE 10000
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "10000"]
