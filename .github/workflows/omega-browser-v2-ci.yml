@@ -34,7 +34,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-          cache: none
 
       - name: Verify Java runtime
         run: java -version
