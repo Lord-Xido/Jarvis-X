@@ -9,6 +9,7 @@ on:
       - "src/jarvisx/**"
       - "tests/**"
       - "examples/earthtwin/**"
+      - "examples/jarvisx-echo/**"
       - "pyproject.toml"
       - ".github/workflows/runtime-v1.yml"
 
@@ -90,4 +91,62 @@ jobs:
               asset = root / relative.removeprefix("./")
               if not asset.is_file() or asset.stat().st_size == 0:
                   raise SystemExit(f"Missing or empty EarthTwin asset: {asset}")
+          PY
+
+  jarvisx-echo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Parse JARVIS X browser modules
+        run: |
+          cp examples/jarvisx-echo/app.js /tmp/jarvisx-echo-app.mjs
+          node --check /tmp/jarvisx-echo-app.mjs
+          node --check examples/jarvisx-echo/runtime-core.mjs
+
+      - name: Run JARVIS X runtime tests
+        run: node --test examples/jarvisx-echo/runtime-core.test.mjs
+
+      - name: Verify JARVIS X asset graph and security boundary
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          root = Path("examples/jarvisx-echo")
+          html = root / "index.html"
+          required = {"./styles.css", "./app.js"}
+          found = set()
+
+          class AssetParser(HTMLParser):
+              def handle_starttag(self, tag, attrs):
+                  values = dict(attrs)
+                  if tag == "link" and values.get("href"):
+                      found.add(values["href"])
+                  if tag == "script" and values.get("src"):
+                      found.add(values["src"])
+
+          parser = AssetParser()
+          parser.feed(html.read_text(encoding="utf-8"))
+          missing = required - found
+          if missing:
+              raise SystemExit(f"Missing JARVIS X asset references: {sorted(missing)}")
+
+          for name in ["index.html", "styles.css", "app.js", "runtime-core.mjs", "runtime-core.test.mjs"]:
+              asset = root / name
+              if not asset.is_file() or asset.stat().st_size == 0:
+                  raise SystemExit(f"Missing or empty JARVIS X asset: {asset}")
+
+          app = (root / "app.js").read_text(encoding="utf-8")
+          if './runtime-core.mjs' not in app:
+              raise SystemExit("JARVIS X app does not import its runtime core")
+          if 'innerHTML' in app or 'innerHTML' in (root / "runtime-core.mjs").read_text(encoding="utf-8"):
+              raise SystemExit("Unsafe innerHTML usage detected in JARVIS X runtime")
           PY
