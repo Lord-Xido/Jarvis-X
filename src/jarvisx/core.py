@@ -47,10 +47,13 @@ class CodexVM:
         cont = self.executor.execute(instr)
         self.ledger.log(self.regs.snapshot(), instr.opcode)
         self.tracer.record(instr, self.regs.snapshot())
-        self.reflex.stabilize(self.regs)
+
+        # Reflex analysis must not mutate the authoritative register machine.
+        # Stabilize a snapshot so instruction semantics remain deterministic.
+        self.reflex.stabilize(self.regs.snapshot())
 
         # Permeate every committed VM transition through the sparse 30D
-        # cognitive field.  This observes the register state but does not
+        # cognitive field. This observes the register state but does not
         # mutate the deterministic register machine.
         self.ai30d.observe_vm_state(instr.opcode, self.regs.snapshot())
 
