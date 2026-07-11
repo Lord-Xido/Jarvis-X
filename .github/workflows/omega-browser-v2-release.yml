@@ -1,0 +1,53 @@
+name: Moagi Omega Browser V2 Release
+
+on:
+  push:
+    tags:
+      - "omega-browser-v2-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Test and package
+        working-directory: omega-browser-v2
+        run: |
+          chmod +x build.sh test.sh
+          ./test.sh
+          ./build.sh
+          sha256sum dist/moagi-omega-browser-v2.jar > dist/moagi-omega-browser-v2.jar.sha256
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: moagi-omega-browser-v2-release
+          path: |
+            omega-browser-v2/dist/moagi-omega-browser-v2.jar
+            omega-browser-v2/dist/moagi-omega-browser-v2.jar.sha256
+          if-no-files-found: error
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            omega-browser-v2/dist/moagi-omega-browser-v2.jar \
+            omega-browser-v2/dist/moagi-omega-browser-v2.jar.sha256 \
+            --title "Moagi Omega Browser V2 ${GITHUB_REF_NAME}" \
+            --generate-notes
