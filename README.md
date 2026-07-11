@@ -49,6 +49,29 @@ The chat interface is a deterministic city-ROM query parser, not a general
 language model. See [`examples/earthtwin/README.md`](examples/earthtwin/README.md)
 for its operational and security boundaries.
 
+## JARVIS X neural echo demo
+
+[`examples/jarvisx-echo/`](examples/jarvisx-echo/) replaces simulated cognitive
+telemetry with trace-driven execution and a small trainable neural core.
+
+It includes:
+
+- a deterministic `12 -> 16 -> 4` classifier trained by online backpropagation;
+- hidden-activation and loss visualization driven by actual inference;
+- versioned, hashed, evidence-gated instruction-order mutation;
+- checksum-verified binary ROM recompilation;
+- bounded LRU/TTL query memory;
+- declarative alias learning through `teach <alias> = <city>`;
+- explicit runtime state transitions and execution traces;
+- optional browser speech synthesis and a 3D neural mirror graph;
+- browser-core tests for neural learning, cache bounds, ROM integrity, query
+  behavior, state transitions, and mutation invariants.
+
+Open `http://localhost:8000/examples/jarvisx-echo/` after starting the same local
+server. The implementation is sentient-feeling by design but does not claim
+consciousness or sentience. See
+[`examples/jarvisx-echo/README.md`](examples/jarvisx-echo/README.md).
+
 ## Install
 
 ```bash
@@ -63,4 +86,5 @@ pip install .
 ```bash
 pip install -e ".[test]"
 pytest
+node --test examples/jarvisx-echo/runtime-core.test.mjs
 ```
