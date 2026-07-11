@@ -31,6 +31,24 @@ See:
 - [`docs/JARVIS_X_RUNTIME_V1_SPEC.md`](docs/JARVIS_X_RUNTIME_V1_SPEC.md)
 - [`docs/30D_SPARSE_SWARM.md`](docs/30D_SPARSE_SWARM.md)
 
+## EarthTwin browser demo
+
+[`examples/earthtwin/`](examples/earthtwin/) is a static Three.js demonstration of
+the runtime's encode/decode, introspection, caching, adaptive LOD, and
+usage-driven refinement concepts.
+
+Run it from the repository root:
+
+```bash
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000/examples/earthtwin/`.
+
+The chat interface is a deterministic city-ROM query parser, not a general
+language model. See [`examples/earthtwin/README.md`](examples/earthtwin/README.md)
+for its operational and security boundaries.
+
 ## Install
 
 ```bash
