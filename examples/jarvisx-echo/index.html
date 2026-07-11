@@ -13,7 +13,7 @@
     <span class="mark">⟡</span>
     <strong>JARVIS X</strong>
     <span>Trace-Driven Neural Echo Chamber</span>
-    <small>runtime v3 · bounded self-optimization</small>
+    <small>runtime v3.1 · provenance-gated</small>
   </header>
 
   <div class="top-actions">
@@ -37,6 +37,8 @@
       <button id="refine-now" type="button">Optimize now</button>
     </div>
     <div class="metrics">
+      <div><span>Provenance</span><b id="m-seal-status">VERIFYING</b></div>
+      <div><span>Trust key</span><b id="m-seal-key">--</b></div>
       <div><span>ROM</span><b id="m-rom-size">--</b></div>
       <div><span>Checksum</span><b id="m-rom-checksum">--</b></div>
       <div><span>Cache</span><b id="m-cache">--</b></div>
@@ -55,17 +57,17 @@
       <span class="eyebrow">LATEST EXECUTION</span>
       <ol id="trace-list" class="trace-list" aria-live="polite"></ol>
     </div>
-    <p class="boundary">This demo uses a small online neural classifier, declarative instruction mutation, bounded cache memory, and checksum-verified ROM recompilation. It does not claim consciousness or sentience.</p>
+    <p class="boundary">Boot is gated by a detached ECDSA-P384 development signature, SHA-384 component digests, and an external public-key trust anchor. Replace the development key with an owner-controlled key before production use. This system does not claim consciousness or sentience.</p>
   </aside>
 
   <section id="chat-container" aria-label="JARVIS X command interface">
     <div id="chat-header" role="button" tabindex="0" aria-controls="chat-body" aria-expanded="true">
-      <div><span class="orb">⟡</span><strong>Neural interface</strong><small id="instruction-indicator">awaiting command</small></div>
+      <div><span class="orb">⟡</span><strong>Neural interface</strong><small id="instruction-indicator">verifying release seal</small></div>
       <button id="chat-toggle" type="button" aria-label="Collapse chat">−</button>
     </div>
     <div id="chat-body">
       <div id="chat-messages" aria-live="polite">
-        <div class="msg bot"><strong>JARVIS X online.</strong><span>Execution traces, neural activations, ROM mutations, and cache behavior are live.</span></div>
+        <div class="msg bot"><strong>JARVIS X boot verification.</strong><span>Validating release signature, ROM digest, instruction manifest, and trust anchor.</span></div>
       </div>
       <div class="suggestions" aria-label="Example commands">
         <button type="button" data-query="Where is Tokyo?">Tokyo</button>
@@ -82,7 +84,7 @@
     </div>
   </section>
 
-  <div id="hint">drag · scroll · query · inspect · optimize</div>
+  <div id="hint">verify · drag · query · inspect · optimize</div>
   <div id="echo-layer" aria-hidden="true"></div>
 
   <script type="importmap">
@@ -93,6 +95,6 @@
       }
     }
   </script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app-sealed.js"></script>
 </body>
 </html>
