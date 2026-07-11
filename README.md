@@ -28,7 +28,11 @@ print(result.reconstruction_error)
 print(result.coherence)
 ```
 
-See `docs/30D_AUTOENCODING_ENGINE.md` for the operational contract.
+Documentation:
+
+- `docs/30D_AUTOENCODING_ENGINE.md` — operational runtime contract.
+- `docs/DR_MOAGI_UNIFIED_AUTOENCODING_EQUATION.md` — formal GPT-3D tensor,
+  attention, tiled-weight, encoder-decoder, and optimisation specification.
 
 ## Install
 ```bash
