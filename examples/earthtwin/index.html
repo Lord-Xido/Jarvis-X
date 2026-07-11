@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://threejs.org; connect-src 'self' https://unpkg.com https://threejs.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none';">
+    <title>EarthTwin · Self-Optimizing Meta-Runtime</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div id="info">🌍 <span>EarthTwin</span> · Meta-Runtime <small>v2.1 · self-optimizing</small></div>
+    <button id="meta-toggle" class="toggle-meta" type="button" aria-controls="meta-panel" aria-expanded="false">⚙️ Meta</button>
+    <div id="hint">🖱 Drag · Scroll · Chat to refine</div>
+
+    <section id="meta-panel" aria-label="Self-optimization telemetry">
+        <h4>🧬 Self-Optimization <button id="refine-now" type="button">⟳ Refine Now</button></h4>
+        <div class="stat-row"><span class="label">ROM Size</span><span class="value" id="m-rom-size">--</span></div>
+        <div class="stat-row"><span class="label">Query Cache</span><span class="value" id="m-cache">--</span></div>
+        <div class="stat-row"><span class="label">FPS (EMA)</span><span class="value" id="m-fps">--</span></div>
+        <div class="stat-row"><span class="label">Quality LOD</span><span class="value" id="m-lod">--</span></div>
+        <div class="stat-row"><span class="label">Hot Cities</span><span class="value" id="m-hot-count">--</span></div>
+        <div class="hot-list" id="m-hot-list">🔍 <span>none yet</span></div>
+        <div class="meta-note">⚡ Re-encodes ROM order and adapts rendering LOD from measured usage.</div>
+    </section>
+
+    <section id="chat-container" aria-label="EarthTwin query engine">
+        <div id="chat-header" role="button" tabindex="0" aria-controls="chat-body" aria-expanded="true">
+            <h3><i>🧠</i> Chat · Query Engine</h3>
+            <button id="toggle-btn" type="button" aria-label="Collapse chat">−</button>
+        </div>
+        <div id="chat-body">
+            <div id="chat-messages" aria-live="polite">
+                <div class="msg bot"><strong>⏳ Meta-Runtime Initialized.</strong><br>Ask me anything about the encoded city ROM.</div>
+            </div>
+            <div id="chat-input-area">
+                <input type="text" id="chat-input" placeholder="e.g., Where is Tokyo?" autocomplete="off" autofocus>
+                <button id="chat-send" type="button">Send</button>
+            </div>
+        </div>
+    </section>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
