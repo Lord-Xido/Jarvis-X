@@ -8,6 +8,7 @@ on:
     paths:
       - "src/jarvisx/**"
       - "tests/**"
+      - "examples/earthtwin/**"
       - "pyproject.toml"
       - ".github/workflows/runtime-v1.yml"
 
@@ -42,3 +43,51 @@ jobs:
 
       - name: Compile package
         run: python -m compileall -q src/jarvisx
+
+  earthtwin:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Parse EarthTwin module
+        run: |
+          cp examples/earthtwin/app.js /tmp/earthtwin-app.mjs
+          node --check /tmp/earthtwin-app.mjs
+
+      - name: Verify demo asset references
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          root = Path("examples/earthtwin")
+          html = root / "index.html"
+          required = {"./styles.css", "./app.js"}
+          found = set()
+
+          class AssetParser(HTMLParser):
+              def handle_starttag(self, tag, attrs):
+                  values = dict(attrs)
+                  if tag == "link" and values.get("href"):
+                      found.add(values["href"])
+                  if tag == "script" and values.get("src"):
+                      found.add(values["src"])
+
+          parser = AssetParser()
+          parser.feed(html.read_text(encoding="utf-8"))
+          missing = required - found
+          if missing:
+              raise SystemExit(f"Missing EarthTwin asset references: {sorted(missing)}")
+
+          for relative in required:
+              asset = root / relative.removeprefix("./")
+              if not asset.is_file() or asset.stat().st_size == 0:
+                  raise SystemExit(f"Missing or empty EarthTwin asset: {asset}")
+          PY
