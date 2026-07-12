@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Neural Core · Adaptive WebGL2 Particle Field</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --cyan: #00ccff;
+      --pink: #ff66aa;
+      --green: #88ff44;
+      --panel: rgba(5, 5, 20, 0.76);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #050510;
+      font-family: "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    canvas { display: block; }
+
+    #stats {
+      position: fixed;
+      top: max(16px, env(safe-area-inset-top));
+      left: max(16px, env(safe-area-inset-left));
+      color: var(--cyan);
+      font-size: 13px;
+      line-height: 1.65;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
+      pointer-events: none;
+      z-index: 10;
+      user-select: none;
+    }
+
+    #stats span { color: var(--pink); }
+    #stats .ok { color: var(--green); }
+
+    #controls {
+      position: fixed;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      max-width: calc(100vw - 24px);
+      padding: 14px 24px;
+      color: #88ddff;
+      font-size: 12px;
+      background: var(--panel);
+      border: 1px solid rgba(0, 200, 255, 0.22);
+      border-radius: 32px;
+      box-shadow: 0 0 40px rgba(0, 100, 255, 0.15);
+      backdrop-filter: blur(10px);
+      z-index: 20;
+    }
+
+    #controls label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    #controls input[type="range"] {
+      width: 112px;
+      cursor: pointer;
+      accent-color: var(--cyan);
+    }
+
+    #controls .val {
+      min-width: 38px;
+      color: var(--pink);
+      font-weight: 700;
+      text-align: right;
+    }
+
+    #error {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 32px;
+      color: #fff;
+      background: #050510;
+      z-index: 100;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 760px) {
+      #stats { font-size: 11px; }
+      #controls {
+        width: calc(100vw - 24px);
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px 16px;
+        padding: 12px 14px;
+        border-radius: 20px;
+      }
+      #controls input[type="range"] { width: 82px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #controls { backdrop-filter: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="stats" aria-live="polite">
+    <div>◈ PARTICLES: <span id="particleCount">0</span></div>
+    <div>◈ VISUAL PULSE: <span id="pulseRate">0.00</span> Hz</div>
+    <div>◈ FRAME TIME: <span id="frameTime">0.00</span> ms</div>
+    <div>◈ GPU TIME: <span id="gpuTime">n/a</span></div>
+    <div>◈ QUALITY: <span id="quality">initialising</span></div>
+    <div>◈ ARCHITECTURE: <span class="ok">WebGL2 · GLSL3</span></div>
+  </div>
+
+  <div id="controls">
+    <label>
+      <span>Morph target</span>
+      <input type="range" id="morphSlider" min="0" max="1" step="0.01" value="0.35" />
+      <span class="val" id="morphVal">0.35</span>
+    </label>
+    <label>
+      <span>Turbulence</span>
+      <input type="range" id="turbSlider" min="0" max="2" step="0.01" value="0.80" />
+      <span class="val" id="turbVal">0.80</span>
+    </label>
+    <label>
+      <span>Adaptation rate</span>
+      <input type="range" id="lrSlider" min="0.1" max="3.0" step="0.1" value="1.0" />
+      <span class="val" id="lrVal">1.0</span>
+    </label>
+  </div>
+
+  <div id="error" role="alert"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+    import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+    import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+
+    const errorPanel = document.getElementById("error");
+    const fail = (message) => {
+      errorPanel.style.display = "grid";
+      errorPanel.textContent = message;
+      throw new Error(message);
+    };
+
+    const probeCanvas = document.createElement("canvas");
+    if (!probeCanvas.getContext("webgl2")) {
+      fail("This visualization requires WebGL2 and GLSL ES 3.00 support.");
+    }
+
+    const isMobile = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const deviceMemory = Number(navigator.deviceMemory || 4);
+    const logicalCores = Number(navigator.hardwareConcurrency || 4);
+
+    function selectParticleCount() {
+      if (reducedMotion) return 100000;
+      if (isMobile || deviceMemory <= 4 || logicalCores <= 4) return 250000;
+      if (deviceMemory <= 8) return 600000;
+      return 1000000;
+    }
+
+    const PARTICLE_COUNT = selectParticleCount();
+    const TARGET_FRAME_MS = isMobile ? 33.3 : 16.7;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050510);
+    scene.fog = new THREE.FogExp2(0x050510, 0.008);
+
+    const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 80);
+    camera.position.set(10, 6, 16);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: !isMobile,
+      powerPreference: "high-performance",
+      alpha: false,
+    });
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.prepend(renderer.domElement);
+
+    const maxPixelRatio = Math.min(devicePixelRatio, isMobile ? 1.2 : 1.6);
+    let activePixelRatio = maxPixelRatio;
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(innerWidth, innerHeight),
+      isMobile ? 0.28 : 0.42,
+      0.28,
+      0.18,
+    );
+    composer.addPass(bloom);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 4;
+    controls.maxDistance = 40;
+    controls.maxPolarAngle = Math.PI / 2.1;
+    controls.update();
+
+    scene.add(new THREE.AmbientLight(0x112244, 0.6));
+    const key = new THREE.DirectionalLight(0x88ddff, 2.5);
+    key.position.set(5, 10, 8);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0xff44aa, 1.5);
+    fill.position.set(-6, 3, -5);
+    scene.add(fill);
+
+    const referenceGrid = new THREE.GridHelper(30, 40, 0x00ccff, 0x0044aa);
+    referenceGrid.position.y = -3;
+    referenceGrid.material.transparent = true;
+    referenceGrid.material.opacity = 0.15;
+    scene.add(referenceGrid);
+
+    const gridSize = 12;
+    const spacing = 0.9;
+    const offset = (gridSize - 1) * spacing * 0.5;
+    const gridPositions = [];
+    const gridColors = [];
+    const gridIndices = [];
+
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        for (let k = 0; k < gridSize; k++) {
+          gridPositions.push(i * spacing - offset, j * spacing - offset + 1, k * spacing - offset);
+          gridColors.push(0.2, 0.2, 0.8);
+        }
+      }
+    }
+
+    const gridIndex = (i, j, k) => i * gridSize * gridSize + j * gridSize + k;
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        for (let k = 0; k < gridSize; k++) {
+          const current = gridIndex(i, j, k);
+          if (i + 1 < gridSize) gridIndices.push(current, gridIndex(i + 1, j, k));
+          if (j + 1 < gridSize) gridIndices.push(current, gridIndex(i, j + 1, k));
+          if (k + 1 < gridSize) gridIndices.push(current, gridIndex(i, j, k + 1));
+        }
+      }
+    }
+
+    const gridGeometry = new THREE.BufferGeometry();
+    gridGeometry.setAttribute("position", new THREE.Float32BufferAttribute(gridPositions, 3));
+    gridGeometry.setAttribute("color", new THREE.Float32BufferAttribute(gridColors, 3));
+    gridGeometry.setIndex(gridIndices);
+
+    const neuralLines = new THREE.LineSegments(
+      gridGeometry,
+      new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.24,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    scene.add(neuralLines);
+
+    const nodeGeometry = new THREE.BufferGeometry();
+    nodeGeometry.setAttribute("position", new THREE.Float32BufferAttribute(gridPositions, 3));
+    const nodePoints = new THREE.Points(
+      nodeGeometry,
+      new THREE.PointsMaterial({
+        color: 0x4488ff,
+        size: 0.08,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    scene.add(nodePoints);
+
+    // A position attribute is retained solely to define draw count. Particle
+    // positions and sizes are generated deterministically from gl_VertexID.
+    const particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(PARTICLE_COUNT * 3), 3),
+    );
+    particleGeometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 12);
+
+    const vertexShader = `
+      uniform float uTime;
+      uniform float uMorphTarget;
+      uniform float uAdaptedMorph;
+      uniform float uTurbulence;
+      uniform float uParticleCount;
+      uniform float uPointScale;
+
+      out vec3 vColor;
+
+      float hash(vec3 p) {
+        p = fract(p * 0.3183099 + 0.1);
+        p *= 17.0;
+        return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+      }
+
+      float valueNoise(vec3 p) {
+        vec3 i = floor(p);
+        vec3 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(
+            mix(hash(i + vec3(0, 0, 0)), hash(i + vec3(1, 0, 0)), f.x),
+            mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x),
+            f.y
+          ),
+          mix(
+            mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x),
+            mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x),
+            f.y
+          ),
+          f.z
+        );
+      }
+
+      void main() {
+        float id = float(gl_VertexID);
+        float t = (id + 0.5) / max(uParticleCount, 1.0);
+        float angle = id * 2.39996323 + id * 0.001;
+
+        float radius;
+        float yPos;
+        float finFlare = 0.0;
+
+        if (t < 0.12) {
+          float localT = t / 0.12;
+          radius = 0.45 * sin(localT * 3.14159265);
+          yPos = 1.7 + localT * 0.4;
+        } else if (t < 0.45) {
+          float localT = (t - 0.12) / 0.33;
+          radius = 0.45 + 0.15 * sin(localT * 3.14159265) * (1.0 - localT);
+          yPos = 1.9 - localT * 0.7;
+        } else {
+          float localT = (t - 0.45) / 0.55;
+          radius = 0.55 * (1.0 - localT * 0.8) + 0.15 * sin(localT * 6.2831853);
+          finFlare = sin(localT * 9.424778) * 0.3 * localT * localT;
+          yPos = 1.2 - localT * 3.8;
+        }
+
+        float radialScale = 1.0 + finFlare * 0.6 * sin(angle * 3.0 + t * 8.0);
+        float x = radius * radialScale * cos(angle + t * 2.0);
+        float z = radius * radialScale * sin(angle + t * 2.0);
+
+        if (t > 0.45) {
+          float localT = (t - 0.45) / 0.55;
+          x += sin(localT * 5.026548) * 0.35 * (1.0 - localT * 0.3);
+          z += sin(localT * 3.769911) * 0.25 * localT;
+        }
+
+        if (t > 0.85) {
+          float localF = (t - 0.85) / 0.15;
+          float lobe = sin(angle * 1.5) * 0.3 * localF * localF;
+          x += lobe * 0.6;
+          z += lobe * 0.2;
+        }
+
+        vec3 mermaidPos = vec3(x, yPos, z);
+
+        float vortexRadius = 2.5 + 0.8 * sin(t * 15.0 + id * 0.01);
+        float vortexAngle = t * 12.0 + id * 0.001 + uTime * 0.4;
+        vec3 vortexPos = vec3(
+          vortexRadius * cos(vortexAngle) * (1.0 + 0.3 * sin(t * 8.0 + uTime)),
+          (t - 0.5) * 5.0 + 1.0 + 0.5 * sin(t * 10.0 + uTime * 0.7),
+          vortexRadius * sin(vortexAngle) * (1.0 + 0.3 * cos(t * 8.0 + uTime * 0.5))
+        );
+
+        // uAdaptedMorph follows uMorphTarget through a bounded first-order
+        // response on the CPU: m(t+dt)=m(t)+(target-m)(1-exp(-eta*dt)).
+        vec3 finalPos = mix(mermaidPos, vortexPos, uAdaptedMorph);
+
+        float noiseScale = 2.0 + uTurbulence * 4.0;
+        vec3 noiseCoord = vec3(
+          finalPos.x * 0.3 + uTime * 0.1,
+          finalPos.y * 0.3 + uTime * 0.08,
+          finalPos.z * 0.3
+        );
+        float n1 = valueNoise(noiseCoord * noiseScale) - 0.5;
+        float n2 = valueNoise(noiseCoord * 1.7 + 1.0) - 0.5;
+        finalPos += vec3(n1, n2 * 0.6, n2) * (uTurbulence * 0.25);
+
+        float mixValue = t * 0.8 + 0.2 * sin(uTime * 0.5 + t * 5.0);
+        vec3 color = mix(vec3(1.0, 0.3, 0.6), vec3(0.0, 0.9, 1.0), mixValue);
+        color = mix(color, vec3(0.8, 0.2, 1.0), uAdaptedMorph * 0.6);
+        float sparkle = smoothstep(0.6, 1.0, valueNoise(finalPos * 5.0 + uTime * 0.5));
+        color += vec3(0.4, 0.4, 0.8) * sparkle * 0.5;
+
+        vec4 mvPosition = modelViewMatrix * vec4(finalPos, 1.0);
+        float deterministicSize = 0.06 + 0.12 * hash(vec3(id, id * 0.17, 1.0));
+        float perspectiveSize = deterministicSize * uPointScale / max(-mvPosition.z, 0.25);
+        gl_PointSize = clamp(perspectiveSize * (1.0 + 0.35 * sin(uTime + id)), 1.0, 22.0);
+        gl_Position = projectionMatrix * mvPosition;
+        vColor = color;
+      }
+    `;
+
+    const fragmentShader = `
+      precision highp float;
+      in vec3 vColor;
+      out vec4 outColor;
+
+      void main() {
+        vec2 center = gl_PointCoord - 0.5;
+        float distanceFromCenter = length(center);
+        if (distanceFromCenter > 0.5) discard;
+        float alpha = 1.0 - smoothstep(0.3, 0.5, distanceFromCenter);
+        float glow = exp(-distanceFromCenter * 8.0);
+        vec3 color = vColor + vec3(0.3, 0.2, 0.6) * glow * 0.6;
+        outColor = vec4(color, alpha * 0.9);
+      }
+    `;
+
+    const particleMaterial = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      uniforms: {
+        uTime: { value: 0 },
+        uMorphTarget: { value: 0.35 },
+        uAdaptedMorph: { value: 0.35 },
+        uTurbulence: { value: 0.8 },
+        uParticleCount: { value: PARTICLE_COUNT },
+        uPointScale: { value: isMobile ? 220 : 300 },
+      },
+      vertexShader,
+      fragmentShader,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+
+    const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    particleSystem.frustumCulled = false;
+    scene.add(particleSystem);
+
+    const ui = {
+      particleCount: document.getElementById("particleCount"),
+      pulseRate: document.getElementById("pulseRate"),
+      frameTime: document.getElementById("frameTime"),
+      gpuTime: document.getElementById("gpuTime"),
+      quality: document.getElementById("quality"),
+      morphSlider: document.getElementById("morphSlider"),
+      turbSlider: document.getElementById("turbSlider"),
+      lrSlider: document.getElementById("lrSlider"),
+      morphVal: document.getElementById("morphVal"),
+      turbVal: document.getElementById("turbVal"),
+      lrVal: document.getElementById("lrVal"),
+    };
+
+    ui.particleCount.textContent = PARTICLE_COUNT.toLocaleString();
+    let morphTarget = Number(ui.morphSlider.value);
+    let adaptationRate = Number(ui.lrSlider.value);
+    let adaptedMorph = morphTarget;
+
+    ui.morphSlider.addEventListener("input", () => {
+      morphTarget = Number(ui.morphSlider.value);
+      ui.morphVal.textContent = morphTarget.toFixed(2);
+      particleMaterial.uniforms.uMorphTarget.value = morphTarget;
+    });
+
+    ui.turbSlider.addEventListener("input", () => {
+      const value = Number(ui.turbSlider.value);
+      ui.turbVal.textContent = value.toFixed(2);
+      particleMaterial.uniforms.uTurbulence.value = value;
+    });
+
+    ui.lrSlider.addEventListener("input", () => {
+      adaptationRate = Number(ui.lrSlider.value);
+      ui.lrVal.textContent = adaptationRate.toFixed(1);
+    });
+
+    const gl = renderer.getContext();
+    const timerExtension = gl.getExtension("EXT_disjoint_timer_query_webgl2");
+    const pendingQueries = [];
+    let activeQuery = null;
+    let lastGpuMilliseconds = null;
+
+    function beginGpuTimer() {
+      if (!timerExtension || activeQuery || pendingQueries.length >= 4) return;
+      activeQuery = gl.createQuery();
+      gl.beginQuery(timerExtension.TIME_ELAPSED_EXT, activeQuery);
+    }
+
+    function endGpuTimer() {
+      if (!timerExtension || !activeQuery) return;
+      gl.endQuery(timerExtension.TIME_ELAPSED_EXT);
+      pendingQueries.push(activeQuery);
+      activeQuery = null;
+    }
+
+    function pollGpuTimers() {
+      if (!timerExtension || pendingQueries.length === 0) return;
+      const query = pendingQueries[0];
+      const available = gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE);
+      const disjoint = gl.getParameter(timerExtension.GPU_DISJOINT_EXT);
+      if (!available) return;
+      if (!disjoint) {
+        const nanoseconds = gl.getQueryParameter(query, gl.QUERY_RESULT);
+        lastGpuMilliseconds = nanoseconds / 1e6;
+      }
+      gl.deleteQuery(query);
+      pendingQueries.shift();
+    }
+
+    function applySize() {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(activePixelRatio);
+      renderer.setSize(innerWidth, innerHeight, false);
+      composer.setPixelRatio(activePixelRatio);
+      composer.setSize(innerWidth, innerHeight);
+    }
+    applySize();
+
+    let qualityCooldown = 0;
+    function governQuality(frameMs) {
+      if (qualityCooldown > 0) {
+        qualityCooldown--;
+        return;
+      }
+
+      let changed = false;
+      if (frameMs > TARGET_FRAME_MS * 1.28 && activePixelRatio > 0.65) {
+        activePixelRatio = Math.max(0.65, activePixelRatio - 0.1);
+        bloom.strength = Math.max(0.18, bloom.strength - 0.04);
+        changed = true;
+      } else if (frameMs < TARGET_FRAME_MS * 0.78 && activePixelRatio < maxPixelRatio) {
+        activePixelRatio = Math.min(maxPixelRatio, activePixelRatio + 0.05);
+        bloom.strength = Math.min(isMobile ? 0.3 : 0.45, bloom.strength + 0.02);
+        changed = true;
+      }
+
+      if (changed) {
+        applySize();
+        qualityCooldown = 120;
+      }
+    }
+
+    const baseNodePositions = new Float32Array(nodeGeometry.attributes.position.array);
+    const nodePositions = nodeGeometry.attributes.position.array;
+    const lineColors = neuralLines.geometry.attributes.color.array;
+    const clock = new THREE.Clock();
+    let animationHandle = 0;
+    let frameAccumulator = 0;
+    let frameSamples = 0;
+    let smoothedFrameMs = TARGET_FRAME_MS;
+
+    function animate() {
+      const delta = Math.min(clock.getDelta(), 0.1);
+      const time = performance.now() * 0.001;
+
+      const response = 1.0 - Math.exp(-adaptationRate * delta);
+      adaptedMorph += (morphTarget - adaptedMorph) * response;
+      particleMaterial.uniforms.uAdaptedMorph.value = adaptedMorph;
+      particleMaterial.uniforms.uTime.value = time * (reducedMotion ? 0.15 : 0.6);
+
+      const angularFrequency = 1.5 * adaptationRate;
+      const wave = Math.sin(time * angularFrequency) * 0.5 + 0.5;
+      const wave2 = Math.sin(time * angularFrequency * 0.7 + 1.2) * 0.5 + 0.5;
+      const wave3 = Math.sin(time * angularFrequency * 0.4 + 2.4) * 0.5 + 0.5;
+
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          for (let k = 0; k < gridSize; k++) {
+            const index = gridIndex(i, j, k);
+            const index3 = index * 3;
+            const dx = i - gridSize * 0.5;
+            const dy = j - gridSize * 0.5;
+            const dz = k - gridSize * 0.5;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            const radialWave = Math.sin(distance * 0.8 - time * 1.2) * 0.5 + 0.5;
+            const fire = Math.max(0, radialWave * wave * 0.8 + wave2 * 0.2 + wave3 * 0.1 - 0.2);
+            lineColors[index3] = 0.1 + fire * 0.9;
+            lineColors[index3 + 1] = 0.1 + fire * 0.3;
+            lineColors[index3 + 2] = 0.5 + fire * 0.5;
+            nodePositions[index3 + 1] = baseNodePositions[index3 + 1] + fire * 0.15;
+          }
+        }
+      }
+      neuralLines.geometry.attributes.color.needsUpdate = true;
+      nodeGeometry.attributes.position.needsUpdate = true;
+
+      controls.update();
+      pollGpuTimers();
+      beginGpuTimer();
+      composer.render();
+      endGpuTimer();
+
+      const frameMs = delta * 1000;
+      smoothedFrameMs += (frameMs - smoothedFrameMs) * 0.08;
+      frameAccumulator += frameMs;
+      frameSamples++;
+
+      if (frameSamples >= 30) {
+        const meanFrameMs = frameAccumulator / frameSamples;
+        ui.frameTime.textContent = meanFrameMs.toFixed(2);
+        ui.pulseRate.textContent = (angularFrequency / (2 * Math.PI)).toFixed(2);
+        ui.gpuTime.textContent = lastGpuMilliseconds === null
+          ? "n/a"
+          : `${lastGpuMilliseconds.toFixed(2)} ms`;
+        ui.quality.textContent = `${activePixelRatio.toFixed(2)}× DPR · bloom ${bloom.strength.toFixed(2)}`;
+        governQuality(smoothedFrameMs);
+        frameAccumulator = 0;
+        frameSamples = 0;
+      }
+
+      animationHandle = requestAnimationFrame(animate);
+    }
+
+    function start() {
+      if (!animationHandle) {
+        clock.getDelta();
+        animationHandle = requestAnimationFrame(animate);
+      }
+    }
+
+    function stop() {
+      if (animationHandle) cancelAnimationFrame(animationHandle);
+      animationHandle = 0;
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stop();
+      else start();
+    });
+
+    renderer.domElement.addEventListener("webglcontextlost", (event) => {
+      event.preventDefault();
+      stop();
+      ui.quality.textContent = "context lost";
+    });
+
+    renderer.domElement.addEventListener("webglcontextrestored", () => {
+      ui.quality.textContent = "context restored";
+      start();
+    });
+
+    addEventListener("resize", applySize, { passive: true });
+    start();
+
+    console.info(
+      `Neural Core online: ${PARTICLE_COUNT.toLocaleString()} procedural particles, WebGL2/GLSL3`,
+    );
+  </script>
+</body>
+</html>
