@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import Iterable
 
 
 class Opcode(IntEnum):
@@ -130,3 +131,21 @@ class Instruction:
             length=int.from_bytes(data[10:12], "big"),
             immediate=immediate,
         )
+
+    @classmethod
+    def decode_stream(cls, data: bytes) -> list["Instruction"]:
+        if not data:
+            raise ValueError("bytecode image cannot be empty")
+        if len(data) % cls.BYTE_WIDTH:
+            raise ValueError("bytecode image length must be a multiple of 16 bytes")
+        return [
+            cls.decode(data[offset : offset + cls.BYTE_WIDTH])
+            for offset in range(0, len(data), cls.BYTE_WIDTH)
+        ]
+
+    @classmethod
+    def encode_stream(cls, instructions: Iterable["Instruction"]) -> bytes:
+        encoded = b"".join(instruction.encode() for instruction in instructions)
+        if not encoded:
+            raise ValueError("instruction stream cannot be empty")
+        return encoded
