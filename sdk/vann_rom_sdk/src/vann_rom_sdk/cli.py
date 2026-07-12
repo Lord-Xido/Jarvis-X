@@ -6,6 +6,14 @@ from pathlib import Path
 
 import numpy as np
 
+from .aether import (
+    AetherConfig,
+    AetherEngine,
+    AetherInput,
+    AetherPolicy,
+    GraphTensor,
+    synthetic_aether_input,
+)
 from .ann import TinyAutoencoder
 from .compiler import Assembler
 from .demo import DEMO_SOURCE, build_demo_vm, demo_input
@@ -20,6 +28,22 @@ def _load_input(path: str) -> np.ndarray:
     if input_values.ndim != 2 or input_values.shape[1] < 2:
         raise ValueError("input must be a vector or batch with at least two features")
     return input_values
+
+
+def _load_aether_input(path: str) -> AetherInput:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    graph = payload.get("graph")
+    if not isinstance(graph, dict):
+        raise ValueError("Aether input requires graph.node_features and graph.adjacency")
+    return AetherInput(
+        video=np.asarray(payload["video"], dtype=np.float32),
+        audio=np.asarray(payload["audio"], dtype=np.float32),
+        graph=GraphTensor(
+            np.asarray(graph["node_features"], dtype=np.float32),
+            np.asarray(graph["adjacency"], dtype=np.float32),
+        ),
+        context=np.asarray(payload["context"], dtype=np.float32),
+    )
 
 
 def _resolve_latent_dim(input_dim: int, requested: int | None) -> int:
@@ -50,6 +74,27 @@ def _execute(
     return report
 
 
+def _execute_aether(data: AetherInput, args: argparse.Namespace) -> dict[str, object]:
+    engine = AetherEngine(
+        AetherConfig(
+            hidden_dim=args.hidden_dim,
+            latent_dim=args.aether_latent_dim,
+            max_tokens=args.max_tokens,
+            learning_rate=args.learning_rate,
+            max_update_norm=args.max_update_norm,
+            semantic_tolerance=args.semantic_tolerance,
+            seed=args.seed,
+        ),
+        policy=AetherPolicy(
+            evolution=args.evolution,
+            recurrent_steps=args.steps,
+            cross_modal_gain=args.cross_modal_gain,
+        ),
+    )
+    result = engine.run(data, adapt=args.adapt, optimize=args.optimize)
+    return result.to_dict(include_arrays=args.include_arrays)
+
+
 def _demo(_: argparse.Namespace) -> int:
     vm = build_demo_vm(output_sink=lambda text: print(f"Decoded output:\n{text}"))
     vm.set_input(demo_input())
@@ -61,6 +106,18 @@ def _demo(_: argparse.Namespace) -> int:
         "policy": result.policy,
         "rom": vm.rom.stats(),
     }, indent=2))
+    return 0
+
+
+def _aether_demo(args: argparse.Namespace) -> int:
+    report = _execute_aether(synthetic_aether_input(args.seed), args)
+    print(json.dumps(report, indent=2))
+    return 0
+
+
+def _aether_run(args: argparse.Namespace) -> int:
+    report = _execute_aether(_load_aether_input(args.input), args)
+    print(json.dumps(report, indent=2))
     return 0
 
 
@@ -123,12 +180,38 @@ def _add_execution_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--seed", type=int, default=7)
 
 
+def _add_aether_arguments(parser: argparse.ArgumentParser, *, require_input: bool) -> None:
+    if require_input:
+        parser.add_argument("--input", required=True, help="JSON file with video, audio, graph and context")
+    parser.add_argument("--hidden-dim", type=int, default=24)
+    parser.add_argument("--aether-latent-dim", type=int, default=12)
+    parser.add_argument("--max-tokens", type=int, default=1024)
+    parser.add_argument("--learning-rate", type=float, default=0.05)
+    parser.add_argument("--max-update-norm", type=float, default=0.25)
+    parser.add_argument("--semantic-tolerance", type=float, default=0.75)
+    parser.add_argument("--evolution", choices=("ssm", "euler"), default="ssm")
+    parser.add_argument("--steps", type=int, default=2)
+    parser.add_argument("--cross-modal-gain", type=float, default=0.25)
+    parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--adapt", action="store_true", help="shadow-test and commit a bounded Ω overlay")
+    parser.add_argument("--optimize", action="store_true", help="search the bounded latent policy space")
+    parser.add_argument("--include-arrays", action="store_true", help="include reconstructed arrays in JSON")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="vann-rom", description="VANN-ROM Ω³ virtual ANN SDK")
     sub = parser.add_subparsers(dest="command", required=True)
 
     demo = sub.add_parser("demo", help="run the built-in autoencoder VM demo")
     demo.set_defaults(func=_demo)
+
+    aether_demo = sub.add_parser("aether-demo", help="run the sparse 4D multimodal Aether Engine")
+    _add_aether_arguments(aether_demo, require_input=False)
+    aether_demo.set_defaults(func=_aether_demo)
+
+    aether_run = sub.add_parser("aether-run", help="run Aether Engine on normalized JSON modalities")
+    _add_aether_arguments(aether_run, require_input=True)
+    aether_run.set_defaults(func=_aether_run)
 
     assemble = sub.add_parser("assemble", help="assemble .vann source into 128-bit bytecode")
     assemble.add_argument("source")
