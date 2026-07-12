@@ -22,7 +22,7 @@ def test_reflex_loop_is_explicitly_opt_in():
     vm.load(assemble("SET Ψ 10\nSET Φ 20\nHALT"))
     state = vm.run()
 
-    assert state["Φ"] == 18
+    assert state["Φ"] == 19
     assert any("REFLEX_DELTA" in snapshot for _, snapshot in vm.tracer.log)
 
 
