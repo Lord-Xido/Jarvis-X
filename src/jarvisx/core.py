@@ -52,7 +52,7 @@ class CodexVM:
             raise RuntimeError("Ethics blocked instruction")
 
         cont = self.executor.execute(instr)
-        reflex_delta = self.reflex.stabilize(self.regs)
+        reflex_delta = self.reflex.stabilize(self.regs) if cont else 0
         self.regs["IP"] += 1
         self.cycles += 1
         self.sandbox.enforce(self.cycles)
