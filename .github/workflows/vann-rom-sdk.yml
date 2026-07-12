@@ -35,7 +35,15 @@ jobs:
         run: python -m compileall -q src tests examples
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
-      - name: Execute source demonstration
+      - name: Execute Aether synthetic closed loop
+        run: vann-rom aether-demo --adapt --optimize
+      - name: Execute Aether external JSON closed loop
+        run: >-
+          vann-rom aether-run
+          --input examples/aether_input.json
+          --adapt
+          --optimize
+      - name: Execute VANN source demonstration
         run: vann-rom demo
       - name: Assemble verified bytecode image
         run: vann-rom assemble examples/demo.vann -o /tmp/demo.vbc
