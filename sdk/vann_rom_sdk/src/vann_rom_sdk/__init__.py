@@ -6,7 +6,7 @@ A reference implementation of a sparse 3D ROM bytecode virtual ANN processor.
 from .ann import TinyAutoencoder
 from .compiler import Assembler
 from .geometry import Address3D, morton3d_decode, morton3d_encode
-from .isa import Instruction, Opcode, NumericFormat, Phase
+from .isa import Instruction, NumericFormat, Opcode, Phase
 from .rom import Sparse3DROM, VoxelPage
 from .vm import VANNVirtualMachine, VMConfig, VMResult
 
@@ -27,4 +27,4 @@ __all__ = [
     "morton3d_decode",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
