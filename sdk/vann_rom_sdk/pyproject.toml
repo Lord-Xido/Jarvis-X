@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vann-rom-sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "Sparse 3D ROM bytecode auto-encoding/decoding virtual ANN processor SDK"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.24"]
+dependencies = ["numpy>=1.24,<3"]
 authors = [{name = "Dr. Matladi Maxwell Moagi"}]
 license = {text = "MIT"}
 keywords = ["virtual-machine", "bytecode", "autoencoder", "3d-rom", "ann"]
@@ -21,6 +21,9 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
+
+[project.optional-dependencies]
+dev = ["build>=1", "pytest>=8"]
 
 [project.urls]
 Repository = "https://github.com/Lord-Xido/Jarvis-X/tree/main/sdk/vann_rom_sdk"
