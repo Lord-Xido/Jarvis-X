@@ -41,11 +41,14 @@ class AetherKnownMathematicalContractGaps(unittest.TestCase):
             )
 
     @unittest.expectedFailure
-    def test_mutated_input_is_revalidated_at_execution_boundary(self):
+    def test_mutated_input_is_rejected_before_authoritative_state_changes(self):
         data = synthetic_aether_input()
         data.video[0, 0, 0, 0] = np.nan
+        engine = AetherEngine(AetherConfig(hidden_dim=16, latent_dim=8))
         with self.assertRaises(ValueError):
-            AetherEngine(AetherConfig(hidden_dim=16, latent_dim=8)).run(data)
+            engine.run(data)
+        self.assertEqual(engine.base_digest, "uninitialized")
+        self.assertEqual(engine.journal, [])
 
     @unittest.expectedFailure
     def test_decoder_can_represent_directed_graph_adjacency(self):
