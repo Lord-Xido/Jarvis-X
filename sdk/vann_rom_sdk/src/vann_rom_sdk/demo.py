@@ -48,6 +48,9 @@ def demo_input() -> np.ndarray:
 
 
 def run_demo() -> dict[str, object]:
-    vm = build_demo_vm()
+    vm = build_demo_vm(output_sink=lambda _: None)
     vm.set_input(demo_input())
-    return vm.run().__dict__
+    result = vm.run()
+    report = result.to_dict()
+    report["rom"] = vm.rom.stats()
+    return report
