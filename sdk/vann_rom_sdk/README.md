@@ -1,40 +1,67 @@
 # VANN-ROM Ω³ SDK
 
-A runnable Python reference implementation of the **3D 1000 GB/s ROM Bytecode Auto-Encoding/Decoding Virtual ANN Processor**.
+A runnable Python semantic reference implementation of the **3D 1000 GB/s ROM Bytecode Auto-Encoding/Decoding Virtual ANN Processor**.
 
-The SDK models the architecture rather than claiming physical 1 TB/s memory throughput from Python. It implements the control semantics, sparse 3D virtual ROM, 128-bit bytecode format, autoencoder/decoder pipeline, Ω adaptive overlay, Λ transaction boundary, metrics, bounded auto-optimizer, assembler, CLI and a lightweight Tkinter IDE.
+Version `0.2.0` hardens the processor around non-bypassable transactions, sealed ROM images, CRC-validated binary execution, deterministic journaling, bounded runtime optimization, and rollback-safe ANN adaptation.
 
-## Components
+The 1000 GB/s value remains an architectural hardware target. This SDK validates processor semantics; it does not claim physical 1 TB/s throughput from Python.
 
-- **Sparse 3D ROM**: only mapped voxel pages consume memory.
-- **128-bit ISA**: fixed-width instructions with CRC validation.
-- **3D program layout**: sequential bytecode is mapped onto XYZ coordinates.
-- **ANN engine**: NumPy encoder, latent field, predictor and decoder.
-- **Ω overlay**: writable residual-driven adaptation separate from immutable ROM.
-- **Λ boundary**: staged verification and atomic commit.
-- **Auto-optimizer**: bounded changes to learning rate, sparsity, prefetch and fusion policy.
-- **Assembler**: readable `.vann` source to bytecode.
-- **CLI and IDE**: command-line execution and local Tkinter development environment.
+## Implemented architecture
+
+- **Sparse 3D ROM** — only mapped voxel pages consume memory.
+- **Sealed ROM manifests** — page topology, Λ masks, instructions, parameters, metadata, and neighbours are integrity-hashed.
+- **128-bit ISA** — fixed-width instructions with CRC-8 validation.
+- **Verified bytecode images** — `.vann` source compiles to executable `.vbc` streams.
+- **3D program layout** — sequential instructions map onto XYZ coordinates with Morton address support.
+- **ANN engine** — NumPy encoder, latent field, predictor, residual and decoder.
+- **Transactional Ω adaptation** — model weights and residual memory are staged together.
+- **Mandatory Λ boundary** — every commit projects and verifies internally, even when bytecode omits explicit preflight instructions.
+- **Atomic rollback** — model, Ω and output snapshots are restored if verification fails.
+- **Automatic journal** — every commit, rollback, checkpoint and policy decision records ROM, model and state hashes.
+- **Bounded optimizer** — policy candidates are range-checked and accepted only when predicted constrained cost does not regress.
+- **CLI and IDE** — source editing, assembly, binary inspection, execution and runtime reporting.
 
 ## Installation
 
 ```bash
-cd vann_rom_sdk
+cd sdk/vann_rom_sdk
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\\Scripts\\activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 python -m pip install -e .
 ```
 
-## Run the demonstration
+## Run the source demonstration
 
 ```bash
 vann-rom demo
 ```
 
-Or:
+## Compile, inspect and execute bytecode
 
 ```bash
-python -m vann_rom_sdk.cli demo
+vann-rom assemble examples/demo.vann -o program.vbc
+vann-rom inspect program.vbc
+vann-rom run-bytecode \
+  --bytecode program.vbc \
+  --input examples/input.json \
+  --latent-dim 4
+```
+
+Every instruction is exactly 16 bytes:
+
+\[
+16\text{ bytes}=128\text{ bits}
+\]
+
+The loader rejects incomplete images and any instruction whose CRC no longer matches its payload.
+
+## Run source directly
+
+```bash
+vann-rom run \
+  --source examples/demo.vann \
+  --input examples/input.json \
+  --latent-dim 4
 ```
 
 ## Launch the virtual IDE
@@ -44,20 +71,6 @@ vann-rom ide
 ```
 
 The IDE provides a VANN source editor, JSON tensor input panel, assembler listing, runtime report, metrics, ROM manifest and execution journal.
-
-## Assemble bytecode
-
-```bash
-vann-rom assemble examples/demo.vann -o program.vbc
-```
-
-Each instruction is exactly 16 bytes.
-
-## Run a source program
-
-```bash
-vann-rom run --source examples/demo.vann --input examples/input.json --latent-dim 4
-```
 
 ## Python API
 
@@ -72,12 +85,9 @@ ENCODE3D
 PREDICT
 COMPARE
 UPDATE_OMEGA
-PROJECT_LAMBDA
-VERIFY
 COMMIT
 DECODE3D
 STAGE
-VERIFY
 COMMIT
 RENDER
 HALT
@@ -89,39 +99,62 @@ vm = VANNVirtualMachine(model, output_sink=print)
 vm.load_program(program.instructions)
 vm.set_input(np.random.default_rng(7).random((1, 12), dtype=np.float32))
 result = vm.run()
-print(result.metrics)
+print(result.to_dict())
 ```
+
+The example deliberately omits explicit `PROJECT_LAMBDA` and `VERIFY` opcodes. `COMMIT` still performs both operations internally; governance cannot be bypassed by source structure.
 
 ## Architectural mapping
 
 ```text
-ROM       -> Sparse3DROM + immutable VoxelPage bytecode
-RAM       -> VM tensor registers, caches and transaction staging
-Ω         -> residual EMA, working correction bias and episodic journal
-Λ         -> root mask, range projection, finite-value verification
+ROM       -> sealed Sparse3DROM + VoxelPage bytecode
+RAM       -> tensor registers, prefetch cache and transaction staging
+Ω         -> residual EMA, correction bias and episodic journal
+Λ         -> root mask, projection, finite-value and shape verification
 Σ         -> X, Z, P, R, E, Ω, Y, G and PC3 runtime state
-Optimizer -> bounded RuntimePolicy controller
+Optimizer -> bounded RuntimePolicy proposal and constrained acceptance
 ```
 
-## Throughput interpretation
+## Invariants
 
-The 1000 GB/s specification is represented as an architectural target. This Python SDK is an executable semantic model, not a hardware bandwidth benchmark. A hardware implementation would map the same ISA and execution model to HBM-class channels, DMA engines, tensor tiles and hierarchical caches.
+```text
+ROM defines
+RAM executes
+Ω adapts
+Λ verifies
+COMMIT journals
+ROLLBACK restores
+Σ evolves
+```
+
+Model training does not mutate authoritative weights until its complete transaction is verified and committed.
 
 ## Tests
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
 
-## Jarvis X integration
+GitHub Actions validates Python 3.10, 3.11, 3.12 and 3.13 and exercises:
 
-This SDK is maintained inside the Jarvis X repository at `sdk/vann_rom_sdk`.
-Its immutable ROM, mutable Ω overlay, and Λ-gated commit model implement the
-Jarvis X / Dr Moagi operational separation:
+- package installation and dependency integrity;
+- source compilation;
+- CRC and bytecode-stream validation;
+- sealed-ROM tamper detection;
+- mandatory commit verification;
+- uncommitted model rollback;
+- source demonstration execution;
+- `.vbc` assembly, inspection and execution.
 
-```text
-ROM defines → RAM executes → Ω adapts → Λ verifies → Σ commits
-```
+## Jarvis-X integration
 
-The Python runtime is the semantic reference model for later native, GPU,
-FPGA, or HBM-backed implementations.
+The SDK lives at `sdk/vann_rom_sdk` inside Jarvis-X. The root CodexVM was also hardened during this integration:
+
+- canonical JSON-safe hash-chained ledger;
+- atomic persistent-ledger replacement;
+- deterministic arithmetic by default;
+- reflex adaptation explicitly opt-in;
+- no reflex mutation after `HALT`;
+- clean execution reset when a new program is loaded.
+
+The Python runtime remains the semantic reference model for later cost-model, native CPU, GPU, FPGA and HBM-backed implementations.
