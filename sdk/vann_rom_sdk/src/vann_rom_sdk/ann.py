@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -112,17 +113,57 @@ class TinyAutoencoder:
             latent_l1=float(np.mean(np.abs(z))),
         )
 
-    def save(self, path: str | Path) -> None:
-        np.savez_compressed(
-            path,
-            input_dim=self.input_dim,
-            latent_dim=self.latent_dim,
+    def state_dict(self) -> dict[str, Any]:
+        """Return an isolated model snapshot suitable for transactional staging."""
+
+        return {
+            "input_dim": self.input_dim,
+            "latent_dim": self.latent_dim,
+            "learning_rate": self.learning_rate,
+            "w_enc": self.w_enc.copy(),
+            "b_enc": self.b_enc.copy(),
+            "w_dec": self.w_dec.copy(),
+            "b_dec": self.b_dec.copy(),
+        }
+
+    def load_state_dict(self, state: dict[str, Any]) -> None:
+        if int(state["input_dim"]) != self.input_dim:
+            raise ValueError("input_dim mismatch")
+        if int(state["latent_dim"]) != self.latent_dim:
+            raise ValueError("latent_dim mismatch")
+        self.learning_rate = float(state["learning_rate"])
+        self.w_enc = np.asarray(state["w_enc"], dtype=np.float32).copy()
+        self.b_enc = np.asarray(state["b_enc"], dtype=np.float32).copy()
+        self.w_dec = np.asarray(state["w_dec"], dtype=np.float32).copy()
+        self.b_dec = np.asarray(state["b_dec"], dtype=np.float32).copy()
+        self._validate_state()
+
+    def clone(self) -> "TinyAutoencoder":
+        clone = TinyAutoencoder(
+            self.input_dim,
+            self.latent_dim,
+            seed=0,
             learning_rate=self.learning_rate,
-            w_enc=self.w_enc,
-            b_enc=self.b_enc,
-            w_dec=self.w_dec,
-            b_dec=self.b_dec,
         )
+        clone.load_state_dict(self.state_dict())
+        return clone
+
+    def _validate_state(self) -> None:
+        expected = {
+            "w_enc": (self.input_dim, self.latent_dim),
+            "b_enc": (self.latent_dim,),
+            "w_dec": (self.latent_dim, self.input_dim),
+            "b_dec": (self.input_dim,),
+        }
+        for name, shape in expected.items():
+            value = getattr(self, name)
+            if value.shape != shape:
+                raise ValueError(f"{name} shape mismatch: expected {shape}, got {value.shape}")
+            if not np.all(np.isfinite(value)):
+                raise FloatingPointError(f"{name} contains non-finite values")
+
+    def save(self, path: str | Path) -> None:
+        np.savez_compressed(path, **self.state_dict())
 
     @classmethod
     def load(cls, path: str | Path) -> "TinyAutoencoder":
@@ -132,8 +173,5 @@ class TinyAutoencoder:
                 int(data["latent_dim"]),
                 learning_rate=float(data["learning_rate"]),
             )
-            model.w_enc = data["w_enc"].astype(np.float32)
-            model.b_enc = data["b_enc"].astype(np.float32)
-            model.w_dec = data["w_dec"].astype(np.float32)
-            model.b_dec = data["b_dec"].astype(np.float32)
+            model.load_state_dict({name: data[name] for name in data.files})
         return model
