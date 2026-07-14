@@ -3,13 +3,22 @@
 from .cache import TemporalSemanticCache
 from .control import ActionProposal, AutonomicEnterpriseController
 from .events import CausalEventLedger, EventEnvelope
-from .policy import AuthorityWitness, CommitDecision, CommitPolicyEngine, CommitRequest
+from .policy import (
+    ApprovalGrant,
+    AuthorityTokenService,
+    AuthorityWitness,
+    CommitDecision,
+    CommitPolicyEngine,
+    CommitRequest,
+)
 from .telemetry import Telemetry
 from .twin import DigitalTwin, EnterpriseState, Scenario, SimulationResult
 from .workflow import DurableOrchestrator, WorkflowDefinition, WorkflowRun, WorkflowStep
 
 __all__ = [
     "ActionProposal",
+    "ApprovalGrant",
+    "AuthorityTokenService",
     "AuthorityWitness",
     "AutonomicEnterpriseController",
     "CausalEventLedger",
