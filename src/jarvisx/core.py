@@ -8,6 +8,8 @@ from .reflex import ReflexEngine
 from .sandbox import Sandbox
 from .debugger import Debugger
 from .tracer import Tracer
+from .aed import MM3DAEDEngine
+
 
 class CodexVM:
     def __init__(self):
@@ -21,6 +23,7 @@ class CodexVM:
         self.sandbox = Sandbox()
         self.debugger = Debugger(self)
         self.tracer = Tracer()
+        self.aed = MM3DAEDEngine()
         self.program = []
         self.cycles = 0
         self.running = True
@@ -28,6 +31,16 @@ class CodexVM:
     def load(self, bytecode):
         self.program = bytecode
         self.regs["IP"] = 0
+
+    def aed_cycle(self, ambient, *, memory=None, intent=None, constraints=None):
+        """Execute one complete MM3D AED transform and commit its front buffer."""
+
+        return self.aed.cycle(
+            ambient,
+            memory=memory,
+            intent=intent,
+            constraints=constraints,
+        )
 
     def step(self):
         ip = self.regs["IP"]
