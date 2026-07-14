@@ -127,6 +127,8 @@ class AutonomicEnterpriseController:
             proposal.commit_request,
             approval_tokens=tuple(approvals),
         )
+        if self.ledger.version(proposal.tenant_id) != request.state_version:
+            raise PermissionError("failed:state_version")
         decision = self.policy.decide(request, witness_token)
         if not decision.allowed:
             raise PermissionError(decision.reason)
