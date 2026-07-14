@@ -3,10 +3,10 @@ from dataclasses import replace
 import pytest
 
 from jarvisx.saas.autonomy import (
-    AuthorityWitness,
     AutonomicEnterpriseController,
     CausalEventLedger,
     CommitPolicyEngine,
+    CommitRequest,
     DigitalTwin,
     DurableOrchestrator,
     EnterpriseState,
@@ -15,6 +15,8 @@ from jarvisx.saas.autonomy import (
     WorkflowDefinition,
     WorkflowStep,
 )
+
+SIGNING_KEY = "test-authority-signing-key-32-bytes-minimum"
 
 
 def enterprise_state():
@@ -66,39 +68,103 @@ def test_causal_ledger_integrity_and_optimistic_concurrency():
         )
 
 
-def test_commit_time_authorization_rejects_stale_or_rebound_witness():
-    from jarvisx.saas.autonomy import CommitRequest
-
-    policy = CommitPolicyEngine(max_risk=0.4, max_cost_minor=1000)
-    bindings = {"invoice_id": "i1", "amount": 500}
-    witness = AuthorityWitness.issue(
+def authorization_request(required_approvals=0):
+    return CommitRequest(
         tenant_id="t1",
         subject="u1",
         action="invoice.pay",
         resource="invoice:i1",
         state_version=4,
         approval_epoch=2,
-        bindings=bindings,
+        bindings={"invoice_id": "i1", "amount": 500},
+        estimated_cost_minor=500,
+        risk=0.1,
+        required_roles=frozenset({"finance_admin"}),
+        required_approvals=required_approvals,
+    )
+
+
+def test_commit_time_authorization_rejects_stale_rebound_or_forged_witness():
+    policy = CommitPolicyEngine(
+        max_risk=0.4,
+        max_cost_minor=1000,
+        signing_key=SIGNING_KEY,
+    )
+    request = authorization_request()
+    witness = policy.issue_witness(
+        request,
         roles={"finance_admin"},
         ttl_seconds=60,
         now_ns=1_000,
     )
-    request = CommitRequest(
-        tenant_id="t1",
-        subject="u1",
-        action="invoice.pay",
-        resource="invoice:i1",
-        state_version=4,
-        approval_epoch=2,
-        bindings=bindings,
-        estimated_cost_minor=500,
-        risk=0.1,
-        required_roles=frozenset({"finance_admin"}),
-    )
     assert policy.decide(request, witness, now_ns=2_000).allowed
     rebound = replace(request, bindings={"invoice_id": "i2", "amount": 500})
     assert not policy.decide(rebound, witness, now_ns=2_000).allowed
-    assert not policy.decide(request, witness, now_ns=witness.expires_at_ns + 1).allowed
+    assert not policy.decide(
+        request,
+        witness,
+        now_ns=60_000_001_001,
+    ).allowed
+
+    body, signature = witness.split(".")
+    tampered = ("A" if body[0] != "A" else "B") + body[1:] + "." + signature
+    assert policy.decide(request, tampered, now_ns=2_000).reason == (
+        "failed:witness_signature"
+    )
+    foreign = CommitPolicyEngine(
+        signing_key="foreign-signing-key-that-is-32-bytes-long"
+    )
+    assert not foreign.decide(request, witness, now_ns=2_000).allowed
+
+
+def test_approval_gate_requires_signed_scoped_distinct_approvers():
+    policy = CommitPolicyEngine(
+        max_risk=0.4,
+        max_cost_minor=1000,
+        signing_key=SIGNING_KEY,
+    )
+    request = authorization_request(required_approvals=2)
+    witness = policy.issue_witness(
+        request,
+        roles={"finance_admin"},
+        now_ns=1_000,
+    )
+
+    unsigned = replace(request, approval_tokens=("anything", "anything-else"))
+    assert not policy.decide(unsigned, witness, now_ns=2_000).allowed
+
+    approval_a = policy.issue_approval(
+        request,
+        approver="director-a",
+        now_ns=1_000,
+    )
+    self_approval = policy.issue_approval(
+        request,
+        approver=request.subject,
+        now_ns=1_000,
+    )
+    duplicate = replace(
+        request,
+        approval_tokens=(approval_a, approval_a, self_approval),
+    )
+    assert not policy.decide(duplicate, witness, now_ns=2_000).allowed
+
+    approval_b = policy.issue_approval(
+        request,
+        approver="director-b",
+        now_ns=1_000,
+    )
+    approved = replace(request, approval_tokens=(approval_a, approval_b))
+    decision = policy.decide(approved, witness, now_ns=2_000)
+    assert decision.allowed
+    assert len(decision.approval_ids) == 2
+
+    rebound = replace(
+        request,
+        bindings={"invoice_id": "i2", "amount": 500},
+        approval_tokens=(approval_a, approval_b),
+    )
+    assert not policy.decide(rebound, witness, now_ns=2_000).allowed
 
 
 def test_temporal_cache_is_bound_to_scope_version_and_time():
@@ -157,10 +223,12 @@ def test_digital_twin_is_deterministic_and_downside_aware():
 
 def test_durable_workflow_is_idempotent_and_compensates():
     ledger = CausalEventLedger()
-    orchestrator = DurableOrchestrator(
-        ledger,
-        CommitPolicyEngine(max_risk=0.5, max_cost_minor=10_000),
+    policy = CommitPolicyEngine(
+        max_risk=0.5,
+        max_cost_minor=10_000,
+        signing_key=SIGNING_KEY,
     )
+    orchestrator = DurableOrchestrator(ledger, policy)
     definition = WorkflowDefinition(
         name="client-onboarding",
         version=1,
@@ -184,16 +252,19 @@ def test_durable_workflow_is_idempotent_and_compensates():
     )
     run = orchestrator.start("t1", "u1", definition)
     bindings = {"client": "Acme"}
-    witness = AuthorityWitness.issue(
-        tenant_id="t1",
-        subject="u1",
+    request = CommitRequest(
+        tenant_id=run.tenant_id,
+        subject=run.subject,
         action="client.create",
         resource="clients",
         state_version=run.state_version,
-        approval_epoch=0,
+        approval_epoch=run.approval_epoch,
         bindings=bindings,
-        roles={"operations_manager"},
+        estimated_cost_minor=0,
+        risk=0.0,
+        required_roles=frozenset({"operations_manager"}),
     )
+    witness = policy.issue_witness(request, roles={"operations_manager"})
     calls = []
 
     def handler(step, data):
@@ -203,7 +274,7 @@ def test_durable_workflow_is_idempotent_and_compensates():
     output = orchestrator.execute_step(
         run.run_id,
         "create_client",
-        witness=witness,
+        witness_token=witness,
         bindings=bindings,
         approvals=(),
         handler=handler,
@@ -213,7 +284,7 @@ def test_durable_workflow_is_idempotent_and_compensates():
         orchestrator.execute_step(
             run.run_id,
             "create_client",
-            witness=witness,
+            witness_token=witness,
             bindings=bindings,
             approvals=(),
             handler=handler,
@@ -231,9 +302,70 @@ def test_durable_workflow_is_idempotent_and_compensates():
     assert ledger.verify()
 
 
-def test_autonomic_controller_requires_fresh_proof_before_commit():
+def test_workflow_idempotency_keys_are_scoped_to_each_step():
+    ledger = CausalEventLedger()
+    policy = CommitPolicyEngine(
+        max_risk=1.0,
+        max_cost_minor=10_000,
+        signing_key=SIGNING_KEY,
+    )
+    orchestrator = DurableOrchestrator(ledger, policy)
+    definition = WorkflowDefinition(
+        name="parallel",
+        version=1,
+        steps=(
+            WorkflowStep(
+                "step_a",
+                "a.execute",
+                "resource:a",
+                required_roles=frozenset({"operator"}),
+            ),
+            WorkflowStep(
+                "step_b",
+                "b.execute",
+                "resource:b",
+                required_roles=frozenset({"operator"}),
+            ),
+        ),
+    )
+    run = orchestrator.start("t1", "operator-1", definition)
+    calls = []
+    for step in definition.steps:
+        bindings = {"step": step.step_id}
+        request = CommitRequest(
+            tenant_id=run.tenant_id,
+            subject=run.subject,
+            action=step.action,
+            resource=step.resource,
+            state_version=run.state_version,
+            approval_epoch=run.approval_epoch,
+            bindings=bindings,
+            estimated_cost_minor=0,
+            risk=0.0,
+            required_roles=step.required_roles,
+        )
+        witness = policy.issue_witness(request, roles={"operator"})
+        result = orchestrator.execute_step(
+            run.run_id,
+            step.step_id,
+            witness_token=witness,
+            bindings=bindings,
+            approvals=(),
+            handler=lambda current, data: calls.append(current.step_id)
+            or current.step_id,
+            idempotency_key="shared-key",
+        )
+        assert result == step.step_id
+    assert calls == ["step_a", "step_b"]
+
+
+def test_autonomic_controller_requires_signed_fresh_proof_before_commit():
     controller = AutonomicEnterpriseController(
-        policy=CommitPolicyEngine(max_risk=1.0, max_cost_minor=1_000_000)
+        policy=CommitPolicyEngine(
+            max_risk=1.0,
+            max_cost_minor=1_000_000,
+            signing_key=SIGNING_KEY,
+        )
     )
     proposal = controller.propose(
         tenant_id="t1",
@@ -241,19 +373,15 @@ def test_autonomic_controller_requires_fresh_proof_before_commit():
         state=enterprise_state(),
         scenarios=[Scenario(name="steady", revenue_growth=0.02)],
     )[0]
-    request = proposal.commit_request
-    witness = AuthorityWitness.issue(
-        tenant_id=request.tenant_id,
-        subject=request.subject,
-        action=request.action,
-        resource=request.resource,
-        state_version=request.state_version,
-        approval_epoch=request.approval_epoch,
-        bindings=request.bindings,
+    with pytest.raises(PermissionError):
+        controller.commit(proposal, "client-forged-witness")
+
+    witness = controller.policy.issue_witness(
+        proposal.commit_request,
         roles={"tenant_owner"},
     )
     event_id = controller.commit(proposal, witness)
     assert event_id
     assert controller.ledger.verify()
     with pytest.raises(PermissionError):
-        controller.commit(proposal, replace(witness, state_version=99))
+        controller.commit(proposal, witness)
