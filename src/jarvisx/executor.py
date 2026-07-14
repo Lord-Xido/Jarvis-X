@@ -1,5 +1,6 @@
-"""Unified scalar and 30D execution unit."""
+"""Unified scalar, 30D, and sparse 3D abstraction execution unit."""
 
+from .abstraction3d import AbstractionANNCore3D, Instruction3D, Opcode3D
 from .ann30d import Instruction30D, Opcode30D
 from .ann30d_safe import SafeANNProcessor30D
 from .opcodes import OPCODES
@@ -18,11 +19,25 @@ ANN_OPCODE_MAP = {
     OPCODES["HALT30"]: Opcode30D.HALT,
 }
 
+ABSTRACTION_OPCODE_MAP = {
+    OPCODES["LOAD3D"]: Opcode3D.LOAD,
+    OPCODES["ABSTRACT3D"]: Opcode3D.ABSTRACT,
+    OPCODES["ROUTE3D"]: Opcode3D.ROUTE,
+    OPCODES["ATTEND3D"]: Opcode3D.ATTEND,
+    OPCODES["PREDICT3D"]: Opcode3D.PREDICT,
+    OPCODES["COMPARE3D"]: Opcode3D.COMPARE,
+    OPCODES["LEARN3D"]: Opcode3D.LEARN,
+    OPCODES["PROJECT3D"]: Opcode3D.PROJECT,
+    OPCODES["DECODE3D"]: Opcode3D.DECODE,
+    OPCODES["HALT3D"]: Opcode3D.HALT,
+}
+
 
 class Executor:
-    def __init__(self, registers, ann30d=None):
+    def __init__(self, registers, ann30d=None, abstraction3d=None):
         self.regs = registers
         self.ann30d = ann30d or SafeANNProcessor30D()
+        self.abstraction3d = abstraction3d or AbstractionANNCore3D()
         self.ann_input = None
         self.ann_target = 0.0
 
@@ -45,6 +60,16 @@ class Executor:
         self.regs["C"] = snapshot.active_cells
         self.regs["D"] = snapshot.cycles
 
+    def _sync_abstraction_registers(self):
+        snapshot = self.abstraction3d.snapshot()
+        scale = 1000000
+        self.regs["A"] = int(round(snapshot.prediction * scale))
+        self.regs["B"] = int(round(snapshot.residual * scale))
+        self.regs["Ω"] = int(round(snapshot.memory_norm * scale))
+        self.regs["C"] = snapshot.active_nodes
+        self.regs["D"] = snapshot.cycles
+        self.regs["FLAGS"] = int(round(snapshot.loss * scale))
+
     def execute(self, instr):
         if instr.opcode == OPCODES["SET"]:
             self.regs[self._register_name(instr.dst)] = instr.imm
@@ -66,6 +91,16 @@ class Executor:
                 target=self.ann_target,
             )
             self._sync_ann_registers()
+            if not should_continue:
+                return False
+
+        elif instr.opcode in ABSTRACTION_OPCODE_MAP:
+            should_continue = self.abstraction3d.execute(
+                Instruction3D(ABSTRACTION_OPCODE_MAP[instr.opcode]),
+                input_vector=self.ann_input,
+                target=self.ann_target,
+            )
+            self._sync_abstraction_registers()
             if not should_continue:
                 return False
 
