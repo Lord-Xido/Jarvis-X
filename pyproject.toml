@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvisx"
-version = "0.1.0"
-description = "Jarvis-X: A powerful assembly language interpreter and virtual machine"
+version = "0.2.0"
+description = "Jarvis-X deterministic VM with a unified sparse 30D virtual ANN processor"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [{name = "Lord-Xido"}]
-keywords = ["assembly", "interpreter", "virtual-machine"]
+keywords = ["assembly", "interpreter", "virtual-machine", "ann", "30d"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -61,7 +61,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=src/jarvisx --cov-report=term-local --cov-report=html --tb=short"
+addopts = "-v --cov=src/jarvisx --cov-report=term-missing --cov-report=html --tb=short"
 
 [tool.coverage.run]
 source = ["src/jarvisx"]
