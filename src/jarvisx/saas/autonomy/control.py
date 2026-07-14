@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, replace
 from typing import Iterable, Optional, Tuple
 
 from .events import CausalEventLedger
-from .policy import AuthorityWitness, CommitPolicyEngine, CommitRequest
+from .policy import CommitPolicyEngine, CommitRequest
 from .twin import DigitalTwin, EnterpriseState, Scenario, SimulationResult
 
 
@@ -114,17 +114,22 @@ class AutonomicEnterpriseController:
                     commit_request=request,
                 )
             )
-        return tuple(proposals)
+        return tuple(sorted(proposals, key=lambda item: item.utility, reverse=True))
 
     def commit(
         self,
         proposal: ActionProposal,
-        witness: AuthorityWitness,
+        witness_token: str,
         *,
         approvals: Iterable[str] = (),
     ) -> str:
-        request = replace(proposal.commit_request, approvals=tuple(approvals))
-        decision = self.policy.decide(request, witness)
+        request = replace(
+            proposal.commit_request,
+            approval_tokens=tuple(approvals),
+        )
+        if self.ledger.version(proposal.tenant_id) != request.state_version:
+            raise PermissionError("failed:state_version")
+        decision = self.policy.decide(request, witness_token)
         if not decision.allowed:
             raise PermissionError(decision.reason)
         event = self.ledger.append(
@@ -136,11 +141,12 @@ class AutonomicEnterpriseController:
                 "scenario": proposal.scenario.name,
                 "utility": proposal.utility,
                 "proof_hash": decision.proof_hash,
+                "approval_ids": list(decision.approval_ids),
                 "expected_shortfall_minor": proposal.simulation.expected_shortfall_minor,
                 "survival_probability": proposal.simulation.survival_probability,
             },
             actor=request.subject,
-            causation_id=witness.witness_id,
+            causation_id=decision.witness_id,
             expected_version=request.state_version,
         )
         return event.event_id
