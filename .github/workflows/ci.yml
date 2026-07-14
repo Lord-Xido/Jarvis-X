@@ -58,6 +58,7 @@ jobs:
           - tests/test_vm.py
           - tests/test_ann30d.py
           - tests/test_ann30d_safe.py
+          - tests/test_abstraction3d.py
           - tests/test_ledger.py
     steps:
       - uses: actions/checkout@v4
