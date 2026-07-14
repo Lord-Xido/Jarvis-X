@@ -60,6 +60,7 @@ jobs:
           - tests/test_abstraction3d.py
           - tests/test_ledger.py
           - tests/test_saas.py
+          - tests/test_autonomic_enterprise.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -108,7 +109,18 @@ jobs:
           - src/jarvisx/saas/service_base.py
           - src/jarvisx/saas/service_billing.py
           - src/jarvisx/saas/service_corporate.py
+          - src/jarvisx/saas/autonomy/__init__.py
+          - src/jarvisx/saas/autonomy/app.py
+          - src/jarvisx/saas/autonomy/cache.py
+          - src/jarvisx/saas/autonomy/cli.py
+          - src/jarvisx/saas/autonomy/control.py
+          - src/jarvisx/saas/autonomy/events.py
+          - src/jarvisx/saas/autonomy/policy.py
+          - src/jarvisx/saas/autonomy/telemetry.py
+          - src/jarvisx/saas/autonomy/twin.py
+          - src/jarvisx/saas/autonomy/workflow.py
           - tests/test_saas.py
+          - tests/test_autonomic_enterprise.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
