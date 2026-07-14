@@ -2,7 +2,7 @@
 
 ## Interpretation boundary
 
-This is an experimental software architecture designed to advance beyond conventional SaaS administration patterns. It is **not** a benchmark-proven claim of superiority over every state-of-the-art system. Its differentiator is the composition of causal event sourcing, commit-time authorization, deterministic digital-twin simulation, durable compensating workflows, context-bound temporal caching, and proof-carrying autonomous action.
+This is an experimental software architecture designed to advance beyond conventional SaaS administration patterns. It is **not** a benchmark-proven claim of superiority over every state-of-the-art system. Its differentiator is the composition of causal event sourcing, commit-time authorization, deterministic digital-twin simulation, compensating workflows, context-bound temporal caching, and proof-carrying autonomous action.
 
 ## 1. Autonomic enterprise state
 
@@ -12,19 +12,7 @@ The control state is
 \mathcal A_t=(\Sigma_t,\mathcal E_t,\mathcal W_t,\mathcal P_t,\mathcal D_t,\mathcal C_t,\mathcal T_t,\Omega_t,\Lambda_t)
 \]
 
-where:
-
-- \(\Sigma_t\): operational SaaS state;
-- \(\mathcal E_t\): causal event ledger;
-- \(\mathcal W_t\): durable workflow state;
-- \(\mathcal P_t\): policy and authority witnesses;
-- \(\mathcal D_t\): enterprise digital twin;
-- \(\mathcal C_t\): context-bound temporal cache;
-- \(\mathcal T_t\): traces, metrics, and structured events;
-- \(\Omega_t\): retained corrections and operational memory;
-- \(\Lambda_t\): financial, role, risk, freshness, and consistency constraints.
-
-The closed loop is
+where \(\mathcal P_t\) contains signed authority witnesses and approval grants. The closed loop is
 
 \[
 \boxed{
@@ -43,7 +31,39 @@ The closed loop is
 
 Authorization is repeated at the durability boundary \(t_c\), not accepted merely because it was valid during planning.
 
-## 2. Causal event ledger
+## 2. Signed commit-time authority
+
+An authority witness is bound to exactly one action:
+
+\[
+W=(tenant,subject,action,resource,v,epoch,t_{issue},t_{expiry},H(bindings),roles).
+\]
+
+The canonical witness envelope is authenticated with HMAC-SHA256 in the software reference implementation. Production deployments should replace the local signing key with a managed KMS or HSM-backed asymmetric signing service.
+
+A durable effect is allowed only when
+
+\[
+\Lambda_{commit}=\Lambda_{signature}\land\Lambda_{tenant}\land
+\Lambda_{subject}\land\Lambda_{action}\land\Lambda_{resource}\land
+\Lambda_{fresh}\land\Lambda_{version}\land\Lambda_{epoch}\land
+\Lambda_{binding}\land\Lambda_{role}\land\Lambda_{approval}\land
+\Lambda_{risk}\land\Lambda_{cost}.
+\]
+
+A caller cannot construct a witness in the commit request. The commit API accepts only a signed witness token. Witnesses are issued through a separate issuer endpoint protected by `X-Autonomy-Issuer-Token`, which must differ from the ordinary service token.
+
+## 3. Signed multi-party approvals
+
+Each approval is independently bound to
+
+\[
+A_i=(tenant,approver,action,resource,v,epoch,t_{issue},t_{expiry},H(bindings)).
+\]
+
+An approval counts only when its signature is valid, its scope exactly matches the commit request, it is fresh, and its approver is distinct. Self-approval is rejected by default. Duplicate tokens from one approver count once.
+
+## 4. Causal event ledger
 
 Each event is
 
@@ -57,35 +77,9 @@ with
 h_i=SHA256(CanonicalJSON(e_i\setminus h_i)).
 \]
 
-The ledger enforces:
+The ledger enforces per-stream sequence numbers, per-tenant optimistic versions, vector clocks, a global hash chain, tenant Merkle roots, and deterministic replay. A stale proposal is rejected before append rather than surfacing a raw optimistic-concurrency exception.
 
-- per-stream monotonic sequence numbers;
-- per-tenant optimistic state versions;
-- vector clocks for node-local causality;
-- global hash-chain integrity;
-- per-tenant Merkle roots;
-- deterministic replay through reducers.
-
-## 3. Commit-time authorization
-
-An authority witness is bound to one action:
-
-\[
-W=(tenant,subject,action,resource,v,epoch,t_{issue},t_{expiry},H(bindings),roles).
-\]
-
-A durable effect is allowed only when
-
-\[
-\Lambda_{commit}=\Lambda_{tenant}\land\Lambda_{subject}\land
-\Lambda_{action}\land\Lambda_{resource}\land\Lambda_{fresh}\land
-\Lambda_{version}\land\Lambda_{epoch}\land\Lambda_{binding}\land
-\Lambda_{role}\land\Lambda_{approval}\land\Lambda_{risk}\land\Lambda_{cost}.
-\]
-
-Any false term rejects the commit. A plan therefore cannot reuse stale approval, changed source data, expired authority, or an action binding different from the one approved.
-
-## 4. Deterministic enterprise digital twin
+## 5. Deterministic enterprise digital twin
 
 For enterprise state
 
@@ -93,29 +87,15 @@ For enterprise state
 S=(cash,revenue,cost,receivables,pipeline,D,F,G,churn,collection),
 \]
 
-the twin applies scenario controls and deterministic low-discrepancy disturbances. For path \(p\) and month \(m\):
-
-\[
-Revenue_{m+1}=\max(0,Revenue_m(1+g_s+\epsilon_{p,m}-0.25\,churn)),
-\]
-
-\[
-Cost_{m+1}=\max(0,Cost_m(1+c_s+\xi_{p,m})),
-\]
-
-\[
-Cash_{m+1}=Cash_m+Recognized_m+Collected_m-Cost_{m+1}.
-\]
-
-The simulator reports expected terminal cash, cumulative profit, survival probability, five-percent expected shortfall, delivery-finance-governance health, and a representative monthly trajectory.
-
-Scenario utility is
+the twin applies scenario controls and deterministic low-discrepancy disturbances. Scenario utility is
 
 \[
 U_s=Profit_s-\lambda ES_s+10^5H_s.
 \]
 
-## 5. Durable workflow machine
+Returned proposals are ordered by this complete utility rather than a different partial ranking expression.
+
+## 6. Durable workflow machine
 
 A workflow is a directed acyclic graph
 
@@ -123,18 +103,15 @@ A workflow is a directed acyclic graph
 \mathcal W=(V,E).
 \]
 
-A step executes only when all dependencies are committed, its idempotency key is unused, and its commit witness passes policy. Failed workflows retain enough state to execute compensating actions in reverse commit order.
+A step executes only when its dependencies are committed and its signed witness and approval tokens pass commit policy. Idempotency is scoped by
 
-The engine provides:
+\[
+(tenant,run,step,idempotency\ key),
+\]
 
-- deterministic dependency ordering;
-- idempotent retries;
-- human approval thresholds;
-- financial and risk budgets;
-- compensation for irreversible external effects;
-- causal audit events for every commit or rejection.
+so two different steps may safely use the same external key without colliding. Completed effects retain the output needed for deterministic retry and reverse-order compensation.
 
-## 6. Context-bound temporal cache
+## 7. Context-bound temporal cache
 
 A cache entry is valid only if
 
@@ -144,74 +121,49 @@ Tenant'=Tenant\land Scope'=Scope\land Version'=Version\land t\in[t_0,t_1].
 
 Semantic similarity alone cannot reuse a result across another tenant, engagement, asset, state version, or validity interval.
 
-## 7. Operational sequence
-
-```text
-OBSERVE
-  -> APPEND CAUSAL EVENT
-  -> BUILD ENTERPRISE STATE
-  -> GENERATE CANDIDATE SCENARIOS
-  -> DIGITAL-TWIN SIMULATION
-  -> DOWNSIDE-AWARE RANKING
-  -> ISSUE ACTION-BOUND WITNESS
-  -> EXECUTE DURABLE WORKFLOW
-  -> RECHECK AUTHORITY AT COMMIT
-  -> COMMIT + PROOF HASH
-  -> EMIT TELEMETRY
-  -> RETAIN CORRECTION IN OMEGA
-```
-
 ## 8. Runtime interfaces
-
-CLI:
-
-```bash
-drmoagi-autonomy simulate \
-  --tenant tenant-1 \
-  --subject owner-1 \
-  --state @state.json \
-  --scenarios @scenarios.json \
-  --risk-aversion 2.0
-```
-
-API:
-
-```bash
-export DM_AUTONOMY_TOKEN='replace-with-a-long-random-secret'
-drmoagi-autonomy serve --host 127.0.0.1 --port 8090
-```
-
-Routes:
 
 ```text
 GET  /health
 POST /v2/autonomy/proposals
+POST /v2/autonomy/authority/witnesses
+POST /v2/autonomy/authority/approvals
 POST /v2/autonomy/commit
 ```
 
-`X-Autonomy-Token` is required unless `DM_AUTONOMY_ALLOW_INSECURE=1` is explicitly set for local development.
+Required secure-mode environment values:
 
-## 9. Complexity
+```text
+DM_AUTONOMY_TOKEN
+DM_AUTONOMY_ISSUER_TOKEN
+DM_AUTONOMY_SIGNING_KEY
+```
 
-For \(P\) simulation paths, horizon \(M\), \(S\) scenarios, \(V\) workflow steps, and \(N\) ledger events:
+`DM_AUTONOMY_TOKEN` authorizes ordinary control-plane access. `DM_AUTONOMY_ISSUER_TOKEN` authorizes witness and approval issuance and must be distinct. `DM_AUTONOMY_SIGNING_KEY` must contain at least 32 bytes. `DM_AUTONOMY_ALLOW_INSECURE=1` is restricted to explicit local development.
 
-\[
-T_{simulate}=O(SPM),\qquad
-T_{workflow}=O(V+|E_{DAG}|),\qquad
-T_{append}=O(1),\qquad
-T_{verify}=O(N).
-\]
+## 9. Verification
 
-Storage grows with committed events and active workflows, not with a dense enterprise-state tensor.
+The security regression suite covers:
+
+- client-forged witness rejection;
+- token-body and signature tampering;
+- foreign signing keys;
+- stale and rebound witnesses;
+- unsigned approval rejection;
+- duplicate and self-approval rejection;
+- approval tenant/action/resource/version/epoch/binding scope;
+- stale proposal rejection before append;
+- cross-step idempotency-key reuse;
+- deterministic replay and compensation.
 
 ## 10. Production gates
 
 Before autonomous financial, employment, legal, or contractual effects are enabled:
 
 1. persist the causal ledger in an append-only database or object store;
-2. sign witnesses and Merkle roots with a managed KMS or HSM;
-3. replace in-memory workflow state with durable leases and recovery checkpoints;
-4. require multi-party approval for high-risk or high-value actions;
+2. replace the software HMAC issuer with managed KMS/HSM signing and key rotation;
+3. persist workflow state with leases and recovery checkpoints;
+4. map approver identities to authoritative corporate identity and delegation records;
 5. connect OpenTelemetry exporters and immutable security logging;
 6. validate each action class against tax, accounting, employment, privacy, and contractual controls;
 7. benchmark forecast accuracy, recovery, authorization safety, latency, and business utility against defined baselines.
