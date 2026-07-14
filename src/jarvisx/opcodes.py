@@ -15,6 +15,16 @@ OPCODES = {
     "PROJECT30": 0x27,
     "DECODE30": 0x28,
     "HALT30": 0x29,
+    "LOAD3D": 0x30,
+    "ABSTRACT3D": 0x31,
+    "ROUTE3D": 0x32,
+    "ATTEND3D": 0x33,
+    "PREDICT3D": 0x34,
+    "COMPARE3D": 0x35,
+    "LEARN3D": 0x36,
+    "PROJECT3D": 0x37,
+    "DECODE3D": 0x38,
+    "HALT3D": 0x39,
 }
 
 OPCODE_NAMES = {value: key for key, value in OPCODES.items()}
