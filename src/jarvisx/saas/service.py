@@ -63,4 +63,6 @@ for _method_name in (
         _tenant_method(getattr(ConsultancyService, _method_name)),
     )
 
-ConsultancyService.authenticate = _authentication_method(ConsultancyService.authenticate)
+ConsultancyService.authenticate = _authentication_method(
+    ConsultancyService.authenticate
+)
