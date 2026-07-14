@@ -87,6 +87,45 @@ vm.load(
 print(vm.run())
 ```
 
+## Dr Moagi Consultancy Cloud SaaS
+
+The repository includes a multi-tenant consultancy operations and corporate-administration platform built on the same deterministic and auditable architecture. It covers:
+
+- organisations, users, tenant memberships, RBAC, and audit events;
+- CRM leads, clients, engagements, budgets, time, and expenses;
+- consultancy retainers and time-and-materials invoicing;
+- SaaS plans, seats, metered usage, subscriptions, invoices, and payments;
+- employees, leave requests, vendors, purchase orders, and dashboards;
+- delivery-finance-governance portfolio geometry;
+- provider-neutral billing with optional Stripe Checkout and webhook adapters;
+- SQLite development mode and PostgreSQL production mode;
+- Docker Compose and Cloud Run deployment workflows.
+
+Local deployment:
+
+```bash
+cp .env.saas.example .env.saas
+docker compose --env-file .env.saas -f docker-compose.saas.yml up --build
+```
+
+Administration:
+
+```bash
+drmoagi-saas init-db
+drmoagi-saas bootstrap \
+  --company 'Dr Moagi Software Consultancy' \
+  --slug dr-moagi \
+  --legal-name 'Dr Moagi Software Consultancy (Pty) Ltd' \
+  --admin-name 'Platform Administrator' \
+  --admin-email admin@example.com \
+  --password 'replace-with-a-strong-password'
+drmoagi-saas serve --host 127.0.0.1 --port 8080
+```
+
+Core SaaS endpoints include `/v1/auth/token`, `/v1/clients`, `/v1/engagements`, `/v1/time-entries`, `/v1/expenses`, `/v1/billing/usage`, `/v1/invoices/consultancy`, `/v1/invoices/platform`, `/v1/payments`, `/v1/corporate/employees`, `/v1/purchase-orders`, and `/v1/dashboard`.
+
+See `docs/DR_MOAGI_CONSULTANCY_CLOUD_SAAS.md` for the mathematical model, billing equations, security architecture, and deployment gates.
+
 ## CLI
 
 ```bash
@@ -121,6 +160,7 @@ Set `JARVISX_API_TOKEN` to require `Authorization: Bearer <token>`.
 - per-request isolated service execution
 - sparse `8 ** 30` virtual addressing
 - sparse trilinear 3D routing with at most eight nodes per observation
+- tenant-scoped SaaS persistence and billing idempotency
 
 The 30 dimensions are virtual computational axes. `FIELD30` is a bounded software coupled-field operator, not a claim of literal 30-dimensional Maxwell physics.
 

@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-drmoagi}
+      POSTGRES_USER: ${POSTGRES_USER:-drmoagi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - drmoagi_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-drmoagi} -d ${POSTGRES_DB:-drmoagi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.saas
+    environment:
+      DM_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-drmoagi}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-drmoagi}
+      DM_TOKEN_SECRET: ${DM_TOKEN_SECRET:?set DM_TOKEN_SECRET}
+      DM_BOOTSTRAP_TOKEN: ${DM_BOOTSTRAP_TOKEN:?set DM_BOOTSTRAP_TOKEN}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    ports:
+      - "${SAAS_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  drmoagi_pg:
