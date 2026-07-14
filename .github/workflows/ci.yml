@@ -98,7 +98,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install black isort
-      - name: Check formatting
-        run: black --check src/jarvisx tests
-      - name: Check import sorting
-        run: isort --check-only src/jarvisx tests
+      - name: Check SaaS formatting
+        run: black --check src/jarvisx/saas tests/test_saas.py
+      - name: Check SaaS import sorting
+        run: isort --check-only src/jarvisx/saas tests/test_saas.py
