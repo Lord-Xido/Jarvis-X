@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: drmoagi
+      POSTGRES_USER: drmoagi
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - drmoagi_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drmoagi -d drmoagi"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.saas
+    environment:
+      DM_DATABASE_URL: postgresql+psycopg2://drmoagi:change-me@db:5432/drmoagi
+      DM_TOKEN_SECRET: replace-with-at-least-32-random-characters
+      DM_BOOTSTRAP_TOKEN: replace-bootstrap-token
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  drmoagi_pg:
