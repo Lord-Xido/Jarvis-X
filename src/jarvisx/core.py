@@ -9,6 +9,7 @@ from .sandbox import Sandbox
 from .debugger import Debugger
 from .tracer import Tracer
 from .aed import MM3DAEDEngine
+from .aape import JXAAPEEngine
 
 
 class CodexVM:
@@ -24,6 +25,7 @@ class CodexVM:
         self.debugger = Debugger(self)
         self.tracer = Tracer()
         self.aed = MM3DAEDEngine()
+        self.aape = JXAAPEEngine()
         self.program = []
         self.cycles = 0
         self.running = True
@@ -40,6 +42,27 @@ class CodexVM:
             memory=memory,
             intent=intent,
             constraints=constraints,
+        )
+
+    def aape_cycle(
+        self,
+        embeddings,
+        *,
+        intent_mask=None,
+        lambda_mask=None,
+        quality_signal=1,
+        lambda_tag=b"lambda-default",
+        max_tokens=None,
+    ):
+        """Execute one JX-AAPE Boolean-topology cycle and commit its front buffer."""
+
+        return self.aape.cycle(
+            embeddings,
+            intent_mask=intent_mask,
+            lambda_mask=lambda_mask,
+            quality_signal=quality_signal,
+            lambda_tag=lambda_tag,
+            max_tokens=max_tokens,
         )
 
     def step(self):
