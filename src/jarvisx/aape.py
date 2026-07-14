@@ -1,7 +1,7 @@
 """Bit-packed topological coding engine for Jarvis-X.
 
 JX-AAPE-Ω evolves a Boolean 3-D toroidal lattice and extracts symbolic tokens
-from the resulting topology. The state belongs to F_2^N and is stored as
+from the resulting topology.  The state belongs to F_2^N and is stored as
 N/64 independent 64-bit words; no F_(2^64) field arithmetic is implied.
 """
 
@@ -10,6 +10,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 from typing import Iterable, Optional, Sequence, Tuple
+
+
+_INT_BIT_COUNT = getattr(int, "bit_count", None)
+
+
+def _popcount(value: int) -> int:
+    """Return Hamming weight on every supported Python version (3.8+)."""
+
+    if _INT_BIT_COUNT is not None:
+        return _INT_BIT_COUNT(value)
+    return bin(value).count("1")
 
 
 DEFAULT_PYTHON_VOCABULARY: Tuple[str, ...] = (
@@ -99,7 +110,7 @@ class BitLattice:
 
     @property
     def active_count(self) -> int:
-        return self.bits.bit_count()
+        return _popcount(self.bits)
 
     @property
     def density(self) -> float:
@@ -251,7 +262,7 @@ class JXAAPEEngine:
                 raise ValueError("embeddings must be unsigned 16-bit integers")
             key = self._feedback_key(index, depth)
             mixed = value ^ key
-            if value > self.config.semantic_threshold and (mixed.bit_count() & 1):
+            if value > self.config.semantic_threshold and (_popcount(mixed) & 1):
                 site = self._splitmix64((index << 16) ^ mixed ^ (depth << 56))
                 bits |= 1 << (site % self._topology.voxel_count)
         return BitLattice(self.config.side, bits)
@@ -327,7 +338,7 @@ class JXAAPEEngine:
         """Apply κ[t+1]=clip(κ[t]+(-1)^q, κ_min, κ_max).
 
         Convention: q=1 requests stronger coupling (decrement κ); q=0 requests
-        weaker coupling (increment κ). This is a control convention, not a proof
+        weaker coupling (increment κ).  This is a control convention, not a proof
         that parity density is monotone in κ.
         """
 
