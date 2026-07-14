@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
 
 from .events import CausalEventLedger
-from .policy import AuthorityWitness, CommitPolicyEngine, CommitRequest
+from .policy import CommitPolicyEngine, CommitRequest
 
 
 def _fingerprint(value: object) -> str:
@@ -67,15 +67,11 @@ class WorkflowRun:
     compensated: List[str] = field(default_factory=list)
     failed_step: Optional[str] = None
     outputs: Dict[str, object] = field(default_factory=dict)
-    idempotency: Set[str] = field(default_factory=set)
+    idempotency: Dict[Tuple[str, str], object] = field(default_factory=dict)
 
 
 class DurableOrchestrator:
-    def __init__(
-        self,
-        ledger: CausalEventLedger,
-        policy: CommitPolicyEngine,
-    ) -> None:
+    def __init__(self, ledger: CausalEventLedger, policy: CommitPolicyEngine) -> None:
         self.ledger = ledger
         self.policy = policy
         self._runs: Dict[str, WorkflowRun] = {}
@@ -124,7 +120,7 @@ class DurableOrchestrator:
         run_id: str,
         step_id: str,
         *,
-        witness: AuthorityWitness,
+        witness_token: str,
         bindings: Dict[str, object],
         approvals: Iterable[str],
         handler: Callable[[WorkflowStep, Dict[str, object]], object],
@@ -133,10 +129,12 @@ class DurableOrchestrator:
         run = self._runs[run_id]
         if run.status != "running":
             raise RuntimeError("workflow is not running")
-        if idempotency_key in run.idempotency:
-            return run.outputs[step_id]
+        scoped_key = (step_id, idempotency_key)
+        if scoped_key in run.idempotency:
+            return run.idempotency[scoped_key]
         step = next(
-            (item for item in run.definition.steps if item.step_id == step_id), None
+            (item for item in run.definition.steps if item.step_id == step_id),
+            None,
         )
         if step is None or step not in self.ready_steps(run):
             raise RuntimeError("step is not ready")
@@ -152,9 +150,9 @@ class DurableOrchestrator:
             risk=step.risk,
             required_roles=step.required_roles,
             required_approvals=step.required_approvals,
-            approvals=tuple(approvals),
+            approval_tokens=tuple(approvals),
         )
-        decision = self.policy.decide(request, witness)
+        decision = self.policy.decide(request, witness_token)
         if not decision.allowed:
             self.ledger.append(
                 tenant_id=run.tenant_id,
@@ -166,7 +164,7 @@ class DurableOrchestrator:
                     "proof_hash": decision.proof_hash,
                 },
                 actor=run.subject,
-                causation_id=witness.witness_id,
+                causation_id=decision.witness_id,
                 expected_version=run.state_version,
             )
             run.state_version = self.ledger.version(run.tenant_id)
@@ -182,14 +180,14 @@ class DurableOrchestrator:
                 event_type="workflow.step_failed",
                 payload={"step_id": step.step_id, "error": type(exc).__name__},
                 actor=run.subject,
-                causation_id=witness.witness_id,
+                causation_id=decision.witness_id,
                 expected_version=run.state_version,
             )
             run.state_version = self.ledger.version(run.tenant_id)
             raise
         run.completed.append(step.step_id)
         run.outputs[step.step_id] = output
-        run.idempotency.add(idempotency_key)
+        run.idempotency[scoped_key] = output
         self.ledger.append(
             tenant_id=run.tenant_id,
             stream="workflow:" + run.run_id,
@@ -198,10 +196,11 @@ class DurableOrchestrator:
                 "step_id": step.step_id,
                 "output_hash": _fingerprint(output),
                 "proof_hash": decision.proof_hash,
+                "approval_ids": list(decision.approval_ids),
                 "idempotency_key": idempotency_key,
             },
             actor=run.subject,
-            causation_id=witness.witness_id,
+            causation_id=decision.witness_id,
             expected_version=run.state_version,
         )
         run.state_version = self.ledger.version(run.tenant_id)
