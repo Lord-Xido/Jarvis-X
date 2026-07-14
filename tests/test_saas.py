@@ -2,12 +2,13 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import select
+
 from jarvisx.saas.billing import BillingLine, calculate_totals, subscription_lines
 from jarvisx.saas.db import Database, Invoice, InvoiceLine, UsageEvent
 from jarvisx.saas.geometry import engagement_point, enterprise_centroid
 from jarvisx.saas.security import Principal, TokenService
 from jarvisx.saas.service import ConsultancyService
-from sqlalchemy import select
 
 
 def make_service(tmp_path):
