@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from dataclasses import asdict
 from typing import Dict, List, Optional
 
@@ -10,18 +11,27 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from .control import ActionProposal, AutonomicEnterpriseController
-from .policy import AuthorityWitness
+from .policy import CommitPolicyEngine
 from .twin import EnterpriseState, Scenario
+
+
+def _controller() -> AutonomicEnterpriseController:
+    configured = os.getenv("DM_AUTONOMY_SIGNING_KEY")
+    signing_key = configured if configured else secrets.token_bytes(32)
+    return AutonomicEnterpriseController(
+        policy=CommitPolicyEngine(signing_key=signing_key)
+    )
+
 
 app = FastAPI(
     title="Dr Moagi Autonomic Enterprise OS",
-    version="2.0.0-experimental",
+    version="2.1.0-experimental",
     description=(
-        "Proof-carrying digital-twin and commit-time-authorized enterprise "
+        "Signed-authority digital-twin and commit-time-authorized enterprise "
         "control plane."
     ),
 )
-controller = AutonomicEnterpriseController()
+controller = _controller()
 proposals: Dict[str, ActionProposal] = {}
 
 
@@ -34,8 +44,31 @@ def authorize_service(
         return
     if not expected:
         raise HTTPException(status_code=503, detail="autonomy token is not configured")
-    if x_autonomy_token != expected:
+    if not secrets.compare_digest(x_autonomy_token or "", expected):
         raise HTTPException(status_code=401, detail="invalid autonomy token")
+
+
+def authorize_issuer(
+    x_autonomy_issuer_token: Optional[str] = Header(default=None),
+) -> None:
+    insecure = os.getenv("DM_AUTONOMY_ALLOW_INSECURE", "0") == "1"
+    if insecure:
+        return
+    expected = os.getenv("DM_AUTONOMY_ISSUER_TOKEN", "")
+    service_token = os.getenv("DM_AUTONOMY_TOKEN", "")
+    signing_key = os.getenv("DM_AUTONOMY_SIGNING_KEY", "")
+    if not expected or not signing_key:
+        raise HTTPException(
+            status_code=503,
+            detail="authority issuer and signing key are not configured",
+        )
+    if expected == service_token:
+        raise HTTPException(
+            status_code=503,
+            detail="issuer token must be distinct from the service token",
+        )
+    if not secrets.compare_digest(x_autonomy_issuer_token or "", expected):
+        raise HTTPException(status_code=401, detail="invalid authority issuer token")
 
 
 class StateRequest(BaseModel):
@@ -55,10 +88,22 @@ class StateRequest(BaseModel):
     approval_epoch: int = 0
 
 
+class WitnessIssueRequest(BaseModel):
+    proposal_id: str
+    roles: List[str] = Field(default_factory=list)
+    ttl_seconds: int = Field(default=300, ge=1, le=3600)
+
+
+class ApprovalIssueRequest(BaseModel):
+    proposal_id: str
+    approver: str
+    ttl_seconds: int = Field(default=300, ge=1, le=3600)
+
+
 class CommitRequestModel(BaseModel):
     proposal_id: str
-    witness: dict
-    approvals: List[str] = Field(default_factory=list)
+    witness_token: str
+    approval_tokens: List[str] = Field(default_factory=list)
 
 
 @app.get("/health")
@@ -98,10 +143,45 @@ def create_proposals(request: StateRequest):
             "commit_request": {
                 **item.commit_request.__dict__,
                 "required_roles": sorted(item.commit_request.required_roles),
+                "approval_tokens": [],
             },
         }
         for item in ranked
     ]
+
+
+@app.post(
+    "/v2/autonomy/authority/witnesses",
+    dependencies=[Depends(authorize_issuer)],
+)
+def issue_witness(request: WitnessIssueRequest):
+    proposal = proposals.get(request.proposal_id)
+    if proposal is None:
+        raise HTTPException(status_code=404, detail="proposal not found")
+    return {
+        "witness_token": controller.policy.issue_witness(
+            proposal.commit_request,
+            roles=request.roles,
+            ttl_seconds=request.ttl_seconds,
+        )
+    }
+
+
+@app.post(
+    "/v2/autonomy/authority/approvals",
+    dependencies=[Depends(authorize_issuer)],
+)
+def issue_approval(request: ApprovalIssueRequest):
+    proposal = proposals.get(request.proposal_id)
+    if proposal is None:
+        raise HTTPException(status_code=404, detail="proposal not found")
+    return {
+        "approval_token": controller.policy.issue_approval(
+            proposal.commit_request,
+            approver=request.approver,
+            ttl_seconds=request.ttl_seconds,
+        )
+    }
 
 
 @app.post("/v2/autonomy/commit", dependencies=[Depends(authorize_service)])
@@ -109,11 +189,12 @@ def commit(request: CommitRequestModel):
     proposal = proposals.get(request.proposal_id)
     if proposal is None:
         raise HTTPException(status_code=404, detail="proposal not found")
-    witness_data = dict(request.witness)
-    witness_data["roles"] = frozenset(witness_data.get("roles", []))
-    witness = AuthorityWitness(**witness_data)
     try:
-        event_id = controller.commit(proposal, witness, approvals=request.approvals)
+        event_id = controller.commit(
+            proposal,
+            request.witness_token,
+            approvals=request.approval_tokens,
+        )
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     return {
