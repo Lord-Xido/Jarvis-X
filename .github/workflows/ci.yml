@@ -4,7 +4,6 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
 
 permissions:
   contents: read
@@ -60,6 +59,7 @@ jobs:
           - tests/test_ann30d_safe.py
           - tests/test_abstraction3d.py
           - tests/test_ledger.py
+          - tests/test_saas.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -100,7 +100,5 @@ jobs:
       - run: pip install black isort
       - name: Check formatting
         run: black --check src/jarvisx tests
-        continue-on-error: true
       - name: Check import sorting
         run: isort --check-only src/jarvisx tests
-        continue-on-error: true
