@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvisx"
-version = "0.2.0"
-description = "Jarvis-X deterministic VM with a unified sparse 30D virtual ANN processor"
+version = "0.3.0"
+description = "Jarvis-X deterministic VM with neural runtimes and a multi-tenant consultancy SaaS enterprise"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [{name = "Lord-Xido"}]
-keywords = ["assembly", "interpreter", "virtual-machine", "ann", "30d"]
+keywords = ["assembly", "interpreter", "virtual-machine", "ann", "30d", "saas", "billing", "multi-tenant"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -26,9 +26,13 @@ classifiers = [
 dependencies = [
     "uvicorn>=0.23.0",
     "fastapi>=0.100.0",
+    "sqlalchemy>=2.0,<2.1",
 ]
 
 [project.optional-dependencies]
+postgres = [
+    "psycopg2-binary>=2.9,<3",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -48,6 +52,7 @@ Issues = "https://github.com/Lord-Xido/Jarvis-X/issues"
 
 [project.scripts]
 jarvisx = "jarvisx.cli:main"
+drmoagi-saas = "jarvisx.saas.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
