@@ -19,6 +19,17 @@ PROJECT30
 DECODE30
 HALT30"""
 
+ABSTRACTION3D_SOURCE = """LOAD3D
+ABSTRACT3D
+ROUTE3D
+ATTEND3D
+PREDICT3D
+COMPARE3D
+LEARN3D
+PROJECT3D
+DECODE3D
+HALT3D"""
+
 
 def _load_vector(value):
     candidate = Path(value)
@@ -42,6 +53,13 @@ def build_parser():
     ann = sub.add_parser("ann30d", help="run the unified 30D ANN pipeline")
     ann.add_argument("input", help="JSON array or path to a JSON array")
     ann.add_argument("--target", type=float, default=0.0)
+
+    abstraction = sub.add_parser(
+        "abstract3d",
+        help="run the sparse 3D mathematical abstraction ANN core",
+    )
+    abstraction.add_argument("input", help="JSON array or path to a JSON array")
+    abstraction.add_argument("--target", type=float, default=0.0)
 
     api = sub.add_parser("api")
     api.add_argument("--host", default="127.0.0.1")
@@ -68,6 +86,11 @@ def main(argv=None):
         print(json.dumps(vm.run(), indent=2, sort_keys=True))
     elif args.command == "ann30d":
         bytecode = Assembler().assemble(Parser().parse(ANN30_SOURCE))
+        vm = CodexVM()
+        vm.load(bytecode, ann_input=_load_vector(args.input), ann_target=args.target)
+        print(json.dumps(vm.run(), indent=2, sort_keys=True))
+    elif args.command == "abstract3d":
+        bytecode = Assembler().assemble(Parser().parse(ABSTRACTION3D_SOURCE))
         vm = CodexVM()
         vm.load(bytecode, ann_input=_load_vector(args.input), ann_target=args.target)
         print(json.dumps(vm.run(), indent=2, sort_keys=True))
