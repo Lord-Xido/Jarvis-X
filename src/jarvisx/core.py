@@ -58,10 +58,20 @@ class CodexVM:
             self.step()
 
     def cognitive_cycle(self, values):
-        """Execute one transactional hierarchical intelligence cycle.
+        """Execute one atomic hierarchical intelligence transaction.
 
-        The cycle quantizes into Q3, condenses through the hierarchy, predicts,
-        computes the residual, updates cumulative Omega memory, applies Lambda
-        constraints, decodes, and atomically commits or rolls back.
+        Kernel state, journal state, and VM registers are restored together if
+        the register projection fails after the kernel has accepted a candidate.
         """
-        return self.cognitive_bridge.cycle(values)
+        state_before = self.cognitive.state
+        journal_length = len(self.cognitive.journal)
+        registers_before = self.regs.snapshot()
+
+        try:
+            return self.cognitive_bridge.cycle(values)
+        except Exception:
+            self.cognitive.state = state_before
+            del self.cognitive.journal[journal_length:]
+            for name, value in registers_before.items():
+                self.regs[name] = value
+            raise
