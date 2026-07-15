@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class MockBrowserEngine implements BrowserEngine {
     private final ExecutorService tasks = Executors.newVirtualThreadPerTaskExecutor();
     private final AtomicBoolean healthy = new AtomicBoolean(true);
+    private final Map<UUID, CompletableFuture<CapabilityResolution>> capabilityResolutions =
+            new ConcurrentHashMap<>();
 
     @Override public String id() { return "mock-semantic"; }
     @Override public String displayName() { return "Deterministic Semantic Engine"; }
@@ -40,7 +42,13 @@ public final class MockBrowserEngine implements BrowserEngine {
 
     @Override
     public EngineSession createSession(SessionConfiguration configuration) {
+        capabilityResolutions.put(configuration.sessionId(), new CompletableFuture<>());
         return new Session(configuration);
+    }
+
+    /** Test hook proving that a renderer request receives an explicit kernel decision. */
+    public CompletionStage<CapabilityResolution> capabilityResolution(UUID sessionId) {
+        return capabilityResolutions.computeIfAbsent(sessionId, ignored -> new CompletableFuture<>());
     }
 
     @Override public boolean healthy() { return healthy.get(); }
@@ -106,8 +114,20 @@ public final class MockBrowserEngine implements BrowserEngine {
                     throw new IllegalArgumentException("Node does not support " + action);
                 }
                 events.submit(new Event.Status("Executed " + action + " on " + node.accessibleName()));
+
+                if (action == Action.FOCUS && nodeId == 5) {
+                    events.submit(new Event.CapabilityRequested(
+                            UUID.randomUUID(),
+                            Capability.GEOLOCATION,
+                            origin,
+                            "runtime telemetry requests a deterministic location grant"
+                    ));
+                    return;
+                }
+
                 if (action == Action.CLICK && nodeId == 4) {
-                    navigate(URI.create("mock://omega/action?source=semantic-node-4")).toCompletableFuture().join();
+                    navigate(URI.create("mock://omega/action?source=semantic-node-4"))
+                            .toCompletableFuture().join();
                 } else {
                     long frame = frameSequence.incrementAndGet();
                     snapshot = buildSnapshot(current, revision.incrementAndGet(), frame);
@@ -116,6 +136,23 @@ public final class MockBrowserEngine implements BrowserEngine {
                             configuration.viewportWidth(), configuration.viewportHeight())));
                 }
             }, tasks);
+        }
+
+        @Override
+        public CompletionStage<Void> resolveCapability(CapabilityResolution resolution) {
+            if (!resolution.requestId().equals(resolution.requestId())) {
+                return CompletableFuture.failedFuture(
+                        new IllegalArgumentException("Capability resolution request id mismatch")
+                );
+            }
+            capabilityResolutions
+                    .computeIfAbsent(configuration.sessionId(), ignored -> new CompletableFuture<>())
+                    .complete(resolution);
+            events.submit(new Event.Status(
+                    "Capability " + resolution.capability() + " "
+                            + (resolution.granted() ? "granted" : "denied")
+            ));
+            return CompletableFuture.completedFuture(null);
         }
 
         @Override public CompletionStage<Snapshot> snapshot() {
@@ -147,7 +184,6 @@ public final class MockBrowserEngine implements BrowserEngine {
     }
 
     private static Snapshot buildSnapshot(URI uri, long revision, long frameSequence) {
-        String host = uri.getHost() == null ? uri.getScheme() : uri.getHost();
         List<Node> nodes = List.of(
                 new Node(0, -1, "document", "Document", new Rect(0, 0, 1200, 760),
                         Transform3D.identity(), Map.of("uri", uri.toString()), Set.of(),
