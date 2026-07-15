@@ -16,24 +16,39 @@ payload
 mac
 ```
 
+Every state-changing command carries one kernel-issued operation context:
+
+```text
+transactionId
+parentRevision
+deadline
+```
+
+The same `transactionId` is returned on every navigation, status, frame, and
+semantic callback caused by that operation. A committed document callback also
+carries `documentRevision`; callbacks emitted before commit use no committed
+revision.
+
 Required messages:
 
 ```text
 HELLO(engineId, engineVersion, capabilities, protocolVersion)
 CREATE_SESSION(configuration)
-NAVIGATE(uri, transactionId, parentRevision)
-RELOAD(transactionId, parentRevision)
-STOP(controlTransactionId, observedRevision)
-STOP_ACK(controlTransactionId, cancelledOperationId)
-SEMANTIC_ACTION(nodeId, action, arguments, transactionId, parentRevision)
-FRAME_NATIVE(handleType, handle, dimensions, damage)
-FRAME_CPU(pixelFormat, dimensions, damage, bytes)
-SEMANTIC_SNAPSHOT(revision, frameSequence, nodes)
+RECOVER_SESSION(configuration, currentUri, currentOrigin, documentRevision)
+NAVIGATE(uri, transactionId, parentRevision, deadline)
+RELOAD(transactionId, parentRevision, deadline)
+STOP(controlTransactionId, observedRevision, deadline)
+STOP_ACK(controlTransactionId, cancelledTransactionId)
+SEMANTIC_ACTION(nodeId, action, arguments, transactionId, parentRevision, deadline)
+FRAME_NATIVE(transactionId, documentRevision, handleType, handle, dimensions, damage)
+FRAME_CPU(transactionId, documentRevision, pixelFormat, dimensions, damage, bytes)
+SEMANTIC_SNAPSHOT(transactionId, revision, frameSequence, nodes)
 CAPABILITY_REQUEST(requestId, origin, capability, rationale)
 CAPABILITY_RESOLUTION(requestId, capability, origin, granted, tokenId, detail)
-NAVIGATION_STARTED(uri, operationId)
-NAVIGATION_COMMITTED(uri, origin, title, operationId)
-NAVIGATION_FAILED(uri, reason, operationId)
+NAVIGATION_STARTED(uri, transactionId)
+NAVIGATION_COMMITTED(uri, origin, title, transactionId, documentRevision)
+NAVIGATION_FAILED(uri, reason, transactionId)
+STATUS(transactionId, documentRevision, message)
 HEARTBEAT(monotonicTime)
 CRASH(reason, recoverable)
 CLOSE_SESSION
@@ -49,19 +64,26 @@ Rules:
 5. Capability requests whose origin differs from the current session origin are
    denied.
 6. State commands for one session are processed in submission order and carry
-   the parent session revision observed by the kernel.
-7. A successful state command advances the session revision once; rejected,
+   the transaction ID, parent session revision, and deadline issued by the kernel.
+7. Every callback caused by a state command carries the same transaction ID.
+8. A successful state command advances the session revision once; rejected,
    failed, and cancelled state commands do not advance it.
-8. `STOP` is a journaled control-lane command. The host must process it while a
+9. `STOP` is a journaled control-lane command. The host must process it while a
    state command is in flight and must not wait for that command to finish.
-9. Successful `STOP` acknowledgement does not advance document revision.
-10. Protocol negotiation must complete before `CREATE_SESSION`; a version
+10. Successful `STOP` acknowledgement does not advance document revision and
+    identifies the transaction it cancelled.
+11. Protocol negotiation must complete before `CREATE_SESSION`; a version
     mismatch closes the transport and tears down the supervised process.
-11. Hosts advertise only capabilities verified by the packaged CEF
+12. After a supervised restart, the adapter must negotiate again, verify that
+    host identity and capability declarations have not changed, send
+    `RECOVER_SESSION` for every live session, and remain unhealthy until all
+    recoveries succeed.
+13. A stale transport generation cannot publish callbacks after replacement.
+14. Hosts advertise only capabilities verified by the packaged CEF
     configuration. Unknown or unverified capabilities default to false.
-12. Frame handles carry explicit lifetime and release messages.
-13. Message sizes and node counts are bounded before allocation.
-14. Unknown message types close the channel.
-15. The host process is disposable and restartable by `ProcessSupervisor`.
-16. Engine stdout/stderr must be drained or redirected so renderer logging cannot
+15. Frame handles carry explicit lifetime and release messages.
+16. Message sizes and node counts are bounded before allocation.
+17. Unknown message types close the channel.
+18. The host process is disposable and restartable by `ProcessSupervisor`.
+19. Engine stdout/stderr must be drained or redirected so renderer logging cannot
     block protocol progress.
