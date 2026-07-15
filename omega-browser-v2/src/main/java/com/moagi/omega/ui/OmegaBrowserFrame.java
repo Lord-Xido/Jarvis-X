@@ -137,9 +137,7 @@ public final class OmegaBrowserFrame extends JFrame {
 
     private void subscribe() {
         kernel.events().subscribe(new Flow.Subscriber<>() {
-            private Flow.Subscription subscription;
             @Override public void onSubscribe(Flow.Subscription subscription) {
-                this.subscription = subscription;
                 subscription.request(Long.MAX_VALUE);
             }
             @Override public void onNext(BrowserEvent item) {
@@ -167,6 +165,9 @@ public final class OmegaBrowserFrame extends JFrame {
             status.setText(changed.decision());
         } else if (event instanceof EngineEvent engineEvent && engineEvent.sessionId().equals(sessionId)) {
             Event payload = engineEvent.event();
+            if (payload instanceof Event.Correlated correlated) {
+                payload = correlated.event();
+            }
             if (payload instanceof Event.Status message) {
                 status.setText(message.message());
             } else if (payload instanceof Event.NavigationStarted started) {
