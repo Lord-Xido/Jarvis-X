@@ -95,6 +95,7 @@ public final class KernelSelfTest {
         }
 
         verifySupervisorLaunchFailureCleanup();
+        JcefAdapterSelfTest.run();
         System.out.println("KernelSelfTest: PASS");
     }
 
