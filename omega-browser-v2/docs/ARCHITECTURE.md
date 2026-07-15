@@ -8,7 +8,9 @@ separate replaceable components and should run in operating-system sandboxes.
 ```text
 User intent
    ↓
-BrowserCommand
+Per-session serial command chain
+   ↓
+BrowserCommand + session parent revision
    ↓
 Transaction journal: CREATED → VALIDATING → AUTHORIZED → EXECUTING
    ↓
@@ -21,19 +23,41 @@ Semantic snapshot + frame surface + engine events
 Transaction journal: COMMITTED / REJECTED / FAILED
 ```
 
+Commands submitted to different sessions may execute concurrently. Commands
+inside one session are appended to one completion chain, so engine state cannot
+be mutated out of submission order.
+
 ## Implemented in this alpha
 
 - Engine-neutral Java interfaces
 - Capability-scored engine selection
-- Origin-bound capability tokens
+- Origin-bound, time-bound capability tokens
+- Request-correlated engine capability decisions
+- Single-use capability consumption before authority is released
+- Session-local ordered transaction execution and revision chains
 - Append-only transaction state journal
 - Browser command validation and commit/failure semantics
 - Engine event forwarding through Java Flow publishers
 - CPU and native frame-surface contracts
 - Normalized semantic-scene snapshots
-- Process-supervisor primitive for external engine hosts
+- Restartable process supervision with continuous output draining
 - Deterministic mock engine and spatial inspector UI
-- Self-test covering commit, capability grant and rejection paths
+- Self-test covering ordering, revision isolation, capability consumption,
+  rejection, journal persistence, viewport validation, and launch cleanup
+
+## Capability mediation
+
+A renderer cannot grant itself authority. It emits a request containing a unique
+`requestId`, active origin, capability, and rationale. The kernel then:
+
+1. verifies that the request origin equals the session's current origin;
+2. asks the central `CapabilityBroker` for a scoped token;
+3. validates and consumes a single-use token;
+4. returns an explicit granted or denied `CapabilityResolution` to the engine;
+5. publishes the decision for audit and UI presentation.
+
+Unknown request ids and mismatched origins are denied. An adapter must not begin
+a privileged operation until the matching resolution has been received.
 
 ## Native engine integration contracts
 
@@ -59,11 +83,21 @@ Valid(command)
 AND Authorized(origin, capability)
 AND SessionAlive
 AND EngineHealthy
-AND ParentRevisionCurrent
+AND ParentRevision == CurrentSessionRevision
+AND PreviousSessionCommandCompleted
 ```
 
-The demonstrator currently serializes commands per transaction execution but
-has not yet implemented optimistic revision conflict retries.
+A successful command advances its session revision exactly once. Rejected and
+failed commands do not advance it. Stale parent revisions are rejected rather
+than silently committed. Optimistic conflict retry is not yet implemented.
+
+## Process supervision invariant
+
+The supervisor owns one process identity per configured engine host. Initial
+launch failure removes the registration so a clean retry is possible. Combined
+stdout/stderr is continuously drained to prevent a native engine from blocking
+on a full operating-system pipe. Restart is bounded and cannot occur after the
+entry has been stopped or removed.
 
 ## Security non-claims
 
