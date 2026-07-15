@@ -63,13 +63,16 @@ public final class BrowserKernel implements AutoCloseable {
     }
 
     /**
-     * Enqueues a command onto the session's single transactional chain. Commands
-     * submitted to different sessions may execute concurrently; commands within
-     * one session are ordered exactly by submission.
+     * Enqueues state-mutating commands onto the session's single transactional
+     * chain. Stop is a journaled control-lane command so it can interrupt an
+     * in-flight engine operation rather than waiting behind it.
      */
     public CompletionStage<TransactionSnapshot> dispatch(UUID sessionId, BrowserCommand command) {
         Objects.requireNonNull(command, "command");
         KernelSession session = requireSession(sessionId);
+        if (command instanceof BrowserCommand.Stop) {
+            return dispatchControl(session, command);
+        }
         return session.enqueue(() -> {
             Origin origin = session.engineSession.currentOrigin();
             long parent = session.revision.get();
@@ -79,7 +82,41 @@ public final class BrowserKernel implements AutoCloseable {
         }, tasks);
     }
 
-    /** Returns a stage that completes when all currently queued session work is done. */
+    private CompletionStage<TransactionSnapshot> dispatchControl(
+            KernelSession session,
+            BrowserCommand command
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            Origin origin = session.engineSession.currentOrigin();
+            long parent = session.revision.get();
+            TransactionSnapshot created = journal.create(session.id, parent, command, origin);
+            events.submit(new TransactionChanged(session.id, created));
+            TransactionSnapshot current = transition(
+                    created, State.VALIDATING, -1, "validating control command"
+            );
+            try {
+                validate(session, command);
+                current = transition(current, State.AUTHORIZED, -1, "control policy authorized");
+                current = transition(current, State.EXECUTING, -1, "control execution started");
+                execute(session, command).toCompletableFuture().join();
+                return transition(
+                        current,
+                        State.COMMITTED,
+                        session.revision.get(),
+                        "control command committed without revision advance"
+                );
+            } catch (CompletionException ex) {
+                Throwable cause = ex.getCause() == null ? ex : ex.getCause();
+                return transition(current, State.FAILED, -1, cause.getMessage());
+            } catch (SecurityException | IllegalArgumentException ex) {
+                return transition(current, State.REJECTED, -1, ex.getMessage());
+            } catch (RuntimeException ex) {
+                return transition(current, State.FAILED, -1, ex.toString());
+            }
+        }, tasks);
+    }
+
+    /** Returns a stage that completes when all currently queued state work is done. */
     public CompletionStage<Void> awaitIdle(UUID sessionId) {
         return requireSession(sessionId).idle();
     }
