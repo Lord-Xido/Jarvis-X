@@ -8,6 +8,8 @@ from .reflex import ReflexEngine
 from .sandbox import Sandbox
 from .debugger import Debugger
 from .tracer import Tracer
+from .cognitive import CognitiveKernel, CognitiveVMBridge
+
 
 class CodexVM:
     def __init__(self):
@@ -21,6 +23,8 @@ class CodexVM:
         self.sandbox = Sandbox()
         self.debugger = Debugger(self)
         self.tracer = Tracer()
+        self.cognitive = CognitiveKernel()
+        self.cognitive_bridge = CognitiveVMBridge(self.regs, self.cognitive)
         self.program = []
         self.cycles = 0
         self.running = True
@@ -28,6 +32,7 @@ class CodexVM:
     def load(self, bytecode):
         self.program = bytecode
         self.regs["IP"] = 0
+        self.running = True
 
     def step(self):
         ip = self.regs["IP"]
@@ -51,3 +56,12 @@ class CodexVM:
     def run(self):
         while self.running:
             self.step()
+
+    def cognitive_cycle(self, values):
+        """Execute one transactional hierarchical intelligence cycle.
+
+        The cycle quantizes into Q3, condenses through the hierarchy, predicts,
+        computes the residual, updates cumulative Omega memory, applies Lambda
+        constraints, decodes, and atomically commits or rolls back.
+        """
+        return self.cognitive_bridge.cycle(values)
