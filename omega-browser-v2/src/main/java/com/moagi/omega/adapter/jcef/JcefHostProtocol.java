@@ -2,6 +2,7 @@ package com.moagi.omega.adapter.jcef;
 
 import com.moagi.omega.api.Capability;
 import com.moagi.omega.api.Engine.CapabilityResolution;
+import com.moagi.omega.api.Engine.OperationContext;
 import com.moagi.omega.api.Engine.SessionConfiguration;
 import com.moagi.omega.api.Origin;
 import com.moagi.omega.api.SemanticScene.Action;
@@ -47,6 +48,23 @@ public final class JcefHostProtocol {
         }
     }
 
+    /** State needed to rehydrate one live session after a supervised host restart. */
+    public record SessionRecovery(
+            SessionConfiguration configuration,
+            URI currentUri,
+            Origin currentOrigin,
+            long documentRevision
+    ) {
+        public SessionRecovery {
+            Objects.requireNonNull(configuration, "configuration");
+            Objects.requireNonNull(currentUri, "currentUri");
+            Objects.requireNonNull(currentOrigin, "currentOrigin");
+            if (documentRevision < 0) {
+                throw new IllegalArgumentException("documentRevision must be non-negative");
+            }
+        }
+    }
+
     public sealed interface HostEvent permits
             HostEvent.NavigationStarted,
             HostEvent.NavigationCommitted,
@@ -59,22 +77,58 @@ public final class JcefHostProtocol {
 
         UUID sessionId();
 
-        record NavigationStarted(UUID sessionId, URI uri) implements HostEvent {}
+        record NavigationStarted(
+                UUID sessionId,
+                UUID transactionId,
+                URI uri
+        ) implements HostEvent {}
 
         record NavigationCommitted(
                 UUID sessionId,
+                UUID transactionId,
+                long documentRevision,
                 URI uri,
                 Origin origin,
                 String title
+        ) implements HostEvent {
+            public NavigationCommitted {
+                if (documentRevision < 0) {
+                    throw new IllegalArgumentException("documentRevision must be non-negative");
+                }
+            }
+        }
+
+        record NavigationFailed(
+                UUID sessionId,
+                UUID transactionId,
+                URI uri,
+                String reason
         ) implements HostEvent {}
 
-        record NavigationFailed(UUID sessionId, URI uri, String reason) implements HostEvent {}
+        record FrameReady(
+                UUID sessionId,
+                UUID transactionId,
+                long documentRevision,
+                Frame frame
+        ) implements HostEvent {
+            public FrameReady {
+                if (documentRevision < 0) {
+                    throw new IllegalArgumentException("documentRevision must be non-negative");
+                }
+            }
+        }
 
-        record FrameReady(UUID sessionId, Frame frame) implements HostEvent {}
+        record SnapshotReady(
+                UUID sessionId,
+                UUID transactionId,
+                Snapshot snapshot
+        ) implements HostEvent {}
 
-        record SnapshotReady(UUID sessionId, Snapshot snapshot) implements HostEvent {}
-
-        record Status(UUID sessionId, String message) implements HostEvent {}
+        record Status(
+                UUID sessionId,
+                UUID transactionId,
+                String message
+        ) implements HostEvent {}
 
         record Crashed(UUID sessionId, String reason, boolean recoverable) implements HostEvent {}
 
@@ -104,14 +158,21 @@ public final class JcefHostProtocol {
 
         CompletionStage<Void> createSession(SessionConfiguration configuration);
 
-        CompletionStage<Void> navigate(UUID sessionId, URI uri);
+        CompletionStage<Void> recoverSession(SessionRecovery recovery);
 
-        CompletionStage<Void> reload(UUID sessionId);
+        CompletionStage<Void> navigate(
+                UUID sessionId,
+                OperationContext context,
+                URI uri
+        );
 
-        CompletionStage<Void> stop(UUID sessionId);
+        CompletionStage<Void> reload(UUID sessionId, OperationContext context);
+
+        CompletionStage<Void> stop(UUID sessionId, OperationContext context);
 
         CompletionStage<Void> execute(
                 UUID sessionId,
+                OperationContext context,
                 long nodeId,
                 Action action,
                 Map<String, String> arguments
