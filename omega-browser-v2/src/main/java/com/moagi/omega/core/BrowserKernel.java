@@ -10,9 +10,11 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 /**
  * Trusted browser kernel. It owns session identity, command authorization,
@@ -25,7 +27,6 @@ public final class BrowserKernel implements AutoCloseable {
     private final ExecutorService tasks = Executors.newVirtualThreadPerTaskExecutor();
     private final SubmissionPublisher<BrowserEvent> events = new SubmissionPublisher<>(tasks, 512);
     private final Map<UUID, KernelSession> sessions = new ConcurrentHashMap<>();
-    private final AtomicLong revision = new AtomicLong();
 
     public BrowserKernel(
             EngineSelector selector,
@@ -41,6 +42,11 @@ public final class BrowserKernel implements AutoCloseable {
     public TransactionJournal journal() { return journal; }
 
     public UUID openSession(boolean privateMode, int viewportWidth, int viewportHeight, URI initialUri) {
+        Objects.requireNonNull(initialUri, "initialUri");
+        if (viewportWidth <= 0 || viewportHeight <= 0) {
+            throw new IllegalArgumentException("Viewport dimensions must be positive");
+        }
+
         EngineSelector.Selection selection = selector.select(initialUri, privateMode);
         UUID id = UUID.randomUUID();
         SessionConfiguration configuration = new SessionConfiguration(
@@ -56,14 +62,26 @@ public final class BrowserKernel implements AutoCloseable {
         return id;
     }
 
+    /**
+     * Enqueues a command onto the session's single transactional chain. Commands
+     * submitted to different sessions may execute concurrently; commands within
+     * one session are ordered exactly by submission.
+     */
     public CompletionStage<TransactionSnapshot> dispatch(UUID sessionId, BrowserCommand command) {
+        Objects.requireNonNull(command, "command");
         KernelSession session = requireSession(sessionId);
-        Origin origin = session.engineSession.currentOrigin();
-        long parent = revision.get();
-        TransactionSnapshot created = journal.create(sessionId, parent, command, origin);
-        events.submit(new TransactionChanged(sessionId, created));
+        return session.enqueue(() -> {
+            Origin origin = session.engineSession.currentOrigin();
+            long parent = session.revision.get();
+            TransactionSnapshot created = journal.create(sessionId, parent, command, origin);
+            events.submit(new TransactionChanged(sessionId, created));
+            return executeTransaction(session, created, command);
+        }, tasks);
+    }
 
-        return CompletableFuture.supplyAsync(() -> executeTransaction(session, created, command), tasks);
+    /** Returns a stage that completes when all currently queued session work is done. */
+    public CompletionStage<Void> awaitIdle(UUID sessionId) {
+        return requireSession(sessionId).idle();
     }
 
     public CompletionStage<com.moagi.omega.api.SemanticScene.Snapshot> snapshot(UUID sessionId) {
@@ -73,6 +91,7 @@ public final class BrowserKernel implements AutoCloseable {
     public void closeSession(UUID sessionId) {
         KernelSession session = sessions.remove(sessionId);
         if (session == null) return;
+        session.closed = true;
         capabilityBroker.revokeSession(sessionId);
         session.engineSession.close();
         events.submit(new SessionChanged(sessionId, "CLOSED", session.engine.id()));
@@ -86,13 +105,25 @@ public final class BrowserKernel implements AutoCloseable {
         TransactionSnapshot current = transition(transaction, State.VALIDATING, -1, "validating command");
         try {
             validate(session, command);
+
+            long observedRevision = session.revision.get();
+            if (transaction.parentRevision() != observedRevision) {
+                throw new IllegalArgumentException(
+                        "Stale parent revision " + transaction.parentRevision()
+                                + "; current session revision is " + observedRevision
+                );
+            }
+
             current = transition(current, State.AUTHORIZED, -1, "policy authorized");
             current = transition(current, State.EXECUTING, -1, "engine execution started");
 
             CompletionStage<Void> operation = execute(session, command);
             operation.toCompletableFuture().join();
 
-            long committedRevision = revision.incrementAndGet();
+            long committedRevision = observedRevision + 1;
+            if (!session.revision.compareAndSet(observedRevision, committedRevision)) {
+                throw new IllegalArgumentException("Session revision changed during transaction execution");
+            }
             return transition(current, State.COMMITTED, committedRevision, "committed");
         } catch (CompletionException ex) {
             Throwable cause = ex.getCause() == null ? ex : ex.getCause();
@@ -105,6 +136,8 @@ public final class BrowserKernel implements AutoCloseable {
     }
 
     private void validate(KernelSession session, BrowserCommand command) {
+        if (session.closed) throw new SecurityException("Browser session is closed");
+
         if (command instanceof BrowserCommand.Navigate navigation) {
             String scheme = navigation.uri().getScheme();
             if (scheme == null || !session.engine.capabilities().schemes().contains(scheme.toLowerCase())) {
@@ -170,14 +203,7 @@ public final class BrowserKernel implements AutoCloseable {
             public void onNext(Event item) {
                 events.submit(new EngineEvent(session.id, item));
                 if (item instanceof Event.CapabilityRequested request) {
-                    var token = capabilityBroker.request(
-                            session.id, request.origin(), request.capability(), true, request.rationale()
-                    );
-                    events.submit(new CapabilityChanged(
-                            session.id,
-                            token.orElse(null),
-                            token.isPresent() ? "GRANTED " + request.capability() : "DENIED " + request.capability()
-                    ));
+                    resolveCapabilityRequest(session, request);
                 }
             }
 
@@ -188,6 +214,55 @@ public final class BrowserKernel implements AutoCloseable {
 
             @Override public void onComplete() {}
         });
+    }
+
+    private void resolveCapabilityRequest(KernelSession session, Event.CapabilityRequested request) {
+        Origin currentOrigin = session.engineSession.currentOrigin();
+        Optional<CapabilityToken> token = Optional.empty();
+        String detail;
+
+        if (session.closed) {
+            detail = "session closed";
+        } else if (!currentOrigin.equals(request.origin())) {
+            detail = "request origin does not match the active session origin";
+        } else {
+            token = capabilityBroker.request(
+                    session.id,
+                    request.origin(),
+                    request.capability(),
+                    true,
+                    request.rationale()
+            );
+            detail = token.isPresent() ? "broker approved" : "broker denied";
+        }
+
+        boolean granted = token.isPresent() && capabilityBroker.validateAndConsume(
+                token.get().tokenId(),
+                session.id,
+                request.origin(),
+                request.capability()
+        );
+        CapabilityToken grantedToken = granted ? token.get() : null;
+        CapabilityResolution resolution = new CapabilityResolution(
+                request.requestId(),
+                request.capability(),
+                request.origin(),
+                granted,
+                granted ? grantedToken.tokenId() : null,
+                granted ? detail : detail + "; no authority released"
+        );
+
+        session.engineSession.resolveCapability(resolution).whenComplete((ignored, error) -> {
+            if (error != null) {
+                events.submit(new EngineEvent(session.id,
+                        new Event.Status("Capability resolution delivery failed: " + error)));
+            }
+        });
+        events.submit(new CapabilityChanged(
+                session.id,
+                grantedToken,
+                granted ? "GRANTED " + request.capability() : "DENIED " + request.capability()
+        ));
     }
 
     private KernelSession requireSession(UUID id) {
@@ -209,13 +284,36 @@ public final class BrowserKernel implements AutoCloseable {
         final boolean privateMode;
         final BrowserEngine engine;
         final EngineSession engineSession;
+        final AtomicLong revision = new AtomicLong();
+        private CompletableFuture<Void> tail = CompletableFuture.completedFuture(null);
         volatile boolean spatialMode;
+        volatile boolean closed;
 
         KernelSession(UUID id, boolean privateMode, BrowserEngine engine, EngineSession engineSession) {
             this.id = id;
             this.privateMode = privateMode;
             this.engine = engine;
             this.engineSession = engineSession;
+        }
+
+        synchronized CompletionStage<TransactionSnapshot> enqueue(
+                Supplier<TransactionSnapshot> operation,
+                Executor executor
+        ) {
+            if (closed) {
+                return CompletableFuture.failedFuture(
+                        new IllegalArgumentException("Browser session is closed: " + id)
+                );
+            }
+            CompletableFuture<TransactionSnapshot> result = tail
+                    .handle((ignored, error) -> null)
+                    .thenApplyAsync(ignored -> operation.get(), executor);
+            tail = result.handle((ignored, error) -> null);
+            return result;
+        }
+
+        synchronized CompletionStage<Void> idle() {
+            return tail.thenApply(ignored -> null);
         }
     }
 }
