@@ -8,6 +8,7 @@ from jarvisx.cognitive import (
     CognitiveVMBridge,
     quantize_q3,
 )
+from jarvisx.core import CodexVM
 from jarvisx.registers import Registers
 
 
@@ -97,6 +98,34 @@ def test_vm_bridge_rejection_does_not_leak_candidate_registers():
     for name, value in before.items():
         if name != "Λ":
             assert after[name] == value
+
+
+def test_vm_rolls_back_kernel_and_registers_on_projection_failure():
+    class FailingRegisters(Registers):
+        def __init__(self):
+            super().__init__()
+            self.fail_once = False
+
+        def __setitem__(self, key, value):
+            if self.fail_once and key == "Ω":
+                self.fail_once = False
+                raise RuntimeError("simulated register failure")
+            super().__setitem__(key, value)
+
+    vm = CodexVM()
+    failing = FailingRegisters()
+    vm.regs = failing
+    vm.cognitive_bridge.registers = failing
+    before_state = vm.cognitive.snapshot()
+    before_registers = failing.snapshot()
+    failing.fail_once = True
+
+    with pytest.raises(RuntimeError, match="simulated register failure"):
+        vm.cognitive_cycle([3, 1, -1, -3])
+
+    assert vm.cognitive.snapshot() == before_state
+    assert vm.cognitive.journal == []
+    assert failing.snapshot() == before_registers
 
 
 def test_configuration_rejects_unbounded_update_ratios():
