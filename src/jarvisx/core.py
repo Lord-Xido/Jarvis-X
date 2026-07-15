@@ -12,7 +12,7 @@ from .cognitive import CognitiveKernel, CognitiveVMBridge
 
 
 class CodexVM:
-    def __init__(self):
+    def __init__(self, reflex_enabled=False):
         self.regs = Registers()
         self.mem = Memory()
         self.decoder = Decoder()
@@ -20,6 +20,7 @@ class CodexVM:
         self.ledger = PersistentLedger()
         self.ethics = LambdaShield()
         self.reflex = ReflexEngine()
+        self.reflex_enabled = bool(reflex_enabled)
         self.sandbox = Sandbox()
         self.debugger = Debugger(self)
         self.tracer = Tracer()
@@ -44,7 +45,8 @@ class CodexVM:
         cont = self.executor.execute(instr)
         self.ledger.log(self.regs.snapshot(), instr.opcode)
         self.tracer.record(instr, self.regs.snapshot())
-        self.reflex.stabilize(self.regs)
+        if self.reflex_enabled:
+            self.reflex.stabilize(self.regs)
 
         self.regs["IP"] += 1
         self.cycles += 1
@@ -56,6 +58,10 @@ class CodexVM:
     def run(self):
         while self.running:
             self.step()
+
+    def apply_reflex(self):
+        """Apply one explicit reflex-stabilisation step to the register bank."""
+        self.reflex.stabilize(self.regs)
 
     def cognitive_cycle(self, values):
         """Execute one atomic hierarchical intelligence transaction.
