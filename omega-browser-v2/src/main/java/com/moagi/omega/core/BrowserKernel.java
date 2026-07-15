@@ -8,6 +8,7 @@ import com.moagi.omega.core.TransactionJournal.TransactionSnapshot;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,6 +22,8 @@ import java.util.function.Supplier;
  * capability grants, transaction state and engine event forwarding.
  */
 public final class BrowserKernel implements AutoCloseable {
+    private static final long ENGINE_OPERATION_DEADLINE_SECONDS = 30;
+
     private final EngineSelector selector;
     private final CapabilityBroker capabilityBroker;
     private final TransactionJournal journal;
@@ -98,7 +101,7 @@ public final class BrowserKernel implements AutoCloseable {
                 validate(session, command);
                 current = transition(current, State.AUTHORIZED, -1, "control policy authorized");
                 current = transition(current, State.EXECUTING, -1, "control execution started");
-                execute(session, command).toCompletableFuture().join();
+                execute(session, created, command).toCompletableFuture().join();
                 return transition(
                         current,
                         State.COMMITTED,
@@ -154,7 +157,7 @@ public final class BrowserKernel implements AutoCloseable {
             current = transition(current, State.AUTHORIZED, -1, "policy authorized");
             current = transition(current, State.EXECUTING, -1, "engine execution started");
 
-            CompletionStage<Void> operation = execute(session, command);
+            CompletionStage<Void> operation = execute(session, transaction, command);
             operation.toCompletableFuture().join();
 
             long committedRevision = observedRevision + 1;
@@ -186,14 +189,28 @@ public final class BrowserKernel implements AutoCloseable {
         }
     }
 
-    private CompletionStage<Void> execute(KernelSession session, BrowserCommand command) {
+    private CompletionStage<Void> execute(
+            KernelSession session,
+            TransactionSnapshot transaction,
+            BrowserCommand command
+    ) {
+        OperationContext context = new OperationContext(
+                transaction.transactionId(),
+                transaction.parentRevision(),
+                Instant.now().plusSeconds(ENGINE_OPERATION_DEADLINE_SECONDS)
+        );
         if (command instanceof BrowserCommand.Navigate navigation) {
-            return session.engineSession.navigate(navigation.uri());
+            return session.engineSession.navigate(context, navigation.uri());
         }
-        if (command instanceof BrowserCommand.Reload) return session.engineSession.reload();
-        if (command instanceof BrowserCommand.Stop) return session.engineSession.stop();
+        if (command instanceof BrowserCommand.Reload) return session.engineSession.reload(context);
+        if (command instanceof BrowserCommand.Stop) return session.engineSession.stop(context);
         if (command instanceof BrowserCommand.SemanticAction action) {
-            return session.engineSession.execute(action.nodeId(), action.action(), action.arguments());
+            return session.engineSession.execute(
+                    context,
+                    action.nodeId(),
+                    action.action(),
+                    action.arguments()
+            );
         }
         if (command instanceof BrowserCommand.RequestCapability request) {
             Origin origin = session.engineSession.currentOrigin();
@@ -228,11 +245,8 @@ public final class BrowserKernel implements AutoCloseable {
 
     private void subscribe(KernelSession session) {
         session.engineSession.events().subscribe(new Flow.Subscriber<>() {
-            private Flow.Subscription subscription;
-
             @Override
             public void onSubscribe(Flow.Subscription subscription) {
-                this.subscription = subscription;
                 subscription.request(Long.MAX_VALUE);
             }
 
