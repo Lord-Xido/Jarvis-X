@@ -19,8 +19,6 @@ def _hamming_distance(left: int, right: int, bits: int) -> int:
 
 @dataclass(frozen=True)
 class ElectronicConfig:
-    """Physical assumptions used by the deterministic substrate model."""
-
     word_bits: int = 64
     supply_voltage_v: float = 0.90
     clock_hz: float = 1_000_000_000.0
@@ -79,9 +77,12 @@ class ElectronicTelemetry:
 
 
 class ElectronicSubstrate:
-    """Maps one VM instruction commit to an electronic state-transition trace."""
-
-    _OPCODE_NAMES = {0x01: "SET", 0x03: "ADD", 0x04: "SUB", 0x0A: "HALT"}
+    _OPCODE_NAMES = {
+        0x01: "SET", 0x02: "MOV", 0x03: "ADD", 0x04: "SUB",
+        0x05: "LOAD", 0x06: "STORE", 0x07: "CMP", 0x08: "JMP",
+        0x09: "JZ", 0x0A: "HALT", 0x0B: "JNZ", 0x0C: "MUL",
+        0x0D: "XOR", 0x0E: "AND", 0x0F: "OR",
+    }
 
     def __init__(self, config: Optional[ElectronicConfig] = None) -> None:
         self.config = config or ElectronicConfig()
@@ -99,13 +100,29 @@ class ElectronicSubstrate:
     def last(self) -> Optional[ElectronicTelemetry]:
         return self.trace[-1] if self.trace else None
 
+    def checkpoint(self) -> Dict[str, Any]:
+        return {
+            "cycle": self.cycle,
+            "junction_temp_c": self.junction_temp_c,
+            "cumulative_energy_j": self.cumulative_energy_j,
+            "previous_instruction_word": self._previous_instruction_word,
+            "trace_length": len(self.trace),
+        }
+
+    def restore(self, checkpoint: Mapping[str, Any]) -> None:
+        self.cycle = int(checkpoint["cycle"])
+        self.junction_temp_c = float(checkpoint["junction_temp_c"])
+        self.cumulative_energy_j = float(checkpoint["cumulative_energy_j"])
+        self._previous_instruction_word = int(checkpoint["previous_instruction_word"])
+        del self.trace[int(checkpoint["trace_length"]) :]
+
     def _instruction_word(self, instr: Any) -> int:
         return (
             (int(instr.opcode) << 56)
             | (int(getattr(instr, "dst", 0)) << 40)
             | (int(getattr(instr, "src1", 0)) << 32)
             | (int(getattr(instr, "src2", 0)) << 24)
-            | (int(getattr(instr, "imm", 0)) << 8)
+            | ((int(getattr(instr, "imm", 0)) & 0xFFFF) << 8)
         )
 
     def _register_transitions(
@@ -113,7 +130,9 @@ class ElectronicSubstrate:
     ) -> int:
         keys = set(before) | set(after)
         return sum(
-            _hamming_distance(before.get(key, 0), after.get(key, 0), self.config.word_bits)
+            _hamming_distance(
+                before.get(key, 0), after.get(key, 0), self.config.word_bits
+            )
             for key in keys
         )
 
@@ -129,41 +148,54 @@ class ElectronicSubstrate:
             "FF": transitions,
         }
 
-        if opcode == 0x01:
+        if opcode in (0x01, 0x02):
             activity["NAND"] += 16
             activity["MUX"] += width
-        elif opcode == 0x03:
+        elif opcode in (0x03, 0x04, 0x07):
             activity["XOR"] += 2 * width
             activity["AND"] += 2 * width
             activity["OR"] += width
-        elif opcode == 0x04:
-            activity["NOT"] += width
-            activity["XOR"] += 2 * width
-            activity["AND"] += 2 * width
-            activity["OR"] += width
+            if opcode == 0x04:
+                activity["NOT"] += width
+        elif opcode in (0x05, 0x06):
+            activity["MUX"] += 2 * width
+            activity["NAND"] += width
+        elif opcode in (0x08, 0x09, 0x0B):
+            activity["MUX"] += width
+            activity["AND"] += width if opcode != 0x08 else 0
         elif opcode == 0x0A:
             activity["NAND"] += 4
             activity["MUX"] = 4
+        elif opcode == 0x0C:
+            activity["AND"] += width * width
+            activity["XOR"] += 4 * width
+            activity["OR"] += 2 * width
+        elif opcode == 0x0D:
+            activity["XOR"] += width
+        elif opcode == 0x0E:
+            activity["AND"] += width
+        elif opcode == 0x0F:
+            activity["OR"] += width
         else:
             activity["NAND"] += 24
             activity["MUX"] += width
-
         return activity
 
     def _critical_path_ns(self, opcode: int) -> float:
         gate_ns = self.config.gate_delay_ps / 1000.0
-        if opcode in (0x03, 0x04):
-            # Conservative ripple-carry estimate. A later backend may substitute
-            # carry-lookahead or measured hardware timing without changing the API.
+        if opcode in (0x03, 0x04, 0x07):
             return (self.config.word_bits + 3) * gate_ns
-        if opcode == 0x01:
+        if opcode == 0x0C:
+            return (2 * self.config.word_bits + 8) * gate_ns
+        if opcode in (0x05, 0x06):
+            return 12 * gate_ns
+        if opcode in (0x01, 0x02, 0x08, 0x09, 0x0B):
             return 3 * gate_ns
         if opcode == 0x0A:
             return gate_ns
         return 5 * gate_ns
 
     def _checksum(self, registers: Mapping[str, int]) -> str:
-        # Stable 64-bit FNV-1a-like checksum over sorted register names and values.
         value = 0xCBF29CE484222325
         for name in sorted(registers):
             payload = (name + "=" + str(int(registers[name]))).encode("utf-8")
@@ -179,10 +211,12 @@ class ElectronicSubstrate:
         after: Mapping[str, int],
         instruction_word: Optional[int] = None,
     ) -> ElectronicTelemetry:
-        """Commit one deterministic electronic trace for a VM instruction."""
-
         opcode = int(instr.opcode)
-        word = self._instruction_word(instr) if instruction_word is None else int(instruction_word)
+        word = (
+            self._instruction_word(instr)
+            if instruction_word is None
+            else int(instruction_word)
+        )
         register_transitions = self._register_transitions(before, after)
         instruction_transitions = _hamming_distance(
             self._previous_instruction_word, word, self.config.word_bits
@@ -195,22 +229,29 @@ class ElectronicSubstrate:
         dynamic_energy_j = (
             total_gate_toggles
             * self.config.switched_capacitance_f
-            * self.config.supply_voltage_v
-            * self.config.supply_voltage_v
+            * self.config.supply_voltage_v ** 2
         )
         dynamic_power_w = dynamic_energy_j / clock_period_s
         total_power_w = self.config.static_power_w + dynamic_power_w
-        self.cumulative_energy_j += dynamic_energy_j + self.config.static_power_w * clock_period_s
+        self.cumulative_energy_j += (
+            dynamic_energy_j + self.config.static_power_w * clock_period_s
+        )
 
         thermal_target = (
             self.config.ambient_temp_c
             + total_power_w * self.config.thermal_resistance_c_per_w
         )
-        thermal_alpha = min(1.0, clock_period_s / self.config.thermal_time_constant_s)
-        self.junction_temp_c += thermal_alpha * (thermal_target - self.junction_temp_c)
+        thermal_alpha = min(
+            1.0, clock_period_s / self.config.thermal_time_constant_s
+        )
+        self.junction_temp_c += thermal_alpha * (
+            thermal_target - self.junction_temp_c
+        )
 
         critical_path_ns = self._critical_path_ns(opcode)
-        usable_period_ns = clock_period_ns * (1.0 - self.config.timing_guard_fraction)
+        usable_period_ns = clock_period_ns * (
+            1.0 - self.config.timing_guard_fraction
+        )
         timing_margin_ns = usable_period_ns - critical_path_ns
         timing_ok = timing_margin_ns >= 0.0
         thermal_ok = self.junction_temp_c <= self.config.max_junction_temp_c
@@ -244,8 +285,6 @@ class ElectronicSubstrate:
         return telemetry
 
     def snapshot(self) -> Dict[str, Any]:
-        """Return a JSON-serializable state summary."""
-
         return {
             "model": "Jarvis-X deterministic electronic substrate",
             "telemetry_is_measured": False,
