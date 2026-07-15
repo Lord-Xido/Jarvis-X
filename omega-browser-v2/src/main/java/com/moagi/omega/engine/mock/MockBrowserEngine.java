@@ -65,6 +65,7 @@ public final class MockBrowserEngine implements BrowserEngine {
         private final AtomicLong frameSequence = new AtomicLong();
         private final AtomicLong revision = new AtomicLong();
         private final AtomicBoolean cancelled = new AtomicBoolean();
+        private final Set<UUID> pendingCapabilityRequests = ConcurrentHashMap.newKeySet();
 
         private volatile URI current = URI.create("about:blank");
         private volatile Origin origin = Origin.from(current);
@@ -116,8 +117,10 @@ public final class MockBrowserEngine implements BrowserEngine {
                 events.submit(new Event.Status("Executed " + action + " on " + node.accessibleName()));
 
                 if (action == Action.FOCUS && nodeId == 5) {
+                    UUID requestId = UUID.randomUUID();
+                    pendingCapabilityRequests.add(requestId);
                     events.submit(new Event.CapabilityRequested(
-                            UUID.randomUUID(),
+                            requestId,
                             Capability.GEOLOCATION,
                             origin,
                             "runtime telemetry requests a deterministic location grant"
@@ -140,9 +143,9 @@ public final class MockBrowserEngine implements BrowserEngine {
 
         @Override
         public CompletionStage<Void> resolveCapability(CapabilityResolution resolution) {
-            if (!resolution.requestId().equals(resolution.requestId())) {
+            if (!pendingCapabilityRequests.remove(resolution.requestId())) {
                 return CompletableFuture.failedFuture(
-                        new IllegalArgumentException("Capability resolution request id mismatch")
+                        new IllegalArgumentException("Unknown capability request: " + resolution.requestId())
                 );
             }
             capabilityResolutions
@@ -166,6 +169,7 @@ public final class MockBrowserEngine implements BrowserEngine {
         @Override
         public void close() {
             cancelled.set(true);
+            pendingCapabilityRequests.clear();
             events.close();
         }
 
@@ -202,7 +206,7 @@ public final class MockBrowserEngine implements BrowserEngine {
                         new Transform3D(0, 0, 52, -0.02, -0.06, 0.01, 1, 1, 1),
                         Map.of("transactional", "true"), Set.of(Action.CLICK, Action.FOCUS), List.of(), 5),
                 new Node(5, 0, "complementary", "Runtime telemetry", new Rect(805, 430, 300, 180),
-                        new Transform3D(0, 0, 42, 0, -0.05, 0, 1, 1, 1),
+                        new Transform3D(0, 0, 42, 0, -0.05, 0.01, 1, 1, 1),
                         Map.of("revision", Long.toString(revision), "frame", Long.toString(frameSequence)),
                         Set.of(Action.FOCUS), List.of(), 4)
         );
