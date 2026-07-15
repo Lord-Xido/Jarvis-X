@@ -5,6 +5,7 @@ import com.moagi.omega.api.SemanticScene.Snapshot;
 import com.moagi.omega.api.Surface.Frame;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -33,6 +34,32 @@ public final class Engine {
             int viewportHeight,
             String profilePartition
     ) {}
+
+    /**
+     * Kernel-issued identity for one engine operation. The transaction id is
+     * stable across the kernel, adapter, IPC transport and native host.
+     */
+    public record OperationContext(
+            UUID transactionId,
+            long parentRevision,
+            Instant deadline
+    ) {
+        public OperationContext {
+            Objects.requireNonNull(transactionId, "transactionId");
+            Objects.requireNonNull(deadline, "deadline");
+            if (parentRevision < -1) {
+                throw new IllegalArgumentException("parentRevision must be -1 or non-negative");
+            }
+        }
+
+        public static OperationContext detached() {
+            return new OperationContext(UUID.randomUUID(), -1, Instant.now().plusSeconds(30));
+        }
+
+        public boolean expired() {
+            return !deadline.isAfter(Instant.now());
+        }
+    }
 
     /**
      * Kernel-issued response to an engine capability request. A granted response
@@ -68,7 +95,8 @@ public final class Engine {
             Event.SnapshotReady,
             Event.Status,
             Event.Crashed,
-            Event.CapabilityRequested {
+            Event.CapabilityRequested,
+            Event.Correlated {
 
         record NavigationStarted(URI uri) implements Event {}
         record NavigationCommitted(URI uri, Origin origin, String title) implements Event {}
@@ -77,6 +105,28 @@ public final class Engine {
         record SnapshotReady(Snapshot snapshot) implements Event {}
         record Status(String message) implements Event {}
         record Crashed(String reason, boolean recoverable) implements Event {}
+
+        /**
+         * Correlates an engine callback to the kernel transaction that caused it.
+         * documentRevision is -1 when no committed document revision exists yet.
+         */
+        record Correlated(
+                UUID transactionId,
+                long documentRevision,
+                Event event
+        ) implements Event {
+            public Correlated {
+                Objects.requireNonNull(transactionId, "transactionId");
+                Objects.requireNonNull(event, "event");
+                if (event instanceof Correlated) {
+                    throw new IllegalArgumentException("Correlated events cannot be nested");
+                }
+                if (documentRevision < -1) {
+                    throw new IllegalArgumentException("documentRevision must be -1 or non-negative");
+                }
+            }
+        }
+
         record CapabilityRequested(
                 UUID requestId,
                 Capability capability,
@@ -103,10 +153,37 @@ public final class Engine {
 
     public interface EngineSession extends AutoCloseable {
         UUID id();
+
         CompletionStage<Void> navigate(URI uri);
         CompletionStage<Void> reload();
         CompletionStage<Void> stop();
         CompletionStage<Void> execute(long nodeId, Action action, Map<String, String> arguments);
+
+        default CompletionStage<Void> navigate(OperationContext context, URI uri) {
+            Objects.requireNonNull(context, "context");
+            return navigate(uri);
+        }
+
+        default CompletionStage<Void> reload(OperationContext context) {
+            Objects.requireNonNull(context, "context");
+            return reload();
+        }
+
+        default CompletionStage<Void> stop(OperationContext context) {
+            Objects.requireNonNull(context, "context");
+            return stop();
+        }
+
+        default CompletionStage<Void> execute(
+                OperationContext context,
+                long nodeId,
+                Action action,
+                Map<String, String> arguments
+        ) {
+            Objects.requireNonNull(context, "context");
+            return execute(nodeId, action, arguments);
+        }
+
         CompletionStage<Void> resolveCapability(CapabilityResolution resolution);
         CompletionStage<Snapshot> snapshot();
         Flow.Publisher<Event> events();
