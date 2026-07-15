@@ -1,6 +1,7 @@
 package com.moagi.omega.core;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /** Supervises optional native engine host processes and reports exit/crash state. */
@@ -22,8 +24,12 @@ public final class ProcessSupervisor implements AutoCloseable {
             int maximumRestarts
     ) {
         public ProcessSpec {
+            id = Objects.requireNonNull(id, "id");
             command = List.copyOf(command);
             environment = Map.copyOf(environment);
+            if (id.isBlank()) throw new IllegalArgumentException("Process id must not be blank");
+            if (command.isEmpty()) throw new IllegalArgumentException("Process command must not be empty");
+            if (maximumRestarts < 0) throw new IllegalArgumentException("maximumRestarts must be non-negative");
         }
     }
 
@@ -50,10 +56,17 @@ public final class ProcessSupervisor implements AutoCloseable {
     }
 
     public synchronized void start(ProcessSpec spec) throws IOException {
+        Objects.requireNonNull(spec, "spec");
         if (managed.containsKey(spec.id())) throw new IllegalStateException("Already supervised: " + spec.id());
         Managed entry = new Managed(spec);
         managed.put(spec.id(), entry);
-        launch(entry);
+        try {
+            launch(entry);
+        } catch (IOException | RuntimeException ex) {
+            managed.remove(spec.id(), entry);
+            entry.stopping = true;
+            throw ex;
+        }
     }
 
     public ProcessState state(String id) {
@@ -63,39 +76,60 @@ public final class ProcessSupervisor implements AutoCloseable {
 
     public synchronized void stop(String id) {
         Managed entry = managed.remove(id);
-        if (entry != null && entry.process != null) {
-            entry.stopping = true;
-            entry.process.destroy();
-            try {
-                if (!entry.process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)) entry.process.destroyForcibly();
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-                entry.process.destroyForcibly();
-            }
+        if (entry == null) return;
+
+        entry.stopping = true;
+        Process process = entry.process;
+        if (process == null) return;
+
+        process.destroy();
+        try {
+            if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            process.destroyForcibly();
         }
     }
 
     private void launch(Managed entry) throws IOException {
+        if (entry.stopping || managed.get(entry.spec.id()) != entry) return;
+
         ProcessBuilder builder = new ProcessBuilder(new ArrayList<>(entry.spec.command()));
         if (entry.spec.workingDirectory() != null) builder.directory(entry.spec.workingDirectory().toFile());
         builder.environment().putAll(entry.spec.environment());
         builder.redirectErrorStream(true);
-        entry.process = builder.start();
-        entry.state = new ProcessState(entry.spec.id(), entry.process.pid(), true,
+
+        Process process = builder.start();
+        entry.process = process;
+        entry.state = new ProcessState(entry.spec.id(), process.pid(), true,
                 entry.restarts, null, Instant.now(), "started");
         stateSink.accept(entry.state);
 
-        workerPool.executor.submit(() -> monitor(entry));
+        workerPool.executor.submit(() -> drainOutput(process));
+        workerPool.executor.submit(() -> monitor(entry, process));
     }
 
-    private void monitor(Managed entry) {
-        try {
-            int exit = entry.process.waitFor();
-            entry.state = new ProcessState(entry.spec.id(), entry.process.pid(), false,
-                    entry.restarts, exit, Instant.now(), "exited");
-            stateSink.accept(entry.state);
+    private static void drainOutput(Process process) {
+        try (var output = process.getInputStream()) {
+            output.transferTo(OutputStream.nullOutputStream());
+        } catch (IOException ignored) {
+            // Process termination commonly closes the stream while the drain task is active.
+        }
+    }
 
-            if (!entry.stopping && exit != 0 && entry.spec.restartOnFailure()
+    private void monitor(Managed entry, Process process) {
+        try {
+            int exit = process.waitFor();
+            if (entry.process == process) {
+                entry.state = new ProcessState(entry.spec.id(), process.pid(), false,
+                        entry.restarts, exit, Instant.now(), "exited");
+                stateSink.accept(entry.state);
+            }
+
+            if (!entry.stopping
+                    && managed.get(entry.spec.id()) == entry
+                    && exit != 0
+                    && entry.spec.restartOnFailure()
                     && entry.restarts < entry.spec.maximumRestarts()) {
                 entry.restarts++;
                 Thread.sleep(Math.min(5_000L, 250L * (1L << Math.min(entry.restarts, 4))));
