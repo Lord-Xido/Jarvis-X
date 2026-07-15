@@ -9,8 +9,9 @@ from .sandbox import Sandbox
 from .debugger import Debugger
 from .tracer import Tracer
 
+
 class CodexVM:
-    def __init__(self):
+    def __init__(self, enable_reflex=False):
         self.regs = Registers()
         self.mem = Memory()
         self.decoder = Decoder()
@@ -18,6 +19,7 @@ class CodexVM:
         self.ledger = PersistentLedger()
         self.ethics = LambdaShield()
         self.reflex = ReflexEngine()
+        self.reflex_enabled = bool(enable_reflex)
         self.sandbox = Sandbox()
         self.debugger = Debugger(self)
         self.tracer = Tracer()
@@ -28,6 +30,8 @@ class CodexVM:
     def load(self, bytecode):
         self.program = bytecode
         self.regs["IP"] = 0
+        self.cycles = 0
+        self.running = True
 
     def step(self):
         ip = self.regs["IP"]
@@ -39,7 +43,8 @@ class CodexVM:
         cont = self.executor.execute(instr)
         self.ledger.log(self.regs.snapshot(), instr.opcode)
         self.tracer.record(instr, self.regs.snapshot())
-        self.reflex.stabilize(self.regs)
+        if self.reflex_enabled:
+            self.reflex.stabilize(self.regs)
 
         self.regs["IP"] += 1
         self.cycles += 1
