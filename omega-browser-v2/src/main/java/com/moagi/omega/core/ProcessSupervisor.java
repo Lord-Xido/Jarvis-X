@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -44,6 +45,8 @@ public final class ProcessSupervisor implements AutoCloseable {
     ) {}
 
     private final Map<String, Managed> managed = new ConcurrentHashMap<>();
+    private final Map<String, CopyOnWriteArrayList<Consumer<ProcessState>>> listeners =
+            new ConcurrentHashMap<>();
     private final Consumer<ProcessState> stateSink;
     private final WorkerPool workerPool = new WorkerPool();
 
@@ -53,6 +56,23 @@ public final class ProcessSupervisor implements AutoCloseable {
 
     public ProcessSupervisor(Consumer<ProcessState> stateSink) {
         this.stateSink = Objects.requireNonNull(stateSink);
+    }
+
+    /**
+     * Registers a lifecycle listener for one supervised process. The current
+     * state is replayed immediately when it already exists.
+     */
+    public AutoCloseable subscribe(String id, Consumer<ProcessState> listener) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(listener, "listener");
+        var subscribers = listeners.computeIfAbsent(id, ignored -> new CopyOnWriteArrayList<>());
+        subscribers.add(listener);
+        ProcessState current = state(id);
+        if (current != null) listener.accept(current);
+        return () -> {
+            subscribers.remove(listener);
+            if (subscribers.isEmpty()) listeners.remove(id, subscribers);
+        };
     }
 
     public synchronized void start(ProcessSpec spec) throws IOException {
@@ -103,7 +123,7 @@ public final class ProcessSupervisor implements AutoCloseable {
         entry.process = process;
         entry.state = new ProcessState(entry.spec.id(), process.pid(), true,
                 entry.restarts, null, Instant.now(), "started");
-        stateSink.accept(entry.state);
+        publish(entry.state);
 
         workerPool.executor.submit(() -> drainOutput(process));
         workerPool.executor.submit(() -> monitor(entry, process));
@@ -123,7 +143,7 @@ public final class ProcessSupervisor implements AutoCloseable {
             if (entry.process == process) {
                 entry.state = new ProcessState(entry.spec.id(), process.pid(), false,
                         entry.restarts, exit, Instant.now(), "exited");
-                stateSink.accept(entry.state);
+                publish(entry.state);
             }
 
             if (!entry.stopping
@@ -140,13 +160,26 @@ public final class ProcessSupervisor implements AutoCloseable {
         } catch (IOException ex) {
             entry.state = new ProcessState(entry.spec.id(), -1, false,
                     entry.restarts, null, Instant.now(), "restart failed: " + ex.getMessage());
-            stateSink.accept(entry.state);
+            publish(entry.state);
+        }
+    }
+
+    private void publish(ProcessState state) {
+        stateSink.accept(state);
+        for (Consumer<ProcessState> listener : listeners.getOrDefault(
+                state.id(), new CopyOnWriteArrayList<>())) {
+            try {
+                listener.accept(state);
+            } catch (RuntimeException ignored) {
+                // A lifecycle observer cannot break process supervision.
+            }
         }
     }
 
     @Override
     public void close() {
         for (String id : List.copyOf(managed.keySet())) stop(id);
+        listeners.clear();
         workerPool.executor.close();
     }
 
