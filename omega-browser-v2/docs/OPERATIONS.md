@@ -8,6 +8,9 @@ not trusted kernel components.
 
 Commands are ordered per browser session. Each committed command advances only
 that session's revision. Commands in different sessions may run concurrently.
+Every engine-bound command carries the kernel transaction ID, parent revision,
+and an absolute deadline. Engine callbacks caused by the command return the same
+transaction ID and, after document commit, the host document revision.
 
 ## Local validation
 
@@ -29,7 +32,10 @@ The self-test must pass before packaging. It verifies:
 - forbidden URI-scheme rejection;
 - positive viewport validation;
 - append-only journal persistence;
-- native process launch-failure cleanup.
+- native process launch-failure cleanup;
+- JCEF transaction correlation across navigation, reload, frames, snapshots,
+  cancellation, and status callbacks;
+- replacement-host negotiation and live-session recovery.
 
 ## CI contract
 
@@ -69,23 +75,62 @@ the artifact, and creates a GitHub release using the tag.
 - Renderer failures must be surfaced as engine events rather than terminating
   the kernel.
 - No engine adapter may bypass the capability broker or transaction journal.
+- A replaced transport generation cannot publish stale callbacks.
+
+## Supervised restart and recovery
+
+`ProcessSupervisor` publishes process lifecycle state to the JCEF adapter. When a
+host exits, the adapter marks itself unhealthy and surfaces a crash event. When a
+bounded restart succeeds, the adapter:
+
+1. connects to a new authenticated transport;
+2. repeats protocol negotiation;
+3. verifies the host identity and declared capabilities are unchanged;
+4. rehydrates every live session with its configuration, current URI, origin,
+   private profile partition, and last document revision;
+5. rejects callbacks from the retired transport generation;
+6. becomes healthy only after all session recoveries succeed.
+
+A failed recovery closes the replacement transport, leaves the adapter unhealthy,
+and surfaces a non-recoverable crash event. In-flight operations on the retired
+transport fail rather than being silently replayed.
 
 ## Adapter readiness gates
 
 A real engine adapter is mergeable only when it provides:
 
 - process launch, output handling, and supervised bounded restart;
-- versioned IPC negotiation;
+- versioned authenticated IPC negotiation;
 - navigation and cancellation;
 - ordered transaction acknowledgement with session revision metadata;
 - semantic snapshot delivery;
 - frame-surface delivery;
 - request-correlated capability forwarding and resolution handling;
-- crash isolation;
+- crash isolation and session recovery;
 - deterministic adapter integration tests.
+
+## Native binary provenance
+
+A platform JCEF/CEF host release must remain outside the kernel JAR and publish:
+
+- the upstream JCEF/CEF version and source revision;
+- build platform, toolchain, and reproducible build instructions;
+- SHA-256 hashes for every native binary and resource bundle;
+- code-signing identity and verification procedure;
+- sandbox and feature declarations actually enabled by the package;
+- compatibility range for the local protocol;
+- update cadence, security advisory procedure, and rollback target.
+
+No native capability such as shared surfaces, site isolation, sandboxing, or
+WebGPU may be advertised until verified against the packaged host configuration.
 
 ## Rollback
 
 The subsystem is isolated under `omega-browser-v2/`. Reverting its merge commit
 removes the Java browser runtime without changing the existing Jarvis-X Python/C
 runtime.
+
+Native host packages must be versioned independently. Rollback selects the last
+signed host manifest compatible with the kernel protocol, verifies its hashes and
+signature, stops the current host, and restarts through `ProcessSupervisor`. A
+rollback must never replace the trusted kernel JAR implicitly.
