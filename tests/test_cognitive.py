@@ -1,3 +1,7 @@
+import math
+
+import pytest
+
 from jarvisx.cognitive import (
     CognitiveConfig,
     CognitiveKernel,
@@ -14,6 +18,13 @@ def test_q3_quantization_is_bounded_and_signed():
     assert quantize_q3(99) == 3
 
 
+def test_q3_quantization_rejects_non_finite_values():
+    with pytest.raises(ValueError, match="finite"):
+        quantize_q3(math.inf)
+    with pytest.raises(ValueError, match="finite"):
+        quantize_q3(math.nan)
+
+
 def test_hierarchy_condenses_to_single_root():
     kernel = CognitiveKernel(CognitiveConfig(branch_factor=2))
     result = kernel.step([3, 2, 1, 0, -1, -2, -3, -4])
@@ -21,6 +32,13 @@ def test_hierarchy_condenses_to_single_root():
     assert result.hierarchy[0] == (3, 2, 1, 0, -1, -2, -3, -4)
     assert len(result.hierarchy[-1]) == 1
     assert result.metrics["condensation_ratio"] == 8.0
+
+
+def test_hierarchy_enforces_maximum_depth_before_allocation_continues():
+    kernel = CognitiveKernel(CognitiveConfig(branch_factor=2, max_levels=2))
+    with pytest.raises(ValueError, match="max_levels"):
+        kernel.step([1, 1, 1, 1])
+    assert kernel.snapshot()["state_hash"] == "GENESIS"
 
 
 def test_prediction_error_updates_cumulative_memory():
@@ -58,3 +76,31 @@ def test_vm_bridge_maps_cycle_to_existing_registers():
     assert regs["Λ"] == 1
     assert regs["Ψ"] == result.hierarchy[-1][0]
     assert regs["𝒮"] == int(result.metrics["residual_l1"])
+
+
+def test_vm_bridge_rejection_does_not_leak_candidate_registers():
+    regs = Registers()
+    kernel = CognitiveKernel(CognitiveConfig(max_residual_l1=4))
+    bridge = CognitiveVMBridge(regs, kernel)
+
+    committed = bridge.cycle([1, 1, 1, 1])
+    assert committed.committed
+    before = regs.snapshot()
+
+    rejected = bridge.cycle([-4, -4, -4, -4])
+    after = regs.snapshot()
+
+    assert not rejected.committed
+    assert rejected.reason == "residual budget exceeded"
+    assert rejected.state_hash == committed.state_hash
+    assert after["Λ"] == 0
+    for name, value in before.items():
+        if name != "Λ":
+            assert after[name] == value
+
+
+def test_configuration_rejects_unbounded_update_ratios():
+    with pytest.raises(ValueError, match="retention ratio"):
+        CognitiveKernel(CognitiveConfig(retention_numerator=9, retention_denominator=8))
+    with pytest.raises(ValueError, match="non-negative"):
+        CognitiveKernel(CognitiveConfig(learning_numerator=-1))
