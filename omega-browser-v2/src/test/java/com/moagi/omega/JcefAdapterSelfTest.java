@@ -3,9 +3,11 @@ package com.moagi.omega;
 import com.moagi.omega.adapter.jcef.JcefBrowserEngine;
 import com.moagi.omega.adapter.jcef.JcefHostProtocol;
 import com.moagi.omega.adapter.jcef.JcefHostProtocol.HostEvent;
+import com.moagi.omega.adapter.jcef.JcefHostProtocol.SessionRecovery;
 import com.moagi.omega.api.*;
 import com.moagi.omega.api.Engine.CapabilityResolution;
 import com.moagi.omega.api.Engine.Event;
+import com.moagi.omega.api.Engine.OperationContext;
 import com.moagi.omega.api.Engine.SessionConfiguration;
 import com.moagi.omega.api.Geometry.Rect;
 import com.moagi.omega.api.Geometry.Transform3D;
@@ -43,9 +45,9 @@ public final class JcefAdapterSelfTest {
     private JcefAdapterSelfTest() {}
 
     public static void run() throws Exception {
-        var transport = new FakeJcefTransport();
+        var firstTransport = new FakeJcefTransport("contract-host");
         try (var engine = JcefBrowserEngine.connect(
-                transport,
+                firstTransport,
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(3)
         )) {
@@ -84,17 +86,14 @@ public final class JcefAdapterSelfTest {
                         "JCEF snapshot did not preserve the committed URI");
                 require(!snapshot.nodes().isEmpty(), "JCEF semantic snapshot was empty");
 
-                recorder.await(event -> isEngineEvent(
-                        event, session, Event.SnapshotReady.class), Duration.ofSeconds(2));
-                recorder.await(event -> isEngineEvent(
-                        event, session, Event.FrameReady.class), Duration.ofSeconds(2));
-                recorder.await(event -> isEngineEvent(
-                        event, session, Event.NavigationCommitted.class), Duration.ofSeconds(2));
+                recorder.awaitCorrelated(session, Event.SnapshotReady.class, Duration.ofSeconds(2));
+                recorder.awaitCorrelated(session, Event.FrameReady.class, Duration.ofSeconds(2));
+                recorder.awaitCorrelated(session, Event.NavigationCommitted.class, Duration.ofSeconds(2));
 
-                UUID requestId = transport.requestCapability(
+                UUID requestId = firstTransport.requestCapability(
                         session, Capability.GEOLOCATION, "HTML geolocation request"
                 );
-                CapabilityResolution resolution = transport.resolution(requestId)
+                CapabilityResolution resolution = firstTransport.resolution(requestId)
                         .toCompletableFuture().get(2, TimeUnit.SECONDS);
                 require(resolution.granted(), "JCEF capability request was not granted");
                 require(resolution.origin().equals(Origin.from(
@@ -111,16 +110,25 @@ public final class JcefAdapterSelfTest {
                         .toCompletableFuture().get(3, TimeUnit.SECONDS);
                 require(reload.state() == TransactionJournal.State.COMMITTED,
                         "JCEF reload did not commit");
+                Event.Correlated reloadCommit = recorder.awaitCorrelated(
+                        session,
+                        event -> event.event() instanceof Event.NavigationCommitted
+                                && event.transactionId().equals(reload.transactionId()),
+                        Duration.ofSeconds(2)
+                );
+                require(reloadCommit.documentRevision() >= 2,
+                        "reload callback did not carry a document revision");
 
                 var slowNavigation = kernel.dispatch(
                         session,
                         new BrowserCommand.Navigate(URI.create("https://adapter.example/slow"))
                 );
-                recorder.await(event -> event instanceof BrowserEvent.EngineEvent engineEvent
-                                && engineEvent.sessionId().equals(session)
-                                && engineEvent.event() instanceof Event.NavigationStarted started
+                Event.Correlated slowStarted = recorder.awaitCorrelated(
+                        session,
+                        event -> event.event() instanceof Event.NavigationStarted started
                                 && "/slow".equals(started.uri().getPath()),
-                        Duration.ofSeconds(2));
+                        Duration.ofSeconds(2)
+                );
 
                 var stop = kernel.dispatch(session, new BrowserCommand.Stop())
                         .toCompletableFuture().get(2, TimeUnit.SECONDS);
@@ -131,8 +139,16 @@ public final class JcefAdapterSelfTest {
                         "stop advanced the document revision");
                 require(cancelled.state() == TransactionJournal.State.FAILED,
                         "cancelled navigation was not journaled as failed");
+                require(slowStarted.transactionId().equals(cancelled.transactionId()),
+                        "navigation callback lost kernel transaction correlation");
+                recorder.awaitCorrelated(
+                        session,
+                        event -> event.event() instanceof Event.NavigationFailed
+                                && event.transactionId().equals(cancelled.transactionId()),
+                        Duration.ofSeconds(2)
+                );
 
-                transport.crash(session, "simulated renderer termination", true);
+                firstTransport.crash(session, "simulated renderer termination", true);
                 recorder.await(event -> event instanceof BrowserEvent.EngineEvent engineEvent
                                 && engineEvent.sessionId().equals(session)
                                 && engineEvent.event() instanceof Event.Crashed crash
@@ -141,21 +157,34 @@ public final class JcefAdapterSelfTest {
                 require(engine.healthy(),
                         "recoverable renderer crash killed the JCEF host adapter");
 
+                var replacementTransport = new FakeJcefTransport("contract-host");
+                engine.recover(replacementTransport);
+                require(engine.healthy(), "adapter was not healthy after host recovery");
+                require(replacementTransport.recoveredSession(session),
+                        "live session was not rehydrated on replacement host");
+                require(replacementTransport.currentUri(session).equals(
+                                URI.create("https://adapter.example/index.html")),
+                        "session URI was not preserved across host recovery");
+
+                var recoveredNavigation = kernel.dispatch(
+                        session,
+                        new BrowserCommand.Navigate(URI.create("https://adapter.example/recovered"))
+                ).toCompletableFuture().get(3, TimeUnit.SECONDS);
+                require(recoveredNavigation.state() == TransactionJournal.State.COMMITTED,
+                        "navigation through recovered host did not commit");
+                recorder.awaitCorrelated(
+                        session,
+                        event -> event.event() instanceof Event.NavigationCommitted committed
+                                && "/recovered".equals(committed.uri().getPath())
+                                && event.transactionId().equals(recoveredNavigation.transactionId()),
+                        Duration.ofSeconds(2)
+                );
+
                 kernel.closeSession(session);
-                require(transport.closedSession(session),
-                        "JCEF session shutdown was not forwarded to the host");
+                require(replacementTransport.closedSession(session),
+                        "JCEF session shutdown was not forwarded to replacement host");
             }
         }
-    }
-
-    private static boolean isEngineEvent(
-            BrowserEvent event,
-            UUID sessionId,
-            Class<? extends Event> type
-    ) {
-        return event instanceof BrowserEvent.EngineEvent engineEvent
-                && engineEvent.sessionId().equals(sessionId)
-                && type.isInstance(engineEvent.event());
     }
 
     private static void require(boolean condition, String message) {
@@ -194,21 +223,54 @@ public final class JcefAdapterSelfTest {
             }
             throw new AssertionError("Timed out waiting for JCEF adapter event");
         }
+
+        Event.Correlated awaitCorrelated(
+                UUID sessionId,
+                Class<? extends Event> eventType,
+                Duration timeout
+        ) throws InterruptedException {
+            return awaitCorrelated(
+                    sessionId,
+                    correlated -> eventType.isInstance(correlated.event()),
+                    timeout
+            );
+        }
+
+        Event.Correlated awaitCorrelated(
+                UUID sessionId,
+                Predicate<Event.Correlated> predicate,
+                Duration timeout
+        ) throws InterruptedException {
+            BrowserEvent found = await(event ->
+                    event instanceof BrowserEvent.EngineEvent engineEvent
+                            && engineEvent.sessionId().equals(sessionId)
+                            && engineEvent.event() instanceof Event.Correlated correlated
+                            && predicate.test(correlated),
+                    timeout
+            );
+            return (Event.Correlated) ((BrowserEvent.EngineEvent) found).event();
+        }
     }
 
     private static final class FakeJcefTransport implements JcefHostProtocol.Transport {
+        private final String engineId;
         private final SubmissionPublisher<HostEvent> events = new SubmissionPublisher<>();
         private final Map<UUID, SessionState> sessions = new ConcurrentHashMap<>();
         private final Map<UUID, CompletableFuture<CapabilityResolution>> resolutions =
                 new ConcurrentHashMap<>();
         private final Set<UUID> closedSessions = ConcurrentHashMap.newKeySet();
+        private final Set<UUID> recoveredSessions = ConcurrentHashMap.newKeySet();
         private final AtomicBoolean healthy = new AtomicBoolean(true);
+
+        private FakeJcefTransport(String engineId) {
+            this.engineId = engineId;
+        }
 
         @Override
         public CompletionStage<JcefHostProtocol.Hello> hello() {
             return CompletableFuture.completedFuture(new JcefHostProtocol.Hello(
                     JcefHostProtocol.VERSION,
-                    "contract-host",
+                    engineId,
                     "test-1.0",
                     false,
                     true,
@@ -224,48 +286,82 @@ public final class JcefAdapterSelfTest {
         }
 
         @Override
-        public CompletionStage<Void> navigate(UUID sessionId, URI uri) {
-            SessionState state = session(sessionId);
-            state.pendingUri = uri;
-            events.submit(new HostEvent.NavigationStarted(sessionId, uri));
-            if ("/slow".equals(uri.getPath())) {
-                state.pendingNavigation = new CompletableFuture<>();
-                return state.pendingNavigation;
-            }
-            commit(state, uri);
+        public CompletionStage<Void> recoverSession(SessionRecovery recovery) {
+            SessionState state = new SessionState(recovery.configuration());
+            state.currentUri = recovery.currentUri();
+            state.pendingUri = recovery.currentUri();
+            state.revision.set(recovery.documentRevision());
+            state.frameSequence.set(recovery.documentRevision());
+            state.snapshot = snapshot(
+                    recovery.currentUri(),
+                    recovery.documentRevision(),
+                    recovery.documentRevision()
+            );
+            sessions.put(recovery.configuration().sessionId(), state);
+            recoveredSessions.add(recovery.configuration().sessionId());
             return CompletableFuture.completedFuture(null);
         }
 
         @Override
-        public CompletionStage<Void> reload(UUID sessionId) {
-            return navigate(sessionId, session(sessionId).currentUri);
+        public CompletionStage<Void> navigate(
+                UUID sessionId,
+                OperationContext context,
+                URI uri
+        ) {
+            SessionState state = session(sessionId);
+            state.pendingUri = uri;
+            state.pendingContext = context;
+            events.submit(new HostEvent.NavigationStarted(
+                    sessionId, context.transactionId(), uri
+            ));
+            if ("/slow".equals(uri.getPath())) {
+                state.pendingNavigation = new CompletableFuture<>();
+                return state.pendingNavigation;
+            }
+            commit(state, context, uri);
+            return CompletableFuture.completedFuture(null);
         }
 
         @Override
-        public CompletionStage<Void> stop(UUID sessionId) {
+        public CompletionStage<Void> reload(UUID sessionId, OperationContext context) {
+            return navigate(sessionId, context, session(sessionId).currentUri);
+        }
+
+        @Override
+        public CompletionStage<Void> stop(UUID sessionId, OperationContext context) {
             SessionState state = session(sessionId);
             CompletableFuture<Void> pending = state.pendingNavigation;
             if (pending != null && !pending.isDone()) {
+                OperationContext cancelledContext = state.pendingContext;
                 events.submit(new HostEvent.NavigationFailed(
-                        sessionId, state.pendingUri, "cancelled by kernel control lane"
+                        sessionId,
+                        cancelledContext.transactionId(),
+                        state.pendingUri,
+                        "cancelled by kernel control lane"
                 ));
                 pending.completeExceptionally(new CancellationException("navigation cancelled"));
                 state.pendingNavigation = null;
+                state.pendingContext = null;
             }
-            events.submit(new HostEvent.Status(sessionId, "stop acknowledged"));
+            events.submit(new HostEvent.Status(
+                    sessionId, context.transactionId(), "stop acknowledged"
+            ));
             return CompletableFuture.completedFuture(null);
         }
 
         @Override
         public CompletionStage<Void> execute(
                 UUID sessionId,
+                OperationContext context,
                 long nodeId,
                 Action action,
                 Map<String, String> arguments
         ) {
             session(sessionId);
             events.submit(new HostEvent.Status(
-                    sessionId, "semantic action " + action + " on node " + nodeId
+                    sessionId,
+                    context.transactionId(),
+                    "semantic action " + action + " on node " + nodeId
             ));
             return CompletableFuture.completedFuture(null);
         }
@@ -342,6 +438,14 @@ public final class JcefAdapterSelfTest {
             return closedSessions.contains(sessionId);
         }
 
+        boolean recoveredSession(UUID sessionId) {
+            return recoveredSessions.contains(sessionId);
+        }
+
+        URI currentUri(UUID sessionId) {
+            return session(sessionId).currentUri;
+        }
+
         private SessionState session(UUID sessionId) {
             SessionState state = sessions.get(sessionId);
             if (state == null) {
@@ -350,15 +454,20 @@ public final class JcefAdapterSelfTest {
             return state;
         }
 
-        private void commit(SessionState state, URI uri) {
+        private void commit(SessionState state, OperationContext context, URI uri) {
             state.currentUri = uri;
             long revision = state.revision.incrementAndGet();
             long frame = state.frameSequence.incrementAndGet();
             state.snapshot = snapshot(uri, revision, frame);
             UUID sessionId = state.configuration.sessionId();
-            events.submit(new HostEvent.SnapshotReady(sessionId, state.snapshot));
+            UUID transactionId = context.transactionId();
+            events.submit(new HostEvent.SnapshotReady(
+                    sessionId, transactionId, state.snapshot
+            ));
             events.submit(new HostEvent.FrameReady(
                     sessionId,
+                    transactionId,
+                    revision,
                     new CpuFrame(
                             frame,
                             2,
@@ -368,9 +477,15 @@ public final class JcefAdapterSelfTest {
                     )
             ));
             events.submit(new HostEvent.NavigationCommitted(
-                    sessionId, uri, Origin.from(uri), "JCEF contract page"
+                    sessionId,
+                    transactionId,
+                    revision,
+                    uri,
+                    Origin.from(uri),
+                    "JCEF contract page"
             ));
             state.pendingNavigation = null;
+            state.pendingContext = null;
         }
 
         private static Snapshot snapshot(URI uri, long revision, long frame) {
@@ -404,6 +519,7 @@ public final class JcefAdapterSelfTest {
             volatile URI pendingUri = currentUri;
             volatile Snapshot snapshot = snapshot(currentUri, 0, 0);
             volatile CompletableFuture<Void> pendingNavigation;
+            volatile OperationContext pendingContext;
 
             SessionState(SessionConfiguration configuration) {
                 this.configuration = configuration;
