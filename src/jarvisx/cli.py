@@ -1,12 +1,12 @@
 import json
 import sys
 
-from .parser import Parser
+from .api import start_api
 from .assembler import Assembler
 from .core import CodexVM
-from .api import start_api
-from .web import start_web
 from .node import CodexNode
+from .parser import Parser
+from .web import start_web
 
 
 def main():
@@ -34,10 +34,10 @@ def main():
             raise SystemExit("Usage: jarvisx cognitive <number> [number ...]")
         try:
             values = [float(value) for value in sys.argv[2:]]
-        except ValueError as exc:
+            vm = CodexVM()
+            result = vm.cognitive_cycle(values)
+        except (OverflowError, ValueError) as exc:
             raise SystemExit("cognitive inputs must be finite numbers") from exc
-        vm = CodexVM()
-        result = vm.cognitive_cycle(values)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
 
     elif cmd == "api":
