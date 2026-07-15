@@ -12,7 +12,7 @@ from .geometric_codec import GeometricRuntime, PermutationTransform
 
 
 class CodexVM:
-    def __init__(self):
+    def __init__(self, reflex_enabled=False):
         self.regs = Registers()
         self.mem = Memory()
         self.decoder = Decoder()
@@ -20,6 +20,7 @@ class CodexVM:
         self.ledger = PersistentLedger()
         self.ethics = LambdaShield()
         self.reflex = ReflexEngine()
+        self.reflex_enabled = bool(reflex_enabled)
         self.sandbox = Sandbox()
         self.debugger = Debugger(self)
         self.tracer = Tracer()
@@ -51,7 +52,10 @@ class CodexVM:
         cont = self.executor.execute(instr)
         self.ledger.log(self.regs.snapshot(), instr.opcode)
         self.tracer.record(instr, self.regs.snapshot())
-        self.reflex.stabilize(self.regs)
+
+        # Always evaluate the reflex residual, but mutate program registers only
+        # when active reflex control was explicitly requested by the caller.
+        self.reflex.stabilize(self.regs, apply=self.reflex_enabled)
 
         self.regs["IP"] += 1
         self.cycles += 1
