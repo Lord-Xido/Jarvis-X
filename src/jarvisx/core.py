@@ -8,6 +8,8 @@ from .reflex import ReflexEngine
 from .sandbox import Sandbox
 from .debugger import Debugger
 from .tracer import Tracer
+from .geometric_codec import GeometricRuntime, PermutationTransform
+
 
 class CodexVM:
     def __init__(self):
@@ -21,6 +23,7 @@ class CodexVM:
         self.sandbox = Sandbox()
         self.debugger = Debugger(self)
         self.tracer = Tracer()
+        self.geometry = GeometricRuntime()
         self.program = []
         self.cycles = 0
         self.running = True
@@ -28,6 +31,15 @@ class CodexVM:
     def load(self, bytecode):
         self.program = bytecode
         self.regs["IP"] = 0
+
+    def load_geometry(self, values, shape, constraints=None):
+        """Encode arithmetic state into the validated geometric field."""
+        return self.geometry.load(values, shape, constraints)
+
+    def execute_geometry(self, permutation):
+        """Execute and commit one bijective geometric coordination transform."""
+        transform = PermutationTransform.from_sequence(permutation)
+        return self.geometry.execute(transform)
 
     def step(self):
         ip = self.regs["IP"]
