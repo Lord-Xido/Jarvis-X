@@ -6,6 +6,7 @@ import com.moagi.omega.api.Surface.Frame;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
@@ -33,6 +34,32 @@ public final class Engine {
             String profilePartition
     ) {}
 
+    /**
+     * Kernel-issued response to an engine capability request. A granted response
+     * always carries the broker token id used to authorize exactly this request.
+     */
+    public record CapabilityResolution(
+            UUID requestId,
+            Capability capability,
+            Origin origin,
+            boolean granted,
+            UUID tokenId,
+            String detail
+    ) {
+        public CapabilityResolution {
+            Objects.requireNonNull(requestId, "requestId");
+            Objects.requireNonNull(capability, "capability");
+            Objects.requireNonNull(origin, "origin");
+            detail = Objects.requireNonNullElse(detail, "");
+            if (granted && tokenId == null) {
+                throw new IllegalArgumentException("Granted capability resolution requires a token id");
+            }
+            if (!granted && tokenId != null) {
+                throw new IllegalArgumentException("Denied capability resolution cannot carry a token id");
+            }
+        }
+    }
+
     public sealed interface Event permits
             Event.NavigationStarted,
             Event.NavigationCommitted,
@@ -50,8 +77,19 @@ public final class Engine {
         record SnapshotReady(Snapshot snapshot) implements Event {}
         record Status(String message) implements Event {}
         record Crashed(String reason, boolean recoverable) implements Event {}
-        record CapabilityRequested(Capability capability, Origin origin, String rationale)
-                implements Event {}
+        record CapabilityRequested(
+                UUID requestId,
+                Capability capability,
+                Origin origin,
+                String rationale
+        ) implements Event {
+            public CapabilityRequested {
+                Objects.requireNonNull(requestId, "requestId");
+                Objects.requireNonNull(capability, "capability");
+                Objects.requireNonNull(origin, "origin");
+                rationale = Objects.requireNonNullElse(rationale, "");
+            }
+        }
     }
 
     public interface BrowserEngine extends AutoCloseable {
@@ -69,6 +107,7 @@ public final class Engine {
         CompletionStage<Void> reload();
         CompletionStage<Void> stop();
         CompletionStage<Void> execute(long nodeId, Action action, Map<String, String> arguments);
+        CompletionStage<Void> resolveCapability(CapabilityResolution resolution);
         CompletionStage<Snapshot> snapshot();
         Flow.Publisher<Event> events();
         URI currentUri();
