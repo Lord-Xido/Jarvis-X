@@ -5,8 +5,8 @@ The kernel operationalises the canonical cycle:
     encode -> condense -> predict -> compare -> update Omega
     -> project Lambda -> decode -> commit/rollback
 
-It uses signed 3-bit latent values and integer/fixed-ratio updates so runs are
-replayable across supported Python versions and hardware.
+All committed state is integer-valued and hash chained. Candidate state is
+validated before it is exposed through the VM register bridge.
 """
 
 from __future__ import annotations
@@ -42,9 +42,10 @@ def _div_round_nearest(numerator: int, denominator: int) -> int:
 
 def quantize_q3(value: Number, scale: float = 1.0) -> int:
     """Quantize a scalar into the signed 3-bit domain {-4, ..., 3}."""
-    if not math.isfinite(float(value)):
+    numeric = float(value)
+    if not math.isfinite(numeric):
         raise ValueError("input values must be finite")
-    return _clamp(_round_half_away_from_zero(float(value) * scale), Q3_MIN, Q3_MAX)
+    return _clamp(_round_half_away_from_zero(numeric * scale), Q3_MIN, Q3_MAX)
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,7 @@ class CognitiveConfig:
     branch_factor: int = 4
     input_scale: float = 1.0
     max_levels: int = 16
+    max_input_values: int = 65536
     retention_numerator: int = 7
     retention_denominator: int = 8
     learning_numerator: int = 1
@@ -67,14 +69,24 @@ class CognitiveConfig:
             raise ValueError("branch_factor must be >= 2")
         if self.max_levels < 1:
             raise ValueError("max_levels must be >= 1")
+        if self.max_input_values < 1:
+            raise ValueError("max_input_values must be positive")
         if self.input_scale <= 0 or not math.isfinite(self.input_scale):
             raise ValueError("input_scale must be positive and finite")
         if self.retention_denominator <= 0 or self.learning_denominator <= 0:
             raise ValueError("update denominators must be positive")
+        if not 0 <= self.retention_numerator <= self.retention_denominator:
+            raise ValueError("retention ratio must be between 0 and 1")
+        if self.learning_numerator < 0:
+            raise ValueError("learning_numerator must be non-negative")
         if self.omega_prediction_scale <= 0:
             raise ValueError("omega_prediction_scale must be positive")
         if self.omega_limit < 1:
             raise ValueError("omega_limit must be positive")
+        if self.max_residual_l1 is not None and self.max_residual_l1 < 0:
+            raise ValueError("max_residual_l1 must be non-negative")
+        if self.max_active_nodes is not None and self.max_active_nodes < 0:
+            raise ValueError("max_active_nodes must be non-negative")
         if self.journal_limit < 1:
             raise ValueError("journal_limit must be positive")
 
@@ -129,12 +141,17 @@ class CognitiveKernel:
         encoded = tuple(quantize_q3(value, self.config.input_scale) for value in source)
         if not encoded:
             raise ValueError("at least one input value is required")
+        if len(encoded) > self.config.max_input_values:
+            raise ValueError("input exceeds max_input_values")
         return encoded
 
     def condense(self, encoded: Tuple[int, ...]) -> Tuple[Tuple[int, ...], ...]:
         levels: List[Tuple[int, ...]] = [encoded]
         current = encoded
-        while len(current) > 1 and len(levels) < self.config.max_levels:
+
+        while len(current) > 1:
+            if len(levels) >= self.config.max_levels:
+                raise ValueError("hierarchy exceeds max_levels")
             parent: List[int] = []
             for start in range(0, len(current), self.config.branch_factor):
                 group = current[start : start + self.config.branch_factor]
@@ -143,9 +160,6 @@ class CognitiveKernel:
             current = tuple(parent)
             levels.append(current)
 
-        if len(current) > 1:
-            root = _clamp(_div_round_nearest(sum(current), len(current)), Q3_MIN, Q3_MAX)
-            levels.append((root,))
         return tuple(levels)
 
     def predict(self, encoded_length: int) -> Tuple[int, ...]:
@@ -175,18 +189,23 @@ class CognitiveKernel:
                 error * self.config.learning_numerator,
                 self.config.learning_denominator,
             )
-            updated.append(_clamp(retained + learned, -self.config.omega_limit, self.config.omega_limit))
+            updated.append(
+                _clamp(retained + learned, -self.config.omega_limit, self.config.omega_limit)
+            )
         return tuple(updated)
 
     def decode(self, hierarchy: Tuple[Tuple[int, ...], ...]) -> Tuple[int, ...]:
-        """Top-down approximate reconstruction from the condensed root."""
-        reconstructed = hierarchy[-1]
-        for child_level in reversed(hierarchy[:-1]):
-            expanded: List[int] = []
-            for value in reconstructed:
-                expanded.extend([value] * self.config.branch_factor)
-            reconstructed = tuple(expanded[: len(child_level)])
-        return tuple(_clamp(value, Q3_MIN, Q3_MAX) for value in reconstructed)
+        """Reconstruct the leaf width from the finest available condensed level."""
+        if len(hierarchy) == 1:
+            return hierarchy[0]
+
+        reconstructed = hierarchy[1]
+        expanded: List[int] = []
+        for value in reconstructed:
+            expanded.extend([value] * self.config.branch_factor)
+        return tuple(
+            _clamp(value, Q3_MIN, Q3_MAX) for value in expanded[: len(hierarchy[0])]
+        )
 
     def _validate_candidate(
         self,
@@ -197,16 +216,21 @@ class CognitiveKernel:
     ) -> Tuple[bool, str]:
         if not hierarchy or hierarchy[0] != encoded or len(hierarchy[-1]) != 1:
             return False, "invalid hierarchy"
+        if len(hierarchy) > self.config.max_levels:
+            return False, "hierarchy depth exceeded"
         if any(value < Q3_MIN or value > Q3_MAX for level in hierarchy for value in level):
             return False, "q3 range violation"
         if any(abs(value) > self.config.omega_limit for value in omega):
             return False, "omega bound violation"
+
         residual_l1 = sum(abs(value) for value in residual)
         if self.config.max_residual_l1 is not None and residual_l1 > self.config.max_residual_l1:
             return False, "residual budget exceeded"
+
         active_nodes = sum(1 for level in hierarchy for value in level if value != 0)
         if self.config.max_active_nodes is not None and active_nodes > self.config.max_active_nodes:
             return False, "active-node budget exceeded"
+
         return True, "committed"
 
     @staticmethod
@@ -235,6 +259,7 @@ class CognitiveKernel:
             "hierarchy_nodes": float(hierarchy_nodes),
             "hierarchy_levels": float(len(hierarchy)),
             "condensation_ratio": float(raw_nodes) / float(root_nodes),
+            "materialization_ratio": float(hierarchy_nodes) / float(raw_nodes),
             "active_fraction": float(active_nodes) / float(hierarchy_nodes),
             "residual_l1": float(sum(abs(value) for value in residual)),
             "memory_l1": float(sum(abs(value) for value in omega)),
@@ -254,6 +279,7 @@ class CognitiveKernel:
         cycle = self.state.cycle + 1
 
         candidate_payload: Dict[str, object] = {
+            "config": asdict(self.config),
             "cycle": cycle,
             "encoded": encoded,
             "hierarchy": hierarchy,
@@ -307,7 +333,7 @@ class CognitiveKernel:
 
 
 class CognitiveVMBridge:
-    """Expose kernel state through the existing Jarvis-X Greek register bank."""
+    """Expose only committed kernel state through the Jarvis-X register bank."""
 
     def __init__(self, registers: object, kernel: Optional[CognitiveKernel] = None) -> None:
         self.registers = registers
@@ -315,13 +341,23 @@ class CognitiveVMBridge:
 
     def cycle(self, values: Union[Number, Sequence[Number]]) -> CycleResult:
         result = self.kernel.step(values)
-        root = result.hierarchy[-1][0]
-        self.registers["Ξ"] = sum(result.encoded)
-        self.registers["Ψ"] = root
-        self.registers["Φ"] = sum(result.prediction)
-        self.registers["Λ"] = 1 if result.committed else 0
-        self.registers["Ω"] = sum(result.omega_after)
-        self.registers["Θ"] = self.kernel.config.learning_numerator
-        self.registers["𝒮"] = int(result.metrics["residual_l1"])
-        self.registers["Π"] = sum(result.decoded)
+        if not result.committed:
+            self.registers["Λ"] = 0
+            return result
+
+        before = self.registers.snapshot()
+        try:
+            root = result.hierarchy[-1][0]
+            self.registers["Ξ"] = sum(result.encoded)
+            self.registers["Ψ"] = root
+            self.registers["Φ"] = sum(result.prediction)
+            self.registers["Λ"] = 1
+            self.registers["Ω"] = sum(result.omega_after)
+            self.registers["Θ"] = self.kernel.config.learning_numerator
+            self.registers["𝒮"] = int(result.metrics["residual_l1"])
+            self.registers["Π"] = sum(result.decoded)
+        except Exception:
+            for name, value in before.items():
+                self.registers[name] = value
+            raise
         return result
