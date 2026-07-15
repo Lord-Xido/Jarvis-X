@@ -1,0 +1,14 @@
+# Deterministic control-flow and memory example.
+SET A 3
+SET B 1
+SET C 0
+
+loop:
+ADD C C A
+SUB A A B
+CMP A Ξ
+JNZ loop
+
+STORE C 0
+LOAD D 0
+HALT
