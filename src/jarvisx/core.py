@@ -88,7 +88,7 @@ class CodexVM:
         """Run the inward 3D geometric feedback loop atomically.
 
         Every committed decoded output becomes the next cycle's input. The
-        final accepted geometric state is projected into the existing Greek
+        last accepted geometric state is projected into the existing Greek
         register bank. Exceptions restore geometric state, journal, and
         registers together.
         """
@@ -98,18 +98,17 @@ class CodexVM:
 
         try:
             results = self.geometric.run_feedback(values, cycles)
-            if not results:
-                return results
-            final = results[-1]
-            if not final.committed:
+            committed = [result for result in results if result.committed]
+            if not committed:
                 self.regs["Λ"] = 0
                 return results
 
+            final = committed[-1]
             root = final.hierarchy[-1].values[0]
             self.regs["Ξ"] = sum(final.encoded)
             self.regs["Ψ"] = root
             self.regs["Φ"] = sum(final.evolved)
-            self.regs["Λ"] = 1
+            self.regs["Λ"] = 1 if results[-1].committed else 0
             self.regs["Ω"] = sum(final.omega_after)
             self.regs["𝒮"] = int(final.metrics["best_reconstruction_l1"])
             self.regs["Π"] = sum(final.output)
