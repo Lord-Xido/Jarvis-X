@@ -1,4 +1,5 @@
 import json
+import math
 import sys
 
 from .api import start_api
@@ -27,6 +28,16 @@ def _parse_geometry_arguments(arguments):
         return cycles, [float(value) for value in values]
     except (OverflowError, ValueError) as exc:
         raise SystemExit("geometry3d inputs must be finite numbers") from exc
+
+
+def _json_safe(value):
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
 
 
 def main():
@@ -69,7 +80,7 @@ def main():
             "final_state": vm.geometric.snapshot(),
             "registers": vm.regs.snapshot(),
         }
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        print(json.dumps(_json_safe(payload), ensure_ascii=False, indent=2, allow_nan=False))
 
     elif cmd == "api":
         start_api()
