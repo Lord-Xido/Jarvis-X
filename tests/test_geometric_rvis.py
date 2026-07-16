@@ -1,7 +1,9 @@
+import json
 import math
 
 import pytest
 
+from jarvisx.cli import _json_safe
 from jarvisx.core import CodexVM
 from jarvisx.geometric_rvis import (
     GeometricConfig,
@@ -90,3 +92,12 @@ def test_codex_vm_projects_geometric_commit_into_registers():
     assert vm.regs["Ψ"] == final.hierarchy[-1].values[0]
     assert vm.regs["𝒮"] == int(final.metrics["best_reconstruction_l1"])
     assert vm.regs["Π"] == sum(final.output)
+
+
+def test_rejected_cycle_serializes_as_strict_browser_json():
+    runtime = GeometricFeedbackRuntime(GeometricConfig(max_reconstruction_l1=0))
+    rejected = runtime.step([3, -4, 3, -4])
+    payload = _json_safe(rejected.to_dict())
+    encoded = json.dumps(payload, allow_nan=False)
+    assert "Infinity" not in encoded
+    assert payload["metrics"]["best_reconstruction_l1"] is None
