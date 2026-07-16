@@ -9,6 +9,7 @@ from .sandbox import Sandbox
 from .debugger import Debugger
 from .tracer import Tracer
 from .cognitive import CognitiveKernel, CognitiveVMBridge
+from .geometric_rvis import GeometricFeedbackRuntime
 
 
 class CodexVM:
@@ -26,6 +27,7 @@ class CodexVM:
         self.tracer = Tracer()
         self.cognitive = CognitiveKernel()
         self.cognitive_bridge = CognitiveVMBridge(self.regs, self.cognitive)
+        self.geometric = GeometricFeedbackRuntime()
         self.program = []
         self.cycles = 0
         self.running = True
@@ -78,6 +80,43 @@ class CodexVM:
         except Exception:
             self.cognitive.state = state_before
             del self.cognitive.journal[journal_length:]
+            for name, value in registers_before.items():
+                self.regs[name] = value
+            raise
+
+    def geometric_feedback(self, values, cycles=None):
+        """Run the inward 3D geometric feedback loop atomically.
+
+        Every committed decoded output becomes the next cycle's input. The
+        final accepted geometric state is projected into the existing Greek
+        register bank. Exceptions restore geometric state, journal, and
+        registers together.
+        """
+        state_before = self.geometric.state
+        journal_length = len(self.geometric.journal)
+        registers_before = self.regs.snapshot()
+
+        try:
+            results = self.geometric.run_feedback(values, cycles)
+            if not results:
+                return results
+            final = results[-1]
+            if not final.committed:
+                self.regs["Λ"] = 0
+                return results
+
+            root = final.hierarchy[-1].values[0]
+            self.regs["Ξ"] = sum(final.encoded)
+            self.regs["Ψ"] = root
+            self.regs["Φ"] = sum(final.evolved)
+            self.regs["Λ"] = 1
+            self.regs["Ω"] = sum(final.omega_after)
+            self.regs["𝒮"] = int(final.metrics["best_reconstruction_l1"])
+            self.regs["Π"] = sum(final.output)
+            return results
+        except Exception:
+            self.geometric.state = state_before
+            del self.geometric.journal[journal_length:]
             for name, value in registers_before.items():
                 self.regs[name] = value
             raise
