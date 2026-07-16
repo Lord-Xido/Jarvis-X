@@ -69,6 +69,13 @@ input[type=range] { width: 100%; padding: 0; }
 </div>
 <script>
 (() => {
+  'use strict';
+
+  const MAX_CYCLES = 1024;
+  const MAX_EVENTS_PER_CYCLE = 2000;
+  const MAX_VOXELS = 4096;
+  const MAX_JSON_BYTES = 5 * 1024 * 1024;
+
   const canvas = document.querySelector('#view');
   const ctx = canvas.getContext('2d');
   const cycleSlider = document.querySelector('#cycle');
@@ -77,8 +84,19 @@ input[type=range] { width: 100%; padding: 0; }
   const metrics = document.querySelector('#metrics');
   const timeline = document.querySelector('#timeline');
   const status = document.querySelector('#status');
+  const playButton = document.querySelector('#play');
   let cycles = [], angleX = -0.45, angleY = 0.65, zoom = 64, playing = false, timer = null;
   let dragging = false, lastX = 0, lastY = 0;
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+  }
+
+  function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
 
   function resize() {
     const dpr = Math.min(devicePixelRatio || 1, 2);
@@ -90,23 +108,46 @@ input[type=range] { width: 100%; padding: 0; }
   addEventListener('resize', resize);
 
   function normalize(data) {
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.cycles)) return data.cycles;
-    if (data.cycle !== undefined) return [data];
-    throw new Error('JSON must be a cycle, an array of cycles, or {cycles:[...]}');
+    let result;
+    if (Array.isArray(data)) result = data;
+    else if (isRecord(data) && Array.isArray(data.cycles)) result = data.cycles;
+    else if (isRecord(data) && data.cycle !== undefined) result = [data];
+    else throw new Error('JSON must be a cycle, an array of cycles, or {cycles:[...]}');
+
+    if (result.length > MAX_CYCLES) throw new Error(`Trace exceeds ${MAX_CYCLES} cycles`);
+    if (result.some(cycle => !isRecord(cycle))) throw new Error('Every cycle must be a JSON object');
+    return result;
+  }
+
+  function validateShape(raw) {
+    if (!Array.isArray(raw) || raw.length !== 3) throw new Error('Cycle shape must contain three axes');
+    const shape = raw.map(Number);
+    if (shape.some(axis => !Number.isInteger(axis) || axis < 1 || axis > 64)) {
+      throw new Error('Cycle shape axes must be integers from 1 to 64');
+    }
+    if (shape[0] * shape[1] * shape[2] > MAX_VOXELS) {
+      throw new Error(`Cycle shape exceeds ${MAX_VOXELS} voxels`);
+    }
+    return shape;
   }
 
   function shapeOf(cycle) {
-    const level = cycle.hierarchy && cycle.hierarchy[0];
-    if (level && level.shape) return level.shape;
-    const event = (cycle.events || []).find(e => e.shape);
-    return event ? event.shape : [4,4,4];
+    const level = Array.isArray(cycle.hierarchy) && cycle.hierarchy[0];
+    if (isRecord(level) && level.shape) return validateShape(level.shape);
+    const event = Array.isArray(cycle.events) ? cycle.events.find(item => isRecord(item) && item.shape) : null;
+    return validateShape(event ? event.shape : [4,4,4]);
+  }
+
+  function q3(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(-4, Math.min(3, numeric));
   }
 
   function valuesOf(cycle) {
-    const values = cycle[stageSelect.value] || [];
+    const values = Array.isArray(cycle[stageSelect.value]) ? cycle[stageSelect.value] : [];
     const [w,h,d] = shapeOf(cycle);
-    return Array.from({length:w*h*d}, (_,i) => Number(values[i] || 0));
+    return Array.from({length:w*h*d}, (_,i) => q3(values[i] ?? 0));
   }
 
   function project(x,y,z,w,h,d) {
@@ -137,24 +178,51 @@ input[type=range] { width: 100%; padding: 0; }
   function renderInfo(cycle,index) {
     cycleLabel.textContent=String(index+1);
     const committed=Boolean(cycle.committed);
-    status.innerHTML=`Cycle ${cycle.cycle ?? index+1} · <span class="${committed?'good':'bad'}">${committed?'COMMITTED':'ROLLED BACK'}</span> · lane ${cycle.selected_lane ?? 'none'} · ${stageSelect.value}`;
-    const m=cycle.metrics||{};
+    status.innerHTML=`Cycle ${escapeHtml(cycle.cycle ?? index+1)} · <span class="${committed?'good':'bad'}">${committed?'COMMITTED':'ROLLED BACK'}</span> · lane ${escapeHtml(cycle.selected_lane ?? 'none')} · ${escapeHtml(stageSelect.value)}`;
+    const m=isRecord(cycle.metrics)?cycle.metrics:{};
     const rows={
       'Input values':m.input_values,'Lattice voxels':m.lattice_voxels,'Hierarchy levels':m.hierarchy_levels,
       'Parallel lanes':m.parallel_lanes,'Admissible lanes':m.admissible_lanes,'Best reconstruction L1':m.best_reconstruction_l1,
-      'Active voxels':m.active_voxels,'Memory L1':m.memory_l1,'State hash':(cycle.state_hash||'').slice(0,12)
+      'Active voxels':m.active_voxels,'Memory L1':m.memory_l1,'State hash':String(cycle.state_hash||'').slice(0,12)
     };
-    metrics.innerHTML=Object.entries(rows).map(([k,v])=>`<span>${k}</span><span>${v ?? '—'}</span>`).join('');
-    timeline.innerHTML=(cycle.events||[]).map(e=>`<div class="event"><strong>${e.phase}</strong>${e.lane?` · ${e.lane}`:''}<br>${e.summary||''}</div>`).join('');
+    metrics.innerHTML=Object.entries(rows).map(([key,value])=>`<span>${escapeHtml(key)}</span><span>${escapeHtml(value ?? '—')}</span>`).join('');
+    const events=Array.isArray(cycle.events)?cycle.events.slice(0,MAX_EVENTS_PER_CYCLE):[];
+    timeline.innerHTML=events.map(event=>{
+      const safe=isRecord(event)?event:{};
+      return `<div class="event"><strong>${escapeHtml(safe.phase||'EVENT')}</strong>${safe.lane?` · ${escapeHtml(safe.lane)}`:''}<br>${escapeHtml(safe.summary||'')}</div>`;
+    }).join('');
   }
 
   function draw() {
-    if(!cycles.length){ ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight); return; }
-    const index=Number(cycleSlider.value), cycle=cycles[index]; drawGrid(cycle); renderInfo(cycle,index);
+    if(!cycles.length){ ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight); status.textContent='No geometric cycle loaded.'; return; }
+    const index=Number(cycleSlider.value), cycle=cycles[index];
+    try {
+      drawGrid(cycle);
+      renderInfo(cycle,index);
+    } catch (error) {
+      ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+      status.textContent=`Invalid trace: ${error.message}`;
+    }
+  }
+
+  function stopPlayback() {
+    playing=false;
+    clearInterval(timer);
+    timer=null;
+    playButton.textContent='Play';
   }
 
   function setCycles(next) {
-    cycles=normalize(next); cycleSlider.max=String(Math.max(0,cycles.length-1)); cycleSlider.value='0'; draw();
+    stopPlayback();
+    cycles=normalize(next);
+    cycleSlider.max=String(Math.max(0,cycles.length-1));
+    cycleSlider.value='0';
+    draw();
+  }
+
+  function parseJsonText(text) {
+    if (new Blob([text]).size > MAX_JSON_BYTES) throw new Error('JSON input exceeds 5 MiB');
+    return JSON.parse(text);
   }
 
   function demoData() {
@@ -172,7 +240,7 @@ input[type=range] { width: 100%; padding: 0; }
         {phase:'COMMIT',lane:selected,summary:'Committed branch and fed output inward.'}
       ], state_hash:'demo'+cycle
     });
-    const pad=a=>a.concat(Array(64-a.length).fill(0));
+    const pad=array=>array.concat(Array(64-array.length).fill(0));
     return {cycles:[
       mk(1,'identity',18,pad([3,1,-1,-3,2,0,-2,-4]),pad([1,1,1,1,0,0,0,0])),
       mk(2,'memory',8,pad([1,1,1,1,0,0,0,0]),pad([1,1,1,1,1,1,1,1])),
@@ -181,17 +249,68 @@ input[type=range] { width: 100%; padding: 0; }
   }
 
   document.querySelector('#demo').onclick=()=>setCycles(demoData());
-  document.querySelector('#load').onclick=()=>{ try{setCycles(JSON.parse(document.querySelector('#json').value));}catch(e){alert(e.message);} };
-  document.querySelector('#file').onchange=async e=>{ const f=e.target.files[0]; if(f) setCycles(JSON.parse(await f.text())); };
-  cycleSlider.oninput=draw; stageSelect.onchange=draw;
-  document.querySelector('#step').onclick=()=>{ if(cycles.length){ cycleSlider.value=String((Number(cycleSlider.value)+1)%cycles.length); draw(); } };
-  document.querySelector('#reset').onclick=()=>{ playing=false; clearInterval(timer); cycleSlider.value='0'; angleX=-.45; angleY=.65; zoom=64; draw(); };
-  document.querySelector('#play').onclick=()=>{ playing=!playing; clearInterval(timer); document.querySelector('#play').textContent=playing?'Pause':'Play'; if(playing) timer=setInterval(()=>document.querySelector('#step').click(),900); };
-  canvas.onpointerdown=e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};
-  canvas.onpointermove=e=>{if(dragging){angleY+=(e.clientX-lastX)*.008;angleX+=(e.clientY-lastY)*.008;lastX=e.clientX;lastY=e.clientY;draw();}};
+  document.querySelector('#load').onclick=()=>{
+    try{setCycles(parseJsonText(document.querySelector('#json').value));}
+    catch(error){alert(error.message);}
+  };
+  document.querySelector('#file').onchange=async event=>{
+    try {
+      const file=event.target.files[0];
+      if(!file) return;
+      if(file.size>MAX_JSON_BYTES) throw new Error('JSON file exceeds 5 MiB');
+      setCycles(parseJsonText(await file.text()));
+    } catch(error) {
+      alert(error.message);
+      event.target.value='';
+    }
+  };
+  cycleSlider.oninput=draw;
+  stageSelect.onchange=draw;
+  document.querySelector('#step').onclick=()=>{
+    if(cycles.length){
+      cycleSlider.value=String((Number(cycleSlider.value)+1)%cycles.length);
+      draw();
+    }
+  };
+  document.querySelector('#reset').onclick=()=>{
+    stopPlayback();
+    cycleSlider.value='0';
+    angleX=-.45;
+    angleY=.65;
+    zoom=64;
+    draw();
+  };
+  playButton.onclick=()=>{
+    playing=!playing;
+    clearInterval(timer);
+    playButton.textContent=playing?'Pause':'Play';
+    if(playing) timer=setInterval(()=>document.querySelector('#step').click(),900);
+  };
+  canvas.onpointerdown=event=>{
+    dragging=true;
+    lastX=event.clientX;
+    lastY=event.clientY;
+    canvas.setPointerCapture(event.pointerId);
+  };
+  canvas.onpointermove=event=>{
+    if(dragging){
+      angleY+=(event.clientX-lastX)*.008;
+      angleX+=(event.clientY-lastY)*.008;
+      lastX=event.clientX;
+      lastY=event.clientY;
+      draw();
+    }
+  };
   canvas.onpointerup=()=>dragging=false;
-  canvas.onwheel=e=>{e.preventDefault();zoom=Math.max(20,Math.min(150,zoom-e.deltaY*.05));draw();};
-  resize(); setCycles(demoData());
+  canvas.onpointercancel=()=>dragging=false;
+  canvas.onwheel=event=>{
+    event.preventDefault();
+    zoom=Math.max(20,Math.min(150,zoom-event.deltaY*.05));
+    draw();
+  };
+
+  resize();
+  setCycles(demoData());
 })();
 </script>
 </body>
