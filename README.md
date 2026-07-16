@@ -1,6 +1,6 @@
 # Jarvis-X
 
-Jarvis-X is a deterministic, auditable virtual machine with a reflex control layer, policy gate, persistent Ω ledger, and a transactional hierarchical cognitive kernel.
+Jarvis-X is a deterministic, auditable virtual machine with a reflex control layer, policy gate, persistent Ω ledger, transactional hierarchical cognitive kernel, and a 3D geometric reasoning-visualisation runtime.
 
 ## Install
 
@@ -17,7 +17,7 @@ pip install .
 jarvisx run program.jx
 ```
 
-The existing VM supports deterministic bytecode decoding, register execution, Λ policy checks, reflex stabilisation, tracing, sandbox limits, and ledger recording.
+The existing VM supports deterministic bytecode decoding, register execution, Λ policy checks, explicit reflex stabilisation, tracing, sandbox limits, and ledger recording.
 
 ## Hierarchical cognitive kernel
 
@@ -75,16 +75,49 @@ print(vm.regs.snapshot())
 
 ### Measured outputs
 
-Each cycle reports:
+Each cycle reports raw and condensed bit counts, hierarchy depth, condensation ratio, active-node fraction, residual magnitude, cumulative memory, reconstruction error, and provenance hashes.
 
-- raw and condensed bit counts;
-- hierarchy depth and total nodes;
-- condensation ratio;
-- active-node fraction;
-- prediction residual magnitude;
-- cumulative memory magnitude;
-- reconstruction error;
-- previous, candidate, and committed state hashes.
+## 3D geometric multiparallel feedback loop
+
+The reasoning-visualisation shell can turn its committed public output inward:
+
+```text
+Public shell values
+  -> signed-3-bit 3D voxel lattice
+  -> identity / diffusion / memory / hybrid lanes in parallel
+  -> 2x2x2 multiresolution condensation
+  -> top-down geometric decoding
+  -> reconstruction scoring
+  -> Λ projection
+  -> atomic commit or rollback
+  -> committed output becomes the next input
+```
+
+Run four inward cycles:
+
+```bash
+jarvisx geometry3d --cycles 4 3 1 -1 -3
+```
+
+The command emits browser-safe JSON containing each cycle, the geometric hierarchy, all four lane candidates, reconstruction and memory metrics, Λ decisions, public shell events, the final state, and the projected register bank.
+
+Python API:
+
+```python
+from jarvisx.core import CodexVM
+
+vm = CodexVM()
+cycles = vm.geometric_feedback([3, 1, -1, -3], cycles=4)
+
+for cycle in cycles:
+    print(cycle.selected_lane)
+    print(cycle.output)
+    print(cycle.events)
+```
+
+Open `geometric-rvis-shell.html` directly in a browser. It provides a rotatable and zoomable 3D lattice, encoded/evolved/decoded stage switching, cycle replay, lane telemetry, Λ status, and the public event timeline. Paste or load JSON produced by the CLI to replay a real execution.
+
+The full design is documented in `docs/JX_RVIS_3D_GEOMETRIC_LOOP.md`.
 
 ## Tests
 
@@ -92,4 +125,4 @@ Each cycle reports:
 pytest
 ```
 
-The cognitive tests cover signed three-bit quantisation, hierarchical condensation, Ω learning, deterministic replay, Λ rollback, and register integration.
+The suites cover signed-three-bit quantisation, hierarchical condensation, Ω learning, deterministic replay, Λ rollback, exact ISA behavior, ledger integrity, 3D address bijection, multiparallel lane determinism, inward feedback, browser event generation, and register integration.
