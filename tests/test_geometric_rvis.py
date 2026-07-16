@@ -1,5 +1,9 @@
+import importlib
 import json
 import math
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+import sys
 
 import pytest
 
@@ -21,6 +25,13 @@ def test_coordinate_mapping_is_bijective():
         assert coordinate_to_index(coord, shape) == index
 
 
+def test_coordinate_mapping_rejects_invalid_shapes_and_indices():
+    with pytest.raises(ValueError, match="positive integers"):
+        coordinate_to_index((0, 0, 0), (4, 0, 4))
+    with pytest.raises(ValueError, match="integer"):
+        index_to_coordinate(True, (4, 4, 4))
+
+
 def test_quantization_rejects_non_finite_input():
     with pytest.raises(ValueError, match="finite"):
         quantize_q3(math.inf)
@@ -35,6 +46,28 @@ def test_geometric_pyramid_condenses_to_one_voxel():
     assert len(hierarchy[-1].values) == 1
 
 
+def test_non_cubic_power_of_two_lattice_reaches_a_valid_root():
+    runtime = GeometricFeedbackRuntime(GeometricConfig(shape=(8, 4, 2)))
+    encoded, input_length = runtime.encode([3, 2, 1, 0])
+    hierarchy = runtime.condense(encoded, input_length)
+    assert [level.shape for level in hierarchy] == [
+        (8, 4, 2),
+        (4, 2, 1),
+        (2, 1, 1),
+        (1, 1, 1),
+    ]
+    assert len(runtime.decode(hierarchy)) == runtime.config.volume
+
+
+def test_sparse_padding_does_not_dominate_geometric_condensation():
+    result = GeometricFeedbackRuntime().step([3, 3, 3, 3])
+    assert result.committed
+    assert result.selected_lane == "identity"
+    assert result.output == (3, 3, 3, 3)
+    assert result.metrics["best_reconstruction_l1"] == 0.0
+    assert result.metrics["active_voxels"] == 4.0
+
+
 def test_parallel_lanes_are_deterministic():
     values = [3, 1, -1, -3, 2, 0, -2, -4]
     left = GeometricFeedbackRuntime().step(values)
@@ -47,6 +80,20 @@ def test_parallel_lanes_are_deterministic():
     ]
 
 
+def test_concurrent_steps_are_serialized_into_unique_committed_cycles():
+    runtime = GeometricFeedbackRuntime()
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        results = list(
+            executor.map(
+                runtime.step,
+                ([1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [-1, -1, -1, -1]),
+            )
+        )
+    assert runtime.state.cycle == 4
+    assert sorted(result.cycle for result in results) == [1, 2, 3, 4]
+    assert len(runtime.journal) == 4
+
+
 def test_feedback_turns_committed_output_into_next_input():
     runtime = GeometricFeedbackRuntime(GeometricConfig(feedback_cycles=3))
     results = runtime.run_feedback([3, 1, -1, -3])
@@ -54,6 +101,14 @@ def test_feedback_turns_committed_output_into_next_input():
     assert all(result.committed for result in results)
     assert results[1].encoded[:4] == results[0].output
     assert results[-1].state_hash == runtime.state.state_hash
+
+
+def test_feedback_rejects_zero_and_excessive_cycle_counts():
+    runtime = GeometricFeedbackRuntime(GeometricConfig(max_feedback_cycles=4))
+    with pytest.raises(ValueError, match="positive integer"):
+        runtime.run_feedback([1], cycles=0)
+    with pytest.raises(ValueError, match="maximum"):
+        runtime.run_feedback([1], cycles=5)
 
 
 def test_lambda_rejection_preserves_committed_state():
@@ -64,6 +119,13 @@ def test_lambda_rejection_preserves_committed_state():
     assert not result.committed
     assert runtime.snapshot() == before
     assert result.state_hash == "GENESIS"
+
+
+def test_invalid_lambda_budgets_are_rejected_at_configuration_time():
+    with pytest.raises(ValueError, match="non-negative"):
+        GeometricFeedbackRuntime(GeometricConfig(max_reconstruction_l1=-1))
+    with pytest.raises(ValueError, match="fit inside"):
+        GeometricFeedbackRuntime(GeometricConfig(max_active_voxels=65))
 
 
 def test_shell_events_expose_3d_pipeline_without_uncommitted_render():
@@ -101,3 +163,21 @@ def test_rejected_cycle_serializes_as_strict_browser_json():
     encoded = json.dumps(payload, allow_nan=False)
     assert "Infinity" not in encoded
     assert payload["metrics"]["best_reconstruction_l1"] is None
+
+
+def test_cli_import_does_not_load_optional_service_modules():
+    for module_name in ("jarvisx.api", "jarvisx.web", "jarvisx.node"):
+        sys.modules.pop(module_name, None)
+    cli = importlib.import_module("jarvisx.cli")
+    importlib.reload(cli)
+    assert "jarvisx.api" not in sys.modules
+    assert "jarvisx.web" not in sys.modules
+    assert "jarvisx.node" not in sys.modules
+
+
+def test_browser_shell_escapes_trace_text_and_bounds_loaded_geometry():
+    shell = (Path(__file__).parents[1] / "geometric-rvis-shell.html").read_text()
+    assert "function escapeHtml" in shell
+    assert "escapeHtml(safe.summary" in shell
+    assert "MAX_VOXELS" in shell
+    assert "MAX_JSON_BYTES" in shell
