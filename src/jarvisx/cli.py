@@ -9,9 +9,29 @@ from .parser import Parser
 from .web import start_web
 
 
+def _parse_geometry_arguments(arguments):
+    cycles = 4
+    values = list(arguments)
+    if "--cycles" in values:
+        index = values.index("--cycles")
+        try:
+            cycles = int(values[index + 1])
+        except (IndexError, ValueError) as exc:
+            raise SystemExit("--cycles requires a positive integer") from exc
+        del values[index : index + 2]
+    if cycles < 1:
+        raise SystemExit("--cycles requires a positive integer")
+    if not values:
+        raise SystemExit("Usage: jarvisx geometry3d [--cycles N] <number> [number ...]")
+    try:
+        return cycles, [float(value) for value in values]
+    except (OverflowError, ValueError) as exc:
+        raise SystemExit("geometry3d inputs must be finite numbers") from exc
+
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage: jarvisx [run|cognitive|api|web|node] <arguments>")
+        print("Usage: jarvisx [run|cognitive|geometry3d|api|web|node] <arguments>")
         return
 
     cmd = sys.argv[1]
@@ -39,6 +59,17 @@ def main():
         except (OverflowError, ValueError) as exc:
             raise SystemExit("cognitive inputs must be finite numbers") from exc
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+
+    elif cmd == "geometry3d":
+        cycles, values = _parse_geometry_arguments(sys.argv[2:])
+        vm = CodexVM()
+        results = vm.geometric_feedback(values, cycles)
+        payload = {
+            "cycles": [result.to_dict() for result in results],
+            "final_state": vm.geometric.snapshot(),
+            "registers": vm.regs.snapshot(),
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
 
     elif cmd == "api":
         start_api()
