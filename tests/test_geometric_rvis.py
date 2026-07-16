@@ -2,6 +2,7 @@ import math
 
 import pytest
 
+from jarvisx.core import CodexVM
 from jarvisx.geometric_rvis import (
     GeometricConfig,
     GeometricFeedbackRuntime,
@@ -78,3 +79,14 @@ def test_cycle_reports_memory_before_and_after_without_aliasing():
     second = runtime.step(first.output)
     assert first.omega_before == ()
     assert second.omega_before == first.omega_after
+
+
+def test_codex_vm_projects_geometric_commit_into_registers():
+    vm = CodexVM()
+    results = vm.geometric_feedback([3, 1, -1, -3], cycles=2)
+    final = results[-1]
+    assert final.committed
+    assert vm.regs["Λ"] == 1
+    assert vm.regs["Ψ"] == final.hierarchy[-1].values[0]
+    assert vm.regs["𝒮"] == int(final.metrics["best_reconstruction_l1"])
+    assert vm.regs["Π"] == sum(final.output)
