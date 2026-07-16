@@ -3,7 +3,6 @@ import math
 
 import pytest
 
-from jarvisx.cli import _json_safe
 from jarvisx.core import CodexVM
 from jarvisx.geometric_rvis import (
     GeometricConfig,
@@ -12,6 +11,7 @@ from jarvisx.geometric_rvis import (
     index_to_coordinate,
     quantize_q3,
 )
+from jarvisx.serialization import json_safe
 
 
 def test_coordinate_mapping_is_bijective():
@@ -97,7 +97,7 @@ def test_codex_vm_projects_geometric_commit_into_registers():
 def test_rejected_cycle_serializes_as_strict_browser_json():
     runtime = GeometricFeedbackRuntime(GeometricConfig(max_reconstruction_l1=0))
     rejected = runtime.step([3, -4, 3, -4])
-    payload = _json_safe(rejected.to_dict())
+    payload = json_safe(rejected.to_dict())
     encoded = json.dumps(payload, allow_nan=False)
     assert "Infinity" not in encoded
     assert payload["metrics"]["best_reconstruction_l1"] is None
