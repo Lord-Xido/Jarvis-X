@@ -73,8 +73,11 @@ def main():
 
     elif cmd == "geometry3d":
         cycles, values = _parse_geometry_arguments(sys.argv[2:])
-        vm = CodexVM()
-        results = vm.geometric_feedback(values, cycles)
+        try:
+            vm = CodexVM()
+            results = vm.geometric_feedback(values, cycles)
+        except (OverflowError, ValueError) as exc:
+            raise SystemExit("geometry3d inputs must be finite and fit the lattice") from exc
         payload = {
             "cycles": [result.to_dict() for result in results],
             "final_state": vm.geometric.snapshot(),
