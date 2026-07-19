@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "uvicorn>=0.23.0",
     "fastapi>=0.100.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
@@ -74,14 +75,14 @@ omit = [
 [tool.black]
 line-length = 100
 target-version = ['py38']
-include = '\\.pyi?$'
+include = '\.pyi?$'
 extend-exclude = '''
 /(
-    \\.git
-  | \\.hg
-  | \\.mypy_cache
-  | \\.tox
-  | \\.venv
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
   | _build
   | buck-out
   | build
