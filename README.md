@@ -101,6 +101,9 @@ The command reports actual parameter count, conceptual parameter targets,
 allocated bytes, latent and projection shapes, Omega head, state hash, measured
 cycle time, and whether the 13.7 ms target was met.
 
+The dimensional, memory, ledger, rendering, and distributed-execution corrections
+are documented in `docs/MM3D_OMEGA4_OPERATIONAL_AUDIT.md`.
+
 ## Local API and dashboard
 
 Jarvis-X uses its declared FastAPI/Uvicorn stack:
