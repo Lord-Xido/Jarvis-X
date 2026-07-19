@@ -1,12 +1,12 @@
-"""Deterministic 3D visual-memory ANN reference runtime.
+"""Deterministic 3D visual-memory reference runtime.
 
 Pipeline:
     Volume3D -> geometric encoder -> latent lattice -> associative memory
-             -> recursive residual refinement -> decoder -> bounded optimiser
+             -> spatial residual refinement -> decoder -> bounded optimiser
 
-The optimiser may only choose declared configuration variants. It evaluates all
-variants from an identical memory snapshot and commits only a measured objective
-improvement, preserving deterministic replay and rollback semantics.
+This module is the executable semantic oracle for later tensor, GPU, and learned
+implementations. Every candidate runs from an identical memory snapshot, and
+only a strictly better measured objective may replace the baseline mechanics.
 """
 
 from __future__ import annotations
@@ -44,7 +44,9 @@ def _softmax(xs: Sequence[float]) -> List[float]:
 
 def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
     scale = _norm(a) * _norm(b)
-    return 0.0 if scale <= 1e-12 else sum(x * y for x, y in zip(a, b)) / scale
+    if scale <= 1e-12:
+        return 0.0
+    return sum(x * y for x, y in zip(a, b)) / scale
 
 
 @dataclass(frozen=True)
@@ -53,15 +55,25 @@ class Volume3D:
     values: Tuple[float, ...]
 
     def __post_init__(self) -> None:
-        if any(axis <= 0 for axis in self.shape) or len(self.values) != _prod(self.shape):
-            raise ValueError("invalid 3D volume")
+        if any(axis <= 0 for axis in self.shape):
+            raise ValueError("volume axes must be positive")
+        if len(self.values) != _prod(self.shape):
+            raise ValueError("volume data length does not match shape")
         if not all(math.isfinite(value) for value in self.values):
             raise ValueError("volume values must be finite")
 
     @classmethod
-    def from_function(cls, shape: Shape3D, fn: Callable[[int, int, int], float]) -> "Volume3D":
+    def from_function(
+        cls, shape: Shape3D, fn: Callable[[int, int, int], float]
+    ) -> "Volume3D":
         d, h, w = shape
-        return cls(shape, tuple(float(fn(z, y, x)) for z in range(d) for y in range(h) for x in range(w)))
+        values = tuple(
+            float(fn(z, y, x))
+            for z in range(d)
+            for y in range(h)
+            for x in range(w)
+        )
+        return cls(shape, values)
 
     def at(self, z: int, y: int, x: int) -> float:
         d, h, w = self.shape
@@ -74,6 +86,14 @@ class Volume3D:
             raise ValueError("MSE requires equal shapes")
         return _mean([(a - b) ** 2 for a, b in zip(self.values, other.values)])
 
+    def subtract(self, other: "Volume3D") -> "Volume3D":
+        if self.shape != other.shape:
+            raise ValueError("subtraction requires equal shapes")
+        return Volume3D(
+            self.shape,
+            tuple(a - b for a, b in zip(self.values, other.values)),
+        )
+
 
 @dataclass(frozen=True)
 class LatentField:
@@ -82,11 +102,16 @@ class LatentField:
     values: Tuple[float, ...]
 
     def __post_init__(self) -> None:
-        if self.channels <= 0 or len(self.values) != _prod(self.shape) * self.channels:
-            raise ValueError("invalid latent field")
+        if self.channels <= 0:
+            raise ValueError("latent channels must be positive")
+        if len(self.values) != _prod(self.shape) * self.channels:
+            raise ValueError("latent data length does not match geometry")
 
     def vectors(self) -> List[Vector]:
-        return [self.values[i : i + self.channels] for i in range(0, len(self.values), self.channels)]
+        return [
+            self.values[i : i + self.channels]
+            for i in range(0, len(self.values), self.channels)
+        ]
 
     def vector(self, z: int, y: int, x: int) -> Vector:
         d, h, w = self.shape
@@ -96,13 +121,21 @@ class LatentField:
         return self.values[start : start + self.channels]
 
     @classmethod
-    def build(cls, shape: Shape3D, vectors: Sequence[Sequence[float]]) -> "LatentField":
+    def build(
+        cls, shape: Shape3D, vectors: Sequence[Sequence[float]]
+    ) -> "LatentField":
         if not vectors:
             raise ValueError("latent field cannot be empty")
         channels = len(vectors[0])
-        if len(vectors) != _prod(shape) or any(len(vector) != channels for vector in vectors):
-            raise ValueError("latent vector dimensions do not match")
-        return cls(shape, channels, tuple(value for vector in vectors for value in vector))
+        if len(vectors) != _prod(shape):
+            raise ValueError("latent vector count does not match shape")
+        if any(len(vector) != channels for vector in vectors):
+            raise ValueError("latent vector widths do not match")
+        return cls(
+            shape,
+            channels,
+            tuple(value for vector in vectors for value in vector),
+        )
 
 
 @dataclass(frozen=True)
@@ -119,14 +152,18 @@ class GeometricConfig:
     max_candidate_steps: int = 8
 
     def validate(self) -> None:
-        if any(axis <= 0 for axis in self.latent_shape) or self.channels < 2 or self.memory_slots <= 0:
-            raise ValueError("invalid geometry or memory dimensions")
+        if any(axis <= 0 for axis in self.latent_shape):
+            raise ValueError("latent axes must be positive")
+        if self.channels < 2 or self.memory_slots <= 0:
+            raise ValueError("invalid channel or memory dimensions")
         if not 1 <= self.refinement_steps <= self.max_candidate_steps:
             raise ValueError("refinement_steps outside declared bounds")
         if not 0.0 < self.learning_rate <= 1.0:
             raise ValueError("learning_rate outside (0, 1]")
-        if not 0.0 <= self.residual_gain <= 1.0 or not 0.0 <= self.memory_gain <= 1.0:
-            raise ValueError("gains outside [0, 1]")
+        if not 0.0 <= self.residual_gain <= 1.0:
+            raise ValueError("residual_gain outside [0, 1]")
+        if not 0.0 <= self.memory_gain <= 1.0:
+            raise ValueError("memory_gain outside [0, 1]")
         if self.max_abs_latent <= 0.0 or self.cost_weight < 0.0:
             raise ValueError("invalid projection or cost bound")
 
@@ -139,10 +176,18 @@ class MemorySlot:
 
 
 class SpatialMemory:
+    """Finite content-addressed memory with anti-monopoly usage pressure."""
+
     def __init__(self, count: int, channels: int) -> None:
         self.channels = channels
         self._slots = [
-            MemorySlot(tuple(0.05 * math.sin((i + 1) * (j + 1)) for j in range(channels)), (0.0,) * channels)
+            MemorySlot(
+                tuple(
+                    0.05 * math.sin((i + 1) * (j + 1))
+                    for j in range(channels)
+                ),
+                (0.0,) * channels,
+            )
             for i in range(count)
         ]
 
@@ -151,22 +196,51 @@ class SpatialMemory:
         clone._slots = list(self._slots)
         return clone
 
+    def snapshot(self) -> Tuple[MemorySlot, ...]:
+        return tuple(self._slots)
+
     def _attention(self, query: Sequence[float]) -> List[float]:
         if len(query) != self.channels:
             raise ValueError("memory query width mismatch")
-        return _softmax([4.0 * _cosine(query, slot.key) + 0.05 * slot.usage for slot in self._slots])
+        scores = [
+            4.0 * _cosine(query, slot.key) - 0.05 * slot.usage
+            for slot in self._slots
+        ]
+        return _softmax(scores)
 
     def read(self, query: Sequence[float]) -> Vector:
         weights = self._attention(query)
-        return tuple(sum(weight * slot.value[c] for weight, slot in zip(weights, self._slots)) for c in range(self.channels))
+        return tuple(
+            sum(
+                weight * slot.value[channel]
+                for weight, slot in zip(weights, self._slots)
+            )
+            for channel in range(self.channels)
+        )
 
-    def write(self, key: Sequence[float], value: Sequence[float], rate: float) -> int:
+    def write(
+        self,
+        key: Sequence[float],
+        value: Sequence[float],
+        rate: float,
+    ) -> int:
+        if len(value) != self.channels:
+            raise ValueError("memory value width mismatch")
         weights = self._attention(key)
-        index = max(range(len(weights)), key=lambda i: (weights[i], -self._slots[i].usage))
+        index = max(
+            range(len(weights)),
+            key=lambda i: (weights[i], -self._slots[i].usage, -i),
+        )
         old = self._slots[index]
         self._slots[index] = MemorySlot(
-            tuple((1.0 - rate) * a + rate * b for a, b in zip(old.key, key)),
-            tuple((1.0 - rate) * a + rate * b for a, b in zip(old.value, value)),
+            tuple(
+                (1.0 - rate) * previous + rate * current
+                for previous, current in zip(old.key, key)
+            ),
+            tuple(
+                (1.0 - rate) * previous + rate * current
+                for previous, current in zip(old.value, value)
+            ),
             old.usage + 1.0,
         )
         return index
@@ -174,7 +248,7 @@ class SpatialMemory:
 
 @dataclass(frozen=True)
 class RefinementTrace:
-    """Auditable latent telemetry; not a textual private reasoning trace."""
+    """Auditable numerical telemetry, not a textual reasoning trace."""
 
     step: int
     reconstruction_loss: float
@@ -199,8 +273,12 @@ class PermeationResult:
     trace: Tuple[RefinementTrace, ...]
     selected: CandidateMeasurement
     baseline: CandidateMeasurement
-    candidate_count: int
+    candidates: Tuple[CandidateMeasurement, ...]
     mechanics_changed: bool
+
+    @property
+    def candidate_count(self) -> int:
+        return len(self.candidates)
 
     def summary(self) -> dict:
         return {
@@ -213,6 +291,9 @@ class PermeationResult:
             "objective": self.selected.objective,
             "mechanics_changed": self.mechanics_changed,
             "candidate_count": self.candidate_count,
+            "candidate_objectives": [
+                measurement.objective for measurement in self.candidates
+            ],
             "trace": [item.__dict__ for item in self.trace],
         }
 
@@ -226,29 +307,93 @@ class GeometricCodec:
         start = index * source // latent
         return start, max(start + 1, (index + 1) * source // latent)
 
-    def encode(self, volume: Volume3D) -> LatentField:
+    def _regions(self, volume: Volume3D):
         sd, sh, sw = volume.shape
         ld, lh, lw = self.config.latent_shape
-        vectors: List[Vector] = []
         for lz in range(ld):
             z0, z1 = self._bounds(sd, ld, lz)
             for ly in range(lh):
                 y0, y1 = self._bounds(sh, lh, ly)
                 for lx in range(lw):
                     x0, x1 = self._bounds(sw, lw, lx)
-                    samples = [volume.at(z, y, x) for z in range(z0, min(z1, sd)) for y in range(y0, min(y1, sh)) for x in range(x0, min(x1, sw))]
-                    mean = _mean(samples)
-                    variance = _mean([(value - mean) ** 2 for value in samples])
-                    cz, cy, cx = min(sd - 1, (z0 + z1 - 1) // 2), min(sh - 1, (y0 + y1 - 1) // 2), min(sw - 1, (x0 + x1 - 1) // 2)
+                    samples = [
+                        volume.at(z, y, x)
+                        for z in range(z0, min(z1, sd))
+                        for y in range(y0, min(y1, sh))
+                        for x in range(x0, min(x1, sw))
+                    ]
+                    cz = min(sd - 1, (z0 + z1 - 1) // 2)
+                    cy = min(sh - 1, (y0 + y1 - 1) // 2)
+                    cx = min(sw - 1, (x0 + x1 - 1) // 2)
                     gradients = (
-                        volume.at(min(sd - 1, cz + 1), cy, cx) - volume.at(max(0, cz - 1), cy, cx),
-                        volume.at(cz, min(sh - 1, cy + 1), cx) - volume.at(cz, max(0, cy - 1), cx),
-                        volume.at(cz, cy, min(sw - 1, cx + 1)) - volume.at(cz, cy, max(0, cx - 1)),
+                        volume.at(min(sd - 1, cz + 1), cy, cx)
+                        - volume.at(max(0, cz - 1), cy, cx),
+                        volume.at(cz, min(sh - 1, cy + 1), cx)
+                        - volume.at(cz, max(0, cy - 1), cx),
+                        volume.at(cz, cy, min(sw - 1, cx + 1))
+                        - volume.at(cz, cy, max(0, cx - 1)),
                     )
-                    radius = math.sqrt(((2 * lz + 1) / ld - 1) ** 2 + ((2 * ly + 1) / lh - 1) ** 2 + ((2 * lx + 1) / lw - 1) ** 2)
-                    basis = [2 * mean - 1, math.sqrt(max(0.0, variance)), gradients[2], gradients[1], gradients[0], radius]
-                    vector = [basis[c] if c < len(basis) else _mean([v * math.sin((c + 1) * (i + 1)) for i, v in enumerate(basis)]) for c in range(self.config.channels)]
-                    vectors.append(tuple(_clamp(v, -self.config.max_abs_latent, self.config.max_abs_latent) for v in vector))
+                    yield lz, ly, lx, samples, gradients
+
+    def _expand_basis(self, basis: Sequence[float]) -> Vector:
+        vector = [
+            basis[channel]
+            if channel < len(basis)
+            else _mean(
+                [
+                    value * math.sin((channel + 1) * (index + 1))
+                    for index, value in enumerate(basis)
+                ]
+            )
+            for channel in range(self.config.channels)
+        ]
+        return tuple(
+            _clamp(
+                value,
+                -self.config.max_abs_latent,
+                self.config.max_abs_latent,
+            )
+            for value in vector
+        )
+
+    def encode(self, volume: Volume3D) -> LatentField:
+        ld, lh, lw = self.config.latent_shape
+        vectors: List[Vector] = []
+        for lz, ly, lx, samples, gradients in self._regions(volume):
+            mean = _mean(samples)
+            variance = _mean([(value - mean) ** 2 for value in samples])
+            radius = math.sqrt(
+                ((2 * lz + 1) / ld - 1) ** 2
+                + ((2 * ly + 1) / lh - 1) ** 2
+                + ((2 * lx + 1) / lw - 1) ** 2
+            )
+            basis = [
+                2.0 * mean - 1.0,
+                math.sqrt(max(0.0, variance)),
+                gradients[2],
+                gradients[1],
+                gradients[0],
+                radius,
+            ]
+            vectors.append(self._expand_basis(basis))
+        return LatentField.build(self.config.latent_shape, vectors)
+
+    def encode_residual(self, residual: Volume3D) -> LatentField:
+        """Project spatial reconstruction error into matching latent cells."""
+
+        vectors: List[Vector] = []
+        for _, _, _, samples, gradients in self._regions(residual):
+            mean = _mean(samples)
+            rms = math.sqrt(_mean([value * value for value in samples]))
+            basis = [
+                mean,
+                rms,
+                gradients[2],
+                gradients[1],
+                gradients[0],
+                _mean([abs(value) for value in samples]),
+            ]
+            vectors.append(self._expand_basis(basis))
         return LatentField.build(self.config.latent_shape, vectors)
 
     def decode(self, latent: LatentField, shape: Shape3D) -> Volume3D:
@@ -256,9 +401,17 @@ class GeometricCodec:
         ld, lh, lw = latent.shape
 
         def sample(z: int, y: int, x: int) -> float:
-            vector = latent.vector(min(ld - 1, z * ld // d), min(lh - 1, y * lh // h), min(lw - 1, x * lw // w))
+            vector = latent.vector(
+                min(ld - 1, z * ld // d),
+                min(lh - 1, y * lh // h),
+                min(lw - 1, x * lw // w),
+            )
             detail = 0.025 * sum(vector[2:5]) if len(vector) > 2 else 0.0
-            return _clamp(0.5 * (vector[0] + 1.0) + detail, 0.0, 1.0)
+            return _clamp(
+                0.5 * (vector[0] + 1.0) + detail,
+                0.0,
+                1.0,
+            )
 
         return Volume3D.from_function(shape, sample)
 
@@ -269,43 +422,137 @@ class VisualMemoryANN:
     def __init__(self, config: Optional[GeometricConfig] = None) -> None:
         self.config = config or GeometricConfig()
         self.config.validate()
-        self.memory = SpatialMemory(self.config.memory_slots, self.config.channels)
-        self.journal: List[CandidateMeasurement] = []
+        self.memory = SpatialMemory(
+            self.config.memory_slots,
+            self.config.channels,
+        )
+        self.journal: List[Tuple[CandidateMeasurement, ...]] = []
 
     @staticmethod
     def _global(latent: LatentField) -> Vector:
         vectors = latent.vectors()
-        return tuple(_mean([vector[c] for vector in vectors]) for c in range(latent.channels))
+        return tuple(
+            _mean([vector[channel] for vector in vectors])
+            for channel in range(latent.channels)
+        )
 
     @staticmethod
     def _operations(volume: Volume3D, config: GeometricConfig) -> int:
-        voxels, cells = _prod(volume.shape), _prod(config.latent_shape)
-        return voxels * (2 * config.channels + 3) + config.refinement_steps * cells * config.channels * (config.memory_slots + 8)
+        voxels = _prod(volume.shape)
+        cells = _prod(config.latent_shape)
+        encode_decode = voxels * (2 * config.channels + 3)
+        refine = (
+            config.refinement_steps
+            * cells
+            * config.channels
+            * (config.memory_slots + 10)
+        )
+        return encode_decode + refine
 
-    def _run(self, observed: Volume3D, target: Volume3D, config: GeometricConfig, memory: SpatialMemory):
-        codec, latent, trace = GeometricCodec(config), GeometricCodec(config).encode(observed), []
+    def _run(
+        self,
+        observed: Volume3D,
+        target: Volume3D,
+        config: GeometricConfig,
+        memory: SpatialMemory,
+    ):
+        codec = GeometricCodec(config)
+        latent = codec.encode(observed)
+        trace: List[RefinementTrace] = []
+
         for step in range(config.refinement_steps):
-            query, recalled = self._global(latent), memory.read(self._global(latent))
+            query = self._global(latent)
+            recalled = memory.read(query)
             reconstruction = codec.decode(latent, target.shape)
-            residual = tuple(expected - actual for expected, actual in zip(target.values, reconstruction.values))
-            residual_mean = _mean(residual)
-            slot = memory.write(query, tuple(residual_mean * math.cos(c + 1) for c in range(config.channels)), config.learning_rate)
+            residual_volume = target.subtract(reconstruction)
+            residual_latent = codec.encode_residual(residual_volume)
+            residual_summary = self._global(residual_latent)
+            slot = memory.write(
+                query,
+                residual_summary,
+                config.learning_rate,
+            )
+
             vectors = []
-            for vector in latent.vectors():
-                vectors.append(tuple(_clamp(value + config.learning_rate * (config.residual_gain * residual_mean + config.memory_gain * (recalled[c] - value)), -config.max_abs_latent, config.max_abs_latent) for c, value in enumerate(vector)))
+            for vector, local_residual in zip(
+                latent.vectors(),
+                residual_latent.vectors(),
+            ):
+                updated = tuple(
+                    _clamp(
+                        value
+                        + config.learning_rate
+                        * (
+                            config.residual_gain * local_residual[channel]
+                            + config.memory_gain
+                            * (recalled[channel] - value)
+                        ),
+                        -config.max_abs_latent,
+                        config.max_abs_latent,
+                    )
+                    for channel, value in enumerate(vector)
+                )
+                vectors.append(updated)
+
             latent = LatentField.build(latent.shape, vectors)
             post = codec.decode(latent, target.shape)
-            trace.append(RefinementTrace(step, post.mse(target), _norm(latent.values) / math.sqrt(len(latent.values)), _norm(residual) / math.sqrt(len(residual)), _norm(recalled), slot))
+            trace.append(
+                RefinementTrace(
+                    step=step,
+                    reconstruction_loss=post.mse(target),
+                    latent_norm=_norm(latent.values)
+                    / math.sqrt(len(latent.values)),
+                    residual_norm=_norm(residual_volume.values)
+                    / math.sqrt(len(residual_volume.values)),
+                    recalled_norm=_norm(recalled),
+                    memory_slot=slot,
+                )
+            )
+
         reconstruction = codec.decode(latent, target.shape)
-        loss, operations = reconstruction.mse(target), self._operations(observed, config)
-        measurement = CandidateMeasurement(config, loss, operations, loss + config.cost_weight * operations)
+        loss = reconstruction.mse(target)
+        operations = self._operations(observed, config)
+        measurement = CandidateMeasurement(
+            config,
+            loss,
+            operations,
+            loss + config.cost_weight * operations,
+        )
         return reconstruction, latent, tuple(trace), measurement, memory
 
     def _candidates(self) -> Tuple[GeometricConfig, ...]:
-        c = self.config
-        proposals = [c, replace(c, learning_rate=max(0.01, c.learning_rate * 0.75)), replace(c, learning_rate=min(1.0, c.learning_rate * 1.25)), replace(c, residual_gain=min(1.0, c.residual_gain + 0.1))]
-        if c.refinement_steps < c.max_candidate_steps:
-            proposals.append(replace(c, refinement_steps=c.refinement_steps + 1))
+        current = self.config
+        proposals = [
+            current,
+            replace(
+                current,
+                learning_rate=max(0.01, current.learning_rate * 0.75),
+            ),
+            replace(
+                current,
+                learning_rate=min(1.0, current.learning_rate * 1.25),
+            ),
+            replace(
+                current,
+                residual_gain=min(1.0, current.residual_gain + 0.1),
+            ),
+            replace(
+                current,
+                memory_gain=max(0.0, current.memory_gain * 0.75),
+            ),
+            replace(
+                current,
+                memory_gain=min(1.0, current.memory_gain * 1.25),
+            ),
+        ]
+        if current.refinement_steps < current.max_candidate_steps:
+            proposals.append(
+                replace(
+                    current,
+                    refinement_steps=current.refinement_steps + 1,
+                )
+            )
+
         unique: List[GeometricConfig] = []
         for proposal in proposals:
             proposal.validate()
@@ -313,32 +560,75 @@ class VisualMemoryANN:
                 unique.append(proposal)
         return tuple(unique)
 
-    def permeate(self, observed: Volume3D, target: Optional[Volume3D] = None, auto_optimize: bool = True) -> PermeationResult:
+    def permeate(
+        self,
+        observed: Volume3D,
+        target: Optional[Volume3D] = None,
+        auto_optimize: bool = True,
+    ) -> PermeationResult:
         target = target or observed
         if observed.shape != target.shape:
             raise ValueError("observed and target volumes must have equal shapes")
+
         candidates = self._candidates() if auto_optimize else (self.config,)
         snapshot = self.memory.clone()
-        runs = [self._run(observed, target, candidate, snapshot.clone()) for candidate in candidates]
+        runs = [
+            self._run(
+                observed,
+                target,
+                candidate,
+                snapshot.clone(),
+            )
+            for candidate in candidates
+        ]
         baseline = runs[0]
-        index = min(range(len(runs)), key=lambda i: (runs[i][3].objective, i))
+        index = min(
+            range(len(runs)),
+            key=lambda candidate_index: (
+                runs[candidate_index][3].objective,
+                candidate_index,
+            ),
+        )
         selected = runs[index]
-        changed = index != 0 and selected[3].objective < baseline[3].objective
-        self.config, self.memory = selected[3].config, selected[4]
-        self.journal.append(selected[3])
-        return PermeationResult(selected[0], selected[1], selected[2], selected[3], baseline[3], len(candidates), changed)
+        changed = (
+            index != 0
+            and selected[3].objective < baseline[3].objective
+        )
+
+        self.config = selected[3].config
+        self.memory = selected[4]
+        measurements = tuple(run[3] for run in runs)
+        self.journal.append(measurements)
+
+        return PermeationResult(
+            reconstruction=selected[0],
+            latent=selected[1],
+            trace=selected[2],
+            selected=selected[3],
+            baseline=baseline[3],
+            candidates=measurements,
+            mechanics_changed=changed,
+        )
 
 
 def make_demo_volume(size: int = 12) -> Volume3D:
     if size < 4:
         raise ValueError("demo size must be at least 4")
-    centre, scale = (size - 1) / 2.0, max(1.0, (size - 1) / 2.0)
+    centre = (size - 1) / 2.0
+    scale = max(1.0, (size - 1) / 2.0)
 
     def field(z: int, y: int, x: int) -> float:
-        nx, ny, nz = (x - centre) / scale, (y - centre) / scale, (z - centre) / scale
+        nx = (x - centre) / scale
+        ny = (y - centre) / scale
+        nz = (z - centre) / scale
         radius = math.sqrt(nx * nx + ny * ny + nz * nz)
         shell = math.exp(-10.0 * (radius - 0.58) ** 2)
-        wave = 0.12 * (math.sin(5 * nx) * math.cos(4 * ny) * math.sin(3 * nz) + 1.0)
+        wave = 0.12 * (
+            math.sin(5 * nx)
+            * math.cos(4 * ny)
+            * math.sin(3 * nz)
+            + 1.0
+        )
         return _clamp(0.82 * shell + wave, 0.0, 1.0)
 
     return Volume3D.from_function((size, size, size), field)
