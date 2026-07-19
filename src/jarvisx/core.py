@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from .debugger import Debugger
 from .decoder import Decoder
@@ -31,6 +31,7 @@ class CodexVM:
         self.debugger = Debugger(self)
         self.tracer = Tracer()
         self.geometric = VisualMemoryANN()
+        self._mm3d = None
         self.program = []
         self.cycles = 0
         self.running = True
@@ -102,3 +103,28 @@ class CodexVM:
             make_demo_volume(size),
             auto_optimize=auto_optimize,
         )
+
+    def run_mm3d_cycle(self, psi_input: Any, config=None):
+        """Execute the bounded MM3D Ω⁴ cycle under VM policy and journaling."""
+
+        action = "MM3D.CYCLE"
+        if not self.ethics.allow_action(action):
+            raise RuntimeError("policy blocked MM3D cycle")
+
+        from .mm3d_omega4 import MM3DEngine
+
+        if self._mm3d is None or (config is not None and self._mm3d.config != config):
+            if self._mm3d is not None:
+                self._mm3d.close()
+            self._mm3d = MM3DEngine(config)
+
+        result = self._mm3d.cycle(psi_input)
+        summary = result.summary()
+        self.ledger.log(summary, action)
+        self.tracer.record_event(action, summary)
+        return result
+
+    def close(self) -> None:
+        if self._mm3d is not None:
+            self._mm3d.close()
+            self._mm3d = None
