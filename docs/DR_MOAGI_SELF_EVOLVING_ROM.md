@@ -40,6 +40,9 @@ Supported operations:
 NOP LOAD3D STORE3D ENC DEC MAC3D BUNDLE META LDC DSM HALT
 ```
 
+`NOP` is a true no-operation. Program termination is represented explicitly by
+`HALT`; the optimizer never treats silence as an implicit stop condition.
+
 `LDC` and `DSM` are macro-ops:
 
 ```text
