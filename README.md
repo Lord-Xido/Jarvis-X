@@ -29,3 +29,15 @@ The reference runtime implements corrected Q8.8 arithmetic, the 128-bit SVI,
 and cadence-based fusion. See
 [`docs/JARVIS_X_800_INSTANCE_RUNTIME.md`](docs/JARVIS_X_800_INSTANCE_RUNTIME.md)
 for the exact operational contract and limitations.
+
+## Run the bounded Self-Evolving ROM
+
+```bash
+jarvisx ser 8
+```
+
+The SER runtime profiles adjacent bytecode, proposes `LDC` and `DSM` macro-op
+fusions, replays baseline and candidate programs from the same deterministic
+snapshot, and publishes a parent-linked ROM version only when machine-state
+semantics are exactly preserved and execution cost is reduced. See
+[`docs/DR_MOAGI_SELF_EVOLVING_ROM.md`](docs/DR_MOAGI_SELF_EVOLVING_ROM.md).
