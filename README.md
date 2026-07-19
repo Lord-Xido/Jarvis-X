@@ -126,6 +126,12 @@ These development servers bind to loopback by default. Production exposure
 requires an external authentication, authorisation, TLS, rate-limiting, and
 process-isolation boundary.
 
+## Validation
+
+The final permeation head passed GitHub Actions run `29700812842` across Python
+3.8, 3.9, 3.10, 3.11, and 3.12, together with pytest, coverage, mypy, Black, and
+isort.
+
 ## Invariants
 
 1. Equal initial state and input must produce equal reference results.
