@@ -1,19 +1,20 @@
 import json
 import sys
 
-from .parser import Parser
+from .aedsie_engine import run_aedsie
+from .api import start_api
 from .assembler import Assembler
 from .core import CodexVM
-from .api import start_api
-from .web import start_web
 from .node import CodexNode
+from .parser import Parser
 from .self_evolving_rom import run_self_evolving_rom
 from .swarm800 import run_swarm
+from .web import start_web
 
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: jarvisx [run|api|web|node|swarm|ser] <file|cycles|epochs>")
+        print("Usage: jarvisx [run|api|web|node|swarm|ser|aedsie] <file|cycles|epochs>")
         return
 
     cmd = sys.argv[1]
@@ -50,6 +51,12 @@ def main():
     elif cmd == "ser":
         epochs = int(sys.argv[2]) if len(sys.argv) >= 3 else 8
         report = run_self_evolving_rom(max_epochs=epochs)
+        print(json.dumps(report, indent=2, sort_keys=True))
+
+    elif cmd == "aedsie":
+        cycles = int(sys.argv[2]) if len(sys.argv) >= 3 and not sys.argv[2].startswith("--") else 4
+        inward = "--no-inward" not in sys.argv[2:]
+        report = run_aedsie(cycles=cycles, inward=inward)
         print(json.dumps(report, indent=2, sort_keys=True))
 
     else:
