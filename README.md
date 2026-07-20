@@ -41,3 +41,23 @@ fusions, replays baseline and candidate programs from the same deterministic
 snapshot, and publishes a parent-linked ROM version only when machine-state
 semantics are exactly preserved and execution cost is reduced. See
 [`docs/DR_MOAGI_SELF_EVOLVING_ROM.md`](docs/DR_MOAGI_SELF_EVOLVING_ROM.md).
+
+## Run the AEDSIE-Sigma virtual engine
+
+```bash
+jarvisx aedsie 4
+```
+
+Disable the bounded inward mechanics proposal:
+
+```bash
+jarvisx aedsie 4 --no-inward
+```
+
+The AEDSIE reference engine auto-executes deterministic synthetic RF ingestion,
+DDC and channelisation, 3D tensorisation, the Dr Moagi differential operator,
+residual encoding and decoding, Omega correction, positive metric evolution,
+nine-expert routing, angle estimation, SHA3 provenance, and transactional
+commit. See
+[`docs/AEDSIE_SIGMA_VIRTUAL_ENGINE.md`](docs/AEDSIE_SIGMA_VIRTUAL_ENGINE.md)
+for the mathematical contract and scope boundary.
