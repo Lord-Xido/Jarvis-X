@@ -4,13 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvisx"
-version = "0.1.0"
-description = "Jarvis-X: A powerful assembly language interpreter and virtual machine"
+version = "0.2.0"
+description = "Jarvis-X deterministic VM and sparse 3-D auto-encoding/decoding automaton"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [{name = "Lord-Xido"}]
-keywords = ["assembly", "interpreter", "virtual-machine"]
+keywords = [
+    "assembly",
+    "interpreter",
+    "virtual-machine",
+    "autoencoder",
+    "cellular-automaton",
+    "sparse-computing",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -61,7 +68,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=src/jarvisx --cov-report=term-local --cov-report=html --tb=short"
+addopts = "-v --cov=src/jarvisx --cov-report=term-missing --cov-report=html --tb=short"
 
 [tool.coverage.run]
 source = ["src/jarvisx"]
@@ -77,11 +84,11 @@ target-version = ['py38']
 include = '\\.pyi?$'
 extend-exclude = '''
 /(
-    \\.git
-  | \\.hg
-  | \\.mypy_cache
-  | \\.tox
-  | \\.venv
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
   | _build
   | buck-out
   | build
