@@ -20,10 +20,9 @@ from .tetration_field import (
 class OperationalTetrationFieldAutomaton(TetrationFieldAutomaton):
     """Extend the brick field so B, Z and Omega commit as one transaction.
 
-    The base field calculates latent states while processing each frontier brick.
-    This operational wrapper reconstructs the committed latent state for every
-    retained brick, validates it, binds it into the journal, and restores the
-    prior field transaction if latent sealing fails.
+    `BrickState.expert_index` records the expert used to produce a transition.
+    The committed latent repository is then re-encoded from the resulting B and
+    Omega state. Its next-state router may legitimately choose another expert.
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -33,14 +32,14 @@ class OperationalTetrationFieldAutomaton(TetrationFieldAutomaton):
     def _evolved_latent(self, state: BrickState) -> Tuple[float, ...]:
         latent = self.network.encode(state.values)
         conditioned = self.network.condition_with_omega(latent, state.omega)
-        expert, _ = self.network.route(conditioned)
-        if expert != state.expert_index:
-            raise ValueError("committed expert index does not match latent router")
+        next_expert, _ = self.network.route(conditioned)
         return tuple(
             math.tanh(
                 conditioned[index]
-                + self.network._dot(self.network.experts[expert][index], conditioned)
-                + self.network.expert_bias[expert][index]
+                + self.network._dot(
+                    self.network.experts[next_expert][index], conditioned
+                )
+                + self.network.expert_bias[next_expert][index]
             )
             for index in range(self.network.latent_dim)
         )
@@ -87,7 +86,9 @@ class OperationalTetrationFieldAutomaton(TetrationFieldAutomaton):
             return metrics
 
         try:
-            candidate_latents = self._build_latent_repository(self.directory.to_dict())
+            candidate_latents = self._build_latent_repository(
+                self.directory.to_dict()
+            )
             sealed_hash = self._seal_latents(candidate_latents)
         except (TypeError, ValueError, OverflowError) as exc:
             self.directory = previous_directory
