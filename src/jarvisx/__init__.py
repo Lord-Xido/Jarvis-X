@@ -1,4 +1,4 @@
-"""Jarvis-X deterministic virtual machine and sparse 3-D automaton."""
+"""Jarvis-X deterministic VM and sparse geometric automata."""
 
 from .automaton import (
     ADDRESS_DEPTH,
@@ -15,8 +15,23 @@ from .automaton import (
     StepMetrics,
     make_echo_injections,
 )
+from .tetration_field import (
+    BASE,
+    BRICK_SIZE,
+    CHANNELS,
+    EDGE,
+    BrickAutoencoderMoE,
+    BrickState,
+    FieldMechanics,
+    FieldStepMetrics,
+    SparseHashDirectory,
+    TetrationAddress,
+    TetrationFieldAutomaton,
+    TetrationUniverse,
+    make_brick_pulse,
+)
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "ADDRESS_DEPTH",
@@ -32,4 +47,17 @@ __all__ = [
     "Sparse3DAutomaton",
     "StepMetrics",
     "make_echo_injections",
+    "BASE",
+    "BRICK_SIZE",
+    "CHANNELS",
+    "EDGE",
+    "BrickAutoencoderMoE",
+    "BrickState",
+    "FieldMechanics",
+    "FieldStepMetrics",
+    "SparseHashDirectory",
+    "TetrationAddress",
+    "TetrationFieldAutomaton",
+    "TetrationUniverse",
+    "make_brick_pulse",
 ]
