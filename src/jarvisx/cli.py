@@ -57,10 +57,10 @@ def _run_source(path: Path) -> int:
 
 
 def _run_automaton(args: argparse.Namespace) -> int:
+    from .operational_field import OperationalTetrationFieldAutomaton
     from .tetration_field import (
         FieldMechanics,
         TetrationAddress,
-        TetrationFieldAutomaton,
         TetrationUniverse,
         make_brick_pulse,
     )
@@ -76,7 +76,7 @@ def _run_automaton(args: argparse.Namespace) -> int:
 
     universe = TetrationUniverse(height=args.tower_height)
     mechanics = FieldMechanics(max_active_bricks=args.max_active)
-    engine = TetrationFieldAutomaton(
+    engine = OperationalTetrationFieldAutomaton(
         universe=universe,
         mechanics=mechanics,
         latent_dim=args.latent_dim,
@@ -106,6 +106,7 @@ def _run_automaton(args: argparse.Namespace) -> int:
     print("Virtual cells:", descriptor["virtual_cells"])
     print("Coordinate naming:", descriptor["coordinate_bits"], "bits")
     print("Brick:", payload["brick_shape"], "router:", payload["router"])
+    print("Committed latent states:", payload["latent_repository_entries"])
     for item in metrics:
         status = "COMMIT" if item["committed"] else "ROLLBACK"
         print(
