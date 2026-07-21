@@ -1,192 +1,309 @@
-# Sparse 3-D Auto-Encoding/Decoding Processing Automaton
+# Sparse Tetration 3-D Auto-Encoding/Decoding Field Automaton
 
-## Operational status
+## 1. Virtual address manifold
 
-This module converts the Jarvis-X geometric automaton specification into a
-runnable, deterministic Python reference implementation.
-
-The nominal coordinate universe is
+Define the base-1000 tetration tower
 
 \[
-\mathcal U = \{0,\ldots,1000^{1000}-1\}^3
-\]
-
-and therefore contains
-
-\[
-|\mathcal U|=(1000^{1000})^3=10^{9000}
-\]
-
-virtual cells. The implementation does **not** allocate a dense tensor of this
-size. It uses exact arbitrary-precision coordinates, a deterministic procedural
-background field, and a bounded sparse active frontier.
-
-## State
-
-For each materialised coordinate \(\mathbf r=(x,y,z)\), the committed cell state
-is
-
-\[
-C_{\mathbf r,t}=(B_{\mathbf r,t},\Omega_{\mathbf r,t},a_{\mathbf r,t},v_{\mathbf r,t})
-\]
-
-where:
-
-- \(B\) is the scalar field value;
-- \(\Omega\) is persistent residual memory;
-- \(a\) counts inactive cycles for pruning;
-- \(v\) is the cell revision.
-
-The global state is
-
-\[
-\Sigma_t=(\mathcal A_t,C_t,\mathcal M_t,J_t)
-\]
-
-with active frontier \(\mathcal A_t\), mechanics \(\mathcal M_t\), and
-transaction journal hash \(J_t\).
-
-## Local 3-D autoencoder
-
-Each cell reads the seven-value axis-aligned neighbourhood
-
-\[
-V_{\mathbf r,t}=
-(B_{\mathbf r,t},B_{\mathbf r+e_x,t},B_{\mathbf r-e_x,t},
- B_{\mathbf r+e_y,t},B_{\mathbf r-e_y,t},
- B_{\mathbf r+e_z,t},B_{\mathbf r-e_z,t}).
-\]
-
-The deterministic ANN executes
-
-\[
-Z_{\mathbf r,t}=E_\theta(V_{\mathbf r,t}),
+T_1=1000,
 \qquad
-\widehat Z_{\mathbf r,t+1}=P_\theta(Z_{\mathbf r,t},\Omega_{\mathbf r,t}),
+T_{k+1}=1000^{T_k}.
+\]
+
+The virtual cubic universe is
+
+\[
+\mathcal U_k=\{0,\ldots,T_k-1\}^3,
+\qquad
+|\mathcal U_k|=T_k^3.
+\]
+
+`TetrationUniverse` stores only this symbolic definition. It never allocates
+\(T_k^3\) cells.
+
+For an explicit raw coordinate, the theoretical naming length is
+
+\[
+b_k=3\left\lceil\log_2T_k\right\rceil
+=3\left\lceil T_{k-1}\log_2 1000\right\rceil.
+\]
+
+At \(k=2\), this is 29,898 bits. For \(k\ge3\), even the raw coordinate string is
+impractical. The executable runtime therefore uses a finite symbolic chart ID and
+exact signed local offsets:
+
+\[
+\mathbf r=(k,\text{chart},x,y,z).
+\]
+
+This is a compressed coordinate description and a local chart, not a claim that
+all arbitrary raw tetration coordinates fit in memory.
+
+## 2. Physical state
+
+Only materialised bricks exist in RAM:
+
+\[
+\Sigma_t=(\mathcal A_t,B_t,Z_t,\Omega_t,\mathcal D_t,J_t).
+\]
+
+- \(\mathcal A_t\): bounded active brick set;
+- \(B_t(\mathbf r)\in\mathbb R^{3\times4\times4\times4}\): 192-value brick;
+- \(Z_t\): transient latent state;
+- \(\Omega_t(\mathbf r)\in\mathbb R^{192}\): correction memory;
+- \(\mathcal D_t\): collision-chained sparse directory;
+- \(J_t\): deterministic journal hash.
+
+The invariant is
+
+\[
+\operatorname{cost}(t)=O(M_t),
+\qquad
+M_t=|\mathcal D_t|,
+\qquad
+O(M_t)\ne O(|\mathcal U_k|).
+\]
+
+## 3. Sparse allocation and active mask
+
+The finite directory uses
+
+\[
+\operatorname{idx}(\mathbf r)=
+\bigl(
+5147x\oplus9293y\oplus11257z\oplus H(\text{chart},k)
+\bigr)\bmod P.
+\]
+
+Each slot contains a collision chain. Equality is checked against the full
+canonical address, so collisions do not alias state.
+
+The active mask is a predicate:
+
+\[
+W_{\mathcal M}(\mathbf r)=
+\begin{cases}
+1,&\mathbf r\in\mathcal A_t,\\
+0,&\text{otherwise}.
+\end{cases}
+\]
+
+In code this is directory membership and threshold testing, not a dense tensor
+multiplication.
+
+## 4. Full brick encoder
+
+Flatten the whole brick:
+
+\[
+b_{\mathbf r}=\operatorname{flat}(B_t(\mathbf r))\in\mathbb R^{192}.
+\]
+
+After box normalisation, encoding is
+
+\[
+z_{\mathbf r}=\tanh(W_{enc}b_{\mathbf r}+c_{enc}),
+\qquad
+W_{enc}\in\mathbb R^{d\times192}.
+\]
+
+All 192 values participate. No prefix such as `flat[:16]` is used.
+
+## 5. Omega conditioning and top-1 MoE
+
+Correction memory conditions the latent state:
+
+\[
+\widetilde z_{\mathbf r}=
+\tanh\left(z_{\mathbf r}+W_\Omega\Omega_t(\mathbf r)\right),
+\qquad
+W_\Omega\in\mathbb R^{d\times192}.
+\]
+
+For experts \(i=1,\ldots,N_E\),
+
+\[
+\ell_i=R_i^T\widetilde z,
+\qquad
+g_i=\frac{e^{\ell_i}}{\sum_j e^{\ell_j}},
+\qquad
+k^*=\arg\max_i g_i.
+\]
+
+Routing is explicitly **top-1**:
+
+\[
+z'_{\mathbf r}=E_{k^*}(\widetilde z_{\mathbf r}).
+\]
+
+The committed brick records `expert_index = k*` for auditing.
+
+## 6. Full decoder
+
+The decoder is a full matrix projection:
+
+\[
+\widehat b_{\mathbf r}=W_{dec}z'_{\mathbf r}+c_{dec},
+\qquad
+W_{dec}\in\mathbb R^{192\times d},
 \]
 
 \[
-\widehat V_{\mathbf r,t+1}=D_\theta(\widehat Z_{\mathbf r,t+1}).
+\widehat V(\mathbf r)=
+\operatorname{reshape}_{3\times4\times4\times4}(\widehat b_{\mathbf r}).
 \]
 
-The centre reconstruction residual is
+It does not replace the brick with `mean(z) * ones`.
+
+## 7. Residual and Omega recurrence
 
 \[
-E_{\mathbf r,t}=\widehat V_{\mathbf r,t+1}[0]-B_{\mathbf r,t}.
+E_{\mathbf r,t}=\widehat V(\mathbf r)-B_t(\mathbf r).
 \]
 
-## Automaton update
-
-Persistent correction memory evolves as
+Omega is a leaky integral:
 
 \[
-\Omega_{\mathbf r,t+1}
-=\rho_\Omega\Omega_{\mathbf r,t}-\eta_\Omega E_{\mathbf r,t}.
+\Omega_{t+1}(\mathbf r)=
+\rho\Omega_t(\mathbf r)-\eta E_{\mathbf r,t},
+\qquad
+0<\rho<1.
 \]
 
-The six-neighbour discrete Laplacian is
+The characteristic decay time is approximately
 
 \[
-\nabla_h^2 B_{\mathbf r,t}
-=\sum_{\mathbf q\in\mathcal N(\mathbf r)}
-(B_{\mathbf q,t}-B_{\mathbf r,t}).
+\tau_\Omega\approx\frac{1}{1-\rho}
 \]
 
-The transaction proposal is
+cycles when \(\rho\) is close to one.
+
+## 8. True cross-brick six-face diffusion
+
+For every channel and voxel, the discrete Laplacian is
 
 \[
-\widetilde B_{\mathbf r,t+1}=B_{\mathbf r,t}+\Delta t
-\left[D\nabla_h^2B_{\mathbf r,t}-K E_{\mathbf r,t}
-+\Omega_{\mathbf r,t+1}\right].
+\Delta B_t(\mathbf r,u)=
+\sum_{q\in\mathcal N_6(\mathbf r,u)}B_t(q)-6B_t(\mathbf r,u).
 \]
 
-The candidate state is committed only after the \(\Lambda\) verification gate
-checks finiteness, coordinate validity, magnitude bounds, energy budget, and
-active-cell budget:
+At an internal voxel, neighbours are read from the same brick. At a face voxel,
+the neighbour is resolved through the sparse directory into the adjacent brick,
+using the opposite face coordinate. This is not `np.roll` with periodic wrapping
+inside one brick.
+
+## 9. Projection
+
+For the box constraint
 
 \[
-\Sigma_{t+1}=\operatorname{COMMIT}
-\left(\Pi_\Lambda[\widetilde\Sigma_{t+1}]\right).
+\Lambda=[16,235]^{192},
 \]
 
-Failure produces an atomic rollback to \(\Sigma_t\).
-
-## Procedural storage
-
-An untouched cell is reconstructed as
+the orthogonal projection is element-wise clipping:
 
 \[
-B_{\mathbf r,0}=H(s,\mathbf r)
+\Pi_\Lambda(v)_j=\min(235,\max(16,v_j)).
 \]
 
-using keyed BLAKE2b. Sampling a virtual coordinate therefore does not allocate
-it. A cell is materialised only when it is injected, becomes active, or lies on
-the immediate causal boundary of an active cell.
-
-For \(A_t\) active cells, latent dimension \(d\), and constant neighbourhood
-size \(k=6\), one cycle is approximately
+For a general admissible set,
 
 \[
-T_t=O(A_t(d+k)),\qquad M_t=O(A_t).
+\Pi_\Lambda(v)=\arg\min_{y\in\Lambda}\|y-v\|_2.
 \]
 
-The nominal \(10^{9000}\) universe affects address range, not dense runtime
-cost.
+## 10. Operational transaction
 
-## Bounded inward optimisation
-
-`BoundedMechanicsOptimizer` tests a finite declared set of mechanics candidates
-on forked shadow states. A candidate is adopted only when every transaction
-commits and its score is lower than the baseline:
+For each active brick and its causal face frontier:
 
 \[
-C=\sum_t \operatorname{MSE}_t+\lambda_A|\mathcal A_t|.
+\widetilde B_{t+1}=B_t+\Delta t\left[
+D\Delta B_t
+-K\left(\mathcal D_\theta(\mathcal G_{MoE}(\mathcal E_\theta(B_t)\mid\Omega_t))-B_t\right)
++\Omega_{t+1}+U_t
+\right].
 \]
 
-No source code is rewritten and no candidate can bypass the same verification
-gate used by the baseline engine.
+Then
 
-## Run
+\[
+B_{t+1}=\Pi_\Lambda(\widetilde B_{t+1}).
+\]
 
-```bash
-pip install -e .
-jarvisx universe
-jarvisx automaton --steps 20 --side 3
-jarvisx automaton --steps 20 --side 3 --auto-optimize --json
-```
+The unified sparse-field form is
 
-Equivalent module execution:
-
-```bash
-python -m jarvisx automaton --steps 20
-```
-
-## API
-
-```bash
-jarvisx api
-```
-
-Endpoints:
-
-- `GET /health`
-- `POST /run`
-- `GET /automaton`
-- `POST /automaton/step`
-
-Example step body:
-
-```json
-{
-  "injections": [
-    {"x": 0, "y": 0, "z": 0, "value": 1.0}
-  ]
+\[
+\boxed{
+\Sigma_{t+1}=\Pi_\Lambda\left[
+\Sigma_t+W_{\mathcal M}\odot
+\left(D\Delta\Sigma_t
+-K(\mathcal D_\theta(\mathcal G_{MoE}(\mathcal E_\theta(\Sigma_t)\mid\Omega_t))-\Sigma_t)
++\Omega_{t+1}+U_t\right)
+\right]
 }
+\]
+
+where \(W_{\mathcal M}\) denotes sparse scheduling semantics rather than a
+materialised dense mask.
+
+All updates are calculated against an immutable transaction snapshot. The
+candidate is checked for finite values, projection bounds, Omega bounds, expert
+index validity, relative energy, and materialisation budget before the directory
+and journal are replaced atomically.
+
+## 11. Frontier control
+
+The next frontier is
+
+\[
+\mathcal F_t=\mathcal A_t\cup\partial_6\mathcal A_t.
+\]
+
+It is ranked and capped by `max_active_bricks`. A brick is pruned after
+`prune_after` low-activity cycles when both deviation from its procedural
+background and Omega magnitude fall below `activation_threshold`.
+
+Without thresholding and pruning, six-face expansion may grow as much as
+
+\[
+M_{t+1}\lesssim7M_t
+\]
+
+before overlap, eventually exhausting the finite cache.
+
+## 12. Stability contract
+
+The reference explicit scheme enforces
+
+\[
+\Delta tD\le\frac16,
+\qquad
+\Delta tK\le1,
+\qquad
+0<\rho<1.
+\]
+
+It also clips the projected field, bounds Omega, caps active bricks, and rolls
+back non-finite or over-energy candidates.
+
+## 13. Complexity
+
+For latent dimension \(d\) and \(M_t\) materialised bricks:
+
+\[
+T_t=O\left(M_t(192d+d^2+192\cdot6)\right),
+\qquad
+S_t=O(M_t\cdot192).
+\]
+
+The tetration height changes the symbolic address description. It does not change
+the number of bricks physically evaluated in one cycle.
+
+## 14. Run
+
+```bash
+jarvisx universe --tower-height 2
+jarvisx universe --tower-height 4
+jarvisx automaton --steps 20 --tower-height 4 --max-active 128
+pytest tests/test_tetration_field.py
 ```
-
-## Determinism
-
-Given the same seed, mechanics, initial state, and ordered input transactions,
-the engine produces the same state and SHA-256 journal chain. Tests cover exact
-replay, sparse budgeting, coordinate wrapping, procedural reconstruction,
-transaction commit, and rollback.
