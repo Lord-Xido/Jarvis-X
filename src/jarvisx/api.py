@@ -1,57 +1,66 @@
-"""FastAPI service for the Jarvis-X VM and sparse 3-D automaton."""
-
+"""FastAPI service for the Jarvis-X VM and tetration field automaton."""
 from __future__ import annotations
 
 from threading import RLock
-from typing import List
+from typing import Dict, List, Optional, Union
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from .assembler import Assembler
-from .automaton import Coordinate3D, Sparse3DAutomaton
 from .core import CodexVM
 from .parser import Parser
+from .tetration_field import (
+    BRICK_SIZE,
+    TetrationAddress,
+    TetrationFieldAutomaton,
+    TetrationUniverse,
+)
 
 app = FastAPI(
     title="Jarvis-X",
-    version="0.2.0",
-    description="Deterministic VM plus transactional sparse 3-D autoencoder automaton.",
+    version="0.3.0",
+    description="Deterministic VM plus transactional sparse tetration brick field.",
 )
-_automaton = Sparse3DAutomaton()
-_automaton_lock = RLock()
+_field = TetrationFieldAutomaton()
+_field_lock = RLock()
 
 
 class RunRequest(BaseModel):
     source: str = ""
 
 
-class CellInjection(BaseModel):
-    x: int = Field(ge=0)
-    y: int = Field(ge=0)
-    z: int = Field(ge=0)
-    value: float
+class BrickInjection(BaseModel):
+    chart: str = "origin"
+    x: int = 0
+    y: int = 0
+    z: int = 0
+    value: Optional[float] = None
+    values: Optional[List[float]] = None
 
 
-class AutomatonStepRequest(BaseModel):
-    injections: List[CellInjection] = Field(default_factory=list)
+class FieldStepRequest(BaseModel):
+    injections: List[BrickInjection] = Field(default_factory=list)
 
 
 @app.get("/health")
 def health() -> dict:
-    return {
-        "status": "ok",
-        "service": "jarvisx",
-        "automaton_cycle": _automaton.cycle,
-    }
+    return {"status": "ok", "service": "jarvisx", "field_cycle": _field.cycle}
+
+
+@app.get("/universe")
+def universe(tower_height: int = 2) -> dict:
+    try:
+        return TetrationUniverse(height=tower_height).descriptor()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/run")
 def run_code(payload: RunRequest) -> dict:
     try:
-        ast = Parser().parse(payload.source)
-        bytecode = Assembler().assemble(ast)
+        bytecode = Assembler().assemble(Parser().parse(payload.source))
         vm = CodexVM()
         vm.load(bytecode)
         vm.run()
@@ -65,24 +74,47 @@ def run_code(payload: RunRequest) -> dict:
 
 
 @app.get("/automaton")
-def automaton_state() -> dict:
-    with _automaton_lock:
-        return _automaton.snapshot()
+@app.get("/field")
+def field_state() -> dict:
+    with _field_lock:
+        return _field.snapshot()
+
+
+def _merge_observation(
+    current: Optional[Union[float, List[float]]],
+    incoming: Union[float, List[float]],
+) -> Union[float, List[float]]:
+    if current is None:
+        return incoming
+    if isinstance(current, list) or isinstance(incoming, list):
+        left = current if isinstance(current, list) else [current] * BRICK_SIZE
+        right = incoming if isinstance(incoming, list) else [incoming] * BRICK_SIZE
+        return [a + b for a, b in zip(left, right)]
+    return current + incoming
 
 
 @app.post("/automaton/step")
-def automaton_step(payload: AutomatonStepRequest) -> dict:
-    injections = {}
+@app.post("/field/step")
+def field_step(payload: FieldStepRequest) -> dict:
+    injections: Dict[TetrationAddress, Union[float, List[float]]] = {}
     try:
         for item in payload.injections:
-            coordinate = Coordinate3D(item.x, item.y, item.z)
-            injections[coordinate] = injections.get(coordinate, 0.0) + item.value
+            if item.values is not None:
+                if len(item.values) != BRICK_SIZE:
+                    raise ValueError(f"values must contain {BRICK_SIZE} numbers")
+                observation: Union[float, List[float]] = item.values
+            elif item.value is not None:
+                observation = item.value
+            else:
+                raise ValueError("each injection requires value or values")
+            address = TetrationAddress(_field.universe.height, item.chart, item.x, item.y, item.z)
+            injections[address] = _merge_observation(injections.get(address), observation)
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    with _automaton_lock:
-        metrics = _automaton.step(injections)
-        response = _automaton.snapshot()
+    with _field_lock:
+        metrics = _field.step(injections)
+        response = _field.snapshot()
         response["transaction"] = metrics.to_dict()
         if not metrics.committed:
             raise HTTPException(status_code=409, detail=response)
