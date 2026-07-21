@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvisx"
-version = "0.2.0"
-description = "Jarvis-X deterministic VM and sparse 3-D auto-encoding/decoding automaton"
+version = "0.3.0"
+description = "Jarvis-X deterministic VM and sparse tetration brick-field automaton"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
@@ -17,6 +17,8 @@ keywords = [
     "autoencoder",
     "cellular-automaton",
     "sparse-computing",
+    "tetration",
+    "mixture-of-experts",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -81,7 +83,7 @@ omit = [
 [tool.black]
 line-length = 100
 target-version = ['py38']
-include = '\\.pyi?$'
+include = '\.pyi?$'
 extend-exclude = '''
 /(
     \.git
