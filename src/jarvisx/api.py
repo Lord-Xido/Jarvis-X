@@ -10,20 +10,16 @@ from pydantic import BaseModel, Field
 
 from .assembler import Assembler
 from .core import CodexVM
+from .operational_field import OperationalTetrationFieldAutomaton
 from .parser import Parser
-from .tetration_field import (
-    BRICK_SIZE,
-    TetrationAddress,
-    TetrationFieldAutomaton,
-    TetrationUniverse,
-)
+from .tetration_field import BRICK_SIZE, TetrationAddress, TetrationUniverse
 
 app = FastAPI(
     title="Jarvis-X",
     version="0.3.0",
     description="Deterministic VM plus transactional sparse tetration brick field.",
 )
-_field = TetrationFieldAutomaton()
+_field = OperationalTetrationFieldAutomaton()
 _field_lock = RLock()
 
 
