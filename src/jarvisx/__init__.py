@@ -26,10 +26,13 @@ from .tetration_field import (
     FieldStepMetrics,
     SparseHashDirectory,
     TetrationAddress,
-    TetrationFieldAutomaton,
+    TetrationFieldAutomaton as ReferenceTetrationFieldAutomaton,
     TetrationUniverse,
     make_brick_pulse,
 )
+from .operational_field import OperationalTetrationFieldAutomaton
+
+TetrationFieldAutomaton = OperationalTetrationFieldAutomaton
 
 __version__ = "0.3.0"
 
@@ -57,6 +60,8 @@ __all__ = [
     "FieldStepMetrics",
     "SparseHashDirectory",
     "TetrationAddress",
+    "ReferenceTetrationFieldAutomaton",
+    "OperationalTetrationFieldAutomaton",
     "TetrationFieldAutomaton",
     "TetrationUniverse",
     "make_brick_pulse",
