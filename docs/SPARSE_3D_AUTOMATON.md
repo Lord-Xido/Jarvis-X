@@ -41,7 +41,8 @@ all arbitrary raw tetration coordinates fit in memory.
 
 ## 2. Physical state
 
-Only materialised bricks exist in RAM:
+Only materialised bricks and their same-key latent and correction records exist
+in RAM:
 
 \[
 \Sigma_t=(\mathcal A_t,B_t,Z_t,\Omega_t,\mathcal D_t,J_t).
@@ -49,10 +50,20 @@ Only materialised bricks exist in RAM:
 
 - \(\mathcal A_t\): bounded active brick set;
 - \(B_t(\mathbf r)\in\mathbb R^{3\times4\times4\times4}\): 192-value brick;
-- \(Z_t\): transient latent state;
+- \(Z_t(\mathbf r)\in\mathbb R^d\): committed sparse latent repository;
 - \(\Omega_t(\mathbf r)\in\mathbb R^{192}\): correction memory;
 - \(\mathcal D_t\): collision-chained sparse directory;
-- \(J_t\): deterministic journal hash.
+- \(J_t\): deterministic journal hash sealing \(B_t,Z_t,\Omega_t\).
+
+For every committed address,
+
+\[
+\mathbf r\in\operatorname{keys}(B_t)
+\Longleftrightarrow
+\mathbf r\in\operatorname{keys}(Z_t)
+\Longleftrightarrow
+\mathbf r\in\operatorname{keys}(\Omega_t).
+\]
 
 The invariant is
 
@@ -96,13 +107,16 @@ multiplication.
 Flatten the whole brick:
 
 \[
-b_{\mathbf r}=\operatorname{flat}(B_t(\mathbf r))\in\mathbb R^{192}.
+b_{\mathbf r}=
+\operatorname{flat}(B_t(\mathbf r))
+\in\mathbb R^{192}.
 \]
 
 After box normalisation, encoding is
 
 \[
-z_{\mathbf r}=\tanh(W_{enc}b_{\mathbf r}+c_{enc}),
+z_{\mathbf r}=
+\tanh(W_{enc}b_{\mathbf r}+c_{enc}),
 \qquad
 W_{enc}\in\mathbb R^{d\times192}.
 \]
@@ -136,7 +150,10 @@ Routing is explicitly **top-1**:
 z'_{\mathbf r}=E_{k^*}(\widetilde z_{\mathbf r}).
 \]
 
-The committed brick records `expert_index = k*` for auditing.
+`BrickState.expert_index` records the expert that generated the transition. After
+\(B_{t+1}\) and \(\Omega_{t+1}\) are formed, the committed latent repository is
+re-encoded from that resulting state. Its next-state router may legitimately
+select another expert.
 
 ## 6. Full decoder
 
@@ -219,7 +236,13 @@ For each active brick and its causal face frontier:
 \[
 \widetilde B_{t+1}=B_t+\Delta t\left[
 D\Delta B_t
--K\left(\mathcal D_\theta(\mathcal G_{MoE}(\mathcal E_\theta(B_t)\mid\Omega_t))-B_t\right)
+-K\left(
+\mathcal D_\theta(
+\mathcal G_{MoE}(
+\mathcal E_\theta(B_t)\mid\Omega_t
+)
+)-B_t
+\right)
 +\Omega_{t+1}+U_t
 \right].
 \]
@@ -227,7 +250,18 @@ D\Delta B_t
 Then
 
 \[
-B_{t+1}=\Pi_\Lambda(\widetilde B_{t+1}).
+B_{t+1}=\Pi_\Lambda(\widetilde B_{t+1}),
+\]
+
+and the same retained sparse keys are re-encoded:
+
+\[
+Z_{t+1}(\mathbf r)=
+\mathcal G_{MoE}
+\left(
+\mathcal E_\theta(B_{t+1}(\mathbf r))\mid
+\Omega_{t+1}(\mathbf r)
+\right).
 \]
 
 The unified sparse-field form is
@@ -236,9 +270,17 @@ The unified sparse-field form is
 \boxed{
 \Sigma_{t+1}=\Pi_\Lambda\left[
 \Sigma_t+W_{\mathcal M}\odot
-\left(D\Delta\Sigma_t
--K(\mathcal D_\theta(\mathcal G_{MoE}(\mathcal E_\theta(\Sigma_t)\mid\Omega_t))-\Sigma_t)
-+\Omega_{t+1}+U_t\right)
+\left(
+D\Delta\Sigma_t
+-K(
+\mathcal D_\theta(
+\mathcal G_{MoE}(
+\mathcal E_\theta(\Sigma_t)\mid\Omega_t
+)
+)-\Sigma_t
+)
++\Omega_{t+1}+U_t
+\right)
 \right]
 }
 \]
@@ -246,22 +288,32 @@ The unified sparse-field form is
 where \(W_{\mathcal M}\) denotes sparse scheduling semantics rather than a
 materialised dense mask.
 
-All updates are calculated against an immutable transaction snapshot. The
-candidate is checked for finite values, projection bounds, Omega bounds, expert
-index validity, relative energy, and materialisation budget before the directory
-and journal are replaced atomically.
+All updates are calculated against an immutable transaction snapshot. A commit
+is accepted only when:
+
+- every field and Omega value is finite and in its declared bounds;
+- every latent vector is finite and has dimension \(d\);
+- the retained key sets for \(B,Z,\Omega\) agree;
+- relative energy and materialisation budgets pass;
+- the journal seals the committed field and sparse latent repository.
+
+If latent construction or sealing fails after the field proposal, the prior
+field directory, latent repository, Omega state, cycle, metrics, and journal hash
+are restored.
 
 ## 11. Frontier control
 
 The next frontier is
 
 \[
-\mathcal F_t=\mathcal A_t\cup\partial_6\mathcal A_t.
+\mathcal F_t=
+\mathcal A_t\cup\partial_6\mathcal A_t.
 \]
 
 It is ranked and capped by `max_active_bricks`. A brick is pruned after
 `prune_after` low-activity cycles when both deviation from its procedural
-background and Omega magnitude fall below `activation_threshold`.
+background and Omega magnitude fall below `activation_threshold`. Its latent
+entry is pruned in the same transaction.
 
 Without thresholding and pruning, six-face expansion may grow as much as
 
@@ -283,8 +335,8 @@ The reference explicit scheme enforces
 0<\rho<1.
 \]
 
-It also clips the projected field, bounds Omega, caps active bricks, and rolls
-back non-finite or over-energy candidates.
+It also clips the projected field, bounds Omega, caps active bricks, validates
+latent dimensions, and rolls back non-finite or over-energy candidates.
 
 ## 13. Complexity
 
@@ -292,12 +344,15 @@ For latent dimension \(d\) and \(M_t\) materialised bricks:
 
 \[
 T_t=O\left(M_t(192d+d^2+192\cdot6)\right),
-\qquad
-S_t=O(M_t\cdot192).
 \]
 
-The tetration height changes the symbolic address description. It does not change
-the number of bricks physically evaluated in one cycle.
+\[
+S_t=O\left(M_t(192+d+192)\right),
+\]
+
+corresponding to sparse storage of \(B_t,Z_t,\Omega_t\). The tetration height
+changes the symbolic address description. It does not change the number of
+bricks physically evaluated in one cycle.
 
 ## 14. Run
 
@@ -305,5 +360,5 @@ the number of bricks physically evaluated in one cycle.
 jarvisx universe --tower-height 2
 jarvisx universe --tower-height 4
 jarvisx automaton --steps 20 --tower-height 4 --max-active 128
-pytest tests/test_tetration_field.py
+pytest tests/test_tetration_field.py tests/test_operational_field.py
 ```
