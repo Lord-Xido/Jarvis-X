@@ -1,42 +1,33 @@
-from flask import Flask, render_template_string, request
-from .core import CodexVM
-from .parser import Parser
-from .assembler import Assembler
+"""Minimal FastAPI dashboard with no undeclared Flask dependency."""
 
-app = Flask(__name__)
-vm = CodexVM()
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+app = FastAPI(title="Jarvis-X Dashboard")
 
 HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Jarvis-X Dashboard</title>
-</head>
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Jarvis-X</title></head>
 <body>
-  <h1>Jarvis-X Control Panel</h1>
-  <form method="post">
-    <textarea name="code" rows="10" cols="60"></textarea><br>
-    <button type="submit">Run</button>
-  </form>
-  {% if result %}
-    <h3>Registers</h3>
-    <pre>{{ result }}</pre>
-  {% endif %}
+  <h1>Jarvis-X 30D Virtual ANN Processor</h1>
+  <p>The operational execution API is available through <code>jarvisx api</code>.</p>
+  <ul>
+    <li><code>GET /health</code></li>
+    <li><code>POST /v1/run/assembly</code></li>
+    <li><code>POST /v1/run/ann30d</code></li>
+  </ul>
 </body>
 </html>
 """
 
-@app.route("/", methods=["GET","POST"])
-def home():
-    result = None
-    if request.method == "POST":
-        source = request.form["code"]
-        ast = Parser().parse(source)
-        bytecode = Assembler().assemble(ast)
-        vm.load(bytecode)
-        vm.run()
-        result = vm.regs.snapshot()
-    return render_template_string(HTML, result=result)
 
-def start_web():
-    app.run(host="0.0.0.0", port=5000)
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return HTML
+
+
+def start_web(host="127.0.0.1", port=5000):
+    import uvicorn
+
+    uvicorn.run("jarvisx.web:app", host=host, port=port)

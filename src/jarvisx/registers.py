@@ -1,17 +1,24 @@
+REG_NAMES = [
+    "Ξ", "Ψ", "Φ", "Λ", "Ω", "Θ", "𝒮", "Π",
+    "A", "B", "C", "D", "IP", "SP", "FLAGS", "TMP",
+]
+
+
 class Registers:
     def __init__(self):
-        self._regs = {
-            "Ξ": 0, "Ψ": 0, "Φ": 0, "Λ": 0, "Ω": 0,
-            "Θ": 0, "𝒮": 0, "Π": 0,
-            "A": 0, "B": 0, "C": 0, "D": 0,
-            "IP": 0, "SP": 0, "FLAGS": 0, "TMP": 0
-        }
+        self._regs = {name: 0 for name in REG_NAMES}
 
     def __getitem__(self, key):
         return self._regs[key]
 
     def __setitem__(self, key, value):
+        if key not in self._regs:
+            raise KeyError(f"unknown register: {key}")
         self._regs[key] = int(value)
+
+    def reset(self):
+        for key in self._regs:
+            self._regs[key] = 0
 
     def snapshot(self):
         return dict(self._regs)
