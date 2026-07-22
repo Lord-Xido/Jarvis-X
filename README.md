@@ -3,9 +3,14 @@
 Jarvis-X is a deterministic, auditable virtual machine with a reflex
 control layer and policy gate.
 
+## Architecture
+
+- [3D Multiparallel Mandelbulb AE/AD ISA — Operational Arithmetic Specification](docs/architecture/3d-mandelbulb-isa-arithmetic.md)
+
 ## Install
 ```bash
 git clone https://github.com/Lord-Xido/Jarvis-X.git
 cd Jarvis-X
 pip install -r requirements.txt
 pip install .
+```
