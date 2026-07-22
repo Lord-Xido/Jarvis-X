@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Jarvis X — 3D Geometric RVIS Shell</title>
+<style>
+:root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #05060a; color: #eef2ff; overflow: hidden; }
+#app { display: grid; grid-template-columns: minmax(0,1fr) 330px; height: 100vh; }
+main { position: relative; min-width: 0; }
+canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+canvas:active { cursor: grabbing; }
+aside { border-left: 1px solid #252a3a; background: rgba(10,12,20,.96); padding: 16px; overflow: auto; }
+h1 { font-size: 17px; margin: 0 0 6px; }
+p { color: #aeb7d1; line-height: 1.4; font-size: 13px; }
+.card { border: 1px solid #2b3144; background: #111522; border-radius: 12px; padding: 12px; margin: 12px 0; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button, select, input, textarea { background: #171c2c; color: #f4f6ff; border: 1px solid #343c55; border-radius: 8px; padding: 8px; }
+button { cursor: pointer; }
+button:hover { background: #202840; }
+textarea { width: 100%; min-height: 110px; resize: vertical; font: 11px/1.35 ui-monospace, SFMono-Regular, monospace; }
+label { font-size: 12px; color: #c8d0e8; }
+input[type=range] { width: 100%; padding: 0; }
+.metric { display: grid; grid-template-columns: 1fr auto; gap: 7px; font-size: 12px; }
+.metric span:nth-child(odd) { color: #aeb7d1; }
+#status { position: absolute; top: 16px; left: 16px; padding: 10px 12px; border-radius: 10px; background: rgba(8,10,17,.76); border: 1px solid #2c344c; backdrop-filter: blur(8px); font-size: 12px; pointer-events: none; }
+#timeline { max-height: 220px; overflow: auto; }
+.event { padding: 7px 0; border-bottom: 1px solid #242a3b; font-size: 11px; color: #bbc4dc; }
+.event strong { color: #f3f5ff; }
+.good { color: #7fffb5; } .bad { color: #ff8998; }
+@media (max-width: 800px) { #app { grid-template-columns: 1fr; grid-template-rows: 58vh 42vh; } aside { border-left: 0; border-top: 1px solid #252a3a; } }
+</style>
+</head>
+<body>
+<div id="app">
+<main>
+  <canvas id="view"></canvas>
+  <div id="status">No geometric cycle loaded.</div>
+</main>
+<aside>
+  <h1>JX-RVIS Ω³ Geometric Loop</h1>
+  <p>Public shell state → Q3 lattice → parallel candidate lanes → Λ projection → commit/rollback → inward feedback.</p>
+  <div class="card">
+    <div class="row">
+      <button id="demo">Demo</button>
+      <button id="play">Play</button>
+      <button id="step">Step</button>
+      <button id="reset">Reset</button>
+    </div>
+    <p><label>Cycle <span id="cycleLabel">0</span></label></p>
+    <input id="cycle" type="range" min="0" max="0" value="0" />
+    <p><label>Stage</label></p>
+    <select id="stage">
+      <option value="encoded">Encoded</option>
+      <option value="evolved">Evolved</option>
+      <option value="decoded">Decoded</option>
+    </select>
+  </div>
+  <div class="card"><div id="metrics" class="metric"></div></div>
+  <div class="card">
+    <label>Load CLI JSON</label>
+    <textarea id="json" placeholder='Paste output from: jarvisx geometry3d --cycles 4 3 1 -1 -3'></textarea>
+    <div class="row"><button id="load">Load JSON</button><input id="file" type="file" accept="application/json,.json" /></div>
+  </div>
+  <div class="card"><strong>Event timeline</strong><div id="timeline"></div></div>
+</aside>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const MAX_CYCLES = 1024;
+  const MAX_EVENTS_PER_CYCLE = 2000;
+  const MAX_VOXELS = 4096;
+  const MAX_JSON_BYTES = 5 * 1024 * 1024;
+
+  const canvas = document.querySelector('#view');
+  const ctx = canvas.getContext('2d');
+  const cycleSlider = document.querySelector('#cycle');
+  const cycleLabel = document.querySelector('#cycleLabel');
+  const stageSelect = document.querySelector('#stage');
+  const metrics = document.querySelector('#metrics');
+  const timeline = document.querySelector('#timeline');
+  const status = document.querySelector('#status');
+  const playButton = document.querySelector('#play');
+  let cycles = [], angleX = -0.45, angleY = 0.65, zoom = 64, playing = false, timer = null;
+  let dragging = false, lastX = 0, lastY = 0;
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+  }
+
+  function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function resize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(canvas.clientWidth * dpr);
+    canvas.height = Math.floor(canvas.clientHeight * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+  addEventListener('resize', resize);
+
+  function normalize(data) {
+    let result;
+    if (Array.isArray(data)) result = data;
+    else if (isRecord(data) && Array.isArray(data.cycles)) result = data.cycles;
+    else if (isRecord(data) && data.cycle !== undefined) result = [data];
+    else throw new Error('JSON must be a cycle, an array of cycles, or {cycles:[...]}');
+
+    if (result.length > MAX_CYCLES) throw new Error(`Trace exceeds ${MAX_CYCLES} cycles`);
+    if (result.some(cycle => !isRecord(cycle))) throw new Error('Every cycle must be a JSON object');
+    return result;
+  }
+
+  function validateShape(raw) {
+    if (!Array.isArray(raw) || raw.length !== 3) throw new Error('Cycle shape must contain three axes');
+    const shape = raw.map(Number);
+    if (shape.some(axis => !Number.isInteger(axis) || axis < 1 || axis > 64)) {
+      throw new Error('Cycle shape axes must be integers from 1 to 64');
+    }
+    if (shape[0] * shape[1] * shape[2] > MAX_VOXELS) {
+      throw new Error(`Cycle shape exceeds ${MAX_VOXELS} voxels`);
+    }
+    return shape;
+  }
+
+  function shapeOf(cycle) {
+    const level = Array.isArray(cycle.hierarchy) && cycle.hierarchy[0];
+    if (isRecord(level) && level.shape) return validateShape(level.shape);
+    const event = Array.isArray(cycle.events) ? cycle.events.find(item => isRecord(item) && item.shape) : null;
+    return validateShape(event ? event.shape : [4,4,4]);
+  }
+
+  function q3(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(-4, Math.min(3, numeric));
+  }
+
+  function valuesOf(cycle) {
+    const values = Array.isArray(cycle[stageSelect.value]) ? cycle[stageSelect.value] : [];
+    const [w,h,d] = shapeOf(cycle);
+    return Array.from({length:w*h*d}, (_,i) => q3(values[i] ?? 0));
+  }
+
+  function project(x,y,z,w,h,d) {
+    x -= (w-1)/2; y -= (h-1)/2; z -= (d-1)/2;
+    const cy=Math.cos(angleY), sy=Math.sin(angleY), cx=Math.cos(angleX), sx=Math.sin(angleX);
+    const rx=x*cy-z*sy, rz=x*sy+z*cy;
+    const ry=y*cx-rz*sx, rz2=y*sx+rz*cx;
+    const perspective = 1/(1+Math.max(-0.75,rz2*0.065));
+    return [canvas.clientWidth/2+rx*zoom*perspective, canvas.clientHeight/2+ry*zoom*perspective, rz2, perspective];
+  }
+
+  function drawGrid(cycle) {
+    const [w,h,d] = shapeOf(cycle), vals = valuesOf(cycle), points=[];
+    for(let z=0;z<d;z++) for(let y=0;y<h;y++) for(let x=0;x<w;x++) {
+      const i=x+w*(y+h*z), p=project(x,y,z,w,h,d); points.push({x:p[0],y:p[1],z:p[2],s:p[3],v:vals[i]});
+    }
+    points.sort((a,b)=>a.z-b.z);
+    ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+    for(const p of points){
+      const r=(3.2+Math.abs(p.v)*1.7)*p.s;
+      const hue=p.v>0?155:p.v<0?350:220, light=46+Math.abs(p.v)*6;
+      ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${hue},90%,${light}%,${p.v===0?.18:.88})`; ctx.fill();
+      if(p.v!==0){ ctx.strokeStyle=`hsla(${hue},100%,75%,.65)`; ctx.stroke(); }
+    }
+  }
+
+  function renderInfo(cycle,index) {
+    cycleLabel.textContent=String(index+1);
+    const committed=Boolean(cycle.committed);
+    status.innerHTML=`Cycle ${escapeHtml(cycle.cycle ?? index+1)} · <span class="${committed?'good':'bad'}">${committed?'COMMITTED':'ROLLED BACK'}</span> · lane ${escapeHtml(cycle.selected_lane ?? 'none')} · ${escapeHtml(stageSelect.value)}`;
+    const m=isRecord(cycle.metrics)?cycle.metrics:{};
+    const rows={
+      'Input values':m.input_values,'Lattice voxels':m.lattice_voxels,'Hierarchy levels':m.hierarchy_levels,
+      'Parallel lanes':m.parallel_lanes,'Admissible lanes':m.admissible_lanes,'Best reconstruction L1':m.best_reconstruction_l1,
+      'Active voxels':m.active_voxels,'Memory L1':m.memory_l1,'State hash':String(cycle.state_hash||'').slice(0,12)
+    };
+    metrics.innerHTML=Object.entries(rows).map(([key,value])=>`<span>${escapeHtml(key)}</span><span>${escapeHtml(value ?? '—')}</span>`).join('');
+    const events=Array.isArray(cycle.events)?cycle.events.slice(0,MAX_EVENTS_PER_CYCLE):[];
+    timeline.innerHTML=events.map(event=>{
+      const safe=isRecord(event)?event:{};
+      return `<div class="event"><strong>${escapeHtml(safe.phase||'EVENT')}</strong>${safe.lane?` · ${escapeHtml(safe.lane)}`:''}<br>${escapeHtml(safe.summary||'')}</div>`;
+    }).join('');
+  }
+
+  function draw() {
+    if(!cycles.length){ ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight); status.textContent='No geometric cycle loaded.'; return; }
+    const index=Number(cycleSlider.value), cycle=cycles[index];
+    try {
+      drawGrid(cycle);
+      renderInfo(cycle,index);
+    } catch (error) {
+      ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+      status.textContent=`Invalid trace: ${error.message}`;
+    }
+  }
+
+  function stopPlayback() {
+    playing=false;
+    clearInterval(timer);
+    timer=null;
+    playButton.textContent='Play';
+  }
+
+  function setCycles(next) {
+    stopPlayback();
+    cycles=normalize(next);
+    cycleSlider.max=String(Math.max(0,cycles.length-1));
+    cycleSlider.value='0';
+    draw();
+  }
+
+  function parseJsonText(text) {
+    if (new Blob([text]).size > MAX_JSON_BYTES) throw new Error('JSON input exceeds 5 MiB');
+    return JSON.parse(text);
+  }
+
+  function demoData() {
+    const mk=(cycle,selected,error,encoded,decoded)=>({
+      cycle, committed:true, selected_lane:selected, encoded, evolved:encoded.map((v,i)=>Math.max(-4,Math.min(3,Math.round((3*v+(encoded[(i+1)%encoded.length]||0))/4)))), decoded,
+      hierarchy:[{shape:[4,4,4],values:encoded},{shape:[2,2,2],values:[1,0,0,-1,0,0,0,0]},{shape:[1,1,1],values:[0]}],
+      metrics:{input_values:8,lattice_voxels:64,hierarchy_levels:3,parallel_lanes:4,admissible_lanes:4,best_reconstruction_l1:error,active_voxels:decoded.filter(Boolean).length,memory_l1:cycle*3},
+      events:[
+        {phase:'GEOM_ENCODE',summary:'Mapped public shell values into a Q3 3D lattice.'},
+        {phase:'MULTIPARALLEL_LANE',lane:'identity',summary:'Evaluated baseline geometric candidate.'},
+        {phase:'MULTIPARALLEL_LANE',lane:'diffusion',summary:'Evaluated neighbourhood-diffused candidate.'},
+        {phase:'MULTIPARALLEL_LANE',lane:'memory',summary:'Evaluated Ω-corrected candidate.'},
+        {phase:'MULTIPARALLEL_LANE',lane:'hybrid',summary:'Evaluated fused geometric candidate.'},
+        {phase:'LAMBDA_PROJECT',lane:selected,summary:'Selected minimum-error admissible lane.'},
+        {phase:'COMMIT',lane:selected,summary:'Committed branch and fed output inward.'}
+      ], state_hash:'demo'+cycle
+    });
+    const pad=array=>array.concat(Array(64-array.length).fill(0));
+    return {cycles:[
+      mk(1,'identity',18,pad([3,1,-1,-3,2,0,-2,-4]),pad([1,1,1,1,0,0,0,0])),
+      mk(2,'memory',8,pad([1,1,1,1,0,0,0,0]),pad([1,1,1,1,1,1,1,1])),
+      mk(3,'hybrid',0,pad([1,1,1,1,1,1,1,1]),pad([1,1,1,1,1,1,1,1]))
+    ]};
+  }
+
+  document.querySelector('#demo').onclick=()=>setCycles(demoData());
+  document.querySelector('#load').onclick=()=>{
+    try{setCycles(parseJsonText(document.querySelector('#json').value));}
+    catch(error){alert(error.message);}
+  };
+  document.querySelector('#file').onchange=async event=>{
+    try {
+      const file=event.target.files[0];
+      if(!file) return;
+      if(file.size>MAX_JSON_BYTES) throw new Error('JSON file exceeds 5 MiB');
+      setCycles(parseJsonText(await file.text()));
+    } catch(error) {
+      alert(error.message);
+      event.target.value='';
+    }
+  };
+  cycleSlider.oninput=draw;
+  stageSelect.onchange=draw;
+  document.querySelector('#step').onclick=()=>{
+    if(cycles.length){
+      cycleSlider.value=String((Number(cycleSlider.value)+1)%cycles.length);
+      draw();
+    }
+  };
+  document.querySelector('#reset').onclick=()=>{
+    stopPlayback();
+    cycleSlider.value='0';
+    angleX=-.45;
+    angleY=.65;
+    zoom=64;
+    draw();
+  };
+  playButton.onclick=()=>{
+    playing=!playing;
+    clearInterval(timer);
+    playButton.textContent=playing?'Pause':'Play';
+    if(playing) timer=setInterval(()=>document.querySelector('#step').click(),900);
+  };
+  canvas.onpointerdown=event=>{
+    dragging=true;
+    lastX=event.clientX;
+    lastY=event.clientY;
+    canvas.setPointerCapture(event.pointerId);
+  };
+  canvas.onpointermove=event=>{
+    if(dragging){
+      angleY+=(event.clientX-lastX)*.008;
+      angleX+=(event.clientY-lastY)*.008;
+      lastX=event.clientX;
+      lastY=event.clientY;
+      draw();
+    }
+  };
+  canvas.onpointerup=()=>dragging=false;
+  canvas.onpointercancel=()=>dragging=false;
+  canvas.onwheel=event=>{
+    event.preventDefault();
+    zoom=Math.max(20,Math.min(150,zoom-event.deltaY*.05));
+    draw();
+  };
+
+  resize();
+  setCycles(demoData());
+})();
+</script>
+</body>
+</html>
