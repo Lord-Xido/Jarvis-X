@@ -3,4 +3,10 @@ class Tracer:
         self.log = []
 
     def record(self, instr, regs):
-        self.log.append((instr.opcode, regs.copy()))
+        self.log.append((int(instr.opcode), regs.copy()))
+
+    def checkpoint(self):
+        return len(self.log)
+
+    def restore(self, checkpoint):
+        del self.log[int(checkpoint) :]

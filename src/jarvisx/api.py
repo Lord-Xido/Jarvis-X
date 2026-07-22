@@ -1,22 +1,41 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+from .assembler import Assembler
 from .core import CodexVM
 from .parser import Parser
-from .assembler import Assembler
 
-app = Flask(__name__)
-vm = CodexVM()
 
-@app.route("/run", methods=["POST"])
-def run_code():
-    source = request.json.get("source", "")
+class RunRequest(BaseModel):
+    source: str
+
+
+def execute_source(source):
     ast = Parser().parse(source)
     bytecode = Assembler().assemble(ast)
+    vm = CodexVM()
     vm.load(bytecode)
     vm.run()
-    return jsonify({
-        "registers": vm.regs.snapshot(),
-        "ledger_entries": len(vm.ledger.chain)
-    })
+    return vm.state_snapshot()
+
+
+app = FastAPI(title="Jarvis-X API", version="0.2.0")
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "runtime": "jarvis-x"}
+
+
+@app.post("/run")
+def run_code(request: RunRequest):
+    try:
+        return execute_source(request.source)
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
 
 def start_api():
-    app.run(host="0.0.0.0", port=8080)
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=8080)

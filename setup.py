@@ -1,14 +1,15 @@
-from setuptools import setup, find_packages
 from pathlib import Path
 
-# Read long description from README
+from setuptools import find_packages, setup
+
+
 readme_file = Path(__file__).parent / "README.md"
 long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists() else ""
 
 setup(
     name="jarvisx",
-    version="0.1.0",
-    description="Jarvis-X: A powerful assembly language interpreter and virtual machine",
+    version="0.2.0",
+    description="Jarvis-X deterministic transactional virtual machine and agent control substrate",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Lord-Xido",
@@ -29,11 +30,7 @@ setup(
             "mypy>=1.0",
         ],
     },
-    entry_points={
-        "console_scripts": [
-            "jarvisx=jarvisx.cli:main",
-        ],
-    },
+    entry_points={"console_scripts": ["jarvisx=jarvisx.cli:main"]},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
