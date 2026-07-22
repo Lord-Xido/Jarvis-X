@@ -8,6 +8,8 @@ from .reflex import ReflexEngine
 from .sandbox import Sandbox
 from .debugger import Debugger
 from .tracer import Tracer
+from .engine30d import Cycle30DResult, ThirtyDAutoEncodingEngine
+
 
 class CodexVM:
     def __init__(self):
@@ -21,6 +23,7 @@ class CodexVM:
         self.sandbox = Sandbox()
         self.debugger = Debugger(self)
         self.tracer = Tracer()
+        self.ai30d = ThirtyDAutoEncodingEngine()
         self.program = []
         self.cycles = 0
         self.running = True
@@ -28,6 +31,11 @@ class CodexVM:
     def load(self, bytecode):
         self.program = bytecode
         self.regs["IP"] = 0
+        self.running = True
+
+    def cognitive_cycle(self, observation) -> Cycle30DResult:
+        """Run an explicit 30D encode/predict/correct/decode transaction."""
+        return self.ai30d.cycle(observation)
 
     def step(self):
         ip = self.regs["IP"]
@@ -39,7 +47,15 @@ class CodexVM:
         cont = self.executor.execute(instr)
         self.ledger.log(self.regs.snapshot(), instr.opcode)
         self.tracer.record(instr, self.regs.snapshot())
-        self.reflex.stabilize(self.regs)
+
+        # Reflex analysis must not mutate the authoritative register machine.
+        # Stabilize a snapshot so instruction semantics remain deterministic.
+        self.reflex.stabilize(self.regs.snapshot())
+
+        # Permeate every committed VM transition through the sparse 30D
+        # cognitive field. This observes the register state but does not
+        # mutate the deterministic register machine.
+        self.ai30d.observe_vm_state(instr.opcode, self.regs.snapshot())
 
         self.regs["IP"] += 1
         self.cycles += 1
