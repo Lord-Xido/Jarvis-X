@@ -1,0 +1,57 @@
+name: VANN-ROM Ω³ SDK
+
+on:
+  push:
+    paths:
+      - "sdk/vann_rom_sdk/**"
+      - ".github/workflows/vann-rom-sdk.yml"
+  pull_request:
+    paths:
+      - "sdk/vann_rom_sdk/**"
+      - ".github/workflows/vann-rom-sdk.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: sdk/vann_rom_sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: sdk/vann_rom_sdk/pyproject.toml
+      - name: Install SDK
+        run: python -m pip install .
+      - name: Verify dependency graph
+        run: python -m pip check
+      - name: Compile sources
+        run: python -m compileall -q src tests examples
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Execute Aether synthetic closed loop
+        run: vann-rom aether-demo --adapt --optimize
+      - name: Execute Aether external JSON closed loop
+        run: >-
+          vann-rom aether-run
+          --input examples/aether_input.json
+          --adapt
+          --optimize
+      - name: Execute VANN source demonstration
+        run: vann-rom demo
+      - name: Assemble verified bytecode image
+        run: vann-rom assemble examples/demo.vann -o /tmp/demo.vbc
+      - name: Inspect verified bytecode image
+        run: vann-rom inspect /tmp/demo.vbc
+      - name: Execute verified bytecode image
+        run: >-
+          vann-rom run-bytecode
+          --bytecode /tmp/demo.vbc
+          --input examples/input.json
+          --latent-dim 4
