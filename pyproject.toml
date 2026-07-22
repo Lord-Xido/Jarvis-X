@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "uvicorn>=0.23.0",
     "fastapi>=0.100.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
@@ -61,7 +62,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=src/jarvisx --cov-report=term-local --cov-report=html --tb=short"
+addopts = "-v --cov=src/jarvisx --cov-report=term --cov-report=html --tb=short"
 
 [tool.coverage.run]
 source = ["src/jarvisx"]
@@ -74,14 +75,14 @@ omit = [
 [tool.black]
 line-length = 100
 target-version = ['py38']
-include = '\\.pyi?$'
+include = '\.pyi?$'
 extend-exclude = '''
 /(
-    \\.git
-  | \\.hg
-  | \\.mypy_cache
-  | \\.tox
-  | \\.venv
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
   | _build
   | buck-out
   | build
