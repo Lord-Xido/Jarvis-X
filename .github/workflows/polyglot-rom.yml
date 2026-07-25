@@ -1,0 +1,95 @@
+name: Polyglot ROM Automation
+
+on:
+  push:
+    branches: [main, develop, "agent/**"]
+    paths:
+      - "src/jarvisx/rom.py"
+      - "src/jarvisx/polyglot.py"
+      - "src/jarvisx/rom_automation.py"
+      - "src/jarvisx/polyglot_cli.py"
+      - "tests/test_polyglot_rom.py"
+      - "examples/polyglot/**"
+      - ".github/workflows/polyglot-rom.yml"
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  compile-verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -e . pytest
+
+      - name: Run polyglot ROM tests
+        run: pytest -q tests/test_polyglot_rom.py
+
+      - name: Compile all language examples
+        run: |
+          mkdir -p build/rom
+          python -m jarvisx.polyglot_cli compile \
+            --language jarvis-asm \
+            --input examples/polyglot/program.jxasm \
+            --output build/rom/program-asm.jxrom
+          python -m jarvisx.polyglot_cli compile \
+            --language json-ir \
+            --input examples/polyglot/program.json \
+            --output build/rom/program-json.jxrom
+          python -m jarvisx.polyglot_cli compile \
+            --language python \
+            --input examples/polyglot/program.py \
+            --output build/rom/program-python.jxrom
+
+      - name: Verify canonical word equivalence and write manifest
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          from jarvisx.polyglot import PolyglotCompiler
+
+          compiler = PolyglotCompiler()
+          paths = sorted(Path("build/rom").glob("*.jxrom"))
+          images = [compiler.decode(path.read_bytes()) for path in paths]
+          assert images and all(image.words == images[0].words for image in images)
+
+          manifest = []
+          for path, image in zip(paths, images):
+              blob = path.read_bytes()
+              manifest.append({
+                  "artifact": path.name,
+                  "language": image.language,
+                  "instruction_count": len(image.words),
+                  "rom_sha256": hashlib.sha256(blob).hexdigest(),
+                  "source_sha256": image.source_sha256,
+                  "payload_sha256": image.payload_sha256,
+              })
+          Path("build/rom/manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload verified ROM images
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvisx-polyglot-rom
+          path: build/rom
+          if-no-files-found: error
