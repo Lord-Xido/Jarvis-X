@@ -1,0 +1,333 @@
+DR MOAGI EQUATION — 3D AUTO-ENCODING/DECODING ENGINE v4.0
+
+I. STATE SPACE
+
+Let the volumetric address lattice be
+
+Ω_h = {0,…,15} × {0,…,63} × {0,…,63},
+
+so that |Ω_h| = 16·64·64 = 65,536 byte-addressed loci.
+
+The committed engine state is
+
+Ξ_t : Ω_h → Q16.16,
+
+with Q16.16 represented by signed 32-bit integers q ∈ ℤ ∩ [−2³¹,2³¹−1] and interpreted as real values q/2¹⁶.
+
+The complete transactional state is
+
+𝒮_t = (Ξ_t, Z_t, X̂_t, E_t, Ω_t, Θ_t, Λ_t, H_t).
+
+
+II. FIVE-PRIMITIVE ARITHMETIC
+
+All executable arithmetic is generated from:
+
+1. Saturated addition
+
+   a ⊕ b := sat₃₂(a+b).
+
+2. Saturated subtraction
+
+   a ⊖ b := sat₃₂(a−b).
+
+3. Arithmetic shift
+
+   a ≫ n := arithmetic right shift of a by n,
+   a ≪ n := saturated left shift of a by n.
+
+4. Bitwise operations
+
+   a ∧ b := AND(a,b),
+   a ⊻ b := XOR(a,b).
+
+5. Constraint projection
+
+   ⌈a⌉_[ℓ,u] := min(max(a,ℓ),u).
+
+The authoritative Q16.16 product is
+
+   a ⊗ b
+   := sat₃₂( (signed₆₄(a)·signed₆₄(b)) ≫ 16 ).
+
+The product is implemented by a finite SHIFT–ADD multiplication macro; the mathematical definition above is independent of the chosen serial or parallel multiplier architecture.
+
+
+III. MASTER DR MOAGI FIELD EQUATION
+
+The continuous shorthand is
+
+                 ∂Ξ(r,t)
+                 ───────
+                    ∂t
+
+   = Ψ(r,t)
+     ⊕ Φ_t[Δ₃Ξ(r,t)]
+     ⊖ C_Θ(E(r,t))
+     ⊕ Ω(r,t)
+     ⊕ Γ(r,t)
+     ⊕ U(r,t),
+
+where r=(x,y,z)∈Ω_h and Δ₃ is the six-neighbour discrete volumetric Laplacian.
+
+The authoritative engine is the discrete transactional law
+
+   Ξ̃_{t+1}
+   = Ξ_t
+     ⊕ P_Θ(Z_t)
+     ⊖ C_Θ(E_t)
+     ⊕ Ω_{t+1}
+     ⊕ κΔ₃Ξ_t
+     ⊕ U_t,
+
+followed by
+
+   Ξ_{t+1}
+   = Π_{Λ_t}[Ξ̃_{t+1};Ξ_t].
+
+The projection is
+
+   Π_Λ[Y;X]
+   = { Y,  if Λ(Y)=1,
+     { X,  if Λ(Y)=0.
+
+Thus computed state and committed state are distinct.
+
+
+IV. 3D ENCODER
+
+For each latent locus r, let 𝒩₂₆(r) be its 3×3×3 neighbourhood, including the centre voxel. Let M_{r,k,t} be a full-word binary intent mask:
+
+   M_{r,k,t} ∈ {0x00000000,0xFFFFFFFF}.
+
+Intent gating is
+
+   G_{r,k,t} = X_{r+k,t} ∧ M_{r,k,t}.
+
+The Φ-weighted encoder accumulator is
+
+   C^{raw}_{r,t}
+   = (b^Φ_r ≪ 16)
+     + Σ_{k∈𝒩₂₆} signed₆₄(G_{r,k,t})·signed₆₄(W^Φ_{r,k}).
+
+The Q16.16 encoded activation is
+
+   A_{r,t}
+   = ⌈ C^{raw}_{r,t} ≫ 16 ⌉_[0,A_max].
+
+The latent bottleneck is
+
+   Z_{r,t}
+   = ⌈
+       ( ⌈A_{r,t}⌉_[Λ_min(r,t),Λ_max(r,t)] ∧ MASK_Λ(r,t) )
+     ⌉_[Λ_min(r,t),Λ_max(r,t)].
+
+For d latent channels,
+
+   Z_t = (Z_{1,t},…,Z_{d,t}) ∈ (Q16.16)^d.
+
+
+V. 3D DECODER
+
+For each reconstructed output locus q and latent channel c,
+
+   D^{raw}_{q,t}
+   = (b^Θ_q ≪ 16)
+     + Σ_{c=1}^{d} signed₆₄(Z_{c,t})·signed₆₄(W^Θ_{q,c}).
+
+The coarse decoded field is
+
+   X̂^{(0)}_{q,t}
+   = ⌈D^{raw}_{q,t} ≫ 16⌉_[X_min(q),X_max(q)].
+
+The candidate reconstruction is
+
+   X̃_{q,t}
+   = ⌈ X̂^{(0)}_{q,t} ⊕ Ω_{q,t+1} ⌉_[X_min(q),X_max(q)].
+
+The reconstruction residual is
+
+   E_{q,t} = X_{q,t} ⊖ X̃_{q,t}.
+
+The normalized reconstruction loss is
+
+   ℒ_rec(t)
+   = (1/|Ω_h|) Σ_{q∈Ω_h} (E_{q,t}/2¹⁶)².
+
+
+VI. Ω CORRECTION MEMORY
+
+Ω is a numeric residual memory, distinct from the provenance ledger.
+
+Its general recurrence is
+
+   Ω_{t+1}
+   = ⌈ β_Ω Ω_t ⊕ η_Ω C_E(E_t) ⌉_[Ω_min,Ω_max].
+
+For the shift-exact choice β_Ω=7/8 and η_Ω=1/16,
+
+   Ω_{t+1}
+   = ⌈
+       Ω_t
+       ⊖ (Ω_t ≫ 3)
+       ⊕ (C_E(E_t) ≫ 4)
+     ⌉_[Ω_min,Ω_max].
+
+Here C_E maps reconstruction residuals into the dimensionality of the persistent correction field.
+
+
+VII. Γ ADAPTIVE DYNAMICS
+
+Let V_t be a fixed-point momentum field. Then
+
+   V_{t+1}
+   = ⌈ β_V V_t ⊖ η_V C_Θ(E_t) ⌉_[V_min,V_max],
+
+and
+
+   Γ_t = V_{t+1}.
+
+The parameters β_V and η_V are Q16.16 constants constrained by Λ.
+
+
+VIII. Λ VALIDITY OPERATOR
+
+The global validity predicate is
+
+   Λ_t(Ξ̃_{t+1})
+   = 𝟙[
+       all components are representable,
+       Ξ̃_{t+1}∈𝒞_bounds,
+       ℒ_rec(t)≤τ_L,
+       no forbidden bit pattern is present,
+       the execution budget is satisfied,
+       and the provenance transition is valid
+     ].
+
+The committed reconstruction is therefore
+
+   X̂_{t+1}
+   = Π_{Λ_t}[X̃_t;X̂_t].
+
+
+IX. PROVENANCE LEDGER
+
+The ledger is not inserted into the numeric latent datapath. It is updated independently:
+
+   H_{t+1}
+   = SHA3-256(
+       H_t ∥ Canon(Ξ_t,Z_t,X̃_t,E_t,Ω_{t+1},Λ_t,t)
+     ).
+
+The hash chain seals the ordered committed transition. XOR may be used internally by the hash implementation, but
+
+   H_t ⊻ A_t
+
+alone is not a cryptographic ledger.
+
+
+X. COMPLETE DISCRETE UPDATE
+
+For every cycle t:
+
+   G_{r,k,t}
+   = X_{r+k,t} ∧ M_{r,k,t},
+
+   A_{r,t}
+   = ⌈
+       [ (b^Φ_r≪16)
+         + Σ_k signed₆₄(G_{r,k,t})·signed₆₄(W^Φ_{r,k})
+       ] ≫ 16
+     ⌉_[0,A_max],
+
+   Z_{r,t}
+   = ⌈
+       (⌈A_{r,t}⌉_[Λ_min,Λ_max] ∧ MASK_Λ)
+     ⌉_[Λ_min,Λ_max],
+
+   X̂^{(0)}_{q,t}
+   = ⌈
+       [ (b^Θ_q≪16)
+         + Σ_c signed₆₄(Z_{c,t})·signed₆₄(W^Θ_{q,c})
+       ] ≫ 16
+     ⌉_[X_min,X_max],
+
+   E_{q,t}
+   = X_{q,t} ⊖ X̂^{(0)}_{q,t},
+
+   Ω_{q,t+1}
+   = ⌈
+       Ω_{q,t}
+       ⊖ (Ω_{q,t}≫3)
+       ⊕ (C_E(E_{q,t})≫4)
+     ⌉_[Ω_min,Ω_max],
+
+   X̃_{q,t+1}
+   = ⌈
+       X̂^{(0)}_{q,t}
+       ⊕ Ω_{q,t+1}
+       ⊕ κΔ₃Ξ_{q,t}
+       ⊕ U_{q,t}
+     ⌉_[X_min,X_max],
+
+   Ξ_{t+1}
+   = Π_{Λ_t}[X̃_{t+1};Ξ_t],
+
+   H_{t+1}
+   = SHA3-256(
+       H_t ∥ Canon(Ξ_t,Ξ_{t+1},Z_t,E_t,Ω_{t+1},Λ_t,t)
+     ).
+
+
+XI. FIXED-POINT CONDITION
+
+A committed fixed point Ξ* satisfies
+
+   Ξ*
+   = Π_{Λ*}[
+       Ξ*
+       ⊕ P_Θ(E_Φ(Ξ*))
+       ⊖ C_Θ(Ξ*⊖D_Θ(E_Φ(Ξ*)))
+       ⊕ Ω*
+       ⊕ κΔ₃Ξ*
+       ⊕ U*;
+       Ξ*
+     ],
+
+with
+
+   Ω*
+   = ⌈β_ΩΩ* ⊕ η_ΩC_E(E*)⌉_[Ω_min,Ω_max].
+
+If the committed update operator T is contractive on a complete feasible state space 𝒞_Λ,
+
+   d(T(X),T(Y)) ≤ q·d(X,Y),    0≤q<1,
+
+then T has a unique fixed point and
+
+   d(Ξ_t,Ξ*) ≤ q^t d(Ξ_0,Ξ*).
+
+This conclusion is conditional on the contraction property being established for the actual quantized operator.
+
+
+XII. CANONICAL MASTER FORM
+
+The pure Dr Moagi equation for the PVSE engine is
+
+   ┌                                                                    ┐
+   │ Ξ_{t+1} = Π_{Λ_t}[                                                 │
+   │   Ξ_t                                                              │
+   │   ⊕ P_Θ(Q_Λ(E_Φ(Ψ_t ∧ X_t)))                                      │
+   │   ⊖ C_Θ(X_t ⊖ D_Θ(Q_Λ(E_Φ(Ψ_t ∧ X_t))))                           │
+   │   ⊕ Ω_{t+1}                                                        │
+   │   ⊕ κΔ₃Ξ_t                                                        │
+   │   ⊕ U_t;                                                           │
+   │   Ξ_t                                                              │
+   │ ],                                                                 │
+   │                                                                    │
+   │ Ω_{t+1} = ⌈β_ΩΩ_t ⊕ η_ΩC_E(E_t)⌉_[Ω_min,Ω_max].                   │
+   └                                                                    ┘
+
+All numerical maps are Q16.16 fixed-point maps. Every executable arithmetic operation reduces to saturated ADD, XOR, AND, SHIFT, and CLAMP, with finite SHIFT–ADD macros for multiplication and cryptographic hashing.
+
+STATUS: EQUATION-ONLY FORMAL SPECIFICATION — VERSION 4.0
