@@ -1,0 +1,175 @@
+name: Runtime v1 verification
+
+on:
+  push:
+    branches:
+      - feature/jarvis-x-runtime-v1
+  pull_request:
+    paths:
+      - "src/jarvisx/**"
+      - "tests/**"
+      - "examples/earthtwin/**"
+      - "examples/jarvisx-echo/**"
+      - "docs/DR_MOAGI_PROVENANCE_SEAL.md"
+      - "pyproject.toml"
+      - ".github/workflows/runtime-v1.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.10", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run test suite
+        run: python -m pytest
+
+      - name: Compile package
+        run: python -m compileall -q src/jarvisx
+
+  earthtwin:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Parse EarthTwin module
+        run: |
+          cp examples/earthtwin/app.js /tmp/earthtwin-app.mjs
+          node --check /tmp/earthtwin-app.mjs
+
+      - name: Verify demo asset references
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          root = Path("examples/earthtwin")
+          html = root / "index.html"
+          required = {"./styles.css", "./app.js"}
+          found = set()
+
+          class AssetParser(HTMLParser):
+              def handle_starttag(self, tag, attrs):
+                  values = dict(attrs)
+                  if tag == "link" and values.get("href"):
+                      found.add(values["href"])
+                  if tag == "script" and values.get("src"):
+                      found.add(values["src"])
+
+          parser = AssetParser()
+          parser.feed(html.read_text(encoding="utf-8"))
+          missing = required - found
+          if missing:
+              raise SystemExit(f"Missing EarthTwin asset references: {sorted(missing)}")
+
+          for relative in required:
+              asset = root / relative.removeprefix("./")
+              if not asset.is_file() or asset.stat().st_size == 0:
+                  raise SystemExit(f"Missing or empty EarthTwin asset: {asset}")
+          PY
+
+  jarvisx-echo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Parse JARVIS X browser modules
+        run: |
+          cp examples/jarvisx-echo/app.js /tmp/jarvisx-echo-app.mjs
+          cp examples/jarvisx-echo/app-sealed.js /tmp/jarvisx-echo-sealed.mjs
+          node --check /tmp/jarvisx-echo-app.mjs
+          node --check /tmp/jarvisx-echo-sealed.mjs
+          node --check examples/jarvisx-echo/runtime-core.mjs
+          node --check examples/jarvisx-echo/provenance.mjs
+          node --check examples/jarvisx-echo/dr-moagi-seal.mjs
+
+      - name: Run JARVIS X runtime tests
+        run: |
+          node --test examples/jarvisx-echo/runtime-core.test.mjs
+          node --test examples/jarvisx-echo/provenance.test.mjs
+
+      - name: Verify JARVIS X asset graph and security boundary
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          root = Path("examples/jarvisx-echo")
+          html = root / "index.html"
+          required = {"./styles.css", "./app-sealed.js"}
+          found = set()
+
+          class AssetParser(HTMLParser):
+              def handle_starttag(self, tag, attrs):
+                  values = dict(attrs)
+                  if tag == "link" and values.get("href"):
+                      found.add(values["href"])
+                  if tag == "script" and values.get("src"):
+                      found.add(values["src"])
+
+          parser = AssetParser()
+          parser.feed(html.read_text(encoding="utf-8"))
+          missing = required - found
+          if missing:
+              raise SystemExit(f"Missing JARVIS X asset references: {sorted(missing)}")
+
+          names = [
+              "index.html",
+              "styles.css",
+              "app.js",
+              "app-sealed.js",
+              "runtime-core.mjs",
+              "runtime-core.test.mjs",
+              "provenance.mjs",
+              "provenance.test.mjs",
+              "dr-moagi-seal.mjs",
+          ]
+          for name in names:
+              asset = root / name
+              if not asset.is_file() or asset.stat().st_size == 0:
+                  raise SystemExit(f"Missing or empty JARVIS X asset: {asset}")
+
+          source_files = [root / name for name in names if name.endswith((".js", ".mjs"))]
+          for source_file in source_files:
+              source = source_file.read_text(encoding="utf-8")
+              if "innerHTML" in source:
+                  raise SystemExit(f"Unsafe innerHTML usage detected in {source_file}")
+
+          sealed_boot = (root / "app-sealed.js").read_text(encoding="utf-8")
+          for required_import in ["./provenance.mjs", "./dr-moagi-seal.mjs", 'import("./app.js")']:
+              if required_import not in sealed_boot:
+                  raise SystemExit(f"Sealed boot path missing {required_import}")
+          PY

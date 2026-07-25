@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self'; img-src 'self' data: https://threejs.org; connect-src 'self' https://unpkg.com https://threejs.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none';">
+  <meta name="color-scheme" content="dark">
+  <title>JARVIS X · Trace-Driven Neural Echo Chamber</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header id="info" aria-label="Runtime identity">
+    <span class="mark">⟡</span>
+    <strong>JARVIS X</strong>
+    <span>Trace-Driven Neural Echo Chamber</span>
+    <small>runtime v3.1 · provenance-gated</small>
+  </header>
+
+  <div class="top-actions">
+    <button id="voice-toggle" class="pill" type="button" aria-pressed="false">Voice: off</button>
+    <button id="meta-toggle" class="pill" type="button" aria-controls="meta-panel" aria-expanded="false">Neural map</button>
+  </div>
+
+  <section id="neural-monitor" aria-label="Live neural activity">
+    <div class="monitor-title"><span>Neural activity</span><span id="neural-state" class="state idle">IDLE</span></div>
+    <canvas id="neural-canvas" width="320" height="72" aria-label="Hidden-layer activation graph"></canvas>
+    <div class="monitor-stats">
+      <span>loss <b id="neural-loss">0.000</b></span>
+      <span>steps <b id="neural-steps">0</b></span>
+      <span>activation <b id="neural-activation">0.000</b></span>
+    </div>
+  </section>
+
+  <aside id="meta-panel" aria-label="Runtime telemetry">
+    <div class="panel-heading">
+      <div><span class="eyebrow">INWARD TRACE</span><h2>Self-optimization</h2></div>
+      <button id="refine-now" type="button">Optimize now</button>
+    </div>
+    <div class="metrics">
+      <div><span>Provenance</span><b id="m-seal-status">VERIFYING</b></div>
+      <div><span>Trust key</span><b id="m-seal-key">--</b></div>
+      <div><span>ROM</span><b id="m-rom-size">--</b></div>
+      <div><span>Checksum</span><b id="m-rom-checksum">--</b></div>
+      <div><span>Cache</span><b id="m-cache">--</b></div>
+      <div><span>FPS / LOD</span><b id="m-render">--</b></div>
+      <div><span>Instruction ISA</span><b id="m-isa">--</b></div>
+      <div><span>ISA hash</span><b id="m-isa-hash">--</b></div>
+      <div><span>ROM refinements</span><b id="m-refinements">--</b></div>
+      <div><span>Aliases learned</span><b id="m-aliases">--</b></div>
+      <div><span>Trace events</span><b id="m-traces">--</b></div>
+    </div>
+    <div class="panel-section">
+      <span class="eyebrow">HOT MEMORY</span>
+      <div id="m-hot-list" class="token-list"><span>no reinforced cities</span></div>
+    </div>
+    <div class="panel-section">
+      <span class="eyebrow">LATEST EXECUTION</span>
+      <ol id="trace-list" class="trace-list" aria-live="polite"></ol>
+    </div>
+    <p class="boundary">Boot is gated by a detached ECDSA-P384 development signature, SHA-384 component digests, and an external public-key trust anchor. Replace the development key with an owner-controlled key before production use. This system does not claim consciousness or sentience.</p>
+  </aside>
+
+  <section id="chat-container" aria-label="JARVIS X command interface">
+    <div id="chat-header" role="button" tabindex="0" aria-controls="chat-body" aria-expanded="true">
+      <div><span class="orb">⟡</span><strong>Neural interface</strong><small id="instruction-indicator">verifying release seal</small></div>
+      <button id="chat-toggle" type="button" aria-label="Collapse chat">−</button>
+    </div>
+    <div id="chat-body">
+      <div id="chat-messages" aria-live="polite">
+        <div class="msg bot"><strong>JARVIS X boot verification.</strong><span>Validating release signature, ROM digest, instruction manifest, and trust anchor.</span></div>
+      </div>
+      <div class="suggestions" aria-label="Example commands">
+        <button type="button" data-query="Where is Tokyo?">Tokyo</button>
+        <button type="button" data-query="Time in Cape Town">Cape Town time</button>
+        <button type="button" data-query="cities >= 10m">Cities ≥10M</button>
+        <button type="button" data-query="teach jozi = Johannesburg">Teach alias</button>
+        <button type="button" data-query="status">Status</button>
+      </div>
+      <form id="chat-form">
+        <label class="sr-only" for="chat-input">Command</label>
+        <input id="chat-input" type="text" maxlength="160" autocomplete="off" placeholder="echo through…" autofocus>
+        <button id="chat-send" type="submit">Execute</button>
+      </form>
+    </div>
+  </section>
+
+  <div id="hint">verify · drag · query · inspect · optimize</div>
+  <div id="echo-layer" aria-hidden="true"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="./app-sealed.js"></script>
+</body>
+</html>
