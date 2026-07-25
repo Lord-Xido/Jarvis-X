@@ -1,0 +1,5 @@
+SET A 7
+SET B 5
+ADD C A B
+SUB D C B
+HALT
