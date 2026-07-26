@@ -1,0 +1,29 @@
+name: CUDA SE3 compile contract
+
+on:
+  push:
+    paths:
+      - "cuda/se3/**"
+      - ".github/workflows/cuda-se3.yml"
+  pull_request:
+    paths:
+      - "cuda/se3/**"
+      - ".github/workflows/cuda-se3.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    container: nvidia/cuda:12.4.1-devel-ubuntu22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show CUDA compiler
+        run: nvcc --version
+      - name: Compile standalone SE3 runtime
+        run: |
+          nvcc -O3 -std=c++17 -lineinfo \
+            -gencode arch=compute_70,code=sm_70 \
+            cuda/se3/jarvis_x_se3.cu \
+            -o /tmp/jarvis_x_se3
