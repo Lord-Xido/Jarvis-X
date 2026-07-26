@@ -1,12 +1,32 @@
+"""Deterministic hash-chained execution ledger."""
+
 import hashlib
-import time
+import json
+from typing import Dict, Mapping
+
 
 class OmegaLedger:
+    """Append canonical JSON records to a deterministic SHA-256 chain."""
+
     def __init__(self):
         self.chain = []
 
-    def log(self, state, opcode):
-        payload = f"{time.time()}|{state}|{opcode}".encode()
-        prev = self.chain[-1]["hash"].encode() if self.chain else b""
-        h = hashlib.sha256(prev + payload).hexdigest()
-        self.chain.append({"hash": h, "payload": payload})
+    def log(self, state: Mapping[str, int], opcode: int) -> Dict[str, object]:
+        payload = {
+            "sequence": len(self.chain),
+            "opcode": int(opcode),
+            "state": dict(state),
+        }
+        canonical = json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        previous = self.chain[-1]["hash"].encode("ascii") if self.chain else b""
+        record = {
+            "hash": hashlib.sha256(previous + canonical).hexdigest(),
+            "payload": payload,
+        }
+        self.chain.append(record)
+        return record
