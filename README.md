@@ -75,6 +75,51 @@ python examples/dr_moagi_spatial_echo.py
 The formal operational boundary and integration roadmap are documented in
 [`docs/DR_MOAGI_SPATIAL_RUNTIME.md`](docs/DR_MOAGI_SPATIAL_RUNTIME.md).
 
+## Sparse 3D Virtual Computer
+
+`jarvisx.virtual3d` provides a sparse logical 3D memory volume with:
+
+- exact coordinate-to-block and local-offset translation;
+- clipped boundary blocks;
+- lazy allocation at both block and cell level;
+- deterministic per-block compression with checksum verification;
+- exact global reblocking across candidate block shapes;
+- online, offline, and adaptive modes;
+- canonical ROM snapshots with SHA-256 state fingerprints.
+
+```python
+from jarvisx.virtual3d import OperationalMode, Virtual3DComputer, VolumeGeometry
+
+geometry = VolumeGeometry(
+    extent=(6400, 6400, 6400),
+    block_shape=(1024, 1024, 1024),
+    cell_bytes=1_000_000_000,
+)
+computer = Virtual3DComputer(geometry, mode=OperationalMode.ADAPTIVE)
+
+computer.write((10, 20, 30), b"Jarvis-X")
+assert computer.read((10, 20, 30)) == b"Jarvis-X"
+
+report = computer.optimize_layout(
+    [(256, 256, 256), (512, 512, 512), (1024, 1024, 1024)]
+)
+fingerprint = computer.save_rom("jarvisx-state.jxrom")
+```
+
+The capacity is explicit: `6400^3` one-byte cells represent 262.144 GB decimal;
+`6400^3` one-gigabyte cells represent 262.144 EB decimal. The runtime never
+allocates the logical capacity densely.
+
+Run the complete ROM demonstration with:
+
+```bash
+python examples/virtual3d_rom_demo.py
+```
+
+The geometry, compression, layout, persistence, and current implementation
+boundary are documented in
+[`docs/DR_MOAGI_3D_VIRTUAL_COMPUTER.md`](docs/DR_MOAGI_3D_VIRTUAL_COMPUTER.md).
+
 ## Sparse Fractal Octree
 
 The concrete recursive spatial substrate is available as
