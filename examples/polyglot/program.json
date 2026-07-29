@@ -1,0 +1,7 @@
+[
+  {"op": "SET", "args": ["A", 7]},
+  {"op": "SET", "args": ["B", 5]},
+  {"op": "ADD", "args": ["C", "A", "B"]},
+  {"op": "SUB", "args": ["D", "C", "B"]},
+  {"op": "HALT", "args": []}
+]
