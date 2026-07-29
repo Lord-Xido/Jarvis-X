@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -28,8 +28,8 @@ class PersistentLedger(OmegaLedger):
             if not self.verify():
                 raise ValueError("ledger integrity verification failed")
 
-    def log(self, state: dict[str, Any], opcode: int) -> dict[str, Any]:
-        entry = super().log(state, opcode)
+    def log(self, state: Mapping[str, Any], opcode: int) -> dict[str, Any]:
+        entry: dict[str, Any] = super().log(state, opcode)
         self._persist()
         return entry
 
