@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use Jarvis-X in research or technical work, please cite the software and the specific release or commit."
+title: "Jarvis-X"
+type: software
+version: 0.1.0
+license: MIT
+authors:
+  - family-names: Moagi
+    given-names: Matladi Maxwell
+    alias: Lord-Xido
+repository-code: "https://github.com/Lord-Xido/Jarvis-X"
+url: "https://github.com/Lord-Xido/Jarvis-X"
+keywords:
+  - deterministic virtual machine
+  - bytecode
+  - sparse computing
+  - geometric autoencoding
+  - auditable adaptive systems
+abstract: >-
+  Jarvis-X is an experimental deterministic bytecode virtual machine and
+  sparse-computing research platform focused on explicit state contracts,
+  bounded execution, verifiable provenance, geometric representations and
+  carefully constrained adaptive runtime experiments.
