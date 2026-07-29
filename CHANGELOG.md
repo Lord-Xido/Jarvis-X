@@ -20,7 +20,13 @@ The project follows semantic versioning where practical during alpha development
 - signed 3-bit feature encoding, sparse scatter/diffusion, decoding and residual correction;
 - bounded deterministic genome and bytecode-schedule candidate evaluation;
 - atomic genome, ROM and evolution-journal checkpoints;
-- cross-platform GCC, Clang sanitizer and MSVC validation.
+- cross-platform GCC, Clang sanitizer and MSVC validation;
+- dependency-free periodic fractional 3D smoothing reference;
+- public forward/inverse 3D DFT and periodic Laplacian spectral primitives;
+- analytic constant-forcing updates for `du/dt = -D(-Delta)^alpha u + Omega`;
+- `2×2×2` restriction, prolongation and coarse-to-fine fusion;
+- ordered mechanistic traces, mass drift, gradient energy, residual and convergence telemetry;
+- independent direct-DFT, spatial-stencil and semigroup validation tests.
 
 ### Changed
 
@@ -29,9 +35,10 @@ The project follows semantic versioning where practical during alpha development
 - packaging metadata is authoritative in `pyproject.toml`;
 - supported Python versions begin at Python 3.10;
 - CI uses current Node 24-compatible major versions of core actions;
-- project documentation distinguishes stable code, reference laboratories, integration candidates, demonstrations and specifications;
+- project documentation distinguishes stable code, reference laboratories, numerical references, integration candidates, demonstrations and specifications;
 - C++ candidate selection excludes wall-clock latency from both fitness and equal-fitness tie handling;
-- C++ checkpoint loading requires all versioned fields and a matching deterministic fingerprint.
+- C++ checkpoint loading requires all versioned fields and a matching deterministic fingerprint;
+- fractional smoothing documentation states dense storage and separable `O(N⁴)` cost for cubic grids explicitly.
 
 ### Fixed
 
@@ -42,7 +49,8 @@ The project follows semantic versioning where practical during alpha development
 - invalid instruction-pointer states were not rejected explicitly;
 - negative C++ genome mutations could wrap unsigned fields to their maximum bounds;
 - the earlier C++ direct-build documentation referenced a nonexistent source file;
-- C++ ROM and CSV state writes could leave partial output after interruption.
+- C++ ROM and CSV state writes could leave partial output after interruption;
+- the earlier fractional branch exposed a dead `_dft3` helper that always raised instead of a testable spectral API.
 
 ## [0.1.0] — Initial alpha
 

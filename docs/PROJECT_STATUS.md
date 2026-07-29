@@ -12,6 +12,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Stable reference | deterministic implementation with focused tests; API may still change before `1.0` |
 | Alpha | executable on `main`, but incomplete or lightly tested |
 | Reference laboratory | bounded executable research subsystem with explicit limits and isolated authority |
+| Numerical reference | correctness-oriented solver with independent mathematical tests and explicit scaling limits |
 | Integration candidate | implemented on a branch or pull request and awaiting canonical integration |
 | Demonstration | runnable visualization or example that is not an authoritative runtime |
 | Specification | documented mathematical or architectural proposal |
@@ -28,16 +29,16 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Cycle sandbox | Stable reference | `sandbox.py` | cycle bound only; no process isolation |
 | Trace and Omega journal | Stable reference | `tracer.py`, `ledger.py`, `ledger_store.py` | persistence is opt-in; timestamps are environmental inputs |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
+| Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database |
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
 | 3D swarm bytecode architecture | Specification | `docs/DR_MOAGI_3D_SWARM_BYTECODE_ISA.md` | document does not establish hardware performance |
 
-## Active integration candidates
+## Active integration and administration work
 
-| Pull request or issue | Capability | Current classification | Required before merge or completion |
+| Issue | Capability | Current classification | Required before completion |
 |---|---|---|---|
-| #46 | hierarchical fractional 3D smoothing solver | Integration candidate | rebase, numerical reference comparison, measured scaling data and green CI |
 | #48 | pull-request backlog consolidation | Governance work | classify overlaps, preserve unique evidence and reduce active drafts below ten |
 | #49 | branch protection and security settings | Repository administration | enable required checks, scanning and private reporting in GitHub settings |
 | #50 | public GitHub profile README | Profile administration | create `Lord-Xido/Lord-Xido`, pin active repositories and review public metadata |
@@ -62,7 +63,8 @@ Jarvis-X does not currently claim:
 - physical hardware performance from a virtual address-space description;
 - trained model quality from deterministic initialized weights;
 - safety certification from the presence of a policy or coherence gate;
-- bit-exact cross-platform floating-point results from the C++ research processor.
+- bit-exact cross-platform floating-point results from the C++ research processor;
+- production-scale fractional PDE performance or physical validity from the numerical reference solver.
 
 ## Canonical promotion checklist
 
@@ -88,7 +90,8 @@ A capability moves to `main` only when all applicable items are satisfied:
 - versioned bytecode container;
 - expanded ISA tests;
 - enforced CI and contributor documentation;
-- isolated C++ processor laboratory with cross-platform validation.
+- isolated C++ processor laboratory with cross-platform validation;
+- independently validated fractional smoothing reference for small periodic grids.
 
 ### `0.3.0` — Sparse spatial runtime
 
