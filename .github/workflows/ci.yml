@@ -43,7 +43,7 @@ jobs:
 
       - name: Check foundation formatting
         run: >-
-          black --check
+          black --check --diff
           setup.py
           src/jarvisx/core.py
           src/jarvisx/ledger.py
@@ -53,7 +53,7 @@ jobs:
 
       - name: Check foundation import order
         run: >-
-          isort --check-only
+          isort --check-only --diff
           setup.py
           src/jarvisx/core.py
           src/jarvisx/ledger.py
