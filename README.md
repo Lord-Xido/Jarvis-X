@@ -1,6 +1,7 @@
 # Jarvis-X
 
 [![Jarvis-X CI](https://github.com/Lord-Xido/Jarvis-X/actions/workflows/ci.yml/badge.svg)](https://github.com/Lord-Xido/Jarvis-X/actions/workflows/ci.yml)
+[![C++ Runtime](https://github.com/Lord-Xido/Jarvis-X/actions/workflows/cpp-autopoietic-runtime.yml/badge.svg)](https://github.com/Lord-Xido/Jarvis-X/actions/workflows/cpp-autopoietic-runtime.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](pyproject.toml)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](docs/PROJECT_STATUS.md)
@@ -9,7 +10,7 @@
 
 The project investigates how large virtual state spaces, geometric representations, residual memory and bounded adaptation can be implemented as reproducible software without confusing virtual extent with physical allocation or simulation with deployed intelligence.
 
-> **Current status:** alpha research software. The repository contains a small stable VM core, validated reference components and multiple experimental integration tracks. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
+> **Current status:** alpha research software. The repository contains a stable reference VM foundation, validated sparse and packaging components, a bounded C++ processor laboratory and experimental integration tracks. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
 
 ## Why Jarvis-X exists
 
@@ -33,13 +34,14 @@ The symbolic vocabulary used in the research documents maps to ordinary engineer
 | Π | projection into a valid state set |
 | Ξ | integrated runtime state |
 
-## Stable capabilities on `main`
+## Capabilities on `main`
 
 | Area | Implemented capability | Maturity |
 |---|---|---|
 | Bytecode VM | parser, assembler, decoder, registers and minimal 64-bit instruction execution | Alpha |
 | Core ISA | `SET`, `ADD`, `SUB`, `HALT` | Alpha |
-| Runtime controls | policy check, cycle sandbox, tracing and ledger integration | Alpha |
+| Runtime controls | policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
+| C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
 | Model packaging | Hugging Face-compatible configuration, model and safetensors exporter | Reference |
 | Research specifications | reality-grounded observer dynamics, spatial bytecode and bounded optimization documents | Proposed / reference |
@@ -48,7 +50,7 @@ Experimental engines remain in draft pull requests until their tests, interfaces
 
 ## Quick start
 
-### Install for development
+### Install the Python package for development
 
 ```bash
 git clone https://github.com/Lord-Xido/Jarvis-X.git
@@ -95,6 +97,24 @@ Adaptive reflex correction is also explicit and disabled by default:
 vm = CodexVM(enable_reflex=True)
 ```
 
+### Build the C++ processor laboratory
+
+```bash
+cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release
+cmake --build build/cpp-runtime --config Release --parallel
+ctest --test-dir build/cpp-runtime -C Release --output-on-failure
+```
+
+Run a bounded inward experiment:
+
+```bash
+./build/cpp-runtime/jarvisx-runtime \
+  --generations 8 \
+  --population 6
+```
+
+See [`cpp_runtime/README.md`](cpp_runtime/README.md) for its state artifacts, determinism contract, sanitizer build and capability limits.
+
 ## Architecture
 
 ```text
@@ -113,8 +133,8 @@ Parser → Assembler → 64-bit bytecode
                          │
               ┌──────────┴──────────┐
               ▼                     ▼
-      authoritative state    optional research layers
-      registers / memory     spatial / adaptive / visual
+      authoritative state    isolated research layers
+      registers / memory     C++ / spatial / visual
 ```
 
 The canonical design rules are documented in [Architecture](docs/ARCHITECTURE.md).
@@ -143,9 +163,10 @@ At depth `D`:
 
 | Track | Purpose | Status |
 |---|---|---|
-| C++ inward runtime | sparse `8192³` virtual processor with bounded genome and bytecode search | Draft PR #45 |
-| Fractional smoothing | deterministic hierarchical 3D fractional-diffusion reference solver | Draft PR #46 |
-| Platform foundation | canonical VM repair, CI enforcement and contributor-ready governance | Draft PR #47 |
+| Fractional smoothing | deterministic hierarchical 3D fractional-diffusion reference solver | Draft PR #46; rebase required |
+| Backlog consolidation | select canonical implementations and close superseded research branches | Issue #48 |
+| Repository protection | required checks, secret scanning and private vulnerability reporting | Issue #49 |
+| Public profile | account-level profile README and pinned-project cleanup | Issue #50 |
 | Browser engines | bounded interactive 3D visual-computing demonstrations | Separate repository |
 
 Draft status is intentional: experimental subsystems are not represented as canonical until CI, review and integration boundaries are satisfied.
@@ -159,11 +180,11 @@ docs/              specifications and architecture records
 scripts/           packaging and export utilities
 examples/          runnable demonstrations
 cuda/              accelerator reference work
-cpp_runtime/       C++ runtime integration track
+cpp_runtime/       bounded C++ processor laboratory
 .github/           CI, templates and repository automation
 ```
 
-Some paths exist only on active branches. [Project Status](docs/PROJECT_STATUS.md) identifies what is present on the default branch.
+[Project Status](docs/PROJECT_STATUS.md) identifies what is implemented, experimental or proposed.
 
 ## Engineering standards
 
@@ -198,7 +219,7 @@ Large architectural proposals should begin as an issue or specification. Product
 
 Jarvis-X is an experimental software and mathematical research project. It does not claim consciousness, unrestricted autonomous self-modification, lossless compression of arbitrary high-dimensional inputs into smaller states, or production safety merely because a policy layer is present.
 
-Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility.
+Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code.
 
 ## Citation
 
