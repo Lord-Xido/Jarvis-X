@@ -10,18 +10,47 @@ on:
       - "cpp_runtime/**"
       - ".github/workflows/cpp-autopoietic-runtime.yml"
 
+permissions:
+  contents: read
+
 jobs:
-  build-and-smoke-test:
-    runs-on: ubuntu-latest
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+            sanitizers: "OFF"
+          - os: ubuntu-latest
+            compiler: clang
+            sanitizers: "ON"
+          - os: windows-latest
+            compiler: msvc
+            sanitizers: "OFF"
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / ${{ matrix.compiler }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select GCC
+        if: matrix.compiler == 'gcc'
+        run: echo "CXX=g++" >> "$GITHUB_ENV"
+
+      - name: Select Clang
+        if: matrix.compiler == 'clang'
+        run: echo "CXX=clang++" >> "$GITHUB_ENV"
+
       - name: Configure
-        run: cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release
+        run: >-
+          cmake -S cpp_runtime -B build/cpp-runtime
+          -DCMAKE_BUILD_TYPE=Release
+          -DJARVISX_ENABLE_SANITIZERS=${{ matrix.sanitizers }}
 
       - name: Build
-        run: cmake --build build/cpp-runtime --parallel 2
+        run: cmake --build build/cpp-runtime --config Release --parallel 2
 
       - name: Test
-        run: ctest --test-dir build/cpp-runtime --output-on-failure
+        run: ctest --test-dir build/cpp-runtime -C Release --output-on-failure
