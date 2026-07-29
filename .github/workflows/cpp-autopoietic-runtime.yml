@@ -1,0 +1,27 @@
+name: C++ Autopoietic Runtime
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/**"
+      - ".github/workflows/cpp-autopoietic-runtime.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/**"
+      - ".github/workflows/cpp-autopoietic-runtime.yml"
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/cpp-runtime --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build/cpp-runtime --output-on-failure
