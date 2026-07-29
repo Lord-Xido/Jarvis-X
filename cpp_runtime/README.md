@@ -1,10 +1,10 @@
 # Jarvis-X Inward C++ Runtime
 
-This dependency-free C++17 subsystem implements a bounded sparse auto-encoding processor and deterministic parameter/schedule search loop.
+This dependency-free C++17 subsystem implements a bounded sparse auto-encoding processor, deterministic parameter/schedule search loop and a trainable dense 3D convolutional autoencoder reference.
 
-It exposes a virtual `8192 × 8192 × 8192` coordinate domain through lazily materialized `8 × 8 × 8` tiles. The virtual extent is an addressing contract, not a dense allocation.
+The sparse processor exposes a virtual `8192 × 8192 × 8192` coordinate domain through lazily materialized `8 × 8 × 8` tiles. The virtual extent is an addressing contract, not a dense allocation.
 
-## Operational cycle
+## Sparse processor operational cycle
 
 1. ingest the executable image by default, or accept explicit text/binary input;
 2. extract a fixed-width deterministic feature vector;
@@ -27,7 +27,7 @@ cmake --build build/cpp-runtime --config Release --parallel
 ctest --test-dir build/cpp-runtime -C Release --output-on-failure
 ```
 
-Direct GCC/Clang build:
+Direct GCC/Clang build for the sparse processor:
 
 ```bash
 g++ -std=c++17 -O3 -Wall -Wextra -Wpedantic \
@@ -62,7 +62,31 @@ Text input is also supported:
   --population 5
 ```
 
-## State artifacts
+## Train the 3D ANN autoencoder core
+
+```bash
+./build/cpp-runtime/jarvisx-autoencoder3d \
+  --edge 8 \
+  --channels 4 \
+  --epochs 250 \
+  --pattern sphere \
+  --quantized \
+  --export-dir .jarvisx-autoencoder3d
+```
+
+The 3D core implements a real trainable encode → latent → decode path with shared `3×3×3` kernels, stride-two spatial compression, direct reverse-mode gradients, gradient clipping, L2 regularization and optional signed 3-bit final inference.
+
+Its output directory contains:
+
+- `metrics.csv` — per-step MSE, MAE, maximum error, latent energy and gradient norm;
+- `input.obj` — input voxel point cloud;
+- `latent.obj` — channel-stacked latent point cloud;
+- `reconstruction.obj` — reconstructed voxel point cloud;
+- `model.jx3d` — reloadable model checkpoint.
+
+Supported deterministic fixtures are `sphere`, `shell`, `checker`, `wave` and `noise`. See [`docs/CPP_3D_AUTOENCODER.md`](../docs/CPP_3D_AUTOENCODER.md) for equations, persistence and complexity boundaries.
+
+## Sparse runtime state artifacts
 
 The default `.jarvisx-runtime/` directory contains:
 
@@ -74,7 +98,9 @@ Use `--reset` to discard an earlier checkpoint, `--state-dir PATH` to isolate an
 
 ## Determinism contract
 
-Candidate generation, feature extraction, encoding, decoding and fitness selection are deterministic for the same input and genome. Wall-clock latency is recorded as telemetry but excluded from fitness. Platform floating-point implementations may still produce small cross-architecture differences; bit-exact portability is not claimed.
+Sparse candidate generation, feature extraction, encoding, decoding and fitness selection are deterministic for the same input and genome. The 3D ANN core uses deterministic initialization and update order for the same model configuration and training sequence. Wall-clock latency is telemetry only and excluded from sparse-processor fitness.
+
+Platform floating-point and transcendental implementations may produce small cross-architecture differences; bit-exact portability is not claimed.
 
 ## Validation
 
@@ -82,8 +108,12 @@ The CTest suite includes:
 
 - inward executable/text smoke execution;
 - genome normalization before allocation;
-- repeatable processor evaluation;
-- proof that wall-clock latency does not alter deterministic fitness.
+- repeatable sparse processor evaluation;
+- proof that wall-clock latency does not alter deterministic fitness;
+- deterministic 3D ANN initialization;
+- measurable reconstruction-error reduction under training;
+- signed 3-bit latent-level validation;
+- exact model save/load replay on the same platform.
 
 Optional sanitizer build:
 
