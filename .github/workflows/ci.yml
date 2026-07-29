@@ -41,25 +41,29 @@ jobs:
       - name: Reject syntax errors and undefined names
         run: flake8 src/jarvisx tests --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Check foundation formatting
+      - name: Check canonical formatting
         run: >-
           black --check --diff
           setup.py
           src/jarvisx/core.py
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
+          src/jarvisx/fractional_smoothing_3d.py
           tests/test_vm.py
           tests/test_ledger.py
+          tests/test_fractional_smoothing_3d.py
 
-      - name: Check foundation import order
+      - name: Check canonical import order
         run: >-
           isort --check-only --diff
           setup.py
           src/jarvisx/core.py
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
+          src/jarvisx/fractional_smoothing_3d.py
           tests/test_vm.py
           tests/test_ledger.py
+          tests/test_fractional_smoothing_3d.py
 
       - name: Type-check package
         run: mypy src/jarvisx --ignore-missing-imports
