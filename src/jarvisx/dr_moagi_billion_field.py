@@ -585,7 +585,7 @@ class SparseBillionField:
         return math.floor(value + 0.5) if value >= 0.0 else math.ceil(value - 0.5)
 
     @staticmethod
-    def _require_finite(value: float, name: str) -> float:
+    def _require_finite(value: object, name: str) -> float:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise TypeError(f"{name} must be numeric")
         result = float(value)
@@ -659,7 +659,16 @@ class SparseBillionField:
         for name in ("observed", "decoded", "predicted", "omega", "committed"):
             if not self.config.value_min <= numeric[name] <= self.config.value_max:
                 raise ValueError(f"checkpoint {name} is outside field bounds")
-        return CellState(latent=latent, valid=valid, **numeric)
+        return CellState(
+            observed=numeric["observed"],
+            latent=latent,
+            decoded=numeric["decoded"],
+            predicted=numeric["predicted"],
+            residual=numeric["residual"],
+            omega=numeric["omega"],
+            committed=numeric["committed"],
+            valid=valid,
+        )
 
     @staticmethod
     def _is_sha256_hex(value: object) -> bool:
