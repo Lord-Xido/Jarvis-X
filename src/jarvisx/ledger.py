@@ -7,7 +7,6 @@ import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
-
 GENESIS_HASH = "0" * 64
 
 
@@ -69,9 +68,7 @@ class OmegaLedger:
                 return False
 
             body = {key: entry[key] for key in required if key != "hash"}
-            expected = hashlib.sha256(
-                _canonical_json(body).encode("utf-8")
-            ).hexdigest()
+            expected = hashlib.sha256(_canonical_json(body).encode("utf-8")).hexdigest()
             if not hmac.compare_digest(str(entry["hash"]), expected):
                 return False
             previous_hash = expected
