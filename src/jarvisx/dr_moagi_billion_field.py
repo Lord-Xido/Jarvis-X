@@ -1,33 +1,33 @@
-"""Sparse reference runtime for the Dr Moagi billion-instance 3D field.
+"""Sparse operational runtime for the Dr Moagi billion-instance 3D field.
 
-The logical lattice contains ``1000 ** 3`` addressable coordinates by default.  This module
-never allocates a dense billion-cell tensor.  It materializes only active coordinates and
-interprets absent coordinates as a deterministic zero background.
+The default logical lattice contains ``1000 ** 3`` addressable coordinates. The runtime never
+allocates a dense billion-cell tensor; it materializes only the configured active support and,
+optionally, a bounded neighbour halo. Missing coordinates are deterministic zero background.
 
-The synchronous update implements the operational sequence documented in
-``docs/DR_MOAGI_3D_BILLION_INSTANCE_AUTOENCODER_EQUATION.md``:
+The synchronous transaction is:
 
-    snapshot -> encode -> Q3 -> reason -> couple -> residual -> omega
-    -> decode -> validate -> commit/rollback -> journal
+    snapshot -> support closure -> encode -> Q3 -> reason/couple/control
+    -> residual -> omega -> decode -> validate -> commit/rollback -> journal
 
-It is a bounded mathematical reference, not a claim that one billion proprietary neural
-models are instantiated.
+This is a bounded mathematical reference, not a claim that one billion proprietary neural models
+are instantiated.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import struct
-from dataclasses import dataclass
-from typing import Dict, Iterable, Iterator, Mapping, Tuple
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, Iterable, Iterator, Mapping, Tuple, cast
 
 Coordinate = Tuple[int, int, int]
 
 
 @dataclass(frozen=True)
 class BillionFieldConfig:
-    """Numerical and execution constraints for one sparse virtual field."""
+    """Numerical, geometric, and execution constraints for one sparse field."""
 
     side: int = 1000
     block_side: int = 32
@@ -45,39 +45,81 @@ class BillionFieldConfig:
     latent_min: int = -4
     latent_max: int = 3
     max_active_cells: int = 100_000
+    halo_depth: int = 0
+    prune_epsilon: float = 0.0
 
     def __post_init__(self) -> None:
-        if self.side <= 0:
-            raise ValueError("side must be positive")
-        if self.block_side <= 0:
-            raise ValueError("block_side must be positive")
-        if self.reasoning_steps <= 0:
-            raise ValueError("reasoning_steps must be positive")
-        if self.max_active_cells <= 0:
-            raise ValueError("max_active_cells must be positive")
-        if self.value_min >= self.value_max:
-            raise ValueError("value_min must be less than value_max")
-        if self.latent_min >= self.latent_max:
-            raise ValueError("latent_min must be less than latent_max")
-        if not 0.0 <= self.reasoning_gain <= 1.0:
-            raise ValueError("reasoning_gain must be in [0, 1]")
-        if not 0.0 <= self.omega_decay <= 1.0:
-            raise ValueError("omega_decay must be in [0, 1]")
+        self._require_positive_int(self.side, "side")
+        self._require_positive_int(self.block_side, "block_side")
+        self._require_positive_int(self.reasoning_steps, "reasoning_steps")
+        self._require_positive_int(self.max_active_cells, "max_active_cells")
+        self._require_non_negative_int(self.halo_depth, "halo_depth")
+
+        if isinstance(self.latent_min, bool) or not isinstance(self.latent_min, int):
+            raise TypeError("latent_min must be an integer")
+        if isinstance(self.latent_max, bool) or not isinstance(self.latent_max, int):
+            raise TypeError("latent_max must be an integer")
+        if (self.latent_min, self.latent_max) != (-4, 3):
+            raise ValueError("the canonical signed Q3 range is exactly [-4, 3]")
+
+        for name in (
+            "encoder_gain",
+            "context_gain",
+            "reasoning_gain",
+            "coupling_gain",
+            "consensus_gain",
+            "omega_decay",
+            "omega_gain",
+            "residual_threshold",
+            "value_min",
+            "value_max",
+            "prune_epsilon",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise TypeError(f"{name} must be numeric")
+            if not math.isfinite(float(value)):
+                raise ValueError(f"{name} must be finite")
+
+        if self.value_min != -1.0 or self.value_max != 1.0:
+            raise ValueError("the canonical field range is exactly [-1, 1]")
+        if self.encoder_gain <= 0.0:
+            raise ValueError("encoder_gain must be positive")
         if self.context_gain < 0.0:
             raise ValueError("context_gain must be non-negative")
+        if not 0.0 <= self.reasoning_gain <= 1.0:
+            raise ValueError("reasoning_gain must be in [0, 1]")
         if self.coupling_gain < 0.0:
             raise ValueError("coupling_gain must be non-negative")
         if self.consensus_gain < 0.0:
             raise ValueError("consensus_gain must be non-negative")
+        if not 0.0 <= self.omega_decay <= 1.0:
+            raise ValueError("omega_decay must be in [0, 1]")
         if self.omega_gain < 0.0:
             raise ValueError("omega_gain must be non-negative")
         if self.residual_threshold < 0.0:
             raise ValueError("residual_threshold must be non-negative")
+        if self.prune_epsilon < 0.0:
+            raise ValueError("prune_epsilon must be non-negative")
+
+    @staticmethod
+    def _require_positive_int(value: int, name: str) -> None:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError(f"{name} must be an integer")
+        if value <= 0:
+            raise ValueError(f"{name} must be positive")
+
+    @staticmethod
+    def _require_non_negative_int(value: int, name: str) -> None:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError(f"{name} must be an integer")
+        if value < 0:
+            raise ValueError(f"{name} must be non-negative")
 
 
 @dataclass(frozen=True)
 class CellState:
-    """Committed and diagnostic state for one active coordinate."""
+    """Committed persistent state plus diagnostics from the latest attempted cycle."""
 
     observed: float = 0.0
     latent: int = 0
@@ -91,7 +133,7 @@ class CellState:
 
 @dataclass(frozen=True)
 class FieldMetrics:
-    """Deterministic aggregate measurements for one committed cycle."""
+    """Deterministic aggregate measurements for one completed cycle."""
 
     cycle: int
     virtual_cells: int
@@ -103,16 +145,19 @@ class FieldMetrics:
     valid_cells: int
     rejected_cells: int
     journal_digest: str
+    state_digest: str
 
 
 _ZERO_STATE = CellState()
+_CHECKPOINT_VERSION = 1
 
 
 class SparseBillionField:
     """Synchronous sparse implementation of the billion-address Dr Moagi field.
 
-    Missing cells are logical zero-valued cells.  Every update reads from a frozen snapshot and
-    writes into a new mapping, so results do not depend on dictionary iteration order.
+    Every update reads a frozen snapshot and writes a new mapping. Canonical address ordering is
+    used for support construction, metrics, serialization, and hashing, so results do not depend
+    on dictionary insertion order.
     """
 
     _NEIGHBOUR_OFFSETS: Tuple[Coordinate, ...] = (
@@ -128,70 +173,51 @@ class SparseBillionField:
         self.config = config or BillionFieldConfig()
         self._cells: Dict[Coordinate, CellState] = {}
         self._cycle = 0
-        self._journal_digest = hashlib.sha256(b"jarvisx-dr-moagi-field-v1").hexdigest()
+        self._journal_digest = self._initial_journal_digest()
 
     @property
     def cycle(self) -> int:
-        """Return the number of committed synchronous cycles."""
-
         return self._cycle
 
     @property
     def virtual_cell_count(self) -> int:
-        """Return the full logical address count without allocating it."""
-
         return self.config.side**3
 
     @property
     def active_cell_count(self) -> int:
-        """Return the number of physically materialized coordinates."""
-
         return len(self._cells)
 
     @property
     def padded_block_count(self) -> int:
-        """Return the number of blocks in the padded logical block grid."""
-
         blocks_per_axis = math.ceil(self.config.side / self.config.block_side)
         return blocks_per_axis**3
 
     def estimate_dense_state_bytes(self, bytes_per_cell: int = 32) -> int:
-        """Estimate dense storage for a chosen per-cell representation."""
-
+        if isinstance(bytes_per_cell, bool) or not isinstance(bytes_per_cell, int):
+            raise TypeError("bytes_per_cell must be an integer")
         if bytes_per_cell <= 0:
             raise ValueError("bytes_per_cell must be positive")
         return self.virtual_cell_count * bytes_per_cell
 
     def address(self, coordinate: Coordinate) -> int:
-        """Map ``(x, y, z)`` to its canonical row-major scalar address."""
-
         x, y, z = self._validate_coordinate(coordinate)
         side = self.config.side
         return x + side * (y + side * z)
 
     def coordinate(self, address: int) -> Coordinate:
-        """Invert the canonical row-major scalar address."""
-
-        if not isinstance(address, int):
+        if isinstance(address, bool) or not isinstance(address, int):
             raise TypeError("address must be an integer")
         if address < 0 or address >= self.virtual_cell_count:
             raise ValueError("address is outside the virtual lattice")
         side = self.config.side
-        x = address % side
-        y = (address // side) % side
-        z = address // (side * side)
-        return x, y, z
+        return address % side, (address // side) % side, address // (side * side)
 
     def block_address(self, coordinate: Coordinate) -> Coordinate:
-        """Return the padded sparse block coordinate that owns ``coordinate``."""
-
         x, y, z = self._validate_coordinate(coordinate)
         block = self.config.block_side
         return x // block, y // block, z // block
 
     def activate(self, coordinate: Coordinate, observed: float = 0.0) -> CellState:
-        """Materialize or update one coordinate without advancing the field cycle."""
-
         coordinate = self._validate_coordinate(coordinate)
         if coordinate not in self._cells and len(self._cells) >= self.config.max_active_cells:
             raise RuntimeError("active-cell budget exceeded")
@@ -211,59 +237,51 @@ class SparseBillionField:
         return state
 
     def deactivate(self, coordinate: Coordinate) -> None:
-        """Remove one materialized coordinate, restoring logical zero background."""
-
-        coordinate = self._validate_coordinate(coordinate)
-        self._cells.pop(coordinate, None)
+        self._cells.pop(self._validate_coordinate(coordinate), None)
 
     def state(self, coordinate: Coordinate) -> CellState:
-        """Return one state, or the immutable zero background for an inactive cell."""
-
-        coordinate = self._validate_coordinate(coordinate)
-        return self._cells.get(coordinate, _ZERO_STATE)
+        return self._cells.get(self._validate_coordinate(coordinate), _ZERO_STATE)
 
     def active_coordinates(self) -> Tuple[Coordinate, ...]:
-        """Return active coordinates in canonical scalar-address order."""
-
         return tuple(sorted(self._cells, key=self.address))
 
     def iter_active(self) -> Iterator[Tuple[Coordinate, CellState]]:
-        """Iterate over active states in canonical scalar-address order."""
-
         for coordinate in self.active_coordinates():
             yield coordinate, self._cells[coordinate]
 
     def encoded_snapshot(self) -> Dict[Coordinate, int]:
-        """Return a copy of the currently committed signed 3-bit latent field."""
-
         return {coordinate: state.latent for coordinate, state in self.iter_active()}
 
     def decoded_value(self, coordinate: Coordinate) -> float:
-        """Return the last committed reconstruction at ``coordinate``."""
-
         return self.state(coordinate).committed
 
-    def step(self, observations: Mapping[Coordinate, float] | None = None) -> FieldMetrics:
-        """Execute one complete synchronous encode/reason/decode/commit transaction.
+    def step(
+        self,
+        observations: Mapping[Coordinate, float] | None = None,
+        controls: Mapping[Coordinate, float] | None = None,
+    ) -> FieldMetrics:
+        """Execute one synchronous transaction.
 
-        New coordinates supplied by ``observations`` become active.  Existing active coordinates
-        retain their previous observation when not supplied in the current mapping.
+        New observation or control coordinates become active. Existing observations persist when
+        omitted. ``controls`` are transient external inputs applied only during this cycle.
+        ``halo_depth`` expands the computational support by the requested bounded neighbour rings.
         """
 
-        normalized_inputs = self._normalize_observations(observations or {})
-        prospective_count = len(set(self._cells).union(normalized_inputs))
-        if prospective_count > self.config.max_active_cells:
+        normalized_inputs = self._normalize_values(observations or {}, "observation")
+        normalized_controls = self._normalize_values(controls or {}, "control")
+        snapshot = dict(self._cells)
+        seed_support = set(snapshot).union(normalized_inputs).union(normalized_controls)
+        active = self._support_closure(seed_support, self.config.halo_depth)
+        if len(active) > self.config.max_active_cells:
             raise RuntimeError("active-cell budget exceeded")
 
-        snapshot = dict(self._cells)
-        active = tuple(sorted(set(snapshot).union(normalized_inputs), key=self.address))
         observed = {
             coordinate: normalized_inputs.get(
-                coordinate,
-                snapshot.get(coordinate, _ZERO_STATE).observed,
+                coordinate, snapshot.get(coordinate, _ZERO_STATE).observed
             )
             for coordinate in active
         }
+        control = {coordinate: normalized_controls.get(coordinate, 0.0) for coordinate in active}
 
         latents: Dict[Coordinate, int] = {}
         decoded: Dict[Coordinate, float] = {}
@@ -284,19 +302,18 @@ class SparseBillionField:
 
             prediction = previous.committed
             for _ in range(self.config.reasoning_steps):
-                prediction += self.config.reasoning_gain * (
-                    decoded[coordinate] - prediction
-                )
+                prediction += self.config.reasoning_gain * (decoded[coordinate] - prediction)
                 prediction += self.config.coupling_gain * laplacian
                 prediction += self.config.consensus_gain * consensus
+                prediction += control[coordinate]
                 prediction = self._clip_value(prediction)
 
             pre_correction_residual = observed[coordinate] - prediction
-            omega = self._clip_value(
+            omega_candidate = self._clip_value(
                 self.config.omega_decay * previous.omega
                 + self.config.omega_gain * pre_correction_residual
             )
-            candidate = self._clip_value(prediction + omega)
+            candidate = self._clip_value(prediction + omega_candidate)
             residual = observed[coordinate] - candidate
             valid = (
                 math.isfinite(candidate)
@@ -304,8 +321,11 @@ class SparseBillionField:
                 and self.config.latent_min <= latents[coordinate] <= self.config.latent_max
                 and abs(residual) <= self.config.residual_threshold
             )
-            committed = candidate if valid else previous.committed
 
+            # Only persistent numeric state crosses the transaction boundary. Rejected candidate
+            # diagnostics remain visible, but committed and omega both roll back atomically.
+            committed = candidate if valid else previous.committed
+            omega = omega_candidate if valid else previous.omega
             staged[coordinate] = CellState(
                 observed=observed[coordinate],
                 latent=latents[coordinate],
@@ -317,6 +337,7 @@ class SparseBillionField:
                 valid=valid,
             )
 
+        staged = self._prune(staged, protected=set(normalized_inputs).union(normalized_controls))
         next_cycle = self._cycle + 1
         next_digest = self._calculate_journal_digest(next_cycle, staged)
         self._cells = staged
@@ -328,19 +349,21 @@ class SparseBillionField:
         self,
         cycles: int,
         observations: Mapping[Coordinate, float] | None = None,
+        controls: Mapping[Coordinate, float] | None = None,
     ) -> FieldMetrics:
-        """Run a fixed number of deterministic cycles and return final metrics."""
-
+        if isinstance(cycles, bool) or not isinstance(cycles, int):
+            raise TypeError("cycles must be an integer")
         if cycles <= 0:
             raise ValueError("cycles must be positive")
         metrics = self.metrics()
         for cycle_index in range(cycles):
-            metrics = self.step(observations if cycle_index == 0 else None)
+            metrics = self.step(
+                observations if cycle_index == 0 else None,
+                controls if cycle_index == 0 else None,
+            )
         return metrics
 
     def metrics(self) -> FieldMetrics:
-        """Measure the currently committed sparse field."""
-
         active_cells = len(self._cells)
         if active_cells:
             residuals = [state.residual for state in self._cells.values()]
@@ -364,23 +387,111 @@ class SparseBillionField:
             valid_cells=valid_cells,
             rejected_cells=active_cells - valid_cells,
             journal_digest=self._journal_digest,
+            state_digest=self.state_digest(),
         )
 
-    def _normalize_observations(
-        self,
-        observations: Mapping[Coordinate, float],
+    def state_digest(self) -> str:
+        """Return a canonical SHA-256 digest of config, cycle, journal, and sparse state."""
+
+        digest = hashlib.sha256()
+        digest.update(b"jarvisx-dr-moagi-state-v1\0")
+        digest.update(self._config_bytes())
+        digest.update(struct.pack(">Q", self._cycle))
+        digest.update(bytes.fromhex(self._journal_digest))
+        self._update_digest_with_states(digest, self._cells)
+        return digest.hexdigest()
+
+    def checkpoint(self) -> Dict[str, object]:
+        """Return a JSON-serializable checkpoint with an independently verifiable state digest."""
+
+        return {
+            "version": _CHECKPOINT_VERSION,
+            "config": asdict(self.config),
+            "cycle": self._cycle,
+            "journal_digest": self._journal_digest,
+            "state_digest": self.state_digest(),
+            "cells": [
+                {
+                    "coordinate": list(coordinate),
+                    "state": asdict(state),
+                }
+                for coordinate, state in self.iter_active()
+            ],
+        }
+
+    @classmethod
+    def from_checkpoint(cls, checkpoint: Mapping[str, object]) -> "SparseBillionField":
+        """Restore a checkpoint and reject malformed or tampered state."""
+
+        if not isinstance(checkpoint, Mapping):
+            raise TypeError("checkpoint must be a mapping")
+        version = checkpoint.get("version")
+        if isinstance(version, bool) or version != _CHECKPOINT_VERSION:
+            raise ValueError("unsupported checkpoint version")
+
+        config_data = checkpoint.get("config")
+        if not isinstance(config_data, Mapping):
+            raise TypeError("checkpoint config must be a mapping")
+        field = cls(BillionFieldConfig(**cast(Any, dict(config_data))))
+
+        cycle = checkpoint.get("cycle")
+        if isinstance(cycle, bool) or not isinstance(cycle, int) or cycle < 0:
+            raise ValueError("checkpoint cycle must be a non-negative integer")
+        journal_digest = checkpoint.get("journal_digest")
+        state_digest = checkpoint.get("state_digest")
+        if not cls._is_sha256_hex(journal_digest):
+            raise ValueError("checkpoint journal_digest must be a SHA-256 hex digest")
+        if not cls._is_sha256_hex(state_digest):
+            raise ValueError("checkpoint state_digest must be a SHA-256 hex digest")
+
+        cells_data = checkpoint.get("cells")
+        if not isinstance(cells_data, list):
+            raise TypeError("checkpoint cells must be a list")
+        if len(cells_data) > field.config.max_active_cells:
+            raise RuntimeError("active-cell budget exceeded")
+
+        restored: Dict[Coordinate, CellState] = {}
+        for item in cells_data:
+            if not isinstance(item, Mapping):
+                raise TypeError("checkpoint cell entry must be a mapping")
+            raw_coordinate = item.get("coordinate")
+            if not isinstance(raw_coordinate, list) or len(raw_coordinate) != 3:
+                raise TypeError("checkpoint coordinate must be a three-integer list")
+            coordinate = field._validate_coordinate(cast(Coordinate, tuple(raw_coordinate)))
+            if coordinate in restored:
+                raise ValueError("checkpoint contains duplicate coordinates")
+            raw_state = item.get("state")
+            if not isinstance(raw_state, Mapping):
+                raise TypeError("checkpoint state must be a mapping")
+            state = field._validated_cell_state(raw_state)
+            restored[coordinate] = state
+
+        field._cells = restored
+        field._cycle = cycle
+        field._journal_digest = str(journal_digest)
+        if field.state_digest() != state_digest:
+            raise ValueError("checkpoint state digest mismatch")
+        return field
+
+    def _normalize_values(
+        self, values: Mapping[Coordinate, float], name: str
     ) -> Dict[Coordinate, float]:
+        if not isinstance(values, Mapping):
+            raise TypeError(f"{name}s must be a mapping")
         normalized: Dict[Coordinate, float] = {}
-        for coordinate, value in observations.items():
+        for coordinate, value in values.items():
             checked_coordinate = self._validate_coordinate(coordinate)
-            checked_value = self._clip_value(self._require_finite(value, "observation"))
+            checked_value = self._clip_value(self._require_finite(value, name))
             normalized[checked_coordinate] = checked_value
         return normalized
 
     def _validate_coordinate(self, coordinate: Coordinate) -> Coordinate:
         if not isinstance(coordinate, tuple) or len(coordinate) != 3:
             raise TypeError("coordinate must be a three-integer tuple")
-        if not all(isinstance(component, int) for component in coordinate):
+        if not all(
+            isinstance(component, int) and not isinstance(component, bool)
+            for component in coordinate
+        ):
             raise TypeError("coordinate components must be integers")
         if not all(0 <= component < self.config.side for component in coordinate):
             raise ValueError("coordinate is outside the virtual lattice")
@@ -394,10 +505,23 @@ class SparseBillionField:
             if all(0 <= component < side for component in neighbour):
                 yield neighbour
 
+    def _support_closure(
+        self, coordinates: Iterable[Coordinate], depth: int
+    ) -> Tuple[Coordinate, ...]:
+        support = set(coordinates)
+        frontier = set(support)
+        for _ in range(depth):
+            expanded = set(frontier)
+            for coordinate in frontier:
+                expanded.update(self._neighbours(coordinate))
+            frontier = expanded - support
+            support.update(expanded)
+            if len(support) > self.config.max_active_cells:
+                raise RuntimeError("active-cell budget exceeded")
+        return tuple(sorted(support, key=self.address))
+
     def _neighbour_mean(
-        self,
-        observed: Mapping[Coordinate, float],
-        coordinate: Coordinate,
+        self, observed: Mapping[Coordinate, float], coordinate: Coordinate
     ) -> float:
         neighbours = tuple(self._neighbours(coordinate))
         if not neighbours:
@@ -405,9 +529,7 @@ class SparseBillionField:
         return sum(observed.get(neighbour, 0.0) for neighbour in neighbours) / len(neighbours)
 
     def _laplacian(
-        self,
-        snapshot: Mapping[Coordinate, CellState],
-        coordinate: Coordinate,
+        self, snapshot: Mapping[Coordinate, CellState], coordinate: Coordinate
     ) -> float:
         center = snapshot.get(coordinate, _ZERO_STATE).committed
         return sum(
@@ -416,51 +538,86 @@ class SparseBillionField:
         )
 
     def _latent_consensus(
-        self,
-        latents: Mapping[Coordinate, int],
-        coordinate: Coordinate,
+        self, latents: Mapping[Coordinate, int], coordinate: Coordinate
     ) -> float:
         neighbours = tuple(self._neighbours(coordinate))
         if not neighbours:
             return 0.0
         center = latents[coordinate]
-        return sum(latents.get(neighbour, 0) - center for neighbour in neighbours) / len(
-            neighbours
-        )
+        return sum(latents.get(neighbour, 0) - center for neighbour in neighbours) / len(neighbours)
 
     def _quantize_q3(self, value: float) -> int:
-        quantized = self._round_half_away_from_zero(3.0 * value)
+        # Piecewise scaling uses every signed 3-bit code over the canonical [-1, 1] field.
+        scaled = 4.0 * value if value < 0.0 else 3.0 * value
+        quantized = self._round_half_away_from_zero(scaled)
         return max(self.config.latent_min, min(self.config.latent_max, quantized))
 
     def _decode_q3(self, latent: int) -> float:
-        return self._clip_value(latent / 3.0)
+        if latent < self.config.latent_min or latent > self.config.latent_max:
+            raise ValueError("latent is outside the canonical signed Q3 range")
+        return latent / 4.0 if latent < 0 else latent / 3.0
 
     def _clip_value(self, value: float) -> float:
         return max(self.config.value_min, min(self.config.value_max, value))
 
+    def _prune(
+        self, states: Dict[Coordinate, CellState], protected: set[Coordinate]
+    ) -> Dict[Coordinate, CellState]:
+        epsilon = self.config.prune_epsilon
+        if epsilon <= 0.0:
+            return states
+        return {
+            coordinate: state
+            for coordinate, state in states.items()
+            if coordinate in protected
+            or not state.valid
+            or max(
+                abs(state.observed),
+                abs(state.omega),
+                abs(state.committed),
+                abs(state.residual),
+            )
+            > epsilon
+        }
+
     @staticmethod
     def _round_half_away_from_zero(value: float) -> int:
-        if value >= 0.0:
-            return math.floor(value + 0.5)
-        return math.ceil(value - 0.5)
+        return math.floor(value + 0.5) if value >= 0.0 else math.ceil(value - 0.5)
 
     @staticmethod
     def _require_finite(value: float, name: str) -> float:
-        if not isinstance(value, (int, float)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise TypeError(f"{name} must be numeric")
         result = float(value)
         if not math.isfinite(result):
             raise ValueError(f"{name} must be finite")
         return result
 
+    def _initial_journal_digest(self) -> str:
+        digest = hashlib.sha256()
+        digest.update(b"jarvisx-dr-moagi-field-v2\0")
+        digest.update(self._config_bytes())
+        return digest.hexdigest()
+
+    def _config_bytes(self) -> bytes:
+        return json.dumps(
+            asdict(self.config), sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode("utf-8")
+
     def _calculate_journal_digest(
-        self,
-        cycle: int,
-        states: Mapping[Coordinate, CellState],
+        self, cycle: int, states: Mapping[Coordinate, CellState]
     ) -> str:
         digest = hashlib.sha256()
+        digest.update(b"jarvisx-dr-moagi-journal-v2\0")
         digest.update(bytes.fromhex(self._journal_digest))
+        digest.update(self._config_bytes())
         digest.update(struct.pack(">Q", cycle))
+        self._update_digest_with_states(digest, states)
+        return digest.hexdigest()
+
+    def _update_digest_with_states(
+        self, digest: Any, states: Mapping[Coordinate, CellState]
+    ) -> None:
         for coordinate in sorted(states, key=self.address):
             state = states[coordinate]
             digest.update(struct.pack(">Q", self.address(coordinate)))
@@ -472,4 +629,44 @@ class SparseBillionField:
             digest.update(struct.pack(">d", state.omega))
             digest.update(struct.pack(">d", state.committed))
             digest.update(b"\x01" if state.valid else b"\x00")
-        return digest.hexdigest()
+
+    def _validated_cell_state(self, raw: Mapping[str, object]) -> CellState:
+        expected = {
+            "observed",
+            "latent",
+            "decoded",
+            "predicted",
+            "residual",
+            "omega",
+            "committed",
+            "valid",
+        }
+        if set(raw) != expected:
+            raise ValueError("checkpoint cell state has unexpected fields")
+        latent = raw["latent"]
+        valid = raw["valid"]
+        if isinstance(latent, bool) or not isinstance(latent, int):
+            raise TypeError("checkpoint latent must be an integer")
+        if not self.config.latent_min <= latent <= self.config.latent_max:
+            raise ValueError("checkpoint latent is outside Q3 range")
+        if not isinstance(valid, bool):
+            raise TypeError("checkpoint valid must be boolean")
+
+        numeric = {
+            name: self._require_finite(raw[name], f"checkpoint {name}")
+            for name in expected - {"latent", "valid"}
+        }
+        for name in ("observed", "decoded", "predicted", "omega", "committed"):
+            if not self.config.value_min <= numeric[name] <= self.config.value_max:
+                raise ValueError(f"checkpoint {name} is outside field bounds")
+        return CellState(latent=latent, valid=valid, **numeric)
+
+    @staticmethod
+    def _is_sha256_hex(value: object) -> bool:
+        if not isinstance(value, str) or len(value) != 64:
+            return False
+        try:
+            bytes.fromhex(value)
+        except ValueError:
+            return False
+        return True
