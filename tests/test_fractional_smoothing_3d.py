@@ -32,9 +32,7 @@ def direct_dft3(field: Grid3D) -> tuple[complex, ...]:
                 for z in range(nz):
                     for y in range(ny):
                         for x in range(nx):
-                            phase = -2j * math.pi * (
-                                kx * x / nx + ky * y / ny + kz * z / nz
-                            )
+                            phase = -2j * math.pi * (kx * x / nx + ky * y / ny + kz * z / nz)
                             total += field.at(x, y, z) * cmath.exp(phase)
                 spectrum.append(total)
     return tuple(spectrum)
