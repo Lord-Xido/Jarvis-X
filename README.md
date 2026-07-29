@@ -4,12 +4,76 @@ Jarvis-X is a deterministic, auditable virtual machine with a reflex
 control layer and policy gate.
 
 ## Install
+
 ```bash
 git clone https://github.com/Lord-Xido/Jarvis-X.git
 cd Jarvis-X
 pip install -r requirements.txt
 pip install .
 ```
+
+## Dr Moagi Operational Spatial Runtime
+
+`jarvisx.spatial` is the first executable architectural-spatial intelligence
+kernel. It provides:
+
+- a canonical hierarchical world-state contract;
+- typed architectural entities and relations;
+- deterministic 3D predicates for support, containment, intersection, and
+  relative height;
+- a multi-term objective over geometry, semantics, relations, hierarchy,
+  architecture, physics, uncertainty, and description length;
+- a bounded propose-shadow-verify-commit echo controller;
+- rollback, journaling, canonical serialization, and real SHA-256 world-state
+  fingerprints.
+
+```python
+from jarvisx.spatial import (
+    AABB,
+    ArchitecturalWorldModel,
+    EchoController,
+    Entity,
+    EntityKind,
+    Relation,
+    RelationKind,
+    Vector3,
+)
+
+world = ArchitecturalWorldModel()
+world.add_entity(
+    Entity(
+        "table",
+        EntityKind.OBJECT,
+        AABB(Vector3(-1, -0.5, 0), Vector3(1, 0.5, 1)),
+        semantic_label="table",
+    )
+)
+world.add_entity(
+    Entity(
+        "lamp",
+        EntityKind.OBJECT,
+        AABB(Vector3(-0.2, -0.2, 1.2), Vector3(0.2, 0.2, 2.2)),
+        semantic_label="lamp",
+    )
+)
+world.add_relation(Relation("table", "lamp", RelationKind.SUPPORTS))
+
+controller = EchoController(world)
+reports = controller.auto_repair_supports()
+
+assert reports[0].accepted
+assert controller.world.revision == 1
+assert len(controller.world.fingerprint()) == 64
+```
+
+Run the complete example with:
+
+```bash
+python examples/dr_moagi_spatial_echo.py
+```
+
+The formal operational boundary and integration roadmap are documented in
+[`docs/DR_MOAGI_SPATIAL_RUNTIME.md`](docs/DR_MOAGI_SPATIAL_RUNTIME.md).
 
 ## Sparse Fractal Octree
 

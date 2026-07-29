@@ -61,7 +61,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=src/jarvisx --cov-report=term-local --cov-report=html --tb=short"
+addopts = "-v --cov=src/jarvisx --cov-report=term-missing --cov-report=html --tb=short"
 
 [tool.coverage.run]
 source = ["src/jarvisx"]
