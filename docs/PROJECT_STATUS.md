@@ -11,6 +11,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 |---|---|
 | Stable reference | deterministic implementation with focused tests; API may still change before `1.0` |
 | Alpha | executable on `main`, but incomplete or lightly tested |
+| Reference laboratory | bounded executable research subsystem with explicit limits and isolated authority |
 | Integration candidate | implemented on a branch or pull request and awaiting canonical integration |
 | Demonstration | runnable visualization or example that is not an authoritative runtime |
 | Specification | documented mathematical or architectural proposal |
@@ -25,7 +26,8 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Register VM | Alpha | `core.py`, `executor.py` | canonical ISA currently has a small instruction surface |
 | Lambda instruction policy | Alpha | `ethics.py` | application-level guard, not a security sandbox |
 | Cycle sandbox | Stable reference | `sandbox.py` | cycle bound only; no process isolation |
-| Trace and Omega journal | Stable reference after PR #47 | `tracer.py`, `ledger.py`, `ledger_store.py` | persistence is opt-in; timestamps are environmental inputs |
+| Trace and Omega journal | Stable reference | `tracer.py`, `ledger.py`, `ledger_store.py` | persistence is opt-in; timestamps are environmental inputs |
+| C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database |
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
@@ -33,11 +35,12 @@ This document is the authoritative implemented-versus-experimental capability ma
 
 ## Active integration candidates
 
-| Pull request | Capability | Current classification | Required before merge |
+| Pull request or issue | Capability | Current classification | Required before merge or completion |
 |---|---|---|---|
-| #45 | dependency-free C++17 sparse inward runtime | Integration candidate | repository-wide CI green, review, canonical API boundary |
-| #46 | hierarchical fractional 3D smoothing solver | Integration candidate | review numerical limits, benchmark reference, merge sequencing |
-| #47 | VM, CI, documentation and governance foundation | Integration candidate | all required checks green and final review |
+| #46 | hierarchical fractional 3D smoothing solver | Integration candidate | rebase, numerical reference comparison, measured scaling data and green CI |
+| #48 | pull-request backlog consolidation | Governance work | classify overlaps, preserve unique evidence and reduce active drafts below ten |
+| #49 | branch protection and security settings | Repository administration | enable required checks, scanning and private reporting in GitHub settings |
+| #50 | public GitHub profile README | Profile administration | create `Lord-Xido/Lord-Xido`, pin active repositories and review public metadata |
 
 Other long-lived draft pull requests are research branches until explicitly classified, rebased and validated.
 
@@ -58,7 +61,8 @@ Jarvis-X does not currently claim:
 - lossless compression of arbitrary data into a smaller state without side information;
 - physical hardware performance from a virtual address-space description;
 - trained model quality from deterministic initialized weights;
-- safety certification from the presence of a policy or coherence gate.
+- safety certification from the presence of a policy or coherence gate;
+- bit-exact cross-platform floating-point results from the C++ research processor.
 
 ## Canonical promotion checklist
 
@@ -83,7 +87,8 @@ A capability moves to `main` only when all applicable items are satisfied:
 - JSON-native verifiable journal;
 - versioned bytecode container;
 - expanded ISA tests;
-- enforced CI and contributor documentation.
+- enforced CI and contributor documentation;
+- isolated C++ processor laboratory with cross-platform validation.
 
 ### `0.3.0` — Sparse spatial runtime
 
