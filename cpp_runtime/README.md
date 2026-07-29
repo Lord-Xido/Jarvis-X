@@ -1,6 +1,6 @@
 # Jarvis-X Inward C++ Runtime
 
-This dependency-free C++17 subsystem implements a bounded sparse auto-encoding processor, deterministic parameter/schedule search loop and a trainable dense 3D convolutional autoencoder reference.
+This C++17 subsystem implements a bounded sparse auto-encoding processor, deterministic parameter/schedule search loop and a trainable dense 3D convolutional autoencoder reference. The numerical components are dependency-free; an optional OpenGL/GLUT target renders the actual ANN tensor state interactively.
 
 The sparse processor exposes a virtual `8192 × 8192 × 8192` coordinate domain through lazily materialized `8 × 8 × 8` tiles. The virtual extent is an addressing contract, not a dense allocation.
 
@@ -26,6 +26,8 @@ cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release
 cmake --build build/cpp-runtime --config Release --parallel
 ctest --test-dir build/cpp-runtime -C Release --output-on-failure
 ```
+
+OpenGL and GLUT/freeglut are detected automatically. When either dependency is absent, CMake skips only `jarvisx-autoencoder3d-gl`; the headless runtime and regression suite still build. Use `-DJARVISX_BUILD_GL_VISUALIZER=OFF` to disable detection explicitly.
 
 Direct GCC/Clang build for the sparse processor:
 
@@ -84,7 +86,28 @@ Its output directory contains:
 - `reconstruction.obj` — reconstructed voxel point cloud;
 - `model.jx3d` — reloadable model checkpoint.
 
-Supported deterministic fixtures are `sphere`, `shell`, `checker`, `wave` and `noise`. See [`docs/CPP_3D_AUTOENCODER.md`](../docs/CPP_3D_AUTOENCODER.md) for equations, persistence and complexity boundaries.
+## Run the interactive 3D engine
+
+```bash
+./build/cpp-runtime/jarvisx-autoencoder3d-gl \
+  --edge 16 \
+  --channels 4 \
+  --pattern sphere \
+  --learning-rate 0.015
+```
+
+This target evolves the original GLUT voxel demonstration into a live visualization of the actual model state:
+
+- cyan voxels are the input tensor;
+- blue/violet voxels are the multichannel latent field;
+- pink voxels are the decoder reconstruction;
+- gold voxels are the absolute reconstruction residual;
+- cyan, pink and gold streams trace encode, decode and residual-learning flow;
+- the HUD reports real MSE, MAE, latent energy, gradient norm and training step.
+
+Core controls are `T`/Space for training, `Q` for Q3 inference, `P` for pattern changes, `0-4` for tensor views, `S`/`L` for checkpoints, mouse drag for rotation and mouse wheel for zoom.
+
+Supported deterministic fixtures are `sphere`, `shell`, `checker`, `wave` and `noise`. See [`docs/CPP_3D_AUTOENCODER.md`](../docs/CPP_3D_AUTOENCODER.md) for equations, interactive controls, persistence and complexity boundaries.
 
 ## Sparse runtime state artifacts
 
@@ -98,7 +121,7 @@ Use `--reset` to discard an earlier checkpoint, `--state-dir PATH` to isolate an
 
 ## Determinism contract
 
-Sparse candidate generation, feature extraction, encoding, decoding and fitness selection are deterministic for the same input and genome. The 3D ANN core uses deterministic initialization and update order for the same model configuration and training sequence. Wall-clock latency is telemetry only and excluded from sparse-processor fitness.
+Sparse candidate generation, feature extraction, encoding, decoding and fitness selection are deterministic for the same input and genome. The 3D ANN core uses deterministic initialization and update order for the same model configuration and training sequence. Wall-clock latency and rendering cadence are telemetry only and excluded from sparse-processor fitness and ANN loss.
 
 Platform floating-point and transcendental implementations may produce small cross-architecture differences; bit-exact portability is not claimed.
 
@@ -120,7 +143,8 @@ Optional sanitizer build:
 ```bash
 cmake -S cpp_runtime -B build/cpp-runtime-san \
   -DCMAKE_BUILD_TYPE=Release \
-  -DJARVISX_ENABLE_SANITIZERS=ON
+  -DJARVISX_ENABLE_SANITIZERS=ON \
+  -DJARVISX_BUILD_GL_VISUALIZER=OFF
 cmake --build build/cpp-runtime-san --parallel
 ctest --test-dir build/cpp-runtime-san --output-on-failure
 ```
