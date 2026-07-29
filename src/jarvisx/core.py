@@ -78,7 +78,7 @@ class CodexVM:
             self.running = False
             raise RuntimeError("Lambda policy blocked instruction")
 
-        should_continue = self.executor.execute(instruction)
+        should_continue = bool(self.executor.execute(instruction))
         snapshot = self.regs.snapshot()
         self.ledger.log(snapshot, instruction.opcode)
         self.tracer.record(instruction, snapshot)
