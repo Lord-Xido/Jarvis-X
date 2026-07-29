@@ -27,6 +27,14 @@ target_include_directories(jarvisx-runtime PRIVATE
 )
 jarvisx_harden(jarvisx-runtime)
 
+add_executable(jarvisx-autoencoder3d
+    src/autoencoder3d_main.cpp
+)
+target_include_directories(jarvisx-autoencoder3d PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+jarvisx_harden(jarvisx-autoencoder3d)
+
 enable_testing()
 
 add_test(
@@ -51,3 +59,14 @@ jarvisx_harden(jarvisx-processor-tests)
 
 add_test(NAME processor-regressions COMMAND jarvisx-processor-tests)
 set_tests_properties(processor-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-autoencoder3d-tests
+    tests/autoencoder3d_tests.cpp
+)
+target_include_directories(jarvisx-autoencoder3d-tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+jarvisx_harden(jarvisx-autoencoder3d-tests)
+
+add_test(NAME autoencoder3d-regressions COMMAND jarvisx-autoencoder3d-tests)
+set_tests_properties(autoencoder3d-regressions PROPERTIES TIMEOUT 120)
