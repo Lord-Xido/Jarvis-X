@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security policy
+    url: https://github.com/Lord-Xido/Jarvis-X/blob/main/SECURITY.md
+    about: Do not publish vulnerability details in a public issue.
+  - name: Project status
+    url: https://github.com/Lord-Xido/Jarvis-X/blob/main/docs/PROJECT_STATUS.md
+    about: Check whether a capability is stable, experimental or proposed.

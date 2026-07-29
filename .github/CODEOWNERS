@@ -1,0 +1,16 @@
+# Default owner
+* @Lord-Xido
+
+# Canonical runtime and formats
+/src/jarvisx/ @Lord-Xido
+/tests/ @Lord-Xido
+
+# Architecture, governance and security
+/docs/ @Lord-Xido
+/SECURITY.md @Lord-Xido
+/GOVERNANCE.md @Lord-Xido
+/.github/ @Lord-Xido
+
+# Native and accelerator research
+/cpp_runtime/ @Lord-Xido
+/cuda/ @Lord-Xido

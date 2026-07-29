@@ -1,0 +1,24 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    target-branch: main
+    groups:
+      python-runtime:
+        dependency-type: production
+      python-tooling:
+        dependency-type: development
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    target-branch: main
+    groups:
+      github-actions:
+        patterns:
+          - "*"
