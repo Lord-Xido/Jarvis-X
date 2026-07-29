@@ -1,16 +1,17 @@
-from .registers import Registers
-from .memory import Memory
+from .debugger import Debugger
 from .decoder import Decoder
+from .ethics import LambdaShield
 from .executor import Executor
 from .ledger_store import PersistentLedger
-from .ethics import LambdaShield
+from .memory import Memory
 from .reflex import ReflexEngine
+from .registers import Registers
 from .sandbox import Sandbox
-from .debugger import Debugger
 from .tracer import Tracer
 
+
 class CodexVM:
-    def __init__(self):
+    def __init__(self, enable_reflex=False):
         self.regs = Registers()
         self.mem = Memory()
         self.decoder = Decoder()
@@ -18,6 +19,7 @@ class CodexVM:
         self.ledger = PersistentLedger()
         self.ethics = LambdaShield()
         self.reflex = ReflexEngine()
+        self.enable_reflex = enable_reflex
         self.sandbox = Sandbox()
         self.debugger = Debugger(self)
         self.tracer = Tracer()
@@ -39,7 +41,8 @@ class CodexVM:
         cont = self.executor.execute(instr)
         self.ledger.log(self.regs.snapshot(), instr.opcode)
         self.tracer.record(instr, self.regs.snapshot())
-        self.reflex.stabilize(self.regs)
+        if self.enable_reflex:
+            self.reflex.stabilize(self.regs)
 
         self.regs["IP"] += 1
         self.cycles += 1
