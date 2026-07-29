@@ -6,7 +6,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(jarvisx-runtime
-    src/jarvis_x_autopoietic_runtime.cpp
+    src/main.cpp
+)
+
+target_include_directories(jarvisx-runtime PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 if(MSVC)
