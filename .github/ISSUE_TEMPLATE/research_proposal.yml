@@ -1,0 +1,83 @@
+name: Research or feature proposal
+description: Propose a focused capability, experiment or architecture decision
+title: "proposal: "
+body:
+  - type: dropdown
+    id: classification
+    attributes:
+      label: Proposed classification
+      options:
+        - Canonical core capability
+        - Sparse spatial subsystem
+        - Bytecode or ROM format
+        - Numerical reference kernel
+        - Bounded adaptive experiment
+        - Visualization or demonstration
+        - Documentation or research specification
+        - Infrastructure or developer tooling
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: Describe the concrete problem without prescribing the implementation first.
+    validations:
+      required: true
+
+  - type: textarea
+    id: contract
+    attributes:
+      label: Proposed contract
+      description: Define inputs, outputs, authoritative state, dimensions, invariants and failure behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Implemented and excluded claims
+      description: State what success would establish and what it would not establish.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include the simpler baseline and explain why it may be insufficient.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: Tests, reference comparisons, benchmarks, threat models or replay fixtures required.
+    validations:
+      required: true
+
+  - type: textarea
+    id: resources
+    attributes:
+      label: Execution and memory bounds
+      description: State expected complexity, resident memory and environmental dependencies.
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and overlap
+      description: Link prerequisite, overlapping, superseded or successor issues and pull requests.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing issues and pull requests for overlapping work.
+          required: true
+        - label: I distinguished virtual scale from physical resource use.
+          required: true
+        - label: I did not use naming alone as evidence of intelligence, safety or performance.
+          required: true
