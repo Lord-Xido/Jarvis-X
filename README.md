@@ -35,3 +35,27 @@ At depth `D`, the deterministic invariants are:
 - active nodes: `(4 ** (D + 1) - 1) // 3`
 - retained volume: `2 ** (-D)` for a unit cube
 - similarity dimension: `2`
+
+## C++ Inward Autopoietic Runtime
+
+The `cpp_runtime/` subsystem implements a dependency-free C++17 processor with:
+
+- a sparse virtual `8192 × 8192 × 8192` lattice;
+- 3-bit auto-encoding and decoding;
+- deterministic 64-bit bytecode synthesis;
+- inward ingestion of its own executable image;
+- candidate genome and bytecode-schedule mutation;
+- isolated evaluation, coherence gating, commit, and rollback;
+- persistent checkpoints, binary ROM output, and CSV evolution journals.
+
+```bash
+cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release
+cmake --build build/cpp-runtime --parallel
+ctest --test-dir build/cpp-runtime --output-on-failure
+
+./build/cpp-runtime/jarvisx-runtime \
+  --generations 8 \
+  --population 6
+```
+
+The self-evolution mechanism is bounded and auditable: it optimizes runtime parameters and bytecode schedules rather than rewriting arbitrary native machine code.
