@@ -10,7 +10,7 @@
 
 The project investigates how large virtual state spaces, geometric representations, residual memory and bounded adaptation can be implemented as reproducible software without confusing virtual extent with physical allocation or simulation with deployed intelligence.
 
-> **Current status:** alpha research software. The repository contains a stable reference VM foundation, validated sparse and packaging components, a bounded C++ processor laboratory and experimental integration tracks. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
+> **Current status:** alpha research software. The repository contains a stable reference VM foundation, validated sparse and numerical components, a bounded C++ processor laboratory and experimental integration tracks. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
 
 ## Why Jarvis-X exists
 
@@ -42,6 +42,7 @@ The symbolic vocabulary used in the research documents maps to ordinary engineer
 | Core ISA | `SET`, `ADD`, `SUB`, `HALT` | Alpha |
 | Runtime controls | policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
+| Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
 | Model packaging | Hugging Face-compatible configuration, model and safetensors exporter | Reference |
 | Research specifications | reality-grounded observer dynamics, spatial bytecode and bounded optimization documents | Proposed / reference |
@@ -97,6 +98,29 @@ Adaptive reflex correction is also explicit and disabled by default:
 vm = CodexVM(enable_reflex=True)
 ```
 
+### Run fractional 3D smoothing
+
+```python
+from jarvisx.fractional_smoothing_3d import (
+    FractionalHierarchyConfig,
+    Grid3D,
+    hierarchical_fractional_smooth,
+)
+
+field = Grid3D.impulse((4, 4, 4), (1, 1, 1), amplitude=8.0)
+config = FractionalHierarchyConfig(
+    alphas=(1.0, 0.65),
+    taus=(0.08, 0.20),
+    coarse_blends=(0.25,),
+)
+result = hierarchical_fractional_smooth(field, config)
+
+assert abs(result.mass_drift) < 1.0e-9
+assert result.field.variance < field.variance
+```
+
+The solver uses a dependency-free separable direct DFT for small correctness fixtures. See [Hierarchical 3D Fractional Smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md) for the equations, complexity and production boundary.
+
 ### Build the C++ processor laboratory
 
 ```bash
@@ -134,7 +158,7 @@ Parser → Assembler → 64-bit bytecode
               ┌──────────┴──────────┐
               ▼                     ▼
       authoritative state    isolated research layers
-      registers / memory     C++ / spatial / visual
+      registers / memory     C++ / numerical / visual
 ```
 
 The canonical design rules are documented in [Architecture](docs/ARCHITECTURE.md).
@@ -163,7 +187,6 @@ At depth `D`:
 
 | Track | Purpose | Status |
 |---|---|---|
-| Fractional smoothing | deterministic hierarchical 3D fractional-diffusion reference solver | Draft PR #46; rebase required |
 | Backlog consolidation | select canonical implementations and close superseded research branches | Issue #48 |
 | Repository protection | required checks, secret scanning and private vulnerability reporting | Issue #49 |
 | Public profile | account-level profile README and pinned-project cleanup | Issue #50 |
@@ -174,7 +197,7 @@ Draft status is intentional: experimental subsystems are not represented as cano
 ## Repository structure
 
 ```text
-src/jarvisx/       canonical Python package
+src/jarvisx/       canonical Python package and numerical references
 tests/             regression and invariant tests
 docs/              specifications and architecture records
 scripts/           packaging and export utilities
@@ -203,6 +226,7 @@ Every canonical subsystem should provide:
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
+- [Hierarchical 3D fractional smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md)
 - [Roadmap](ROADMAP.md)
 - [Governance](GOVERNANCE.md)
 - [Security policy](SECURITY.md)
@@ -219,7 +243,7 @@ Large architectural proposals should begin as an issue or specification. Product
 
 Jarvis-X is an experimental software and mathematical research project. It does not claim consciousness, unrestricted autonomous self-modification, lossless compression of arbitrary high-dimensional inputs into smaller states, or production safety merely because a policy layer is present.
 
-Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code.
+Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code. The fractional solver is a small-grid CPU reference, not a calibrated physical model or production FFT implementation.
 
 ## Citation
 
