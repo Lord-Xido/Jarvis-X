@@ -15,14 +15,17 @@ struct Metrics {
 class Processor {
 public:
     Processor(Genome genome, Packet packet)
-        : genome_(std::move(genome)), packet_(std::move(packet)),
-          omega_(genome_.feature_dim, 0.0F), rom_(synthesize_rom(genome_)) {
-        genome_.clamp();
+        : genome_(normalize_genome(std::move(genome))),
+          packet_(std::move(packet)),
+          omega_(genome_.feature_dim, 0.0F),
+          rom_(synthesize_rom(genome_)) {
         if (!packet_.valid()) throw std::runtime_error("invalid packet");
     }
 
     void run() {
-        while (!halted_ && metrics_.cycles < 32ULL + genome_.iterations * 16ULL) {
+        const std::uint64_t cycle_limit =
+            32ULL + static_cast<std::uint64_t>(genome_.iterations) * 16ULL;
+        while (!halted_ && metrics_.cycles < cycle_limit) {
             if (pc_ >= rom_.size()) throw std::runtime_error("ROM PC overflow");
             execute(rom_[pc_]);
             ++metrics_.cycles;
@@ -32,8 +35,14 @@ public:
 
     const Metrics& metrics() const noexcept { return metrics_; }
     const SparseLattice& lattice() const noexcept { return lattice_; }
+    const Genome& genome() const noexcept { return genome_; }
 
 private:
+    static Genome normalize_genome(Genome genome) noexcept {
+        genome.clamp();
+        return genome;
+    }
+
     Genome genome_;
     Packet packet_;
     SparseLattice lattice_;
@@ -98,6 +107,8 @@ private:
         case Op::Halt:
             halted_ = true;
             break;
+        default:
+            throw std::runtime_error("invalid ROM opcode");
         }
     }
 
@@ -132,11 +143,12 @@ private:
     }
 
     void diffuse(std::uint16_t radius) {
+        if (latent_.empty()) throw std::runtime_error("diffusion before encoding");
         std::vector<std::int8_t> evolved(latent_.size());
+        const std::size_t offset = radius % latent_.size();
         for (std::size_t i = 0; i < latent_.size(); ++i) {
-            const std::size_t left =
-                (i + latent_.size() - radius % latent_.size()) % latent_.size();
-            const std::size_t right = (i + radius) % latent_.size();
+            const std::size_t left = (i + latent_.size() - offset) % latent_.size();
+            const std::size_t right = (i + offset) % latent_.size();
             const int value = latent_[left] + 2 * latent_[i] + latent_[right];
             evolved[i] = static_cast<std::int8_t>(
                 std::max(-4, std::min(3, int(std::lround(value / 4.0)))));
@@ -151,6 +163,7 @@ private:
     }
 
     void decode() {
+        if (latent_.empty()) throw std::runtime_error("decode before encoding");
         reconstruction_.assign(genome_.feature_dim, 0.0F);
         for (std::size_t i = 0; i < reconstruction_.size(); ++i) {
             float sum = 0.0F;
@@ -165,6 +178,9 @@ private:
     }
 
     void learn(std::uint16_t learning_units, std::uint16_t omega_units) {
+        if (features_.size() != reconstruction_.size()) {
+            throw std::runtime_error("learning state dimension mismatch");
+        }
         const float learning = learning_units / 100000.0F;
         const float omega_rate = omega_units / 100000.0F;
         double error2 = 0.0;
@@ -186,6 +202,8 @@ private:
             1.0F - clampf(metrics_.energy / energy_limit, 0.0F, 1.0F);
         metrics_.coherence = 0.7F * mse_score + 0.3F * energy_score;
         admissible_ = std::isfinite(metrics_.mse) &&
+            std::isfinite(metrics_.energy) &&
+            std::isfinite(metrics_.coherence) &&
             metrics_.coherence >= coherence_units / 10000.0F;
         if (!admissible_) {
             for (std::int8_t& q : latent_) q = static_cast<std::int8_t>(q / 2);
@@ -205,14 +223,16 @@ struct Evaluation {
 };
 
 double fitness(const Evaluation& e) noexcept {
-    if (!e.valid || !std::isfinite(e.metrics.mse)) {
+    if (!e.valid || !std::isfinite(e.metrics.mse) ||
+        !std::isfinite(e.metrics.coherence) || !std::isfinite(e.metrics.energy)) {
         return -std::numeric_limits<double>::infinity();
     }
+    // Fitness is intentionally independent of wall-clock time. Latency remains
+    // telemetry, but excluding it keeps replay and candidate selection deterministic.
     return 8.0 * clampf(e.metrics.coherence, 0.0F, 1.0F)
          - 2.0 * std::log1p(1000.0 * std::max(0.0F, e.metrics.mse))
          - 0.25 * e.metrics.energy
-         - 0.15 * e.metrics.rejected
-         - 0.0005 * e.elapsed_ms
+         - 0.15 * static_cast<double>(e.metrics.rejected)
          - 0.00000001 * static_cast<double>(e.memory_bytes);
 }
 
@@ -227,12 +247,19 @@ Evaluation evaluate(Genome genome, const Packet& packet) {
         const auto stop = std::chrono::steady_clock::now();
         result.elapsed_ms =
             std::chrono::duration<double, std::milli>(stop - start).count();
+        result.genome = processor.genome();
         result.metrics = processor.metrics();
         result.tiles = processor.lattice().tile_count();
         result.memory_bytes = processor.lattice().estimated_bytes();
-        result.valid = result.metrics.committed + result.metrics.rejected >=
-                       result.genome.iterations;
+        const std::uint64_t decisions =
+            result.metrics.committed + result.metrics.rejected;
+        result.valid = decisions == result.genome.iterations &&
+                       result.metrics.cycles > 0 &&
+                       std::isfinite(result.metrics.mse) &&
+                       std::isfinite(result.metrics.coherence) &&
+                       std::isfinite(result.metrics.energy);
         result.fitness = fitness(result);
+        if (!result.valid) result.error = "incomplete or non-finite evaluation";
     } catch (const std::exception& error) {
         result.error = error.what();
     }
