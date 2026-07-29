@@ -58,12 +58,20 @@ class OmegaLedger:
             if entry.get("previous_hash") != previous_hash:
                 return False
 
-            required = {"timestamp_ns", "opcode", "state", "previous_hash", "hash"}
+            required = {
+                "timestamp_ns",
+                "opcode",
+                "state",
+                "previous_hash",
+                "hash",
+            }
             if set(entry) != required:
                 return False
 
             body = {key: entry[key] for key in required if key != "hash"}
-            expected = hashlib.sha256(_canonical_json(body).encode("utf-8")).hexdigest()
+            expected = hashlib.sha256(
+                _canonical_json(body).encode("utf-8")
+            ).hexdigest()
             if not hmac.compare_digest(str(entry["hash"]), expected):
                 return False
             previous_hash = expected
