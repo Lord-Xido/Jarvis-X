@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import cmath
 import math
-from dataclasses import dataclass
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 
 Shape3D = tuple[int, int, int]
 Coordinate3D = tuple[int, int, int]
@@ -96,68 +96,44 @@ def grid_from_values(shape: Shape3D, values: Iterable[float]) -> Grid3D:
     return Grid3D(shape, tuple(float(value) for value in values))
 
 
-def _transform_x(
-    values: Sequence[complex], shape: Shape3D, inverse: bool
-) -> list[complex]:
+def _transform_x(values: Sequence[complex], shape: Shape3D, inverse: bool) -> list[complex]:
     nx, ny, nz = shape
     output = [0j] * len(values)
     sign = 1.0 if inverse else -1.0
     scale = 1.0 / nx if inverse else 1.0
-    roots = [
-        [cmath.exp(sign * 2j * math.pi * k * x / nx) for x in range(nx)]
-        for k in range(nx)
-    ]
+    roots = [[cmath.exp(sign * 2j * math.pi * k * x / nx) for x in range(nx)] for k in range(nx)]
     for z in range(nz):
         for y in range(ny):
             for k in range(nx):
-                total = sum(
-                    values[_index(x, y, z, shape)] * roots[k][x]
-                    for x in range(nx)
-                )
+                total = sum(values[_index(x, y, z, shape)] * roots[k][x] for x in range(nx))
                 output[_index(k, y, z, shape)] = total * scale
     return output
 
 
-def _transform_y(
-    values: Sequence[complex], shape: Shape3D, inverse: bool
-) -> list[complex]:
+def _transform_y(values: Sequence[complex], shape: Shape3D, inverse: bool) -> list[complex]:
     nx, ny, nz = shape
     output = [0j] * len(values)
     sign = 1.0 if inverse else -1.0
     scale = 1.0 / ny if inverse else 1.0
-    roots = [
-        [cmath.exp(sign * 2j * math.pi * k * y / ny) for y in range(ny)]
-        for k in range(ny)
-    ]
+    roots = [[cmath.exp(sign * 2j * math.pi * k * y / ny) for y in range(ny)] for k in range(ny)]
     for z in range(nz):
         for x in range(nx):
             for k in range(ny):
-                total = sum(
-                    values[_index(x, y, z, shape)] * roots[k][y]
-                    for y in range(ny)
-                )
+                total = sum(values[_index(x, y, z, shape)] * roots[k][y] for y in range(ny))
                 output[_index(x, k, z, shape)] = total * scale
     return output
 
 
-def _transform_z(
-    values: Sequence[complex], shape: Shape3D, inverse: bool
-) -> list[complex]:
+def _transform_z(values: Sequence[complex], shape: Shape3D, inverse: bool) -> list[complex]:
     nx, ny, nz = shape
     output = [0j] * len(values)
     sign = 1.0 if inverse else -1.0
     scale = 1.0 / nz if inverse else 1.0
-    roots = [
-        [cmath.exp(sign * 2j * math.pi * k * z / nz) for z in range(nz)]
-        for k in range(nz)
-    ]
+    roots = [[cmath.exp(sign * 2j * math.pi * k * z / nz) for z in range(nz)] for k in range(nz)]
     for y in range(ny):
         for x in range(nx):
             for k in range(nz):
-                total = sum(
-                    values[_index(x, y, z, shape)] * roots[k][z]
-                    for z in range(nz)
-                )
+                total = sum(values[_index(x, y, z, shape)] * roots[k][z] for z in range(nz))
                 output[_index(x, y, k, shape)] = total * scale
     return output
 
@@ -354,9 +330,7 @@ def prolong_double(field: Grid3D) -> Grid3D:
 
 def round_trip_error(coarse: Grid3D) -> float:
     reconstructed = restrict_half(prolong_double(coarse))
-    return _rms(
-        tuple(left - right for left, right in zip(reconstructed.values, coarse.values))
-    )
+    return _rms(tuple(left - right for left, right in zip(reconstructed.values, coarse.values)))
 
 
 @dataclass(frozen=True)
@@ -378,10 +352,7 @@ class FractionalHierarchyConfig:
             _validate_alpha(alpha)
         if not all(math.isfinite(tau) and tau >= 0.0 for tau in self.taus):
             raise ValueError("all smoothing times must be finite and non-negative")
-        if not all(
-            math.isfinite(weight) and 0.0 <= weight <= 1.0
-            for weight in self.coarse_blends
-        ):
+        if not all(math.isfinite(weight) and 0.0 <= weight <= 1.0 for weight in self.coarse_blends):
             raise ValueError("all coarse blends must lie in [0, 1]")
         if not math.isfinite(self.diffusivity) or self.diffusivity < 0.0:
             raise ValueError("diffusivity must be finite and non-negative")
@@ -548,9 +519,7 @@ def hierarchical_fractional_smooth(
         )
         sequence += 1
 
-    update_rms = _rms(
-        tuple(after - before for after, before in zip(fused.values, field.values))
-    )
+    update_rms = _rms(tuple(after - before for after, before in zip(fused.values, field.values)))
     mass_before = field.mass
     mass_after = fused.mass
     instructions.append(
@@ -558,8 +527,7 @@ def hierarchical_fractional_smooth(
             sequence,
             "VERIFY_MASS_AND_UPDATE",
             0,
-            f"mass_drift={mass_after - mass_before:.12e} "
-            f"update_rms={update_rms:.12e}",
+            f"mass_drift={mass_after - mass_before:.12e} update_rms={update_rms:.12e}",
         )
     )
     return HierarchicalSmoothingResult(
@@ -606,9 +574,5 @@ def run_to_equilibrium(
             )
         )
         if result.update_rms <= tolerance:
-            return EquilibriumResult(
-                current, True, cycle, tuple(updates), tuple(residuals)
-            )
-    return EquilibriumResult(
-        current, False, max_cycles, tuple(updates), tuple(residuals)
-    )
+            return EquilibriumResult(current, True, cycle, tuple(updates), tuple(residuals))
+    return EquilibriumResult(current, False, max_cycles, tuple(updates), tuple(residuals))
