@@ -95,6 +95,35 @@ jobs:
           flags: python
           fail_ci_if_error: false
 
+  package:
+    name: Build package
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tools
+        run: python -m pip install build twine
+
+      - name: Build source and wheel distributions
+        run: python -m build
+
+      - name: Validate package metadata
+        run: twine check dist/*
+
+      - name: Smoke-test built wheel
+        run: |
+          python -m venv /tmp/jarvisx-wheel-test
+          /tmp/jarvisx-wheel-test/bin/python -m pip install dist/*.whl
+          /tmp/jarvisx-wheel-test/bin/python -c "from jarvisx.core import CodexVM; assert CodexVM"
+
   security:
     name: Dependency audit
     runs-on: ubuntu-latest
