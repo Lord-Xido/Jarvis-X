@@ -27,6 +27,20 @@ target_include_directories(jarvisx-runtime PRIVATE
 )
 jarvisx_harden(jarvisx-runtime)
 
+add_library(jarvisx-dm-geom-core
+    src/dm_geom.cpp
+)
+target_include_directories(jarvisx-dm-geom-core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+jarvisx_harden(jarvisx-dm-geom-core)
+
+add_executable(dm-geom
+    src/dm_geom_main.cpp
+)
+target_link_libraries(dm-geom PRIVATE jarvisx-dm-geom-core)
+jarvisx_harden(dm-geom)
+
 enable_testing()
 
 add_test(
@@ -51,3 +65,12 @@ jarvisx_harden(jarvisx-processor-tests)
 
 add_test(NAME processor-regressions COMMAND jarvisx-processor-tests)
 set_tests_properties(processor-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(dm-geom-tests
+    tests/dm_geom_tests.cpp
+)
+target_link_libraries(dm-geom-tests PRIVATE jarvisx-dm-geom-core)
+jarvisx_harden(dm-geom-tests)
+
+add_test(NAME dm-geom-regressions COMMAND dm-geom-tests)
+set_tests_properties(dm-geom-regressions PROPERTIES TIMEOUT 120)
