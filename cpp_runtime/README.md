@@ -62,6 +62,27 @@ Text input is also supported:
   --population 5
 ```
 
+## DM-GEOM mechanical latent engine
+
+`dm-geom` is an isolated mesh auto-encoding and decoding executable built on the same hardened C++17 profile. It:
+
+1. extracts nine finite geometric features from a validated triangle mesh;
+2. encodes mean radius and radial disorder into a bounded three-dimensional latent state;
+3. decodes a fixed-topology sphere whose radius, deformation amplitude and deformation frequency vary continuously;
+4. evaluates position, radius and surface-area reconstruction error;
+5. applies central finite-difference gradient descent with gradient clipping and latent projection;
+6. exports deterministic little-endian binary STL artifacts.
+
+The fixed topology is intentional: it prevents the zero numerical gradient produced when loss depends only on an integer segment or vertex count.
+
+Run the demonstration:
+
+```bash
+./build/cpp-runtime/dm-geom
+```
+
+The executable writes `recon.stl` and `optimized.stl` in the working directory and returns a non-zero status if evolution does not improve reconstruction loss.
+
 ## State artifacts
 
 The default `.jarvisx-runtime/` directory contains:
@@ -83,7 +104,11 @@ The CTest suite includes:
 - inward executable/text smoke execution;
 - genome normalization before allocation;
 - repeatable processor evaluation;
-- proof that wall-clock latency does not alter deterministic fitness.
+- proof that wall-clock latency does not alter deterministic fitness;
+- DM-GEOM topology and non-degeneracy checks;
+- nine-feature population and finite-value checks;
+- continuous-loss evolution regression;
+- decoder singularity regression at latent `x = -2`.
 
 Optional sanitizer build:
 
