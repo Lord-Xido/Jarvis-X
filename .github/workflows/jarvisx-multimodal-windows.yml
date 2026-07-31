@@ -1,0 +1,98 @@
+name: Jarvis-X Multimodal Windows
+
+on:
+  pull_request:
+    paths:
+      - "apps/windows/jarvisx-multimodal-studio/**"
+      - ".github/workflows/jarvisx-multimodal-windows.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/windows/jarvisx-multimodal-studio/**"
+      - ".github/workflows/jarvisx-multimodal-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld python3 zip binutils
+
+      - name: Reject obvious embedded project keys
+        shell: bash
+        run: |
+          if grep -RInE 'sk-(proj-)?[A-Za-z0-9_-]{20,}' apps/windows/jarvisx-multimodal-studio; then
+            echo "Potential API key material detected" >&2
+            exit 1
+          fi
+
+      - name: Assemble and check browser JavaScript
+        shell: bash
+        run: |
+          APP=apps/windows/jarvisx-multimodal-studio
+          cat "$APP"/src/fragments/index.html/*.part > /tmp/jarvisx-index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          source = Path("/tmp/jarvisx-index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", source, flags=re.S | re.I)
+          Path("/tmp/jarvisx-ui.js").write_text("\n".join(scripts), encoding="utf-8")
+          PY
+          node --check /tmp/jarvisx-ui.js
+
+      - name: Build twice and prove reproducibility
+        shell: bash
+        run: |
+          cp -a apps/windows/jarvisx-multimodal-studio /tmp/build-a
+          cp -a apps/windows/jarvisx-multimodal-studio /tmp/build-b
+          /tmp/build-a/build-windows.sh
+          /tmp/build-b/build-windows.sh
+          cmp /tmp/build-a/JarvisX-Multimodal-Studio.exe /tmp/build-b/JarvisX-Multimodal-Studio.exe
+
+      - name: Verify PE and embedded assets
+        shell: bash
+        run: |
+          APP=/tmp/build-a
+          file "$APP/JarvisX-Multimodal-Studio.exe" | tee /tmp/file.txt
+          grep -q 'PE32+ executable.*x86-64' /tmp/file.txt
+          objdump -x "$APP/JarvisX-Multimodal-Studio.exe" > /tmp/pe.txt
+          grep -q 'Subsystem.*Windows GUI' /tmp/pe.txt
+          grep -q 'DLL Name: KERNEL32.dll' /tmp/pe.txt
+          grep -q 'DLL Name: USER32.dll' /tmp/pe.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path("/tmp/build-a")
+          binary = (app / "JarvisX-Multimodal-Studio.exe").read_bytes()
+          for relative in ("src/index.html", "src/JarvisXMultimodal.ps1"):
+              payload = (app / relative).read_bytes()
+              if payload not in binary:
+                  raise SystemExit(f"embedded payload not found: {relative}")
+          PY
+
+      - name: Package release artifact
+        shell: bash
+        run: |
+          APP=/tmp/build-a
+          sha256sum "$APP/JarvisX-Multimodal-Studio.exe" > "$APP/SHA256SUMS.txt"
+          cd "$APP"
+          zip -9 JarvisX-Multimodal-Studio-Windows-x64.zip \
+            JarvisX-Multimodal-Studio.exe README.md SECURITY.md SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JarvisX-Multimodal-Studio-Windows-x64
+          path: |
+            /tmp/build-a/JarvisX-Multimodal-Studio.exe
+            /tmp/build-a/JarvisX-Multimodal-Studio-Windows-x64.zip
+            /tmp/build-a/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

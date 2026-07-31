@@ -1,0 +1,47 @@
+const titles={chat:["Multimodal Chat","Reason over text, images, documents, and recorded audio."],image:["Image Studio","Create original visual media from a text specification."],voice:["Voice Studio","Synthesize speech and transcribe recorded audio."],video:["Video Studio","Submit and retrieve asynchronous video-generation jobs."]};
+function toast(text,error=false){const t=$("#toast");t.textContent=text;t.className="toast show"+(error?" error":"");clearTimeout(t._x);t._x=setTimeout(()=>t.className="toast",3500)}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function renderMarkdown(s){let x=escapeHtml(s);x=x.replace(/```([\s\S]*?)```/g,(_,c)=>"<pre><code>"+c.trim()+"</code></pre>");x=x.replace(/`([^`]+)`/g,"<code>$1</code>");x=x.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");x=x.replace(/\n\n+/g,"</p><p>").replace(/\n/g,"<br>");return "<p>"+x+"</p>"}
+function persist(){localStorage.setItem("jx_settings",JSON.stringify(state.settings));localStorage.setItem("jx_sessions",JSON.stringify(state.sessions.slice(0,30)))}
+function newSession(){const s={id:crypto.randomUUID(),title:"New conversation",created:Date.now(),messages:[]};state.sessions.unshift(s);state.active=s.id;persist();renderSessions();renderMessages()}
+function current(){return state.sessions.find(s=>s.id===state.active)}
+function renderSessions(){const box=$("#sessions");box.innerHTML="";state.sessions.forEach(s=>{const d=document.createElement("div");d.className="session"+(s.id===state.active?" active":"");d.textContent=s.title;d.onclick=()=>{state.active=s.id;renderSessions();renderMessages()};box.appendChild(d)})}
+function renderMessages(){
+  const s=current(),box=$("#messages");box.innerHTML="";
+  if(!s||!s.messages.length){box.innerHTML='<div class="empty"><div><div class="empty-orb"></div><h3>Multimodal system ready</h3><p>Attach an image, PDF, document, spreadsheet, source file, or audio recording. The desktop process—not the browser—holds and uses your encrypted API credential.</p></div></div>';return}
+  s.messages.forEach(m=>{
+    const d=document.createElement("div");d.className="msg "+m.role;
+    const chips=(m.files||[]).map(f=>`<span class="file-chip">${escapeHtml(f)}</span>`).join("");
+    d.innerHTML=`<div class="avatar">${m.role==="user"?"YOU":"JX"}</div><div><div class="msg-head"><span class="msg-role">${m.role==="user"?"USER":"JARVIS-X"}</span><span class="msg-time">${new Date(m.time).toLocaleTimeString()}</span></div><div class="msg-body">${renderMarkdown(m.content)}</div>${chips?`<div class="attachments-inline">${chips}</div>`:""}<div class="msg-tools"><button class="mini copy">Copy</button>${m.role==="assistant"?'<button class="mini speak">Speak</button>':""}</div></div>`;
+    d.querySelector(".copy").onclick=()=>navigator.clipboard.writeText(m.content).then(()=>toast("Copied"));
+    const speak=d.querySelector(".speak");if(speak)speak.onclick=()=>speakText(m.content);
+    box.appendChild(d)
+  });box.scrollTop=box.scrollHeight
+}
+function showView(name){$$(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===name));$$(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+name));$("#view-title").textContent=titles[name][0];$("#view-subtitle").textContent=titles[name][1]}
+$$(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+$("#new-chat").onclick=newSession;
+function openSettings(){const s=state.settings;$("#chat-model").value=s.chatModel;$("#image-model").value=s.imageModel;$("#speech-model").value=s.speechModel;$("#transcribe-model").value=s.transcribeModel;$("#video-model").value=s.videoModel;$("#max-tokens").value=s.maxTokens;$("#instructions").value=s.instructions;$("#api-key").value="";$("#settings-modal").classList.add("open")}
+$("#settings-btn").onclick=$("#top-settings").onclick=openSettings;$("#settings-close").onclick=()=>$("#settings-modal").classList.remove("open");$("#settings-modal").onclick=e=>{if(e.target.id==="settings-modal")e.currentTarget.classList.remove("open")}
+async function readJson(r){const text=await r.text();let j;try{j=JSON.parse(text)}catch{j={error:text||r.statusText}}if(!r.ok)throw new Error(j.error||"Request failed");return j}
+async function status(){try{const j=await readJson(await api("/api/status"));$("#key-status").textContent=j.keyPresent?(j.keySource==="environment"?"Key from environment":"Encrypted key ready"):"API key required";$("#key-dot").className="dot "+(j.keyPresent?"ok":"");if(!j.keyPresent)setTimeout(openSettings,350)}catch(e){$("#key-status").textContent="Runtime unavailable";$("#key-dot").className="dot bad"}}
+$("#save-settings").onclick=async()=>{
+  state.settings={chatModel:$("#chat-model").value.trim(),imageModel:$("#image-model").value.trim(),speechModel:$("#speech-model").value.trim(),transcribeModel:$("#transcribe-model").value.trim(),videoModel:$("#video-model").value.trim(),maxTokens:+$("#max-tokens").value||4096,instructions:$("#instructions").value.trim()};persist();
+  const key=$("#api-key").value.trim();
+  if(key){try{$("#save-settings").disabled=true;await readJson(await api("/api/key",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({apiKey:key})}));toast("API key validated and encrypted")}catch(e){toast(e.message,true);return}finally{$("#save-settings").disabled=false}}
+  $("#settings-modal").classList.remove("open");status()
+};
+$("#delete-key").onclick=async()=>{if(!confirm("Delete the encrypted key saved by this app?"))return;try{await readJson(await api("/api/key",{method:"DELETE"}));toast("Saved key deleted");status()}catch(e){toast(e.message,true)}};
+function autosize(){const p=$("#prompt");p.style.height="auto";p.style.height=Math.min(p.scrollHeight,190)+"px"}$("#prompt").oninput=autosize;
+$("#attach-btn").onclick=()=>$("#file-input").click();
+$("#file-input").onchange=async e=>{
+  for(const f of [...e.target.files]){
+    if(f.size>15*1024*1024){toast(`${f.name} exceeds 15 MB`,true);continue}
+    if(state.attachments.length>=4){toast("Maximum four attachments per message",true);break}
+    const b64=await fileBase64(f);state.attachments.push({name:f.name,mime:f.type||"application/octet-stream",base64:b64,size:f.size})
+  }e.target.value="";renderAttachments()
+};
+function fileBase64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(f)})}
+function renderAttachments(){const b=$("#attach-preview");b.innerHTML="";state.attachments.forEach((a,i)=>{const d=document.createElement("div");d.className="attach-item";d.innerHTML=`<span>${escapeHtml(a.name)}</span><button>×</button>`;d.querySelector("button").onclick=()=>{state.attachments.splice(i,1);renderAttachments()};b.appendChild(d)})}
+async function send(){
+  const prompt=$("#prompt").value.trim();if(!prompt&&!state.attachments.length)return;if(!current())newSession();

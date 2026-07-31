@@ -1,0 +1,212 @@
+        $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+        if (-not $response.IsSuccessStatusCode) {
+            $text = [Text.Encoding]::UTF8.GetString($bytes)
+            throw (Read-OpenAIError $text ([int]$response.StatusCode))
+        }
+        return $bytes
+    } finally {
+        if ($response) { $response.Dispose() }
+        $client.Dispose()
+    }
+}
+
+function Read-Request {
+    param([System.Net.Sockets.TcpClient]$Client)
+    $stream = $Client.GetStream()
+    $header = [IO.MemoryStream]::new()
+    $matched = 0
+    while ($header.Length -lt 65536) {
+        $value = $stream.ReadByte()
+        if ($value -lt 0) { break }
+        $header.WriteByte([byte]$value)
+        switch ($matched) {
+            0 { if ($value -eq 13) { $matched = 1 } }
+            1 { if ($value -eq 10) { $matched = 2 } elseif ($value -ne 13) { $matched = 0 } }
+            2 { if ($value -eq 13) { $matched = 3 } else { $matched = 0 } }
+            3 {
+                if ($value -eq 10) { $matched = 4 } else { $matched = 0 }
+            }
+        }
+        if ($matched -eq 4) { break }
+    }
+
+    if ($matched -ne 4) { throw "Invalid HTTP request." }
+    $headerText = [Text.Encoding]::ASCII.GetString($header.ToArray())
+    $header.Dispose()
+    $lines = $headerText -split "`r`n"
+    $requestLine = $lines[0] -split " "
+    if ($requestLine.Count -lt 2) { throw "Invalid HTTP request line." }
+
+    $headers = @{}
+    for ($i = 1; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        if ([string]::IsNullOrEmpty($line)) { continue }
+        $index = $line.IndexOf(":")
+        if ($index -gt 0) {
+            $name = $line.Substring(0, $index).Trim().ToLowerInvariant()
+            $value = $line.Substring($index + 1).Trim()
+            $headers[$name] = $value
+        }
+    }
+
+    $contentLength = 0
+    if ($headers.ContainsKey("content-length")) {
+        $contentLength = [int]$headers["content-length"]
+    }
+    if ($contentLength -gt 33554432) {
+        throw "Request body exceeds 32 MB."
+    }
+
+    $body = New-Object byte[] $contentLength
+    $offset = 0
+    while ($offset -lt $contentLength) {
+        $read = $stream.Read($body, $offset, $contentLength - $offset)
+        if ($read -le 0) { throw "Unexpected end of request body." }
+        $offset += $read
+    }
+
+    return [pscustomobject]@{
+        Method = $requestLine[0].ToUpperInvariant()
+        Target = $requestLine[1]
+        Headers = $headers
+        Body = $body
+        Stream = $stream
+    }
+}
+
+function Get-ReasonPhrase {
+    param([int]$Status)
+    switch ($Status) {
+        200 { "OK" }
+        204 { "No Content" }
+        400 { "Bad Request" }
+        401 { "Unauthorized" }
+        404 { "Not Found" }
+        405 { "Method Not Allowed" }
+        413 { "Payload Too Large" }
+        500 { "Internal Server Error" }
+        default { "Response" }
+    }
+}
+
+function Send-Bytes {
+    param(
+        [System.Net.Sockets.NetworkStream]$Stream,
+        [int]$Status,
+        [string]$ContentType,
+        [byte[]]$Body,
+        [hashtable]$ExtraHeaders = @{}
+    )
+    $reason = Get-ReasonPhrase $Status
+    $headers = "HTTP/1.1 $Status $reason`r`n" +
+        "Content-Type: $ContentType`r`n" +
+        "Content-Length: $($Body.Length)`r`n" +
+        "Cache-Control: no-store`r`n" +
+        "X-Content-Type-Options: nosniff`r`n" +
+        "Referrer-Policy: no-referrer`r`n" +
+        "Connection: close`r`n"
+    foreach ($entry in $ExtraHeaders.GetEnumerator()) {
+        $headers += "$($entry.Key): $($entry.Value)`r`n"
+    }
+    $headers += "`r`n"
+    $headerBytes = [Text.Encoding]::ASCII.GetBytes($headers)
+    $Stream.Write($headerBytes, 0, $headerBytes.Length)
+    if ($Body.Length -gt 0) {
+        $Stream.Write($Body, 0, $Body.Length)
+    }
+    $Stream.Flush()
+}
+
+function Send-Json {
+    param(
+        [System.Net.Sockets.NetworkStream]$Stream,
+        [int]$Status,
+        $Object
+    )
+    $json = $Object | ConvertTo-Json -Depth 100 -Compress
+    $bytes = [Text.Encoding]::UTF8.GetBytes($json)
+    Send-Bytes $Stream $Status "application/json; charset=utf-8" $bytes
+}
+
+function Get-RequestToken {
+    param($Request, [Uri]$Uri)
+    if ($Request.Headers.ContainsKey("x-jarvis-token")) {
+        return [string]$Request.Headers["x-jarvis-token"]
+    }
+    $query = $Uri.Query.TrimStart("?") -split "&"
+    foreach ($part in $query) {
+        $kv = $part -split "=", 2
+        if ($kv.Count -eq 2 -and $kv[0] -eq "token") {
+            return [Uri]::UnescapeDataString($kv[1])
+        }
+    }
+    if ($Request.Headers.ContainsKey("cookie")) {
+        foreach ($cookie in ([string]$Request.Headers["cookie"] -split ";")) {
+            $kv = $cookie.Trim() -split "=", 2
+            if ($kv.Count -eq 2 -and $kv[0] -eq "jarvis_token") {
+                return $kv[1]
+            }
+        }
+    }
+    return ""
+}
+
+function Get-QueryValue {
+    param([Uri]$Uri, [string]$Name)
+    foreach ($part in ($Uri.Query.TrimStart("?") -split "&")) {
+        $kv = $part -split "=", 2
+        if ($kv.Count -eq 2 -and $kv[0] -eq $Name) {
+            return [Uri]::UnescapeDataString($kv[1])
+        }
+    }
+    return $null
+}
+
+function Get-JsonBody {
+    param($Request)
+    if ($Request.Body.Length -eq 0) { return $null }
+    $text = [Text.Encoding]::UTF8.GetString($Request.Body)
+    return ($text | ConvertFrom-Json)
+}
+
+function Extract-ResponseText {
+    param($Response)
+    $parts = New-Object System.Collections.Generic.List[string]
+    if ($Response.output) {
+        foreach ($item in $Response.output) {
+            if ($item.type -eq "message" -and $item.content) {
+                foreach ($content in $item.content) {
+                    if ($content.type -eq "output_text" -and $content.text) {
+                        $parts.Add([string]$content.text)
+                    } elseif ($content.type -eq "refusal" -and $content.refusal) {
+                        $parts.Add([string]$content.refusal)
+                    }
+                }
+            }
+        }
+    }
+    if ($parts.Count -eq 0 -and $Response.output_text) {
+        $parts.Add([string]$Response.output_text)
+    }
+    return ($parts -join "`n")
+}
+
+function Handle-Request {
+    param($Request)
+    $uri = [Uri]("http://127.0.0.1" + $Request.Target)
+    $path = $uri.AbsolutePath
+    $token = Get-RequestToken $Request $uri
+
+    if ($token -ne $script:LaunchToken) {
+        Send-Json $Request.Stream 401 @{ error = "Unauthorized local request." }
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $path -eq "/") {
+        if (-not (Test-Path -LiteralPath $HtmlPath)) {
+            Send-Json $Request.Stream 500 @{ error = "Application interface is missing." }
+            return
+        }
+        $body = [IO.File]::ReadAllBytes($HtmlPath)
+        $headers = @{
+            "Set-Cookie" = "jarvis_token=$script:LaunchToken; Path=/; HttpOnly; SameSite=Strict"

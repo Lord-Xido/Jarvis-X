@@ -1,0 +1,12 @@
+LIBRARY KERNEL32.dll
+EXPORTS
+  GetEnvironmentVariableW
+  CreateDirectoryW
+  CreateFileW
+  WriteFile
+  CloseHandle
+  GetProcessHeap
+  HeapAlloc
+  HeapFree
+  CreateProcessW
+  ExitProcess

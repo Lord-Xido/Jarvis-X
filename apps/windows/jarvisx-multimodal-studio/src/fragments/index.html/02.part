@@ -1,0 +1,82 @@
+          <div class="card">
+            <h3>Image Generation</h3><div class="card-sub">Generate a new image from a detailed visual specification.</div>
+            <div class="field"><label>Prompt</label><textarea id="image-prompt" placeholder="A cinematic holographic neural city, precision technical visualization…"></textarea></div>
+            <div class="two">
+              <div class="field"><label>Size</label><select id="image-size"><option>1024x1024</option><option>1536x1024</option><option>1024x1536</option></select></div>
+              <div class="field"><label>Quality</label><select id="image-quality"><option value="auto">Auto</option><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+            </div>
+            <div class="field"><label><input id="image-transparent" type="checkbox"> Transparent background</label></div>
+            <button id="generate-image" class="primary">Generate image</button>
+          </div>
+          <div id="image-result" class="card result-panel"><div class="result-placeholder">Generated imagery will appear here.</div></div>
+        </div>
+      </div>
+
+      <div id="view-voice" class="view studio">
+        <div class="studio-grid">
+          <div class="card">
+            <h3>Speech Synthesis</h3><div class="card-sub">Convert text into generated audio, or record speech and transcribe it.</div>
+            <div class="field"><label>Speech text</label><textarea id="speech-text" placeholder="Enter text to synthesize…"></textarea></div>
+            <div class="two">
+              <div class="field"><label>Voice</label><select id="voice-select"><option>alloy</option><option>ash</option><option>ballad</option><option>coral</option><option>echo</option><option>fable</option><option>nova</option><option>onyx</option><option>sage</option><option>shimmer</option><option>verse</option><option>marin</option><option>cedar</option></select></div>
+              <div class="field"><label>Speed</label><input id="voice-speed" type="number" min=".25" max="4" step=".05" value="1"></div>
+            </div>
+            <button id="generate-speech" class="primary">Generate speech</button>
+            <button id="voice-record" class="secondary" style="margin-left:6px">Record to transcribe</button>
+          </div>
+          <div class="card result-panel"><div class="audio-box"><div id="voice-state">No audio generated.</div><audio id="audio-player" controls hidden></audio><a id="audio-download" class="primary" style="display:none;text-decoration:none;margin-top:12px" download="jarvisx-speech.mp3">Download MP3</a></div></div>
+        </div>
+      </div>
+
+      <div id="view-video" class="view studio">
+        <div class="studio-grid">
+          <div class="card">
+            <h3>Video Generation</h3><div class="card-sub">Creates an asynchronous video job. Availability, cost, and completion time depend on your project.</div>
+            <div class="field"><label>Prompt</label><textarea id="video-prompt" placeholder="A four-second cinematic orbital pass through a luminous computational world…"></textarea></div>
+            <div class="two">
+              <div class="field"><label>Duration</label><select id="video-seconds"><option value="4">4 seconds</option><option value="8">8 seconds</option><option value="12">12 seconds</option></select></div>
+              <div class="field"><label>Resolution</label><select id="video-size"><option value="1280x720">1280 × 720</option><option value="720x1280">720 × 1280</option><option value="1792x1024">1792 × 1024</option><option value="1024x1792">1024 × 1792</option></select></div>
+            </div>
+            <button id="generate-video" class="primary">Create video job</button>
+          </div>
+          <div id="video-result" class="card result-panel"><div class="result-placeholder">Video status and completed media will appear here.</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="settings-modal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-head"><h3>Runtime Settings</h3><button class="close" id="settings-close">×</button></div>
+    <div class="notice">The API key is validated and encrypted with Windows Data Protection API for the current Windows user. It is not stored in the HTML, conversation history, or executable.</div>
+    <div class="field"><label>OpenAI API key</label><input id="api-key" type="password" autocomplete="off" placeholder="Paste the key created in the secure setup flow"></div>
+    <div class="two">
+      <div class="field"><label>Chat model</label><input id="chat-model" value="gpt-5.2"></div>
+      <div class="field"><label>Image model</label><input id="image-model" value="gpt-image-1"></div>
+      <div class="field"><label>Speech model</label><input id="speech-model" value="gpt-4o-mini-tts"></div>
+      <div class="field"><label>Transcription model</label><input id="transcribe-model" value="gpt-4o-mini-transcribe"></div>
+      <div class="field"><label>Video model</label><input id="video-model" value="sora-2"></div>
+      <div class="field"><label>Maximum output tokens</label><input id="max-tokens" type="number" min="128" max="32768" value="4096"></div>
+    </div>
+    <div class="field"><label>Assistant instructions</label><textarea id="instructions">You are JARVIS-X, a precise multimodal assistant. Analyze supplied media carefully, distinguish observation from inference, and provide clear operational answers.</textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button id="delete-key" class="danger">Delete saved key</button><button id="save-settings" class="primary">Validate and save</button></div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const query=new URLSearchParams(location.search); const launchToken=query.get("token")||sessionStorage.getItem("jx_token")||"";
+if(query.get("token")){sessionStorage.setItem("jx_token",launchToken);history.replaceState(null,"",location.pathname)}
+const api=(path,opts={})=>fetch(path,{...opts,headers:{"X-Jarvis-Token":launchToken,...(opts.headers||{})}});
+const state={
+  settings:JSON.parse(localStorage.getItem("jx_settings")||"null")||{
+    chatModel:"gpt-5.2",imageModel:"gpt-image-1",speechModel:"gpt-4o-mini-tts",
+    transcribeModel:"gpt-4o-mini-transcribe",videoModel:"sora-2",maxTokens:4096,
+    instructions:"You are JARVIS-X, a precise multimodal assistant. Analyze supplied media carefully, distinguish observation from inference, and provide clear operational answers."
+  },
+  sessions:JSON.parse(localStorage.getItem("jx_sessions")||"[]"), active:null, attachments:[], mediaRecorder:null, chunks:[]
+};

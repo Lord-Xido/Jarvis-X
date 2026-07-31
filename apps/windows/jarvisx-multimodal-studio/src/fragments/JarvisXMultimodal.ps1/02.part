@@ -1,0 +1,189 @@
+            "Content-Security-Policy" = "default-src 'self' data: blob:; img-src 'self' data: blob:; media-src 'self' data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+        }
+        Send-Bytes $Request.Stream 200 "text/html; charset=utf-8" $body $headers
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $path -eq "/api/status") {
+        $key = Get-ApiKey
+        $source = if (-not [string]::IsNullOrWhiteSpace($env:OPENAI_API_KEY)) {
+            "environment"
+        } elseif (Test-Path -LiteralPath $KeyPath) {
+            "dpapi"
+        } else {
+            "none"
+        }
+        Send-Json $Request.Stream 200 @{
+            version = $AppVersion
+            keyPresent = -not [string]::IsNullOrWhiteSpace($key)
+            keySource = $source
+        }
+        return
+    }
+
+    if ($Request.Method -eq "POST" -and $path -eq "/api/key") {
+        $data = Get-JsonBody $Request
+        $key = [string]$data.apiKey
+        if ([string]::IsNullOrWhiteSpace($key)) { throw "API key is empty." }
+        $key = $key.Trim()
+
+        $client = New-OpenAIClient $key
+        try {
+            $response = $client.GetAsync(
+                "https://api.openai.com/v1/models"
+            ).GetAwaiter().GetResult()
+            $text = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+            if (-not $response.IsSuccessStatusCode) {
+                throw (Read-OpenAIError $text ([int]$response.StatusCode))
+            }
+        } finally {
+            if ($response) { $response.Dispose() }
+            $client.Dispose()
+        }
+
+        Save-ApiKey $key
+        Send-Json $Request.Stream 200 @{ ok = $true }
+        return
+    }
+
+    if ($Request.Method -eq "DELETE" -and $path -eq "/api/key") {
+        Remove-SavedApiKey
+        Send-Json $Request.Stream 200 @{ ok = $true }
+        return
+    }
+
+    if ($Request.Method -eq "POST" -and $path -eq "/api/chat") {
+        $data = Get-JsonBody $Request
+        $input = New-Object System.Collections.Generic.List[object]
+
+        if ($data.history) {
+            foreach ($message in $data.history) {
+                $role = [string]$message.role
+                if ($role -ne "user" -and $role -ne "assistant") { continue }
+                $input.Add(@{
+                    role = $role
+                    content = [string]$message.content
+                })
+            }
+        }
+
+        $content = New-Object System.Collections.Generic.List[object]
+        $content.Add(@{
+            type = "input_text"
+            text = [string]$data.prompt
+        })
+
+        if ($data.attachments) {
+            foreach ($attachment in $data.attachments) {
+                $mime = [string]$attachment.mime
+                $base64 = [string]$attachment.base64
+                if ($mime.StartsWith("image/")) {
+                    $content.Add(@{
+                        type = "input_image"
+                        image_url = "data:$mime;base64,$base64"
+                        detail = "auto"
+                    })
+                } else {
+                    $content.Add(@{
+                        type = "input_file"
+                        filename = [string]$attachment.name
+                        file_data = "data:$mime;base64,$base64"
+                    })
+                }
+            }
+        }
+
+        $input.Add(@{
+            role = "user"
+            content = $content
+        })
+
+        $body = @{
+            model = if ($data.model) { [string]$data.model } else { "gpt-5.2" }
+            instructions = [string]$data.instructions
+            input = $input
+            max_output_tokens = [int]$data.maxOutputTokens
+            store = $false
+        }
+
+        $response = Invoke-OpenAIJson "POST" "/responses" $body
+        $text = Extract-ResponseText $response
+        Send-Json $Request.Stream 200 @{
+            text = $text
+            responseId = $response.id
+            usage = $response.usage
+        }
+        return
+    }
+
+    if ($Request.Method -eq "POST" -and $path -eq "/api/image") {
+        $data = Get-JsonBody $Request
+        $body = @{
+            model = if ($data.model) { [string]$data.model } else { "gpt-image-1" }
+            prompt = [string]$data.prompt
+            size = [string]$data.size
+            quality = [string]$data.quality
+            background = if ([bool]$data.transparent) { "transparent" } else { "auto" }
+            output_format = "png"
+            n = 1
+        }
+        $response = Invoke-OpenAIJson "POST" "/images/generations" $body
+        $base64 = $null
+        if ($response.data -and $response.data.Count -gt 0) {
+            $base64 = [string]$response.data[0].b64_json
+        }
+        if ([string]::IsNullOrWhiteSpace($base64)) {
+            throw "The image endpoint returned no image data."
+        }
+        Send-Json $Request.Stream 200 @{ base64 = $base64 }
+        return
+    }
+
+    if ($Request.Method -eq "POST" -and $path -eq "/api/speech") {
+        $data = Get-JsonBody $Request
+        $text = [string]$data.text
+        if ($text.Length -gt 4096) { $text = $text.Substring(0, 4096) }
+        $body = @{
+            model = if ($data.model) { [string]$data.model } else { "gpt-4o-mini-tts" }
+            voice = if ($data.voice) { [string]$data.voice } else { "alloy" }
+            input = $text
+            response_format = "mp3"
+            speed = [double]$data.speed
+        }
+        $bytes = Invoke-OpenAIBinaryJson "/audio/speech" $body
+        Send-Bytes $Request.Stream 200 "audio/mpeg" $bytes
+        return
+    }
+
+    if ($Request.Method -eq "POST" -and $path -eq "/api/transcribe") {
+        $data = Get-JsonBody $Request
+        $file = [pscustomobject]@{
+            name = if ($data.name) { [string]$data.name } else { "recording.webm" }
+            mime = if ($data.mime) { [string]$data.mime } else { "audio/webm" }
+            base64 = [string]$data.base64
+        }
+        $fields = @{
+            model = if ($data.model) { [string]$data.model } else { "gpt-4o-mini-transcribe" }
+            response_format = "json"
+        }
+        $response = Invoke-OpenAIMultipart "/audio/transcriptions" $fields $file
+        Send-Json $Request.Stream 200 @{ text = [string]$response.text }
+        return
+    }
+
+    if ($Request.Method -eq "POST" -and $path -eq "/api/video") {
+        $data = Get-JsonBody $Request
+        $fields = @{
+            model = if ($data.model) { [string]$data.model } else { "sora-2" }
+            prompt = [string]$data.prompt
+            seconds = [string]$data.seconds
+            size = [string]$data.size
+        }
+        $response = Invoke-OpenAIMultipart "/videos" $fields $null
+        Send-Json $Request.Stream 200 $response
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $path -eq "/api/video/status") {
+        $id = Get-QueryValue $uri "id"
+        if ([string]::IsNullOrWhiteSpace($id)) { throw "Video job ID is missing." }

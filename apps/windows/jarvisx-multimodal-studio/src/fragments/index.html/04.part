@@ -1,0 +1,35 @@
+  const s=current(),files=state.attachments.map(a=>a.name);s.messages.push({role:"user",content:prompt||"Analyze the attached media.",files,time:Date.now()});if(s.messages.length===1)s.title=(prompt||files[0]||"Multimodal input").slice(0,42);persist();renderSessions();renderMessages();
+  const attachments=state.attachments;state.attachments=[];renderAttachments();$("#prompt").value="";autosize();$("#send").disabled=true;
+  const pending={role:"assistant",content:"Processing multimodal input…",time:Date.now(),pending:true};s.messages.push(pending);renderMessages();
+  try{
+    const history=s.messages.filter(m=>!m.pending).slice(-20,-1).map(m=>({role:m.role,content:m.content}));
+    const j=await readJson(await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:state.settings.chatModel,instructions:state.settings.instructions,maxOutputTokens:state.settings.maxTokens,history,prompt:prompt||"Analyze the attached media.",attachments})}));
+    Object.assign(pending,{content:j.text||"(No text returned)",pending:false,responseId:j.responseId})
+  }catch(e){Object.assign(pending,{content:"Error: "+e.message,pending:false})}finally{$("#send").disabled=false;persist();renderMessages()}
+}
+$("#send").onclick=send;$("#prompt").onkeydown=e=>{if(e.ctrlKey&&e.key==="Enter"){e.preventDefault();send()}};
+let recPurpose="chat";
+async function beginRecording(purpose,button){
+  if(!navigator.mediaDevices?.getUserMedia){toast("Microphone recording is unavailable in this browser",true);return}
+  if(state.mediaRecorder){state.mediaRecorder.stop();return}
+  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});state.chunks=[];recPurpose=purpose;const rec=new MediaRecorder(stream);state.mediaRecorder=rec;button.classList.add("recording");button.textContent="■ Stop";rec.ondataavailable=e=>{if(e.data.size)state.chunks.push(e.data)};rec.onstop=async()=>{button.classList.remove("recording");button.textContent=purpose==="chat"?"● Mic":"Record to transcribe";stream.getTracks().forEach(t=>t.stop());state.mediaRecorder=null;const blob=new Blob(state.chunks,{type:rec.mimeType||"audio/webm"});await transcribeBlob(blob,purpose)};rec.start()}catch(e){toast(e.message,true)}
+}
+$("#mic-btn").onclick=()=>beginRecording("chat",$("#mic-btn"));$("#voice-record").onclick=()=>beginRecording("voice",$("#voice-record"));
+async function transcribeBlob(blob,purpose){try{toast("Transcribing recording…");const b64=await fileBase64(new File([blob],"recording.webm",{type:blob.type}));const j=await readJson(await api("/api/transcribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:state.settings.transcribeModel,name:"recording.webm",mime:blob.type,base64:b64})}));if(purpose==="chat"){$("#prompt").value=($("#prompt").value+" "+j.text).trim();autosize()}else $("#speech-text").value=j.text;toast("Transcription complete")}catch(e){toast(e.message,true)}}
+async function speakText(text){$("#speech-text").value=text.slice(0,4000);showView("voice");generateSpeech()}
+async function generateSpeech(){
+  const text=$("#speech-text").value.trim();if(!text)return;$("#generate-speech").disabled=true;$("#voice-state").innerHTML='<div class="loader"></div>Generating speech…';
+  try{const r=await api("/api/speech",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:state.settings.speechModel,text,voice:$("#voice-select").value,speed:+$("#voice-speed").value||1})});if(!r.ok)throw new Error((await r.json()).error);const blob=await r.blob(),url=URL.createObjectURL(blob),p=$("#audio-player");p.src=url;p.hidden=false;$("#audio-download").href=url;$("#audio-download").style.display="inline-block";$("#voice-state").textContent="Generated speech ready.";p.play().catch(()=>{})}catch(e){$("#voice-state").textContent=e.message;toast(e.message,true)}finally{$("#generate-speech").disabled=false}
+}
+$("#generate-speech").onclick=generateSpeech;
+$("#generate-image").onclick=async()=>{
+  const prompt=$("#image-prompt").value.trim();if(!prompt)return;const box=$("#image-result");box.innerHTML='<div class="result-placeholder"><div class="loader"></div>Generating image…</div>';$("#generate-image").disabled=true;
+  try{const j=await readJson(await api("/api/image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:state.settings.imageModel,prompt,size:$("#image-size").value,quality:$("#image-quality").value,transparent:$("#image-transparent").checked})}));const url="data:image/png;base64,"+j.base64;box.innerHTML=`<div><img src="${url}" alt="Generated image"><div style="text-align:center;margin-top:12px"><a class="primary" style="text-decoration:none" download="jarvisx-image.png" href="${url}">Download PNG</a></div></div>`}catch(e){box.innerHTML=`<div class="result-placeholder">${escapeHtml(e.message)}</div>`;toast(e.message,true)}finally{$("#generate-image").disabled=false}
+};
+let videoTimer=null;
+$("#generate-video").onclick=async()=>{
+  const prompt=$("#video-prompt").value.trim();if(!prompt)return;clearInterval(videoTimer);const box=$("#video-result");box.innerHTML='<div class="result-placeholder"><div class="loader"></div>Submitting video job…</div>';$("#generate-video").disabled=true;
+  try{const j=await readJson(await api("/api/video",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:state.settings.videoModel,prompt,seconds:$("#video-seconds").value,size:$("#video-size").value})}));renderVideoStatus(j);videoTimer=setInterval(()=>pollVideo(j.id),5000)}catch(e){box.innerHTML=`<div class="result-placeholder">${escapeHtml(e.message)}</div>`;toast(e.message,true)}finally{$("#generate-video").disabled=false}
+};
+function renderVideoStatus(j){const box=$("#video-result"),p=Number(j.progress||0);box.innerHTML=`<div style="width:min(480px,100%);text-align:center"><h3>${escapeHtml(String(j.status||"queued").toUpperCase())}</h3><p class="card-sub">Job ${escapeHtml(j.id||"")}</p><div class="progress"><div style="width:${Math.max(2,p)}%"></div></div><p style="font-size:10px;color:var(--muted);margin-top:9px">${p}% complete</p></div>`}
+async function pollVideo(id){try{const j=await readJson(await api("/api/video/status?id="+encodeURIComponent(id)));if(j.status==="completed"){clearInterval(videoTimer);const url="/api/video/content?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(launchToken);$("#video-result").innerHTML=`<div><video controls src="${url}"></video><div style="text-align:center;margin-top:12px"><a class="primary" style="text-decoration:none" href="${url}" download="jarvisx-video.mp4">Download MP4</a></div></div>`}else if(j.status==="failed"){clearInterval(videoTimer);throw new Error(j.error?.message||"Video generation failed")}else renderVideoStatus(j)}catch(e){clearInterval(videoTimer);toast(e.message,true)}}
