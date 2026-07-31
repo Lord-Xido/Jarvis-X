@@ -26,7 +26,11 @@ The project follows semantic versioning where practical during alpha development
 - analytic constant-forcing updates for `du/dt = -D(-Delta)^alpha u + Omega`;
 - `2×2×2` restriction, prolongation and coarse-to-fine fusion;
 - ordered mechanistic traces, mass drift, gradient energy, residual and convergence telemetry;
-- independent direct-DFT, spatial-stencil and semigroup validation tests.
+- independent direct-DFT, spatial-stencil and semigroup validation tests;
+- deterministic Dr. Moagi Unified Autoencoding reference for `[frequency, amplitude, phase]` states;
+- explicit diagonal-Gaussian encoder posterior and standard-normal KL regularization;
+- circular phase reconstruction metric, transformed-input reconstruction and fixed-point telemetry;
+- finite-difference signal gradients, operation forcing modes and bounded equilibrium traces.
 
 ### Changed
 
@@ -38,7 +42,8 @@ The project follows semantic versioning where practical during alpha development
 - project documentation distinguishes stable code, reference laboratories, numerical references, integration candidates, demonstrations and specifications;
 - C++ candidate selection excludes wall-clock latency from both fitness and equal-fitness tie handling;
 - C++ checkpoint loading requires all versioned fields and a matching deterministic fingerprint;
-- fractional smoothing documentation states dense storage and separable `O(N⁴)` cost for cubic grids explicitly.
+- fractional smoothing documentation states dense storage and separable `O(N⁴)` cost for cubic grids explicitly;
+- UEA documentation distinguishes transformed-input reconstruction from strict latent invariance and transform maps from vector fields.
 
 ### Fixed
 
