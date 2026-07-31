@@ -36,8 +36,7 @@ def _finite_matrix(matrix: Matrix3, name: str) -> None:
 
 def _matvec(matrix: Matrix3, vector: Vector3) -> Vector3:
     values = tuple(
-        sum(matrix[row][column] * vector[column] for column in range(3))
-        for row in range(3)
+        sum(matrix[row][column] * vector[column] for column in range(3)) for row in range(3)
     )
     return cast(Vector3, values)
 
@@ -95,9 +94,7 @@ class SignalMetric:
     phase: float = 1.0
 
     def __post_init__(self) -> None:
-        if not all(
-            math.isfinite(value) and value > 0.0 for value in self.as_vector()
-        ):
+        if not all(math.isfinite(value) and value > 0.0 for value in self.as_vector()):
             raise ValueError("metric weights must be finite and positive")
 
     def as_vector(self) -> Vector3:
@@ -119,10 +116,7 @@ def signal_squared_error(
 ) -> float:
     active_metric = metric or SignalMetric()
     residual = signal_residual(prediction, target)
-    return sum(
-        weight * value * value
-        for weight, value in zip(active_metric.as_vector(), residual)
-    )
+    return sum(weight * value * value for weight, value in zip(active_metric.as_vector(), residual))
 
 
 @dataclass(frozen=True)
@@ -137,8 +131,7 @@ class GaussianPosterior:
     def sample(self, epsilon: Vector3) -> Vector3:
         _finite_vector(epsilon, "epsilon")
         values = tuple(
-            self.mean[index]
-            + math.exp(0.5 * self.log_variance[index]) * epsilon[index]
+            self.mean[index] + math.exp(0.5 * self.log_variance[index]) * epsilon[index]
             for index in range(3)
         )
         return cast(Vector3, values)
@@ -203,9 +196,7 @@ class AffineSignalOperation:
         _finite_vector(self.bias, f"{self.name} bias")
 
     def apply(self, signal: Signal3D) -> Signal3D:
-        return Signal3D.from_vector(
-            _add(_matvec(self.matrix, signal.as_vector()), self.bias)
-        )
+        return Signal3D.from_vector(_add(_matvec(self.matrix, signal.as_vector()), self.bias))
 
 
 @dataclass(frozen=True)
@@ -254,10 +245,7 @@ class MoagiCoefficients:
             raise ValueError("beta must be finite and non-negative")
         if not math.isfinite(self.gamma) or self.gamma < 0.0:
             raise ValueError("gamma must be finite and non-negative")
-        if not all(
-            math.isfinite(value)
-            for value in (self.lambda_m, self.lambda_f, self.lambda_n)
-        ):
+        if not all(math.isfinite(value) for value in (self.lambda_m, self.lambda_f, self.lambda_n)):
             raise ValueError("operation coefficients must be finite")
 
     def operation_weights(self) -> Vector3:
