@@ -1,0 +1,200 @@
+param()
+
+$ErrorActionPreference = "Stop"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Add-Type -AssemblyName System.Net.Http
+Add-Type -AssemblyName System.Windows.Forms
+
+$AppVersion = "1.0.0"
+$AppDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$HtmlPath = Join-Path $AppDir "index.html"
+$KeyPath = Join-Path $AppDir "key.dat"
+$LogPath = Join-Path $AppDir "runtime.log"
+$script:StopRequested = $false
+$script:LaunchToken = [Guid]::NewGuid().ToString("N")
+
+function Write-Log {
+    param([string]$Message)
+    try {
+        $line = "[{0}] {1}`r`n" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Message
+        [IO.File]::AppendAllText($LogPath, $line, [Text.Encoding]::UTF8)
+    } catch {}
+}
+
+function Get-ApiKey {
+    if (-not [string]::IsNullOrWhiteSpace($env:OPENAI_API_KEY)) {
+        return $env:OPENAI_API_KEY.Trim()
+    }
+    if (Test-Path -LiteralPath $KeyPath) {
+        try {
+            $encrypted = [IO.File]::ReadAllText($KeyPath, [Text.Encoding]::UTF8).Trim()
+            if ([string]::IsNullOrWhiteSpace($encrypted)) { return $null }
+            $secure = ConvertTo-SecureString $encrypted
+            return ([Net.NetworkCredential]::new("", $secure)).Password
+        } catch {
+            Write-Log "Unable to decrypt the stored API key."
+        }
+    }
+    return $null
+}
+
+function Save-ApiKey {
+    param([string]$Key)
+    $secure = ConvertTo-SecureString $Key -AsPlainText -Force
+    $encrypted = ConvertFrom-SecureString $secure
+    [IO.File]::WriteAllText($KeyPath, $encrypted, [Text.Encoding]::UTF8)
+}
+
+function Remove-SavedApiKey {
+    if (Test-Path -LiteralPath $KeyPath) {
+        Remove-Item -LiteralPath $KeyPath -Force
+    }
+}
+
+function New-OpenAIClient {
+    param([string]$Key)
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    $client.Timeout = [TimeSpan]::FromMinutes(12)
+    $client.DefaultRequestHeaders.Authorization =
+        [System.Net.Http.Headers.AuthenticationHeaderValue]::new("Bearer", $Key)
+    [void]$client.DefaultRequestHeaders.TryAddWithoutValidation(
+        "X-Client-Request-Id", [Guid]::NewGuid().ToString()
+    )
+    return $client
+}
+
+function Read-OpenAIError {
+    param([string]$Text, [int]$StatusCode)
+    try {
+        $parsed = $Text | ConvertFrom-Json
+        if ($parsed.error.message) { return [string]$parsed.error.message }
+    } catch {}
+    if ($Text.Length -gt 500) { $Text = $Text.Substring(0, 500) }
+    if ([string]::IsNullOrWhiteSpace($Text)) { return "OpenAI API returned HTTP $StatusCode." }
+    return $Text
+}
+
+function Invoke-OpenAIJson {
+    param(
+        [ValidateSet("GET","POST","DELETE")][string]$Method,
+        [string]$Path,
+        $Body = $null
+    )
+    $key = Get-ApiKey
+    if ([string]::IsNullOrWhiteSpace($key)) {
+        throw "No OpenAI API key is configured."
+    }
+
+    $client = New-OpenAIClient $key
+    try {
+        $uri = "https://api.openai.com/v1$Path"
+        if ($Method -eq "GET") {
+            $response = $client.GetAsync($uri).GetAwaiter().GetResult()
+        } elseif ($Method -eq "DELETE") {
+            $response = $client.DeleteAsync($uri).GetAwaiter().GetResult()
+        } else {
+            $json = $Body | ConvertTo-Json -Depth 100 -Compress
+            $content = [System.Net.Http.StringContent]::new(
+                $json, [Text.Encoding]::UTF8, "application/json"
+            )
+            $response = $client.PostAsync($uri, $content).GetAwaiter().GetResult()
+            $content.Dispose()
+        }
+
+        $text = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $status = [int]$response.StatusCode
+        if (-not $response.IsSuccessStatusCode) {
+            throw (Read-OpenAIError $text $status)
+        }
+        if ([string]::IsNullOrWhiteSpace($text)) { return $null }
+        return ($text | ConvertFrom-Json)
+    } finally {
+        if ($response) { $response.Dispose() }
+        $client.Dispose()
+    }
+}
+
+function Invoke-OpenAIBinaryJson {
+    param([string]$Path, $Body)
+    $key = Get-ApiKey
+    if ([string]::IsNullOrWhiteSpace($key)) {
+        throw "No OpenAI API key is configured."
+    }
+    $client = New-OpenAIClient $key
+    try {
+        $json = $Body | ConvertTo-Json -Depth 50 -Compress
+        $content = [System.Net.Http.StringContent]::new(
+            $json, [Text.Encoding]::UTF8, "application/json"
+        )
+        $response = $client.PostAsync(
+            "https://api.openai.com/v1$Path", $content
+        ).GetAwaiter().GetResult()
+        $content.Dispose()
+        $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+        if (-not $response.IsSuccessStatusCode) {
+            $text = [Text.Encoding]::UTF8.GetString($bytes)
+            throw (Read-OpenAIError $text ([int]$response.StatusCode))
+        }
+        return $bytes
+    } finally {
+        if ($response) { $response.Dispose() }
+        $client.Dispose()
+    }
+}
+
+function Invoke-OpenAIMultipart {
+    param([string]$Path, [hashtable]$Fields, $File = $null)
+    $key = Get-ApiKey
+    if ([string]::IsNullOrWhiteSpace($key)) {
+        throw "No OpenAI API key is configured."
+    }
+    $client = New-OpenAIClient $key
+    $multipart = [System.Net.Http.MultipartFormDataContent]::new()
+    try {
+        foreach ($entry in $Fields.GetEnumerator()) {
+            if ($null -ne $entry.Value) {
+                $stringContent = [System.Net.Http.StringContent]::new([string]$entry.Value)
+                $multipart.Add($stringContent, [string]$entry.Key)
+            }
+        }
+
+        if ($null -ne $File) {
+            $bytes = [Convert]::FromBase64String([string]$File.base64)
+            $fileContent = [System.Net.Http.ByteArrayContent]::new($bytes)
+            $mime = if ([string]::IsNullOrWhiteSpace([string]$File.mime)) {
+                "application/octet-stream"
+            } else {
+                [string]$File.mime
+            }
+            $fileContent.Headers.ContentType =
+                [System.Net.Http.Headers.MediaTypeHeaderValue]::new($mime)
+            $multipart.Add($fileContent, "file", [string]$File.name)
+        }
+
+        $response = $client.PostAsync(
+            "https://api.openai.com/v1$Path", $multipart
+        ).GetAwaiter().GetResult()
+        $text = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        if (-not $response.IsSuccessStatusCode) {
+            throw (Read-OpenAIError $text ([int]$response.StatusCode))
+        }
+        return ($text | ConvertFrom-Json)
+    } finally {
+        if ($response) { $response.Dispose() }
+        $multipart.Dispose()
+        $client.Dispose()
+    }
+}
+
+function Invoke-OpenAIGetBytes {
+    param([string]$Path)
+    $key = Get-ApiKey
+    if ([string]::IsNullOrWhiteSpace($key)) {
+        throw "No OpenAI API key is configured."
+    }
+    $client = New-OpenAIClient $key
+    try {
+        $response = $client.GetAsync(
+            "https://api.openai.com/v1$Path"
+        ).GetAwaiter().GetResult()

@@ -1,0 +1,85 @@
+        $response = Invoke-OpenAIJson "GET" ("/videos/" + [Uri]::EscapeDataString($id))
+        Send-Json $Request.Stream 200 $response
+        return
+    }
+
+    if ($Request.Method -eq "GET" -and $path -eq "/api/video/content") {
+        $id = Get-QueryValue $uri "id"
+        if ([string]::IsNullOrWhiteSpace($id)) { throw "Video job ID is missing." }
+        $bytes = Invoke-OpenAIGetBytes (
+            "/videos/" + [Uri]::EscapeDataString($id) + "/content"
+        )
+        Send-Bytes $Request.Stream 200 "video/mp4" $bytes
+        return
+    }
+
+    if ($Request.Method -eq "POST" -and $path -eq "/api/close") {
+        Send-Json $Request.Stream 200 @{ ok = $true }
+        $script:StopRequested = $true
+        return
+    }
+
+    Send-Json $Request.Stream 404 @{ error = "Not found." }
+}
+
+if (-not (Test-Path -LiteralPath $HtmlPath)) {
+    [System.Windows.Forms.MessageBox]::Show(
+        "The JARVIS-X interface file is missing.",
+        "JARVIS-X",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Error
+    ) | Out-Null
+    exit 1
+}
+
+$listener = $null
+$port = 0
+foreach ($candidate in 39147..39167) {
+    try {
+        $listener = [System.Net.Sockets.TcpListener]::new(
+            [Net.IPAddress]::Loopback, $candidate
+        )
+        $listener.Start()
+        $port = $candidate
+        break
+    } catch {
+        if ($listener) {
+            try { $listener.Stop() } catch {}
+        }
+        $listener = $null
+    }
+}
+
+if (-not $listener) {
+    Write-Log "No local port was available."
+    exit 2
+}
+
+$url = "http://127.0.0.1:$port/?token=$script:LaunchToken"
+Write-Log "Runtime $AppVersion started on loopback port $port."
+Start-Process $url
+
+try {
+    while (-not $script:StopRequested) {
+        $client = $listener.AcceptTcpClient()
+        try {
+            $request = Read-Request $client
+            try {
+                Handle-Request $request
+            } catch {
+                $message = $_.Exception.Message
+                Write-Log "Request error: $message"
+                try {
+                    Send-Json $request.Stream 500 @{ error = $message }
+                } catch {}
+            }
+        } catch {
+            Write-Log "Transport error: $($_.Exception.Message)"
+        } finally {
+            try { $client.Close() } catch {}
+        }
+    }
+} finally {
+    try { $listener.Stop() } catch {}
+    Write-Log "Runtime stopped."
+}

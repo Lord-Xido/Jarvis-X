@@ -1,0 +1,7 @@
+$("#close-app").onclick=async()=>{if(!confirm("Close the local JARVIS-X engine?"))return;try{await api("/api/close",{method:"POST"});document.body.innerHTML='<div class="empty"><div><h3>JARVIS-X closed</h3><p>You may close this browser tab.</p></div></div>'}catch{}};
+if(!state.sessions.length)newSession();else{state.active=state.sessions[0].id;renderSessions();renderMessages()}
+status();
+})();
+</script>
+</body>
+</html>

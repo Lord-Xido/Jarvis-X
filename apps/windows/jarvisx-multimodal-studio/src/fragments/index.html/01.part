@@ -1,0 +1,77 @@
+.composer textarea{width:100%;min-height:58px;max-height:190px;resize:none;border:0;outline:0;background:transparent;color:var(--text);padding:7px;font-size:13px;line-height:1.45}
+.composer-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px}.tool-row{display:flex;gap:6px;align-items:center}.tool-row button{border:0;background:transparent;color:var(--muted);padding:7px;border-radius:8px}.tool-row button:hover{background:#18223b;color:var(--cyan)}
+.send-row{display:flex;align-items:center;gap:9px}.hint{font-size:8px;color:#607392}
+.studio{padding:24px;overflow:auto;width:100%}.studio-grid{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:18px;max-width:1200px;margin:0 auto}
+.card{border:1px solid var(--line);border-radius:16px;background:rgba(12,18,34,.86);padding:18px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 4px;font-size:14px}.card-sub{color:var(--muted);font-size:9px;margin-bottom:17px;line-height:1.5}
+.field{display:grid;gap:6px;margin-bottom:13px}.field label{font-size:9px;color:#9db1d1;text-transform:uppercase;letter-spacing:.7px}
+.field input,.field textarea,.field select{width:100%;border:1px solid #2d416c;border-radius:9px;background:#080d19;color:var(--text);padding:10px;outline:0}.field textarea{resize:vertical;min-height:120px}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--cyan)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.result-panel{min-height:520px;display:grid;place-items:center;position:relative;overflow:hidden}
+.result-placeholder{text-align:center;color:var(--muted);font-size:11px}.result-panel img,.result-panel video{max-width:100%;max-height:72vh;border-radius:12px;box-shadow:0 12px 55px rgba(0,0,0,.5)}
+.loader{width:45px;height:45px;border:3px solid #24375d;border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}@keyframes spin{to{transform:rotate(360deg)}}
+.audio-box{width:100%;padding:22px;border:1px dashed #324a78;border-radius:14px;text-align:center}.audio-box audio{width:100%;margin-top:15px}
+.progress{height:8px;background:#10192d;border-radius:99px;overflow:hidden;margin-top:12px}.progress>div{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue));width:0;transition:.3s}
+.modal-backdrop{position:fixed;inset:0;z-index:100;background:rgba(1,3,9,.74);backdrop-filter:blur(8px);display:none;place-items:center;padding:20px}.modal-backdrop.open{display:grid}
+.modal{width:min(650px,100%);max-height:90vh;overflow:auto;border:1px solid #344d80;border-radius:18px;background:#09101f;box-shadow:0 30px 100px rgba(0,0,0,.65);padding:22px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modal-head h3{margin:0}.close{border:0;background:none;color:var(--muted);font-size:22px}
+.notice{font-size:10px;line-height:1.55;padding:10px;border:1px solid rgba(73,229,155,.25);border-radius:9px;background:rgba(73,229,155,.06);color:#a9eecf;margin-bottom:15px}
+.toast{position:fixed;right:18px;bottom:18px;z-index:200;padding:11px 14px;border:1px solid #354e7c;border-radius:10px;background:#0a1222;color:var(--text);box-shadow:var(--shadow);font-size:10px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}.toast.error{border-color:#8c3342;color:#ffb0b9}
+.recording{color:var(--red)!important;animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.45}}
+@media(max-width:900px){.app{grid-template-columns:72px minmax(0,1fr)}.sidebar{padding:12px 8px}.brand h1,.brand p,.nav-label,.sidebar-section,.status-card .status-text{display:none}.brand{justify-content:center}.nav button{text-align:center}.nav-icon{width:auto;font-size:18px}.sidebar-footer .utility-btn{text-align:center;padding:10px}.studio-grid{grid-template-columns:1fr}.topbar{padding:10px 12px}.pill{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">JX</div><div><h1>JARVIS-X</h1><p>MULTIMODAL MEDIA ENGINE</p></div></div>
+    <nav class="nav">
+      <button class="active" data-view="chat"><span class="nav-icon">◈</span><span class="nav-label">Multimodal Chat</span></button>
+      <button data-view="image"><span class="nav-icon">▧</span><span class="nav-label">Image Studio</span></button>
+      <button data-view="voice"><span class="nav-icon">◉</span><span class="nav-label">Voice Studio</span></button>
+      <button data-view="video"><span class="nav-icon">▶</span><span class="nav-label">Video Studio</span></button>
+    </nav>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Conversations</div>
+      <button id="new-chat" class="utility-btn">＋ New conversation</button>
+      <div id="sessions" class="session-list"></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="status-card">
+        <div class="status-line"><span id="key-dot" class="dot"></span><strong id="key-status">Checking key</strong></div>
+        <div class="status-text">API requests remain in the local Windows process. The key is never embedded in this executable.</div>
+      </div>
+      <button id="settings-btn" class="utility-btn"><span class="nav-icon">⚙</span><span class="nav-label">Settings</span></button>
+      <button id="close-app" class="utility-btn"><span class="nav-icon">⏻</span><span class="nav-label">Close engine</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="view-title"><h2 id="view-title">Multimodal Chat</h2><p id="view-subtitle">Reason over text, images, documents, and recorded audio.</p></div>
+      <div class="top-actions">
+        <div class="pill"><span id="runtime-dot" class="dot ok"></span><span>LOCAL RUNTIME ACTIVE</span></div>
+        <button id="top-settings" class="icon-btn">Settings</button>
+      </div>
+    </header>
+
+    <section class="content">
+      <div id="view-chat" class="view chat-view active">
+        <div id="messages" class="messages"></div>
+        <div class="composer-wrap">
+          <div id="attach-preview" class="attach-preview"></div>
+          <div class="composer">
+            <textarea id="prompt" placeholder="Describe, ask, analyze, generate, or attach media…"></textarea>
+            <div class="composer-bottom">
+              <div class="tool-row">
+                <button id="attach-btn" title="Attach files">＋ File</button>
+                <button id="mic-btn" title="Record and transcribe">● Mic</button>
+                <input id="file-input" type="file" multiple hidden accept="image/*,audio/*,.pdf,.txt,.md,.csv,.json,.html,.js,.py,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
+              </div>
+              <div class="send-row"><span class="hint">Ctrl + Enter</span><button id="send" class="primary">Send</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-image" class="view studio">
+        <div class="studio-grid">
