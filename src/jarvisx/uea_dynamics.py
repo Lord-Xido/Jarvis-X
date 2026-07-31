@@ -82,10 +82,13 @@ class DrMoagiUEA:
     def loss(self, signals: Iterable[Signal3D]) -> LossBreakdown:
         batch = self._batch(signals)
         count = len(batch)
-        base = sum(
-            signal_squared_error(self.model.reconstruct(signal), signal, self.metric)
-            for signal in batch
-        ) / count
+        base = (
+            sum(
+                signal_squared_error(self.model.reconstruct(signal), signal, self.metric)
+                for signal in batch
+            )
+            / count
+        )
 
         operation_losses: list[tuple[str, float]] = []
         for operation in self.operations.items():
@@ -102,9 +105,7 @@ class DrMoagiUEA:
         kl = sum(self.model.posterior(signal).kl_standard_normal for signal in batch)
         kl /= count
         total_loss = (
-            base
-            + sum(value for _, value in operation_losses)
-            + self.coefficients.beta * kl
+            base + sum(value for _, value in operation_losses) + self.coefficients.beta * kl
         )
         return LossBreakdown(base, tuple(operation_losses), kl, total_loss)
 
@@ -146,9 +147,9 @@ class DrMoagiUEA:
             minus[axis] -= finite_difference_step
             plus_signal = Signal3D.from_vector(cast(Vector3, tuple(plus)))
             minus_signal = Signal3D.from_vector(cast(Vector3, tuple(minus)))
-            derivative = (
-                self.loss((plus_signal,)).total - self.loss((minus_signal,)).total
-            ) / (2.0 * finite_difference_step)
+            derivative = (self.loss((plus_signal,)).total - self.loss((minus_signal,)).total) / (
+                2.0 * finite_difference_step
+            )
             gradient.append(derivative)
         return cast(Vector3, tuple(gradient))
 
@@ -193,9 +194,7 @@ class DrMoagiUEA:
         if not math.isfinite(time_step) or time_step <= 0.0:
             raise ValueError("time step must be finite and positive")
         derivative = self.derivative(signal, finite_difference_step, forcing_mode)
-        candidate = Signal3D.from_vector(
-            _add(signal.as_vector(), _scale(time_step, derivative))
-        )
+        candidate = Signal3D.from_vector(_add(signal.as_vector(), _scale(time_step, derivative)))
         return bounds.project(candidate) if bounds is not None else candidate
 
     def run_to_equilibrium(
