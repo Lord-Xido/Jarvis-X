@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>3D Dr. Moagi Auto-Encoding Engine (3D-DSMPE-Ω)</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #020205;
+      --panel: #05050a;
+      --panel-2: #0a0a12;
+      --magenta: #ff00ff;
+      --cyan: #00ffff;
+      --green: #00ff66;
+      --orange: #ffaa00;
+      --muted: #7f7f92;
+      --line: #252536;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: var(--bg); }
+    body {
+      color: #e8e8ee;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      overflow: hidden;
+      display: flex;
+    }
+    #viewport {
+      flex: 1 1 auto;
+      min-width: 0;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #0b0b20 0%, #010103 68%, #000 100%);
+    }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #panel {
+      width: 360px;
+      max-width: 42vw;
+      flex: 0 0 auto;
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      border-left: 1px solid var(--magenta);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      box-shadow: -8px 0 34px rgba(255, 0, 255, 0.11);
+    }
+    h1, h2 {
+      color: var(--magenta);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.7px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 7px;
+    }
+    h1 { font-size: 13px; }
+    .equation {
+      background: #000;
+      border: 1px solid var(--magenta);
+      border-radius: 6px;
+      padding: 12px 9px;
+      color: var(--cyan);
+      font-size: 10.5px;
+      line-height: 1.55;
+      text-align: center;
+      box-shadow: 0 0 18px rgba(255, 0, 255, 0.16);
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 9px;
+      min-width: 0;
+    }
+    .metric.wide { grid-column: 1 / -1; }
+    .metric-label { color: var(--magenta); font-size: 9px; text-transform: uppercase; }
+    .metric-value {
+      color: var(--green);
+      font-size: 17px;
+      font-weight: 700;
+      margin-top: 5px;
+      overflow-wrap: anywhere;
+    }
+    .metric-sub { color: var(--muted); font-size: 8.5px; margin-top: 3px; line-height: 1.35; }
+    .control label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--cyan);
+      font-size: 9.5px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--magenta); }
+    .buttons { display: flex; gap: 5px; }
+    button {
+      flex: 1 1 0;
+      border: 1px solid #353548;
+      background: #0d0d18;
+      color: #cfcfe2;
+      border-radius: 4px;
+      padding: 8px 6px;
+      font: inherit;
+      font-size: 9.5px;
+      cursor: pointer;
+    }
+    button:hover, button:focus-visible { border-color: var(--cyan); outline: none; }
+    button.active { color: #000; background: var(--magenta); border-color: var(--magenta); }
+    button.secondary { color: var(--cyan); }
+    .status-pass { color: var(--green); }
+    .status-fail { color: #ff5252; }
+    .log {
+      min-height: 130px;
+      flex: 1 0 150px;
+      background: #000;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 9px;
+      overflow-y: auto;
+      font-size: 9px;
+      color: var(--green);
+      line-height: 1.4;
+    }
+    .log-entry { border-bottom: 1px dashed #15151f; padding: 2px 0; }
+    .log-encode { color: var(--cyan); }
+    .log-decode { color: var(--orange); }
+    .log-moagi { color: var(--magenta); }
+    .hint { color: var(--muted); font-size: 8.5px; line-height: 1.4; }
+    @media (max-width: 760px) {
+      body { flex-direction: column; overflow: auto; }
+      #viewport { min-height: 58vh; }
+      #panel {
+        width: 100%; max-width: none; min-height: 42vh;
+        border-left: 0; border-top: 1px solid var(--magenta);
+        box-shadow: 0 -8px 34px rgba(255, 0, 255, 0.11);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="viewport" aria-label="3D engine visualization">
+    <canvas id="engineCanvas"></canvas>
+  </main>
+
+  <aside id="panel">
+    <h1>3D-DSMPE-Ω | Dr. Moagi Engine</h1>
+
+    <div class="equation">
+      ℳ<sub>Ω</sub>(Ψ,𝒯<sub>d</sub>) = RMSE[Ψ,𝒟(𝒯<sub>d</sub>)] + γ·|𝒯<sub>d</sub>|/|𝒯<sub>d</sub><sup>full</sup>|<br>
+      d* = arg min<sub>1≤d≤D</sub> ℳ<sub>Ω</sub>(Ψ,𝒯<sub>d</sub>)
+    </div>
+
+    <section class="grid" aria-label="Measured model metrics">
+      <div class="metric wide">
+        <div class="metric-label">Observed Dr. Moagi Loss</div>
+        <div class="metric-value" id="loss">0.000000</div>
+        <div class="metric-sub">Measured reconstruction RMSE + γ-weighted materialization ratio</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">RMSE</div>
+        <div class="metric-value" id="rmse">0.000000</div>
+        <div class="metric-sub">Fixed 9³ evaluation lattice</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Compression</div>
+        <div class="metric-value" id="compression">0.00%</div>
+        <div class="metric-sub">1 − visited / complete tree</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Selected Depth</div>
+        <div class="metric-value" id="selectedDepth">0</div>
+        <div class="metric-sub">Minimum observed objective</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Depth Entropy</div>
+        <div class="metric-value" id="entropy">0.0000</div>
+        <div class="metric-sub">Normalized leaf-depth Shannon entropy</div>
+      </div>
+      <div class="metric wide">
+        <div class="metric-label">Topology</div>
+        <div class="metric-value" id="nodes">0 / 0</div>
+        <div class="metric-sub" id="leafSummary">Leaves: 0 | Boundary leaves: 0</div>
+      </div>
+      <div class="metric wide">
+        <div class="metric-label">Evidence Guard</div>
+        <div class="metric-value status-pass" id="evidenceStatus">PENDING</div>
+        <div class="metric-sub" id="digest">Digest: —</div>
+      </div>
+    </section>
+
+    <div class="control">
+      <label for="gammaSlider"><span>γ complexity weight</span><output id="gammaValue">0.50</output></label>
+      <input type="range" id="gammaSlider" min="0" max="100" value="50">
+    </div>
+    <div class="control">
+      <label for="depthSlider"><span>Depth search ceiling D</span><output id="depthValue">4</output></label>
+      <input type="range" id="depthSlider" min="1" max="5" value="4">
+    </div>
+    <div class="control">
+      <label for="timeSlider"><span>Field time t</span><output id="timeValue">0.00</output></label>
+      <input type="range" id="timeSlider" min="0" max="628" value="0">
+    </div>
+    <div class="control">
+      <label for="rotationSlider"><span>Rotation speed</span><output id="rotationValue">0.35</output></label>
+      <input type="range" id="rotationSlider" min="0" max="100" value="35">
+    </div>
+
+    <h2>Visualization phase</h2>
+    <div class="buttons" id="phaseButtons">
+      <button id="btnOriginal" class="active" type="button">Original Ψ</button>
+      <button id="btnLatent" type="button">Latent 𝒯</button>
+      <button id="btnDecoded" type="button">Decoded 𝒟</button>
+    </div>
+    <div class="buttons">
+      <button id="btnRebuild" class="secondary" type="button">Rebuild</button>
+      <button id="btnPause" class="secondary" type="button">Pause</button>
+      <button id="btnEvidence" class="secondary" type="button">Evidence JSON</button>
+    </div>
+
+    <p class="hint">
+      This is a bounded octree reference visualization, not a neural network claim. “Original”,
+      “latent”, and “decoded” are distinct measured representations of the same deterministic field.
+    </p>
+
+    <h2>Execution log</h2>
+    <div class="log" id="logConsole" aria-live="polite"></div>
+  </aside>
+
+  <script>
+    "use strict";
+
+    const canvas = document.getElementById("engineCanvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const viewport = document.getElementById("viewport");
+    const logConsole = document.getElementById("logConsole");
+
+    const ROOT_SIZE = 3.6;
+    const LIPSCHITZ_BOUND = 1.4;
+    const COLLAPSE_MARGIN = 0.02;
+    const EVAL_RESOLUTION = 9;
+
+    let width = 1;
+    let height = 1;
+    let gamma = 0.5;
+    let maxDepth = 4;
+    let fieldTime = 0;
+    let rotationSpeed = 0.35;
+    let rotationAngle = 0;
+    let phase = "original";
+    let paused = false;
+    let lastFrame = performance.now();
+    let selectedModel = null;
+    let candidates = [];
+    let originalPoints = [];
+    let decodedPoints = [];
+    let rebuildTimer = 0;
+
+    function completeOctreeNodes(depth) {
+      if (depth < 0) throw new Error("depth must be non-negative");
+      return (Math.pow(8, depth + 1) - 1) / 7;
+    }
+
+    function targetSDF(x, y, z, t = fieldTime) {
+      const radial = Math.hypot(x, y) - 1.1;
+      const torus = Math.hypot(radial, z) - 0.38;
+      const displacement = 0.05
+        * Math.sin(4 * x + t)
+        * Math.cos(4 * y - 0.7 * t)
+        * Math.sin(4 * z + 0.5 * t);
+      return torus + displacement;
+    }
+
+    function makeNode(x, y, z, size, depth, path, depthLimit) {
+      const sdfValue = targetSDF(x, y, z);
+      const halfDiagonal = Math.sqrt(3) * size / 2;
+      const safelyAway = Math.abs(sdfValue) > LIPSCHITZ_BOUND * halfDiagonal + COLLAPSE_MARGIN;
+      const node = { x, y, z, size, depth, path, sdfValue, boundary: false, children: null };
+
+      if (safelyAway) return node;
+      if (depth >= depthLimit) {
+        node.boundary = true;
+        return node;
+      }
+
+      node.children = [];
+      const childSize = size / 2;
+      const offset = size / 4;
+      for (let i = 0; i < 8; i += 1) {
+        node.children.push(makeNode(
+          x + (i & 1 ? offset : -offset),
+          y + (i & 2 ? offset : -offset),
+          z + (i & 4 ? offset : -offset),
+          childSize,
+          depth + 1,
+          path * 8 + i,
+          depthLimit
+        ));
+      }
+      return node;
+    }
+
+    function walkTree(root) {
+      const leaves = [];
+      let visited = 0;
+      const stack = [root];
+      while (stack.length) {
+        const node = stack.pop();
+        visited += 1;
+        if (node.children) {
+          for (let i = 7; i >= 0; i -= 1) stack.push(node.children[i]);
+        } else {
+          leaves.push(node);
+        }
+      }
+      return { leaves, visited };
+    }
+
+    function decode(root, x, y, z) {
+      let node = root;
+      while (node.children) {
+        const index = (x >= node.x ? 1 : 0) | (y >= node.y ? 2 : 0) | (z >= node.z ? 4 : 0);
+        node = node.children[index];
+      }
+      return node.sdfValue;
+    }
+
+    function sampleAxis(size, resolution) {
+      const step = size / resolution;
+      const first = -size / 2 + step / 2;
+      return Array.from({ length: resolution }, (_, index) => first + index * step);
+    }
+
+    function depthEntropy(leaves, depthLimit) {
+      const counts = Array(depthLimit + 1).fill(0);
+      leaves.forEach((leaf) => { counts[leaf.depth] += 1; });
+      if (!leaves.length || depthLimit === 0) return 0;
+      let entropy = 0;
+      counts.forEach((count) => {
+        if (!count) return;
+        const p = count / leaves.length;
+        entropy -= p * Math.log2(p);
+      });
+      return entropy / Math.log2(depthLimit + 1);
+    }
+
+    function fnv1a(text) {
+      let hash = 0x811c9dc5;
+      for (let i = 0; i < text.length; i += 1) {
+        hash ^= text.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+      }
+      return (hash >>> 0).toString(16).padStart(8, "0");
+    }
+
+    function measureModel(depthLimit) {
+      const root = makeNode(0, 0, 0, ROOT_SIZE, 0, 0, depthLimit);
+      const { leaves, visited } = walkTree(root);
+      const totalPossible = completeOctreeNodes(depthLimit);
+      const complexity = visited / totalPossible;
+      const compression = 1 - complexity;
+      const axis = sampleAxis(ROOT_SIZE, EVAL_RESOLUTION);
+      let squaredError = 0;
+      let samples = 0;
+
+      for (const z of axis) for (const y of axis) for (const x of axis) {
+        const error = targetSDF(x, y, z) - decode(root, x, y, z);
+        squaredError += error * error;
+        samples += 1;
+      }
+
+      const rmse = Math.sqrt(squaredError / samples);
+      const representedVolume = leaves.reduce((sum, leaf) => sum + Math.pow(leaf.size, 3), 0);
+      const volumeError = Math.abs(representedVolume - Math.pow(ROOT_SIZE, 3));
+      const entropy = depthEntropy(leaves, depthLimit);
+      const loss = rmse + gamma * complexity;
+      const boundaryLeaves = leaves.filter((leaf) => leaf.boundary);
+      const digestPayload = JSON.stringify({
+        depthLimit,
+        visited,
+        totalPossible,
+        leaves: leaves.map((leaf) => [leaf.path, leaf.depth, leaf.boundary ? 1 : 0, +leaf.sdfValue.toFixed(10)]),
+        rmse: +rmse.toFixed(10),
+        loss: +loss.toFixed(10)
+      });
+
+      return {
+        root, leaves, boundaryLeaves, depth: depthLimit, visited, totalPossible,
+        complexity, compression, rmse, volumeError, entropy, loss,
+        digest: fnv1a(digestPayload)
+      };
+    }
+
+    function estimateGradient(x, y, z) {
+      const h = 0.012;
+      const gx = targetSDF(x + h, y, z) - targetSDF(x - h, y, z);
+      const gy = targetSDF(x, y + h, z) - targetSDF(x, y - h, z);
+      const gz = targetSDF(x, y, z + h) - targetSDF(x, y, z - h);
+      const norm = Math.hypot(gx, gy, gz) || 1;
+      return { x: gx / norm, y: gy / norm, z: gz / norm };
+    }
+
+    function buildOriginalPoints() {
+      const axis = sampleAxis(ROOT_SIZE, 28);
+      const threshold = ROOT_SIZE / 28 * 0.62;
+      const points = [];
+      for (const z of axis) for (const y of axis) for (const x of axis) {
+        const d = targetSDF(x, y, z);
+        if (Math.abs(d) <= threshold) points.push({ x, y, z, d });
+      }
+      return points;
+    }
+
+    function buildDecodedPoints(model) {
+      return model.boundaryLeaves.map((leaf) => {
+        const normal = estimateGradient(leaf.x, leaf.y, leaf.z);
+        return {
+          x: leaf.x - leaf.sdfValue * normal.x,
+          y: leaf.y - leaf.sdfValue * normal.y,
+          z: leaf.z - leaf.sdfValue * normal.z,
+          size: leaf.size
+        };
+      });
+    }
+
+    function selectBestModel() {
+      candidates = [];
+      for (let depth = 1; depth <= maxDepth; depth += 1) candidates.push(measureModel(depth));
+      selectedModel = candidates.reduce((best, model) => {
+        if (!best || model.loss < best.loss || (model.loss === best.loss && model.depth < best.depth)) return model;
+        return best;
+      }, null);
+      originalPoints = buildOriginalPoints();
+      decodedPoints = buildDecodedPoints(selectedModel);
+    }
+
+    function runEvidenceGuard() {
+      const minimum = Math.min(...candidates.map((model) => model.loss));
+      const checks = {
+        completeTreeCount: completeOctreeNodes(0) === 1 && completeOctreeNodes(4) === 4681,
+        selectedMinimum: Math.abs(selectedModel.loss - minimum) < 1e-12,
+        boundedCompression: selectedModel.compression >= 0 && selectedModel.compression < 1,
+        partitionVolume: selectedModel.volumeError < 1e-9,
+        boundaryPresent: selectedModel.boundaryLeaves.length > 0
+      };
+      return { passed: Object.values(checks).every(Boolean), checks };
+    }
+
+    function updateMetrics(evidence) {
+      document.getElementById("loss").textContent = selectedModel.loss.toFixed(6);
+      document.getElementById("rmse").textContent = selectedModel.rmse.toFixed(6);
+      document.getElementById("compression").textContent = `${(selectedModel.compression * 100).toFixed(2)}%`;
+      document.getElementById("selectedDepth").textContent = String(selectedModel.depth);
+      document.getElementById("entropy").textContent = selectedModel.entropy.toFixed(4);
+      document.getElementById("nodes").textContent = `${selectedModel.visited.toLocaleString()} / ${selectedModel.totalPossible.toLocaleString()}`;
+      document.getElementById("leafSummary").textContent = `Leaves: ${selectedModel.leaves.length.toLocaleString()} | Boundary leaves: ${selectedModel.boundaryLeaves.length.toLocaleString()}`;
+      const status = document.getElementById("evidenceStatus");
+      status.textContent = evidence.passed ? "PASS" : "FAIL";
+      status.className = `metric-value ${evidence.passed ? "status-pass" : "status-fail"}`;
+      document.getElementById("digest").textContent = `FNV-1a model digest: ${selectedModel.digest}`;
+    }
+
+    function log(message, kind = "") {
+      const entry = document.createElement("div");
+      entry.className = `log-entry ${kind}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logConsole.prepend(entry);
+      while (logConsole.children.length > 36) logConsole.lastElementChild.remove();
+    }
+
+    function rebuild() {
+      const started = performance.now();
+      selectBestModel();
+      const evidence = runEvidenceGuard();
+      updateMetrics(evidence);
+      log(`ENCODE→MEASURE→SELECT completed in ${(performance.now() - started).toFixed(1)} ms`, "log-encode");
+      log(`d*=${selectedModel.depth}, loss=${selectedModel.loss.toFixed(6)}, digest=${selectedModel.digest}`, "log-moagi");
+      log(`Evidence guard ${evidence.passed ? "PASS" : "FAIL"}: ${JSON.stringify(evidence.checks)}`, evidence.passed ? "" : "log-decode");
+    }
+
+    function scheduleRebuild() {
+      clearTimeout(rebuildTimer);
+      rebuildTimer = setTimeout(rebuild, 90);
+    }
+
+    function resizeCanvas() {
+      const rect = viewport.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = Math.max(1, rect.width);
+      height = Math.max(1, rect.height);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function project(point, rotX, rotY) {
+      const cy = Math.cos(rotY), sy = Math.sin(rotY);
+      const cx = Math.cos(rotX), sx = Math.sin(rotX);
+      const x1 = point.x * cy + point.z * sy;
+      const z1 = -point.x * sy + point.z * cy;
+      const y1 = point.y * cx - z1 * sx;
+      const z2 = point.y * sx + z1 * cx;
+      const camera = 6.3;
+      const scale = Math.min(width, height) * 0.72 / (camera + z2);
+      return { x: width / 2 + x1 * scale, y: height / 2 + y1 * scale, z: z2, scale };
+    }
+
+    function drawPointCloud(points, rotX, rotY, color, baseRadius) {
+      const projected = points.map((point) => ({ ...project(point, rotX, rotY), source: point }));
+      projected.sort((a, b) => b.z - a.z);
+      ctx.fillStyle = color;
+      projected.forEach((point) => {
+        const radius = Math.max(0.55, baseRadius * (0.85 + point.scale / 140));
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawCube(node, rotX, rotY) {
+      const h = node.size / 2;
+      const corners = [
+        [-h,-h,-h], [h,-h,-h], [-h,h,-h], [h,h,-h],
+        [-h,-h,h], [h,-h,h], [-h,h,h], [h,h,h]
+      ].map(([dx, dy, dz]) => project({ x: node.x + dx, y: node.y + dy, z: node.z + dz }, rotX, rotY));
+      const edges = [[0,1],[1,3],[3,2],[2,0],[4,5],[5,7],[7,6],[6,4],[0,4],[1,5],[2,6],[3,7]];
+      ctx.beginPath();
+      edges.forEach(([a, b]) => { ctx.moveTo(corners[a].x, corners[a].y); ctx.lineTo(corners[b].x, corners[b].y); });
+      ctx.stroke();
+    }
+
+    function drawLatent(rotX, rotY) {
+      const sorted = selectedModel.boundaryLeaves
+        .map((node) => ({ node, p: project(node, rotX, rotY) }))
+        .sort((a, b) => b.p.z - a.p.z);
+      ctx.strokeStyle = "rgba(255,0,255,0.55)";
+      ctx.lineWidth = 0.75;
+      sorted.forEach(({ node }) => drawCube(node, rotX, rotY));
+    }
+
+    function render(now) {
+      const dt = Math.min(0.05, (now - lastFrame) / 1000);
+      lastFrame = now;
+      if (!paused) rotationAngle += dt * rotationSpeed;
+
+      ctx.fillStyle = "#020205";
+      ctx.fillRect(0, 0, width, height);
+      const rotX = 0.34 + Math.sin(rotationAngle * 0.37) * 0.16;
+      const rotY = rotationAngle;
+
+      if (selectedModel) {
+        if (phase === "original") drawPointCloud(originalPoints, rotX, rotY, "rgba(0,255,255,0.72)", 1.05);
+        if (phase === "latent") drawLatent(rotX, rotY);
+        if (phase === "decoded") drawPointCloud(decodedPoints, rotX, rotY, "rgba(255,170,0,0.88)", 1.45);
+      }
+
+      ctx.fillStyle = "#ff00ff";
+      ctx.font = "12px SFMono-Regular, Consolas, monospace";
+      ctx.fillText(`3D-DSMPE-Ω | ${phase.toUpperCase()} | γ=${gamma.toFixed(2)} | t=${fieldTime.toFixed(2)}`, 18, 28);
+      requestAnimationFrame(render);
+    }
+
+    function setPhase(next, button) {
+      phase = next;
+      document.querySelectorAll("#phaseButtons button").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      log(`Visualization phase → ${next.toUpperCase()}`, next === "decoded" ? "log-decode" : "log-encode");
+    }
+
+    document.getElementById("gammaSlider").addEventListener("input", (event) => {
+      gamma = Number(event.target.value) / 100;
+      document.getElementById("gammaValue").textContent = gamma.toFixed(2);
+      scheduleRebuild();
+    });
+    document.getElementById("depthSlider").addEventListener("input", (event) => {
+      maxDepth = Number(event.target.value);
+      document.getElementById("depthValue").textContent = String(maxDepth);
+      scheduleRebuild();
+    });
+    document.getElementById("timeSlider").addEventListener("input", (event) => {
+      fieldTime = Number(event.target.value) / 100;
+      document.getElementById("timeValue").textContent = fieldTime.toFixed(2);
+      scheduleRebuild();
+    });
+    document.getElementById("rotationSlider").addEventListener("input", (event) => {
+      rotationSpeed = Number(event.target.value) / 100;
+      document.getElementById("rotationValue").textContent = rotationSpeed.toFixed(2);
+    });
+    document.getElementById("btnOriginal").addEventListener("click", (event) => setPhase("original", event.currentTarget));
+    document.getElementById("btnLatent").addEventListener("click", (event) => setPhase("latent", event.currentTarget));
+    document.getElementById("btnDecoded").addEventListener("click", (event) => setPhase("decoded", event.currentTarget));
+    document.getElementById("btnRebuild").addEventListener("click", rebuild);
+    document.getElementById("btnPause").addEventListener("click", (event) => {
+      paused = !paused;
+      event.currentTarget.textContent = paused ? "Resume" : "Pause";
+      log(paused ? "Renderer paused" : "Renderer resumed", "log-moagi");
+    });
+    document.getElementById("btnEvidence").addEventListener("click", () => {
+      const evidence = {
+        schema: "jarvisx.3d-dsmpe-omega.v1",
+        generated_at: new Date().toISOString(),
+        parameters: { gamma, max_depth: maxDepth, field_time: fieldTime },
+        selected: {
+          depth: selectedModel.depth,
+          loss: selectedModel.loss,
+          reconstruction_rmse: selectedModel.rmse,
+          compression_ratio: selectedModel.compression,
+          complexity_ratio: selectedModel.complexity,
+          visited_nodes: selectedModel.visited,
+          total_possible_nodes: selectedModel.totalPossible,
+          leaves: selectedModel.leaves.length,
+          boundary_leaves: selectedModel.boundaryLeaves.length,
+          depth_entropy: selectedModel.entropy,
+          partition_volume_error: selectedModel.volumeError,
+          model_digest_fnv1a32: selectedModel.digest
+        },
+        candidates: candidates.map((model) => ({
+          depth: model.depth, loss: model.loss, rmse: model.rmse,
+          complexity_ratio: model.complexity, digest: model.digest
+        }))
+      };
+      const blob = new Blob([JSON.stringify(evidence, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "3d-dsmpe-omega-evidence.json";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 0);
+      log("Machine-readable evidence emitted", "log-moagi");
+    });
+
+    new ResizeObserver(resizeCanvas).observe(viewport);
+    resizeCanvas();
+    rebuild();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
