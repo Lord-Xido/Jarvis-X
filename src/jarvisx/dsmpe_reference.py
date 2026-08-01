@@ -130,7 +130,12 @@ def complete_octree_nodes(depth: int) -> int:
 
     if depth < 0:
         raise ValueError("depth must be non-negative")
-    return (8 ** (depth + 1) - 1) // 7
+    total = 0
+    level_nodes = 1
+    for _ in range(depth + 1):
+        total += level_nodes
+        level_nodes *= 8
+    return total
 
 
 def _build_node(
