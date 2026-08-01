@@ -1,9 +1,9 @@
 """Reproducible empirical validation for canonical Jarvis-X invariants.
 
 This module consolidates executable evidence for claims that are already implemented on
-``main``.  It intentionally tests bounded software properties: deterministic replay,
+``main``. It intentionally tests bounded software properties: deterministic replay,
 journal integrity, sparse transactional behavior, closed-form geometry and numerical
-invariants.  It does not infer intelligence, consciousness, physical performance or
+invariants. It does not infer intelligence, consciousness, physical performance or
 production safety from those observations.
 """
 
@@ -100,7 +100,7 @@ def _vm_replay_check(repetitions: int) -> ValidationCheck:
             "SET Ψ 10",
             "SET Φ 20",
             "ADD A Ψ Φ",
-            "SUB E Φ Ψ",
+            "SUB B Φ Ψ",
             "HALT",
         )
     )
@@ -137,7 +137,7 @@ def _vm_replay_check(repetitions: int) -> ValidationCheck:
         all_cycles_equal
         and all_ledgers_valid
         and baseline_state["A"] == 30
-        and baseline_state["E"] == 10
+        and baseline_state["B"] == 10
     )
     executed_instructions = repetitions * len(program)
 
@@ -160,7 +160,7 @@ def _vm_replay_check(repetitions: int) -> ValidationCheck:
             "trace_digest_sha256": _canonical_digest(baseline_trace),
             "ledger_integrity": all_ledgers_valid,
             "final_A": baseline_state["A"],
-            "final_E": baseline_state["E"],
+            "final_B": baseline_state["B"],
         },
         boundary=(
             "The timing is an observational CI measurement, not a portable performance claim. "
