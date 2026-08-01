@@ -91,7 +91,9 @@ def _canonical_digest(value: object) -> str:
 
 
 def _assemble(source: str) -> list[int]:
-    return Assembler().assemble(Parser().parse(source))
+    ast: list[list[str]] = Parser().parse(source)
+    assembled: list[int] = Assembler().assemble(ast)
+    return assembled
 
 
 def _vm_replay_check(repetitions: int) -> ValidationCheck:
