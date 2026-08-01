@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-07-29  
+**Last reviewed:** 2026-08-01  
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -28,12 +28,35 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Lambda instruction policy | Alpha | `ethics.py` | application-level guard, not a security sandbox |
 | Cycle sandbox | Stable reference | `sandbox.py` | cycle bound only; no process isolation |
 | Trace and Omega journal | Stable reference | `tracer.py`, `ledger.py`, `ledger_store.py` | persistence is opt-in; timestamps are environmental inputs |
+| Consolidated empirical validation | Stable reference | `empirical_validation.py`, focused tests, JSON artifact workflow | verifies bounded software invariants only; no AGI, safety or production-performance inference |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
-| Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database |
+| Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database or proof of long-memory quality |
+| Sparse billion-address field | Stable reference | `dr_moagi_billion_field.py`, transaction/digest/checkpoint tests | virtual `1000³` address space; active sparse coordinates alone are materialized |
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
 | 3D swarm bytecode architecture | Specification | `docs/DR_MOAGI_3D_SWARM_BYTECODE_ISA.md` | document does not establish hardware performance |
+
+## Empirical evidence gate
+
+The canonical evidence command is:
+
+```bash
+python -m jarvisx.empirical_validation \
+  --repetitions 64 \
+  --octree-max-depth 6 \
+  --output artifacts/empirical-validation.json
+```
+
+The gate currently tests five falsifiable properties:
+
+1. deterministic VM state and trace replay;
+2. Omega journal tamper detection;
+3. sparse-field insertion-order invariance, checkpoint replay and atomic rollback;
+4. fractal-octree agreement with exact recursive closed forms;
+5. fractional-smoothing conservation, dissipation and semigroup tolerances.
+
+The `Empirical Validation` GitHub Actions workflow publishes the machine-readable report as a retained workflow artifact. See [Empirical Validation](EMPIRICAL_VALIDATION.md) for protocols, thresholds and inference boundaries.
 
 ## Active integration and administration work
 
@@ -64,7 +87,8 @@ Jarvis-X does not currently claim:
 - trained model quality from deterministic initialized weights;
 - safety certification from the presence of a policy or coherence gate;
 - bit-exact cross-platform floating-point results from the C++ research processor;
-- production-scale fractional PDE performance or physical validity from the numerical reference solver.
+- production-scale fractional PDE performance or physical validity from the numerical reference solver;
+- empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines.
 
 ## Canonical promotion checklist
 
@@ -78,6 +102,8 @@ A capability moves to `main` only when all applicable items are satisfied:
 - [ ] implemented-versus-proposed documentation;
 - [ ] CI on supported platforms;
 - [ ] benchmark or reference comparison for performance claims;
+- [ ] machine-readable evidence artifact for empirical claims;
+- [ ] explicit inference boundary preventing overstatement;
 - [ ] security analysis for untrusted inputs;
 - [ ] migration or compatibility note when replacing an existing subsystem.
 
@@ -90,6 +116,7 @@ A capability moves to `main` only when all applicable items are satisfied:
 - versioned bytecode container;
 - expanded ISA tests;
 - enforced CI and contributor documentation;
+- consolidated empirical evidence gate with retained artifacts;
 - isolated C++ processor laboratory with cross-platform validation;
 - independently validated fractional smoothing reference for small periodic grids.
 
@@ -99,7 +126,7 @@ A capability moves to `main` only when all applicable items are satisfied:
 - durable block storage;
 - deterministic serialization;
 - transactional concurrency;
-- benchmark corpus.
+- benchmark corpus with named baselines and uncertainty reporting.
 
 ### `0.4.0` — Bounded adaptive laboratory
 
