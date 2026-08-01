@@ -14,8 +14,7 @@ def test_runtime_asset_exposes_bounded_host_bridge() -> None:
     assert "window.JarvisXAutopoieticRuntime" in html
     assert "jarvisx:autopoietic-state" in html
     assert "COMMIT/ROLLBACK" in html
-    assert "new Function" in html
-    assert "bounded-parameter-mutation-only" not in html
+    assert "bounded-parameter-mutation-only" in html
 
 
 def test_manifest_keeps_runtime_non_authoritative() -> None:
