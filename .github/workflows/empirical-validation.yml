@@ -1,0 +1,87 @@
+name: Empirical Validation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/**"
+      - "tests/**"
+      - "docs/EMPIRICAL_VALIDATION.md"
+      - "pyproject.toml"
+      - ".github/workflows/empirical-validation.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/**"
+      - "tests/**"
+      - "docs/EMPIRICAL_VALIDATION.md"
+      - "pyproject.toml"
+      - ".github/workflows/empirical-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: empirical-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: Canonical empirical evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install test dependencies
+        run: python -m pip install -e ".[test]"
+
+      - name: Test the evidence harness
+        run: pytest tests/test_empirical_validation.py -q --no-cov
+
+      - name: Generate machine-readable evidence
+        run: >-
+          python -m jarvisx.empirical_validation
+          --repetitions 64
+          --octree-max-depth 6
+          --output artifacts/empirical-validation.json
+
+      - name: Validate JSON artifact
+        run: python -m json.tool artifacts/empirical-validation.json > /dev/null
+
+      - name: Publish validation summary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path("artifacts/empirical-validation.json").read_text())
+          summary = payload["summary"]
+          lines = [
+              "## Jarvis-X empirical validation",
+              "",
+              f"**Result:** {'PASS' if summary['passed'] else 'FAIL'}",
+              f"**Checks:** {summary['checks_passed']}/{summary['checks_total']}",
+              "",
+              "| Check | Result |",
+              "|---|---|",
+          ]
+          for check in payload["checks"]:
+              lines.append(f"| `{check['name']}` | {'PASS' if check['passed'] else 'FAIL'} |")
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text("\n".join(lines) + "\n")
+          PY
+
+      - name: Upload empirical evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvisx-empirical-validation-${{ github.sha }}
+          path: artifacts/empirical-validation.json
+          if-no-files-found: error
+          retention-days: 90
