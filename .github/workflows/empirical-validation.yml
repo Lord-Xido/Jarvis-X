@@ -43,7 +43,7 @@ jobs:
         run: python -m pip install -e ".[test]"
 
       - name: Test the evidence harness
-        run: pytest tests/test_empirical_validation.py -q
+        run: pytest tests/test_empirical_validation.py -q --no-cov
 
       - name: Generate machine-readable evidence
         run: >-
