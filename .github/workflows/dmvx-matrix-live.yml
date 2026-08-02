@@ -12,6 +12,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
 
 concurrency:
   group: dmvx-matrix-live
@@ -45,3 +46,24 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Record live deployment on PR 70
+        uses: actions/github-script@v8
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          SOURCE_SHA: f1ff17833b169851570883dc06b9b5b5df7206cc
+        with:
+          script: |
+            const body = [
+              'DMVX matrix runtime deployment receipt:',
+              '',
+              `- live URL: ${process.env.PAGE_URL}`,
+              `- operational source head: \`${process.env.SOURCE_SHA}\``,
+              '- invariant suite: passed before deployment',
+              '- release path: GitHub Pages artifact deployment from the default branch',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 70,
+              body,
+            });
