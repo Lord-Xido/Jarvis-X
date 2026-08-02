@@ -31,17 +31,26 @@ jobs:
         with:
           node-version: 22
       - name: Run matrix runtime invariants
+        id: invariants
+        continue-on-error: true
         run: node --test apps/dmvx-matrix/test_core.mjs
-      - name: Record successful preflight on PR 70
-        uses: actions/github-script@v8
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: 70,
-              body: 'DMVX matrix live-release preflight passed: six invariant tests succeeded. GitHub Pages deployment is starting from operational source `f1ff17833b169851570883dc06b9b5b5df7206cc`.',
-            });
+      - name: Record preflight outcome on PR 70
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.invariants.outcome }}
+        run: |
+          cat > /tmp/dmvx-preflight.md <<EOF
+          DMVX matrix live-release preflight:
+
+          - operational source: \`f1ff17833b169851570883dc06b9b5b5df7206cc\`
+          - six-test invariant suite: ${OUTCOME}
+          - next stage: GitHub Pages deployment when preflight succeeds
+          EOF
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/70/comments" --raw-field body="$(cat /tmp/dmvx-preflight.md)"
+      - name: Enforce preflight
+        if: steps.invariants.outcome != 'success'
+        run: exit 1
 
   deploy:
     needs: preflight
@@ -56,43 +65,42 @@ jobs:
           ref: agent/dmvx-1-transactional-firmware
       - name: Configure GitHub Pages
         id: configure
+        continue-on-error: true
         uses: actions/configure-pages@v5
         with:
           enablement: true
       - name: Upload static runtime
         id: upload
+        continue-on-error: true
         uses: actions/upload-pages-artifact@v3
         with:
           path: apps/dmvx-matrix
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
       - name: Record deployment outcome on PR 70
         if: always()
-        uses: actions/github-script@v8
         env:
+          GH_TOKEN: ${{ github.token }}
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
-          SOURCE_SHA: f1ff17833b169851570883dc06b9b5b5df7206cc
           CONFIGURE_OUTCOME: ${{ steps.configure.outcome }}
           UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
           DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
-        with:
-          script: |
-            const pageUrl = process.env.PAGE_URL || '(not produced)';
-            const body = [
-              'DMVX matrix runtime deployment receipt:',
-              '',
-              `- live URL: ${pageUrl}`,
-              `- operational source head: \`${process.env.SOURCE_SHA}\``,
-              '- invariant suite: passed in preflight',
-              `- Pages configuration: ${process.env.CONFIGURE_OUTCOME}`,
-              `- artifact upload: ${process.env.UPLOAD_OUTCOME}`,
-              `- deployment: ${process.env.DEPLOY_OUTCOME}`,
-              '- release path: GitHub Pages artifact deployment from the default branch',
-            ].join('\n');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: 70,
-              body,
-            });
+        run: |
+          page_url="${PAGE_URL:-'(not produced)'}"
+          cat > /tmp/dmvx-deploy.md <<EOF
+          DMVX matrix runtime deployment receipt:
+
+          - live URL: ${page_url}
+          - operational source: \`f1ff17833b169851570883dc06b9b5b5df7206cc\`
+          - invariant suite: passed in preflight
+          - Pages configuration: ${CONFIGURE_OUTCOME}
+          - artifact upload: ${UPLOAD_OUTCOME}
+          - deployment: ${DEPLOY_OUTCOME}
+          - release path: GitHub Pages artifact deployment from the default branch
+          EOF
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/70/comments" --raw-field body="$(cat /tmp/dmvx-deploy.md)"
+      - name: Enforce deployment
+        if: steps.configure.outcome != 'success' || steps.upload.outcome != 'success' || steps.deployment.outcome != 'success'
+        run: exit 1
