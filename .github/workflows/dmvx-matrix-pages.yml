@@ -40,6 +40,8 @@ jobs:
   deploy:
     if: github.event_name != 'pull_request'
     needs: test
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -48,32 +50,50 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
       - name: Configure GitHub Pages
+        id: configure
+        continue-on-error: true
         uses: actions/configure-pages@v5
         with:
           enablement: true
       - name: Upload static runtime
+        id: upload
+        continue-on-error: true
         uses: actions/upload-pages-artifact@v3
         with:
           path: apps/dmvx-matrix
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
-      - name: Record deployment receipt on PR 70
+      - name: Enforce deployment result
+        if: steps.configure.outcome != 'success' || steps.upload.outcome != 'success' || steps.deployment.outcome != 'success'
+        run: exit 1
+
+  report:
+    if: always() && github.event_name != 'pull_request'
+    needs: [test, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record deployment outcome on PR 70
         uses: actions/github-script@v8
         env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+          TEST_RESULT: ${{ needs.test.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
         with:
           script: |
+            const pageUrl = process.env.PAGE_URL || '(not produced)';
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: 70,
               body: [
-                'DMVX matrix runtime deployed successfully.',
+                'DMVX matrix runtime deployment outcome:',
                 '',
-                `- live URL: ${process.env.PAGE_URL}`,
+                `- live URL: ${pageUrl}`,
                 `- deployed commit: \`${context.sha}\``,
-                '- six runtime invariants passed before deployment',
-                '- deployment: GitHub Pages artifact release',
+                `- invariant test job: ${process.env.TEST_RESULT}`,
+                `- Pages deployment job: ${process.env.DEPLOY_RESULT}`,
+                '- release path: GitHub Pages artifact deployment',
               ].join('\n'),
             });
