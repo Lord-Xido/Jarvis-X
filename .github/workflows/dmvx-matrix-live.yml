@@ -34,31 +34,43 @@ jobs:
         with:
           node-version: 22
       - name: Run matrix runtime invariants
+        id: invariants
         run: node --test apps/dmvx-matrix/test_core.mjs
       - name: Configure GitHub Pages
+        id: configure
         uses: actions/configure-pages@v5
         with:
           enablement: true
       - name: Upload static runtime
+        id: upload
         uses: actions/upload-pages-artifact@v3
         with:
           path: apps/dmvx-matrix
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Record live deployment on PR 70
+      - name: Record deployment outcome on PR 70
+        if: always()
         uses: actions/github-script@v8
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           SOURCE_SHA: f1ff17833b169851570883dc06b9b5b5df7206cc
+          TEST_OUTCOME: ${{ steps.invariants.outcome }}
+          CONFIGURE_OUTCOME: ${{ steps.configure.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+          DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
         with:
           script: |
+            const pageUrl = process.env.PAGE_URL || '(not produced)';
             const body = [
               'DMVX matrix runtime deployment receipt:',
               '',
-              `- live URL: ${process.env.PAGE_URL}`,
+              `- live URL: ${pageUrl}`,
               `- operational source head: \`${process.env.SOURCE_SHA}\``,
-              '- invariant suite: passed before deployment',
+              `- invariant suite: ${process.env.TEST_OUTCOME}`,
+              `- Pages configuration: ${process.env.CONFIGURE_OUTCOME}`,
+              `- artifact upload: ${process.env.UPLOAD_OUTCOME}`,
+              `- deployment: ${process.env.DEPLOY_OUTCOME}`,
               '- release path: GitHub Pages artifact deployment from the default branch',
             ].join('\n');
             await github.rest.issues.createComment({
