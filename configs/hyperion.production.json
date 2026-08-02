@@ -1,0 +1,27 @@
+{
+  "allow_unconfigured_sources": false,
+  "bytecode_absolute_tolerance": 0.01,
+  "bytecode_relative_tolerance": 0.01,
+  "continuity_absolute_tolerance": 0.01,
+  "continuity_relative_tolerance": 0.01,
+  "critical_threshold": 0.75,
+  "epsilon": 1e-12,
+  "event_tolerance_ms": 25,
+  "ghs_exposure_weight": 0.7,
+  "ghs_frequency_weight": 0.3,
+  "lower_bound": null,
+  "minimum_dt_ms": 1,
+  "precision_limit_fraction": 0.02,
+  "precision_quantile": 0.8,
+  "robust_window": 30,
+  "robust_z_threshold": 3.5,
+  "source_weights": {
+    "audio": 1.0,
+    "cpu": 1.0,
+    "csv": 1.0
+  },
+  "target_quantity": "amount",
+  "target_unit": "ZAR",
+  "value_scale": 100,
+  "weight_scale": 1000000
+}

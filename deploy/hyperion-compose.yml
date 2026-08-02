@@ -1,0 +1,26 @@
+services:
+  hyperion:
+    build:
+      context: ..
+      dockerfile: deploy/hyperion.Dockerfile
+    environment:
+      HYPERION_API_KEY: ${HYPERION_API_KEY:?set HYPERION_API_KEY}
+      HYPERION_REQUIRE_API_KEY: "true"
+      HYPERION_DATA_DIR: /var/lib/hyperion
+      HYPERION_CONFIG_FILE: /etc/hyperion/config.json
+      HYPERION_MODEL_FILE: /etc/hyperion/model.json
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - hyperion-data:/var/lib/hyperion
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+volumes:
+  hyperion-data:
