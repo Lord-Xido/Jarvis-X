@@ -1,0 +1,40 @@
+    WAIT_BUS          R1
+    CMP               R1, BUS_EMPTY
+    JZ                MAIN_LOOP
+
+    BEGIN_TX          R5
+    STORE_HANDLE      REG_INJECTION_BUFFER, R1
+    MOVI              R7, #0x00
+    CLEAR_MEM         OMEGA_CANDIDATE_BANK
+
+ENCODE_ATTEMPT:
+    JSR               EXEC_AUTO_ENCODE
+    CMP               R0, STATUS_OK
+    JNZ               HANDLE_ENCODE_FAILURE
+
+    JSR               EXEC_LATENT_STAGE
+    CMP               R0, STATUS_OK
+    JNZ               REJECT_TRANSACTION
+
+    JSR               EXEC_DECODE_VERIFY
+    CMP               R0, STATUS_OK
+    JNZ               HANDLE_VERIFY_FAILURE
+
+    JSR               EXEC_POLICY_VALIDATE
+    CMP               R0, STATUS_OK
+    JNZ               REJECT_TRANSACTION
+
+    HASH_STATE        OMEGA_CANDIDATE_BANK, R6
+    ATOMIC_COMMIT     OMEGA_CANDIDATE_BANK, OMEGA_T_BANK, R0
+    CMP               R0, STATUS_OK
+    JNZ               FATAL_COMMIT_FAULT
+
+    APPEND_RECEIPT    RECEIPT_LOG, R5, R6, R2, R4, STATUS_COMMITTED
+    SIGNAL_STATUS     STATUS_COMMITTED
+    END_TX            R5
+    JMP               MAIN_LOOP
+
+HANDLE_ENCODE_FAILURE:
+    CMP               R0, STATUS_DRIFT
+    JNZ               REJECT_TRANSACTION
+    JMP               BOUNDED_RETRY

@@ -1,0 +1,40 @@
+; ==============================================================================
+; DM-vOmegaXi+ TRANSACTIONAL AUTO-ENCODING ROM FIRMWARE
+; Architecture : Psi-Phi-Lambda-Omega-Theta stack
+; Status       : Normative source for the bounded reference ISA in ISA.md
+; Capability   : Propose -> validate -> stage -> verify -> atomically commit
+; Non-claim    : Virtual manifold size is symbolic; physical work is budgeted.
+; ==============================================================================
+
+.ARCH       DMVX-1
+.ENDIAN     LITTLE
+.WORD       32
+.ADDR       32
+.STACK      0x00008000, 0x00001000
+.ENTRY      BOOT
+
+; ------------------------------------------------------------------------------
+; Numeric and execution constants
+; Q16.16 values are encoded as integer(value * 65536).
+; ------------------------------------------------------------------------------
+.EQU STATUS_OK,                 0x00000000
+.EQU STATUS_READY,              0x00000001
+.EQU STATUS_COMMITTED,          0x00000002
+.EQU STATUS_REJECTED,           0x00000003
+.EQU STATUS_DRIFT,              0x00000101
+.EQU STATUS_VERIFY_FAILED,      0x00000102
+.EQU STATUS_BOUNDS_FAILED,      0x00000103
+.EQU STATUS_BUDGET_FAILED,      0x00000104
+.EQU STATUS_NONFINITE,          0x00000105
+.EQU STATUS_STACK_FAULT,        0x00000106
+.EQU STATUS_ROM_FAULT,          0x00000107
+
+.EQU BUS_EMPTY,                 0x00000000
+.EQU MAX_RETRIES,               0x00000004
+.EQU MAX_ACTIVE_PAGES,          0x00000100
+.EQU FREE_ENERGY_LIMIT_Q16,     0x00004000      ; 0.25
+.EQU RECON_TOLERANCE_Q16,       0x00000800      ; 0.03125
+.EQU LATENT_MIN_Q16,            0xFFFF0000      ; -1.0
+.EQU LATENT_MAX_Q16,            0x00010000      ; +1.0
+.EQU MODULATION_GAIN_Q16,       0x0000E666      ; 0.90
+

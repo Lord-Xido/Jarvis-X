@@ -1,0 +1,40 @@
+
+; ------------------------------------------------------------------------------
+; Lambda gate: validates policy evidence, bounds, authorization, and receipts.
+; ------------------------------------------------------------------------------
+EXEC_POLICY_VALIDATE:
+    ENTER             #0x08
+
+    VERIFY_AUTH       ACTIVE_AUTHORITY, R0
+    CMP               R0, STATUS_OK
+    JNZ               POLICY_RETURN
+
+    POLICY_CHECK      OMEGA_CANDIDATE_BANK, R_THETA, POLICY_EVIDENCE, R0
+    CMP               R0, STATUS_OK
+    JNZ               POLICY_RETURN
+
+    VERIFY_PROVENANCE REG_INJECTION_BUFFER, POLICY_EVIDENCE, R0
+
+POLICY_RETURN:
+    LEAVE
+    RTS
+
+; ------------------------------------------------------------------------------
+; Fatal faults: only integrity failures halt the runtime.
+; ------------------------------------------------------------------------------
+FATAL_ROM_FAULT:
+    APPEND_FAULT      FAULT_LOG, #0x00, PC, STATUS_ROM_FAULT, #0x00
+    SIGNAL_STATUS     STATUS_ROM_FAULT
+    HALT
+
+FATAL_BOOT_FAULT:
+    APPEND_FAULT      FAULT_LOG, #0x00, PC, R0, #0x00
+    SIGNAL_STATUS     R0
+    HALT
+
+FATAL_COMMIT_FAULT:
+    APPEND_FAULT      FAULT_LOG, R5, PC, R0, R4
+    SIGNAL_STATUS     R0
+    HALT
+
+; ------------------------------------------------------------------------------
