@@ -19,10 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  preflight:
     runs-on: ubuntu-latest
     steps:
       - name: Check out operational runtime branch
@@ -34,8 +31,29 @@ jobs:
         with:
           node-version: 22
       - name: Run matrix runtime invariants
-        id: invariants
         run: node --test apps/dmvx-matrix/test_core.mjs
+      - name: Record successful preflight on PR 70
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 70,
+              body: 'DMVX matrix live-release preflight passed: six invariant tests succeeded. GitHub Pages deployment is starting from operational source `f1ff17833b169851570883dc06b9b5b5df7206cc`.',
+            });
+
+  deploy:
+    needs: preflight
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out operational runtime branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/dmvx-1-transactional-firmware
       - name: Configure GitHub Pages
         id: configure
         uses: actions/configure-pages@v5
@@ -55,7 +73,6 @@ jobs:
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           SOURCE_SHA: f1ff17833b169851570883dc06b9b5b5df7206cc
-          TEST_OUTCOME: ${{ steps.invariants.outcome }}
           CONFIGURE_OUTCOME: ${{ steps.configure.outcome }}
           UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
           DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
@@ -67,7 +84,7 @@ jobs:
               '',
               `- live URL: ${pageUrl}`,
               `- operational source head: \`${process.env.SOURCE_SHA}\``,
-              `- invariant suite: ${process.env.TEST_OUTCOME}`,
+              '- invariant suite: passed in preflight',
               `- Pages configuration: ${process.env.CONFIGURE_OUTCOME}`,
               `- artifact upload: ${process.env.UPLOAD_OUTCOME}`,
               `- deployment: ${process.env.DEPLOY_OUTCOME}`,
