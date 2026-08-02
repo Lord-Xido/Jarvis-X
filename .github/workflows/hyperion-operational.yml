@@ -1,0 +1,86 @@
+name: Hyperion Operational Service
+
+on:
+  pull_request:
+    paths:
+      - "src/jarvisx/hyperion*.py"
+      - "tests/test_hyperion*.py"
+      - "scripts/smoke_hyperion_service.py"
+      - "configs/hyperion*.json"
+      - "deploy/hyperion*"
+      - "docs/HYPERION*.md"
+      - "pyproject.toml"
+      - ".github/workflows/hyperion-operational.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/hyperion*.py"
+      - "tests/test_hyperion*.py"
+      - "scripts/smoke_hyperion_service.py"
+      - "configs/hyperion*.json"
+      - "deploy/hyperion*"
+      - "docs/HYPERION*.md"
+      - "pyproject.toml"
+      - ".github/workflows/hyperion-operational.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  operational-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and test dependencies
+        run: python -m pip install -e ".[test]"
+      - name: Run Hyperion tests
+        run: pytest -q tests/test_hyperion.py tests/test_hyperion_operational.py
+      - name: CLI audit and verification
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          Path("/tmp/hyperion-input.json").write_text(json.dumps({"observations": [
+              {"source": "csv", "timestamp_ms": 0, "value": 100.0, "quantity": "amount", "unit": "ZAR", "correlation_id": "ci", "label": "known"},
+              {"source": "cpu", "timestamp_ms": 1, "value": 100.0, "quantity": "amount", "unit": "ZAR", "correlation_id": "ci", "label": "known"}
+          ]}))
+          PY
+          jarvisx-hyperion audit /tmp/hyperion-input.json \
+            --config configs/hyperion.production.json \
+            --model configs/hyperion.model.v1.json \
+            --output /tmp/hyperion-bundle.json
+          jarvisx-hyperion verify /tmp/hyperion-bundle.json \
+            --config configs/hyperion.production.json \
+            --model configs/hyperion.model.v1.json
+      - name: Authenticated network smoke test
+        env:
+          HYPERION_API_KEY: ci-secret
+          HYPERION_REQUIRE_API_KEY: "true"
+          HYPERION_DATA_DIR: /tmp/hyperion-state
+          HYPERION_CONFIG_FILE: configs/hyperion.production.json
+          HYPERION_MODEL_FILE: configs/hyperion.model.v1.json
+        run: |
+          uvicorn jarvisx.hyperion_service:app_factory --factory --host 127.0.0.1 --port 8080 --workers 1 >/tmp/hyperion.log 2>&1 &
+          service_pid=$!
+          trap 'kill $service_pid' EXIT
+          python - <<'PY'
+          import time
+          import urllib.request
+
+          for _ in range(50):
+              try:
+                  urllib.request.urlopen("http://127.0.0.1:8080/healthz", timeout=1)
+                  break
+              except Exception:
+                  time.sleep(0.1)
+          else:
+              raise SystemExit("service did not become healthy")
+          PY
+          python scripts/smoke_hyperion_service.py
+      - name: Build container image
+        run: docker build -f deploy/hyperion.Dockerfile -t jarvisx-hyperion:ci .
