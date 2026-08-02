@@ -1,0 +1,21 @@
+{
+  "faults": [],
+  "output": [
+    0.1000055120820693,
+    -0.1999873893117375,
+    0.2999853142794322,
+    -0.40000757415359833
+  ],
+  "receipt": {
+    "candidate_digest": "d903c394d18d88f297cf252792eb8a5b6b7eb4f37c6333c0bceab9e262c3f69a",
+    "committed_digest": "d903c394d18d88f297cf252792eb8a5b6b7eb4f37c6333c0bceab9e262c3f69a",
+    "free_energy": 0.08163255568911763,
+    "input_digest": "4509c7ff15d03d99840ae65de8e44d23f125884f6d1887ed2fd3bf84c922e65a",
+    "outcome": "committed",
+    "reconstruction_distance": 1.0095661124472771e-05,
+    "retries": 0,
+    "status": 0,
+    "tx_id": 1
+  },
+  "status": "COMMITTED"
+}
