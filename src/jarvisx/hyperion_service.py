@@ -146,7 +146,9 @@ class AtomicReportStore:
                 if current != encoded:
                     raise RuntimeError("immutable report digest collision")
                 return destination
-            temporary = destination.with_suffix(f".tmp-{os.getpid()}-{threading.get_ident()}")
+            temporary = destination.with_suffix(
+                f".tmp-{os.getpid()}-{threading.get_ident()}"
+            )
             with temporary.open("wb") as handle:
                 handle.write(encoded)
                 handle.flush()
@@ -218,6 +220,35 @@ def _json_compatible(value: object) -> object:
     )
 
 
+def _required_int(value: object, field_name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{field_name} must be an integer")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError as error:
+            raise ValueError(f"{field_name} must be an integer") from error
+    raise ValueError(f"{field_name} must be an integer")
+
+
+def _required_float(value: object, field_name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{field_name} must be numeric")
+    if isinstance(value, (int, float, str)):
+        try:
+            converted = float(value)
+        except ValueError as error:
+            raise ValueError(f"{field_name} must be numeric") from error
+        if not converted == converted or converted in (float("inf"), float("-inf")):
+            raise ValueError(f"{field_name} must be finite")
+        return converted
+    raise ValueError(f"{field_name} must be numeric")
+
+
 def report_to_dict(report: AuditReport) -> dict[str, object]:
     value = _json_compatible(asdict(report))
     if not isinstance(value, dict):
@@ -236,8 +267,8 @@ def observation_to_dict(observation: Observation) -> dict[str, object]:
 def observation_from_dict(payload: Mapping[str, object]) -> Observation:
     return Observation(
         source=str(payload["source"]),
-        timestamp_ms=int(payload["timestamp_ms"]),
-        value=float(payload["value"]),
+        timestamp_ms=_required_int(payload["timestamp_ms"], "timestamp_ms"),
+        value=_required_float(payload["value"], "value"),
         quantity=str(payload["quantity"]),
         unit=str(payload["unit"]),
         correlation_id=(
@@ -245,7 +276,7 @@ def observation_from_dict(payload: Mapping[str, object]) -> Observation:
             if payload.get("correlation_id") is not None
             else None
         ),
-        confidence=float(payload.get("confidence", 1.0)),
+        confidence=_required_float(payload.get("confidence", 1.0), "confidence"),
         available=bool(payload.get("available", True)),
         label=str(payload["label"]) if payload.get("label") is not None else None,
         metadata=(
@@ -306,9 +337,11 @@ def verify_evidence_bundle(
         return False, "observations missing"
     observations: list[Observation] = []
     for payload in raw_observations:
-        if not isinstance(payload, Mapping):
+        if not isinstance(payload, dict):
             return False, "invalid observation payload"
-        observations.append(observation_from_dict(cast(Mapping[str, object], payload)))
+        observations.append(
+            observation_from_dict(cast(Mapping[str, object], payload))
+        )
     replay = engine.audit(observations)
     if not replay.verify():
         return False, "replayed report failed verification"
@@ -463,9 +496,15 @@ def create_hyperion_app(
             return
         expected = runtime_settings.api_key
         if expected is None or x_hyperion_key is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="unauthorized",
+            )
         if not hmac.compare_digest(x_hyperion_key, expected):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="unauthorized",
+            )
 
     @application.get("/healthz", include_in_schema=False)
     def healthz() -> dict[str, str]:
@@ -541,7 +580,11 @@ def create_hyperion_app(
             )
         return result
 
-    @application.get("/metrics", dependencies=[Depends(authorize)], include_in_schema=False)
+    @application.get(
+        "/metrics",
+        dependencies=[Depends(authorize)],
+        include_in_schema=False,
+    )
     def metrics_endpoint() -> Response:
         return Response(runtime.metrics_text(), media_type="text/plain; version=0.0.4")
 
