@@ -12,6 +12,26 @@ This package converts the original pseudo-assembly into a bounded, auditable ref
 - `MATRIX_1000KB3.md` — formal 1000³ logical-matrix extension, runtime alignment table, measurable targets, and capability boundaries.
 - `SHA256SUMS.txt` — integrity manifest for source fragments, generated ROM, documentation, VM, tests, and demo output.
 
+## Operational browser runtime
+
+The executable sparse-matrix implementation is under `../../apps/dmvx-matrix/`. It operationalizes the matrix specification with:
+
+- a deterministic logical `1000³` domain backed by at most 4,096 resident cells;
+- a 64-value encoder, Q16.16 latent state, decoder, and measured reconstruction RMSE;
+- finite, bounds, and resource-budget validation with atomic commit or rollback;
+- leaky residual correction memory and inward active-set reduction;
+- versioned CRC-32 ROM persistence, local autoboot, and binary export;
+- SHA-256 receipt chaining and measured browser telemetry;
+- six Node.js invariant tests and GitHub Pages deployment workflows.
+
+Run its invariant suite with:
+
+```bash
+node --test ../../apps/dmvx-matrix/test_core.mjs
+```
+
+The browser runtime is an executable reference implementation, not a claim of a physically resident billion-cell tensor, electromagnetic bytecode, zero latency, or measured `1000^n` acceleration.
+
 ## Source transport
 
 The authoritative ROM source is stored as ordered text fragments so connector transport can be verified independently. Materialize the original source with:
