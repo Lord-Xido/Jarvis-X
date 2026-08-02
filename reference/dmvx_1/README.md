@@ -9,6 +9,7 @@ This package converts the original pseudo-assembly into a bounded, auditable ref
 - `reference_vm.py` — deterministic executable reference model.
 - `test_reference_vm.py` — commit, rollback, budget, authorization, and retry tests.
 - `demo_output.json` — canonical committed transaction receipt.
+- `MATRIX_1000KB3.md` — formal 1000³ logical-matrix extension, runtime alignment table, measurable targets, and capability boundaries.
 - `SHA256SUMS.txt` — integrity manifest for source fragments, generated ROM, documentation, VM, tests, and demo output.
 
 ## Source transport
