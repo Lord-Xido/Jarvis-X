@@ -1,0 +1,40 @@
+
+HANDLE_VERIFY_FAILURE:
+    CMP               R0, STATUS_VERIFY_FAILED
+    JNZ               REJECT_TRANSACTION
+
+BOUNDED_RETRY:
+    INC               R7
+    CMP               R7, MAX_RETRIES
+    JGE               REJECT_TRANSACTION
+
+    APPLY_MODULATION  R_THETA, MODULATION_GAIN_Q16, Z_LATENT_VECTOR, R0
+    CMP               R0, STATUS_OK
+    JNZ               REJECT_TRANSACTION
+    JMP               ENCODE_ATTEMPT
+
+REJECT_TRANSACTION:
+    HASH_STATE        OMEGA_CANDIDATE_BANK, R6
+    CLEAR_MEM         OMEGA_CANDIDATE_BANK
+    APPEND_RECEIPT    RECEIPT_LOG, R5, R6, R2, R4, STATUS_REJECTED
+    APPEND_FAULT      FAULT_LOG, R5, PC, R0, R4
+    SIGNAL_STATUS     STATUS_REJECTED
+    ABORT_TX          R5
+    JMP               MAIN_LOOP
+
+; ------------------------------------------------------------------------------
+; Encoder: computes a candidate latent vector and measured free energy.
+; Every exit restores the stack frame.
+; ------------------------------------------------------------------------------
+.SECTION "NEURAL_CODEC_SUBSYSTEM", RX
+
+EXEC_AUTO_ENCODE:
+    ENTER             #0x10
+    PUSH              R2
+    PUSH              R3
+
+    ENCODE_LATENT     REG_INJECTION_BUFFER, R_THETA, Z_LATENT_VECTOR, R0
+    CMP               R0, STATUS_OK
+    JNZ               AUTO_ENCODE_RETURN
+
+    CHECK_FINITE      Z_LATENT_VECTOR, R0

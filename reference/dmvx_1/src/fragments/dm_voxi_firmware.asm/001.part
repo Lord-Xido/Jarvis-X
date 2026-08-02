@@ -1,0 +1,40 @@
+; ------------------------------------------------------------------------------
+; Memory map
+; ------------------------------------------------------------------------------
+.ORG 0x00000000
+.SECTION "ROM_BOOT", RX
+
+BOOT:
+    INIT_SYS          #0x00, R0
+    INIT_STACK        STACK_BASE, STACK_LIMIT
+    VERIFY_ROM        ROM_BOOT_BEGIN, ROM_END, R0
+    CMP               R0, STATUS_OK
+    JNZ               FATAL_ROM_FAULT
+
+    INIT_VMANIFOLD    MANIFOLD_TABLE, MAX_ACTIVE_PAGES, R0
+    CMP               R0, STATUS_OK
+    JNZ               FATAL_BOOT_FAULT
+
+    CLEAR_MEM         OMEGA_CANDIDATE_BANK
+    CLEAR_MEM         RECEIPT_WORKSPACE
+    MOVI              R7, #0x00
+    SIGNAL_STATUS     STATUS_READY
+    JMP               MAIN_LOOP
+
+ROM_BOOT_BEGIN:
+    NOP
+
+; ------------------------------------------------------------------------------
+; Core transaction loop
+; R0 : status/result
+; R1 : bus payload handle
+; R2 : free energy Q16.16
+; R3 : scratch
+; R4 : reconstruction distance Q16.16
+; R5 : transaction id
+; R6 : candidate digest
+; R7 : retry counter
+; ------------------------------------------------------------------------------
+.SECTION "CORE_EXECUTION_LOOP", RX
+
+MAIN_LOOP:

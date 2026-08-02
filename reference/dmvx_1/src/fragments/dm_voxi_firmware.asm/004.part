@@ -1,0 +1,40 @@
+    CMP               R0, STATUS_OK
+    JNZ               AUTO_ENCODE_RETURN
+
+    CALC_FREE_ENERGY  Z_LATENT_VECTOR, R2, R0
+    CMP               R0, STATUS_OK
+    JNZ               AUTO_ENCODE_RETURN
+
+    CMP               R2, FREE_ENERGY_LIMIT_Q16
+    JLE               AUTO_ENCODE_ACCEPT
+
+    MOVI              R0, STATUS_DRIFT
+    JMP               AUTO_ENCODE_RETURN
+
+AUTO_ENCODE_ACCEPT:
+    MOVI              R0, STATUS_OK
+
+AUTO_ENCODE_RETURN:
+    POP               R3
+    POP               R2
+    LEAVE
+    RTS
+
+; ------------------------------------------------------------------------------
+; Quantize into a staging bank. Committed Omega state is never mutated here.
+; ------------------------------------------------------------------------------
+EXEC_LATENT_STAGE:
+    ENTER             #0x08
+
+    QUANTIZE_Q16      Z_LATENT_VECTOR, Z_QUANTIZED, R0
+    CMP               R0, STATUS_OK
+    JNZ               LATENT_STAGE_RETURN
+
+    CHECK_BOUNDS      Z_QUANTIZED, LATENT_MIN_Q16, LATENT_MAX_Q16, R0
+    CMP               R0, STATUS_OK
+    JNZ               LATENT_STAGE_RETURN
+
+    CHECK_BUDGET      Z_QUANTIZED, MAX_ACTIVE_PAGES, R0
+    CMP               R0, STATUS_OK
+    JNZ               LATENT_STAGE_RETURN
+

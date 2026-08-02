@@ -1,0 +1,40 @@
+    WRITE_MEM         OMEGA_CANDIDATE_BANK, Z_QUANTIZED, R0
+
+LATENT_STAGE_RETURN:
+    LEAVE
+    RTS
+
+; ------------------------------------------------------------------------------
+; Decode from staged state and compare with a tolerance, not exact equality.
+; ------------------------------------------------------------------------------
+EXEC_DECODE_VERIFY:
+    ENTER             #0x08
+
+    READ_MEM          OMEGA_CANDIDATE_BANK, Z_RETRIEVED, R0
+    CMP               R0, STATUS_OK
+    JNZ               DECODE_VERIFY_RETURN
+
+    DECODE_LATENT     Z_RETRIEVED, R_THETA, REG_RECONSTRUCTION_OUTPUT, R0
+    CMP               R0, STATUS_OK
+    JNZ               DECODE_VERIFY_RETURN
+
+    CHECK_FINITE      REG_RECONSTRUCTION_OUTPUT, R0
+    CMP               R0, STATUS_OK
+    JNZ               DECODE_VERIFY_RETURN
+
+    CALC_DISTANCE     REG_RECONSTRUCTION_OUTPUT, REG_INJECTION_BUFFER, R4, R0
+    CMP               R0, STATUS_OK
+    JNZ               DECODE_VERIFY_RETURN
+
+    CMP               R4, RECON_TOLERANCE_Q16
+    JLE               DECODE_VERIFY_ACCEPT
+
+    MOVI              R0, STATUS_VERIFY_FAILED
+    JMP               DECODE_VERIFY_RETURN
+
+DECODE_VERIFY_ACCEPT:
+    MOVI              R0, STATUS_OK
+
+DECODE_VERIFY_RETURN:
+    LEAVE
+    RTS

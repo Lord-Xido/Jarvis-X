@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="DMVX-1 operational 1000³ sparse matrix codec reference runtime">
+  <title>DMVX-1 · Operational 1000³ Matrix Runtime</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">DM–vΩΞ⁺ / DMVX-1</p>
+        <h1>Operational 1000³ Matrix Runtime</h1>
+        <p class="subhead">Sparse logical field · Q16.16 latent codec · transactional commit/rollback · CRC-checked ROM · receipt chain</p>
+      </div>
+      <div class="status-stack">
+        <span id="runtime-status" class="pill good">AUTO RUNNING</span>
+        <span class="pill">LOGICAL DOMAIN: 1,000,000,000 CELLS</span>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <div class="viewport-card">
+        <div id="viewport" aria-label="3D visualization of the committed sparse matrix state"></div>
+        <div class="viewport-legend">
+          <span><i class="dot raw"></i> low activation</span>
+          <span><i class="dot latent"></i> midpoint</span>
+          <span><i class="dot committed"></i> high activation</span>
+        </div>
+        <div class="commit-banner" id="commit-banner">Awaiting first transaction</div>
+      </div>
+
+      <aside class="control-column">
+        <section class="panel">
+          <div class="panel-title"><span>Measured Runtime</span><span id="frame-state">—</span></div>
+          <dl class="metrics">
+            <div><dt>Active cells</dt><dd id="m-active">—</dd></div>
+            <div><dt>Resident state</dt><dd id="m-bytes">—</dd></div>
+            <div><dt>Logical compression</dt><dd id="m-compression">—</dd></div>
+            <div><dt>Codec latency</dt><dd id="m-codec">—</dd></div>
+            <div><dt>Reconstruction RMSE</dt><dd id="m-rmse">—</dd></div>
+            <div><dt>Measured throughput</dt><dd id="m-throughput">—</dd></div>
+            <div><dt>Frame latency</dt><dd id="m-frame">—</dd></div>
+            <div><dt>State version</dt><dd id="m-version">0</dd></div>
+          </dl>
+        </section>
+
+        <section class="panel controls-panel">
+          <div class="panel-title"><span>Operator Bus</span><span>AUTHORIZED LOCAL DEMO</span></div>
+          <label for="drive">External drive <output id="drive-value">0.50</output></label>
+          <input id="drive" type="range" min="0" max="1" step="0.01" value="0.5">
+          <div class="button-grid">
+            <button id="step">Encode → verify → commit</button>
+            <button id="toggle-auto">Pause auto</button>
+            <button id="inward">Turn inward ×2</button>
+            <button id="save-rom">Save ROM</button>
+            <button id="load-rom">Load ROM</button>
+            <button id="export-rom">Export .bin</button>
+            <button id="reset" class="danger wide">Reset deterministic state</button>
+          </div>
+        </section>
+
+        <section class="panel ledger-panel">
+          <div class="panel-title"><span>Ω Receipt Ledger</span><span id="ledger-head">GENESIS</span></div>
+          <ol id="ledger" class="ledger"></ol>
+        </section>
+      </aside>
+    </section>
+
+    <footer>
+      <strong>Operational boundary:</strong> this deployment implements a bounded deterministic reference codec and visualizer. The 1000³ domain is logical and sparse; symbolic 1000ⁿ scaling is not reported as physical speed.
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" referrerpolicy="no-referrer"></script>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
