@@ -1,0 +1,25 @@
+; Data and persistent regions
+; ------------------------------------------------------------------------------
+.ORG 0x00010000
+.SECTION "VOLATILE_WORK", RW
+REG_INJECTION_BUFFER:       .RES 0x1000
+REG_RECONSTRUCTION_OUTPUT:  .RES 0x1000
+Z_LATENT_VECTOR:            .RES 0x1000
+Z_QUANTIZED:                .RES 0x1000
+Z_RETRIEVED:                .RES 0x1000
+RECEIPT_WORKSPACE:          .RES 0x0100
+R_THETA:                    .Q16 1.000000
+ACTIVE_AUTHORITY:           .RES 0x0100
+POLICY_EVIDENCE:            .RES 0x0400
+
+.ORG 0x00020000
+.SECTION "PERSISTENT_STATE", RWP
+OMEGA_T_BANK:               .RES 0x2000
+OMEGA_CANDIDATE_BANK:       .RES 0x2000
+MANIFOLD_TABLE:             .RES 0x1000
+RECEIPT_LOG:                .RES 0x4000
+FAULT_LOG:                  .RES 0x2000
+
+.ORG 0x0002FFFF
+ROM_END:
+    .DWORD 0x44564D58       ; "DVMX"

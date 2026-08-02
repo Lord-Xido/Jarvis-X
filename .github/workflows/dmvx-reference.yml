@@ -30,6 +30,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Assemble normative ROM source
+        working-directory: reference/dmvx_1
+        run: cat src/fragments/dm_voxi_firmware.asm/*.part > dm_voxi_firmware.asm
+
       - name: Compile reference VM
         run: python -m compileall -q reference/dmvx_1
 
