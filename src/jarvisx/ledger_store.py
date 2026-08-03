@@ -4,7 +4,7 @@ import json
 import os
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .ledger import OmegaLedger
 
@@ -29,9 +29,23 @@ class PersistentLedger(OmegaLedger):
                 raise ValueError("ledger integrity verification failed")
 
     def log(self, state: Mapping[str, Any], opcode: int) -> dict[str, Any]:
-        entry: dict[str, Any] = super().log(state, opcode)
-        self._persist()
+        checkpoint = self.checkpoint()
+        entry = cast(dict[str, Any], OmegaLedger.log(self, state, opcode))
+        try:
+            self._persist()
+        except Exception:
+            OmegaLedger.restore(self, checkpoint)
+            raise
         return entry
+
+    def restore(self, checkpoint: int) -> None:
+        if checkpoint == len(self.chain):
+            return
+        OmegaLedger.restore(self, checkpoint)
+        self._persist()
+
+    def reset(self) -> None:
+        self.restore(0)
 
     def _persist(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
