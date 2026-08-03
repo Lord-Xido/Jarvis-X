@@ -33,6 +33,22 @@ class OmegaLedger:
         self.chain: list[dict[str, Any]] = []
         self._clock_ns = clock_ns or time.time_ns
 
+    def checkpoint(self) -> int:
+        return len(self.chain)
+
+    def restore(self, checkpoint: int) -> None:
+        if (
+            not isinstance(checkpoint, int)
+            or isinstance(checkpoint, bool)
+            or checkpoint < 0
+            or checkpoint > len(self.chain)
+        ):
+            raise ValueError("ledger checkpoint is invalid")
+        del self.chain[checkpoint:]
+
+    def reset(self) -> None:
+        self.chain.clear()
+
     def log(self, state: Mapping[str, Any], opcode: int) -> dict[str, Any]:
         if not isinstance(state, Mapping):
             raise TypeError("ledger state must be a mapping")
