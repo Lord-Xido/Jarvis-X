@@ -4,7 +4,7 @@ import json
 import os
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .ledger import OmegaLedger
 
@@ -30,7 +30,7 @@ class PersistentLedger(OmegaLedger):
 
     def log(self, state: Mapping[str, Any], opcode: int) -> dict[str, Any]:
         checkpoint = self.checkpoint()
-        entry = OmegaLedger.log(self, state, opcode)
+        entry = cast(dict[str, Any], OmegaLedger.log(self, state, opcode))
         try:
             self._persist()
         except Exception:
