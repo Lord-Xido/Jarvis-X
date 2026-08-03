@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from os import PathLike
 
 from .debugger import Debugger
@@ -16,12 +17,23 @@ from .sandbox import Sandbox
 from .tracer import Tracer
 
 
-class CodexVM:
-    """Deterministic Jarvis-X bytecode virtual machine.
+@dataclass(frozen=True)
+class _VMCheckpoint:
+    registers: dict[str, int]
+    memory: bytes
+    cycles: int
+    running: bool
+    ledger_length: int
+    trace_length: int
 
-    Ordinary VM execution is side-effect free outside memory unless a
-    ``ledger_path`` is supplied. Reflex stabilization is opt-in so that basic
-    assembly semantics remain authoritative and reproducible.
+
+class CodexVM:
+    """Deterministic transactional Jarvis-X bytecode virtual machine.
+
+    Each instruction executes against a complete authoritative-state checkpoint.
+    A failed execution, validation, journal write, or trace write restores the
+    checkpoint and stops the VM. Reflex stabilization is opt-in and occurs
+    before the canonical post-instruction snapshot is journalled and traced.
     """
 
     def __init__(
@@ -48,6 +60,24 @@ class CodexVM:
         self.program: list[int] = []
         self.cycles = 0
         self.running = False
+
+    def _checkpoint(self) -> _VMCheckpoint:
+        return _VMCheckpoint(
+            registers=self.regs.snapshot(),
+            memory=self.mem.snapshot(),
+            cycles=self.cycles,
+            running=self.running,
+            ledger_length=self.ledger.checkpoint(),
+            trace_length=self.tracer.checkpoint(),
+        )
+
+    def _restore(self, checkpoint: _VMCheckpoint) -> None:
+        self.regs.restore(checkpoint.registers)
+        self.mem.restore(checkpoint.memory)
+        self.cycles = checkpoint.cycles
+        self.running = checkpoint.running
+        self.ledger.restore(checkpoint.ledger_length)
+        self.tracer.restore(checkpoint.trace_length)
 
     def load(self, bytecode: Iterable[int]) -> None:
         program = list(bytecode)
@@ -78,20 +108,31 @@ class CodexVM:
             self.running = False
             raise RuntimeError("Lambda policy blocked instruction")
 
-        should_continue = bool(self.executor.execute(instruction))
-        snapshot = self.regs.snapshot()
-        self.ledger.log(snapshot, instruction.opcode)
-        self.tracer.record(instruction, snapshot)
+        checkpoint = self._checkpoint()
+        try:
+            next_cycles = self.cycles + 1
+            self.sandbox.enforce(next_cycles)
 
-        if self.enable_reflex:
-            self.reflex.stabilize(self.regs)
+            should_continue = bool(self.executor.execute(instruction))
+            if self.enable_reflex:
+                self.reflex.stabilize(self.regs)
 
-        self.regs["IP"] = ip + 1
-        self.cycles += 1
-        self.sandbox.enforce(self.cycles)
+            self.regs["IP"] = ip + 1
+            self.cycles = next_cycles
+            self.running = should_continue
 
-        if not should_continue:
+            snapshot = self.regs.snapshot()
+            self.ledger.log(snapshot, instruction.opcode)
+            self.tracer.record(instruction, snapshot)
+        except Exception:
+            try:
+                self._restore(checkpoint)
+            except Exception as rollback_error:
+                self.running = False
+                raise RuntimeError("VM transaction rollback failed") from rollback_error
             self.running = False
+            raise
+
         return should_continue
 
     def run(self) -> dict[str, int]:
