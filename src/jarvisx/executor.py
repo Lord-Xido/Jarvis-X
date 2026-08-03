@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .registers import REGISTER_NAMES
 
-REG_NAMES = list(REGISTER_NAMES)
+REG_NAMES: list[str] = list(REGISTER_NAMES)
 SUPPORTED_OPCODES = frozenset({0x01, 0x03, 0x04, 0x0A})
 
 
