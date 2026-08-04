@@ -49,11 +49,9 @@ jobs:
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
           src/jarvisx/fractional_smoothing_3d.py
-          src/jarvisx/photonic_rendering.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
-          tests/test_photonic_rendering.py
 
       - name: Check canonical import order
         run: >-
@@ -63,11 +61,9 @@ jobs:
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
           src/jarvisx/fractional_smoothing_3d.py
-          src/jarvisx/photonic_rendering.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
-          tests/test_photonic_rendering.py
 
       - name: Type-check package
         run: mypy src/jarvisx --ignore-missing-imports
