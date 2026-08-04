@@ -616,6 +616,8 @@ class Sparse3DBitVM:
             if operand is not None and not isinstance(operand, BitAddress):
                 raise TypeError("instruction addresses must be BitAddress values")
 
+        required: Tuple[BitAddress | None, ...]
+        forbidden: Tuple[BitAddress | None, ...]
         if instruction.opcode in (BitOpcode.BSET, BitOpcode.BCLR):
             required = (instruction.destination,)
             forbidden = (instruction.source0, instruction.source1)
@@ -763,23 +765,44 @@ class Sparse3DBitVM:
         after_digest: str,
         error: str | None,
     ) -> JournalEntry:
+        sequence = self._sequence + 1
+        opcode = instruction.opcode.value
+        destination = self._serialize_address(instruction.destination)
+        source0 = self._serialize_address(instruction.source0)
+        source1 = self._serialize_address(instruction.source1)
+        previous_hash = self._journal_digest
         payload = {
-            "sequence": self._sequence + 1,
-            "opcode": instruction.opcode.value,
+            "sequence": sequence,
+            "opcode": opcode,
             "committed": committed,
-            "destination": self._serialize_address(instruction.destination),
-            "source0": self._serialize_address(instruction.source0),
-            "source1": self._serialize_address(instruction.source1),
+            "destination": destination,
+            "source0": source0,
+            "source1": source1,
             "length_bits": instruction.length_bits,
             "result": result,
             "touched_bricks": touched,
             "before_state_digest": before_digest,
             "after_state_digest": after_digest,
-            "previous_hash": self._journal_digest,
+            "previous_hash": previous_hash,
             "error": error,
         }
         entry_hash = hashlib.sha256(self._canonical_json(payload)).hexdigest()
-        entry = JournalEntry(hash=entry_hash, **payload)
+        entry = JournalEntry(
+            sequence=sequence,
+            opcode=opcode,
+            committed=committed,
+            destination=destination,
+            source0=source0,
+            source1=source1,
+            length_bits=instruction.length_bits,
+            result=result,
+            touched_bricks=touched,
+            before_state_digest=before_digest,
+            after_state_digest=after_digest,
+            previous_hash=previous_hash,
+            error=error,
+            hash=entry_hash,
+        )
         self._journal.append(entry)
         self._journal_digest = entry_hash
         return entry
