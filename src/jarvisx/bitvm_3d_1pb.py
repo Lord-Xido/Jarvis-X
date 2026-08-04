@@ -28,6 +28,9 @@ CANONICAL_VIRTUAL_BYTES = CANONICAL_BRICKS * DECIMAL_MEGABYTE
 CANONICAL_VIRTUAL_BITS = CANONICAL_VIRTUAL_BYTES * 8
 
 BrickKey = Tuple[int, int, int, int]  # (asid, x, y, z)
+_READABLE_CLASSES = frozenset((0, 2, 3, 4))
+_WRITABLE_CLASSES = frozenset((1, 3, 4))
+_HEX_DIGEST_LENGTH = 64
 
 
 class AddressClass(IntEnum):
@@ -78,7 +81,7 @@ class BitVMConfig:
                 raise TypeError(f"{name} must be an integer")
             if value <= 0:
                 raise ValueError(f"{name} must be positive")
-        if self.side > 1000:
+        if self.side > CANONICAL_SIDE:
             raise ValueError("side must fit the canonical 10-bit coordinate field")
         if self.brick_bytes > DECIMAL_MEGABYTE:
             raise ValueError("brick_bytes must not exceed the canonical decimal 1 MB brick")
@@ -144,8 +147,6 @@ class BitAddress:
         return self.asid, self.x, self.y, self.z
 
     def pack(self) -> int:
-        """Pack the address into one unsigned 64-bit integer."""
-
         return (
             (self.asid << 56)
             | (self.access_class << 53)
@@ -192,15 +193,18 @@ class Capability:
             raise ValueError("allowed_classes must not be empty")
         if not self.allowed_opcodes:
             raise ValueError("allowed_opcodes must not be empty")
+        for opcode in self.allowed_opcodes:
+            if not isinstance(opcode, BitOpcode):
+                raise TypeError("allowed_opcodes must contain BitOpcode values")
         for asid in self.allowed_asids:
             if isinstance(asid, bool) or not isinstance(asid, int):
                 raise TypeError("allowed_asids must contain integers")
-            if asid < 0 or asid > 255:
+            if not 0 <= asid <= 255:
                 raise ValueError("allowed ASID must be in [0, 255]")
         for access_class in self.allowed_classes:
             if isinstance(access_class, bool) or not isinstance(access_class, int):
                 raise TypeError("allowed_classes must contain integers")
-            if access_class < 0 or access_class > 7:
+            if not 0 <= access_class <= 7:
                 raise ValueError("allowed access class must be in [0, 7]")
         for name in ("x_range", "y_range", "z_range"):
             value = getattr(self, name)
@@ -256,9 +260,9 @@ class JournalEntry:
     sequence: int
     opcode: str
     committed: bool
-    destination: int | None
-    source0: int | None
-    source1: int | None
+    destination: int | str | None
+    source0: int | str | None
+    source1: int | str | None
     length_bits: int
     result: int | str | None
     touched_bricks: Tuple[BrickKey, ...]
@@ -344,6 +348,8 @@ class Sparse3DBitVM:
         """Read one bit. An absent brick returns zero without allocation."""
 
         self._validate_address(address)
+        if address.access_class not in _READABLE_CLASSES:
+            raise PermissionError("read_bit requires a readable address class")
         self.capability.authorize(BitOpcode.BPOPCNT, address)
         return self._read_bit_from(self._bricks, address)
 
@@ -407,13 +413,10 @@ class Sparse3DBitVM:
                 for src in source0:
                     self._authorize_address(instruction.opcode, src, accessed)
                     bits.append(self._read_bit_from(self._bricks, src))
-                result = hashlib.sha256(self._pack_bits(bits)).hexdigest()
+                result = hashlib.sha256(self._pack_bits_lsb_first(bits)).hexdigest()
 
-            else:  # pragma: no cover - Enum exhaustiveness guard
+            else:  # pragma: no cover
                 raise ValueError(f"unsupported opcode {instruction.opcode.value}")
-
-            if len(accessed) > self.capability.max_accessed_bricks:
-                raise PermissionError("instruction exceeds the capability brick-access bound")
 
             next_bricks = dict(self._bricks)
             for key, payload in staged.items():
@@ -477,8 +480,6 @@ class Sparse3DBitVM:
         return hashlib.sha256(payload).hexdigest()
 
     def checkpoint(self) -> Dict[str, Any]:
-        """Return a deterministic JSON-serializable checkpoint including sparse payloads."""
-
         return {
             "version": self.CHECKPOINT_VERSION,
             "config": asdict(self.config),
@@ -486,10 +487,7 @@ class Sparse3DBitVM:
             "journal_digest": self._journal_digest,
             "state_digest": self.state_digest(),
             "bricks": [
-                {
-                    "key": list(key),
-                    "payload_b64": base64.b64encode(payload).decode("ascii"),
-                }
+                {"key": list(key), "payload_b64": base64.b64encode(payload).decode("ascii")}
                 for key, payload in sorted(self._bricks.items())
             ],
             "journal": [asdict(entry) for entry in self._journal],
@@ -524,6 +522,8 @@ class Sparse3DBitVM:
                 raise ValueError("checkpoint brick key must be a sequence")
             key = tuple(raw_key)
             vm._validate_brick_key(key)
+            if key in bricks:
+                raise ValueError("checkpoint contains a duplicate brick key")
             payload_text = item.get("payload_b64")
             if not isinstance(payload_text, str):
                 raise ValueError("checkpoint brick payload must be base64 text")
@@ -545,33 +545,60 @@ class Sparse3DBitVM:
             journal_raw, (str, bytes, bytearray)
         ):
             raise ValueError("checkpoint journal must be a sequence")
-        previous = vm._initial_journal_digest()
+        previous_hash = vm._initial_journal_digest()
+        expected_before = vm._state_digest_for({})
         entries: list[JournalEntry] = []
-        for raw in journal_raw:
+        for expected_sequence, raw in enumerate(journal_raw, start=1):
             if not isinstance(raw, Mapping):
                 raise ValueError("checkpoint journal entry must be a mapping")
             normalized = dict(raw)
             touched_raw = normalized.get("touched_bricks")
-            if not isinstance(touched_raw, Sequence):
+            if not isinstance(touched_raw, Sequence) or isinstance(
+                touched_raw, (str, bytes, bytearray)
+            ):
                 raise ValueError("checkpoint touched_bricks must be a sequence")
-            normalized["touched_bricks"] = tuple(tuple(item) for item in touched_raw)
-            entry = JournalEntry(**normalized)
-            if entry.previous_hash != previous:
+            touched: list[BrickKey] = []
+            for raw_key in touched_raw:
+                if not isinstance(raw_key, Sequence) or isinstance(
+                    raw_key, (str, bytes, bytearray)
+                ):
+                    raise ValueError("checkpoint touched brick key must be a sequence")
+                key = tuple(raw_key)
+                vm._validate_brick_key(key)
+                touched.append(key)
+            if tuple(touched) != tuple(sorted(set(touched))):
+                raise ValueError("checkpoint touched_bricks must be sorted and unique")
+            normalized["touched_bricks"] = tuple(touched)
+            try:
+                entry = JournalEntry(**normalized)
+            except TypeError as exc:
+                raise ValueError("checkpoint journal entry schema mismatch") from exc
+            vm._validate_journal_entry(entry, expected_sequence)
+            if entry.previous_hash != previous_hash:
                 raise ValueError("checkpoint journal chain mismatch")
+            if entry.before_state_digest != expected_before:
+                raise ValueError("checkpoint journal state continuity mismatch")
+            if not entry.committed and entry.after_state_digest != entry.before_state_digest:
+                raise ValueError("rejected journal entry must preserve state")
             if vm._journal_entry_hash(entry) != entry.hash:
                 raise ValueError("checkpoint journal digest mismatch")
-            previous = entry.hash
+            previous_hash = entry.hash
+            expected_before = entry.after_state_digest
             entries.append(entry)
+
         vm._journal = entries
-        vm._journal_digest = previous
+        vm._journal_digest = previous_hash
         vm._sequence = len(entries)
+        restored_state_digest = vm.state_digest()
 
         if checkpoint.get("sequence") != vm._sequence:
             raise ValueError("checkpoint sequence mismatch")
         if checkpoint.get("journal_digest") != vm._journal_digest:
             raise ValueError("checkpoint journal digest mismatch")
-        if checkpoint.get("state_digest") != vm.state_digest():
+        if checkpoint.get("state_digest") != restored_state_digest:
             raise ValueError("checkpoint state digest mismatch")
+        if expected_before != restored_state_digest:
+            raise ValueError("checkpoint journal tip does not match restored state")
         return vm
 
     def _validate_instruction_shape(self, instruction: BitInstruction) -> None:
@@ -584,40 +611,42 @@ class Sparse3DBitVM:
             BitOpcode.BOR,
             BitOpcode.BXOR,
         }
-        unary_source = {BitOpcode.BCOPY, BitOpcode.BNOT, BitOpcode.BPOPCNT, BitOpcode.BHASH}
-        binary_source = {BitOpcode.BAND, BitOpcode.BOR, BitOpcode.BXOR}
-        if instruction.opcode in mutating and instruction.destination is None:
-            raise ValueError("mutating instruction requires a destination")
-        if instruction.opcode in unary_source and instruction.source0 is None:
-            raise ValueError("instruction requires source0")
-        if instruction.opcode in binary_source and (
-            instruction.source0 is None or instruction.source1 is None
-        ):
-            raise ValueError("binary instruction requires source0 and source1")
-        if instruction.destination is not None and instruction.opcode in mutating:
-            if instruction.destination.access_class not in (
-                int(AddressClass.WRITE),
-                int(AddressClass.JOURNAL),
-                int(AddressClass.CONTROL),
-            ):
+        operands = (instruction.destination, instruction.source0, instruction.source1)
+        for operand in operands:
+            if operand is not None and not isinstance(operand, BitAddress):
+                raise TypeError("instruction addresses must be BitAddress values")
+
+        if instruction.opcode in (BitOpcode.BSET, BitOpcode.BCLR):
+            required = (instruction.destination,)
+            forbidden = (instruction.source0, instruction.source1)
+        elif instruction.opcode in (BitOpcode.BCOPY, BitOpcode.BNOT):
+            required = (instruction.destination, instruction.source0)
+            forbidden = (instruction.source1,)
+        elif instruction.opcode in (BitOpcode.BAND, BitOpcode.BOR, BitOpcode.BXOR):
+            required = (instruction.destination, instruction.source0, instruction.source1)
+            forbidden = ()
+        elif instruction.opcode in (BitOpcode.BPOPCNT, BitOpcode.BHASH):
+            required = (instruction.source0,)
+            forbidden = (instruction.destination, instruction.source1)
+        else:  # pragma: no cover
+            raise ValueError("unsupported opcode")
+        if any(item is None for item in required):
+            raise ValueError("instruction is missing a required operand")
+        if any(item is not None for item in forbidden):
+            raise ValueError("instruction contains an extraneous operand")
+
+        if instruction.opcode in mutating:
+            assert instruction.destination is not None
+            if instruction.destination.access_class not in _WRITABLE_CLASSES:
                 raise PermissionError("mutating destination must carry a write-capable class")
         for source in (instruction.source0, instruction.source1):
-            if source is not None and source.access_class not in (
-                int(AddressClass.READ),
-                int(AddressClass.EXECUTE),
-                int(AddressClass.JOURNAL),
-                int(AddressClass.CONTROL),
-            ):
+            if source is not None and source.access_class not in _READABLE_CLASSES:
                 raise PermissionError("source must carry a readable class")
 
     def _validate_address(self, address: BitAddress) -> None:
         if not isinstance(address, BitAddress):
             raise TypeError("address must be a BitAddress")
-        if (
-            address.x >= self.config.side
-            or address.y >= self.config.side
-            or address.z >= self.config.side
-        ):
+        if max(address.x, address.y, address.z) >= self.config.side:
             raise ValueError("address coordinate is outside the configured lattice")
         if address.byte_offset >= self.config.brick_bytes:
             raise ValueError("byte offset is outside the configured brick")
@@ -629,16 +658,13 @@ class Sparse3DBitVM:
         for item in key:
             if isinstance(item, bool) or not isinstance(item, int):
                 raise TypeError("brick key components must be integers")
-        if asid < 0 or asid > 255:
+        if not 0 <= asid <= 255:
             raise ValueError("brick ASID is outside [0, 255]")
         if min(x, y, z) < 0 or max(x, y, z) >= self.config.side:
             raise ValueError("brick coordinate is outside the configured lattice")
 
     def _authorize_address(
-        self,
-        opcode: BitOpcode,
-        address: BitAddress,
-        accessed: set[BrickKey],
+        self, opcode: BitOpcode, address: BitAddress, accessed: set[BrickKey]
     ) -> None:
         self._validate_address(address)
         self.capability.authorize(opcode, address)
@@ -647,9 +673,7 @@ class Sparse3DBitVM:
             raise PermissionError("instruction exceeds the capability brick-access bound")
 
     def _address_stream(
-        self,
-        start: BitAddress | None,
-        length_bits: int,
+        self, start: BitAddress | None, length_bits: int
     ) -> Iterator[BitAddress]:
         if start is None:
             return iter(())
@@ -697,10 +721,7 @@ class Sparse3DBitVM:
         return (payload[address.byte_offset] >> address.bit_offset) & 1
 
     def _write_bit(
-        self,
-        staged: Dict[BrickKey, bytearray],
-        address: BitAddress,
-        value: int,
+        self, staged: Dict[BrickKey, bytearray], address: BitAddress, value: int
     ) -> None:
         payload = staged.get(address.brick_key)
         if payload is None:
@@ -746,11 +767,9 @@ class Sparse3DBitVM:
             "sequence": self._sequence + 1,
             "opcode": instruction.opcode.value,
             "committed": committed,
-            "destination": (
-                instruction.destination.pack() if instruction.destination is not None else None
-            ),
-            "source0": instruction.source0.pack() if instruction.source0 is not None else None,
-            "source1": instruction.source1.pack() if instruction.source1 is not None else None,
+            "destination": self._serialize_address(instruction.destination),
+            "source0": self._serialize_address(instruction.source0),
+            "source1": self._serialize_address(instruction.source1),
             "length_bits": instruction.length_bits,
             "result": result,
             "touched_bricks": touched,
@@ -764,6 +783,58 @@ class Sparse3DBitVM:
         self._journal.append(entry)
         self._journal_digest = entry_hash
         return entry
+
+    @staticmethod
+    def _serialize_address(value: object) -> int | str | None:
+        if value is None:
+            return None
+        if isinstance(value, BitAddress):
+            return value.pack()
+        return f"<invalid:{type(value).__module__}.{type(value).__qualname__}>"
+
+    def _validate_journal_entry(self, entry: JournalEntry, expected_sequence: int) -> None:
+        if isinstance(entry.sequence, bool) or entry.sequence != expected_sequence:
+            raise ValueError("checkpoint journal sequence mismatch")
+        if entry.opcode not in {opcode.value for opcode in BitOpcode}:
+            raise ValueError("checkpoint journal opcode is invalid")
+        if not isinstance(entry.committed, bool):
+            raise ValueError("checkpoint journal committed flag is invalid")
+        if isinstance(entry.length_bits, bool) or not isinstance(entry.length_bits, int):
+            raise ValueError("checkpoint journal length_bits is invalid")
+        if entry.length_bits <= 0 or entry.length_bits > self.config.max_instruction_bits:
+            raise ValueError("checkpoint journal length_bits is outside bounds")
+        for value in (entry.destination, entry.source0, entry.source1):
+            if value is not None and not isinstance(value, (int, str)):
+                raise ValueError("checkpoint journal address encoding is invalid")
+            if isinstance(value, int) and not 0 <= value < 1 << 64:
+                raise ValueError("checkpoint journal packed address is outside bounds")
+            if isinstance(value, str) and not value.startswith("<invalid:"):
+                raise ValueError("checkpoint journal invalid-address marker is malformed")
+        for digest in (
+            entry.before_state_digest,
+            entry.after_state_digest,
+            entry.previous_hash,
+            entry.hash,
+        ):
+            self._validate_digest(digest)
+        if entry.committed and entry.error is not None:
+            raise ValueError("committed journal entry must not contain an error")
+        if not entry.committed and not isinstance(entry.error, str):
+            raise ValueError("rejected journal entry must contain an error")
+        if entry.committed and any(
+            isinstance(value, str)
+            for value in (entry.destination, entry.source0, entry.source1)
+        ):
+            raise ValueError("committed journal entry cannot contain invalid addresses")
+
+    @staticmethod
+    def _validate_digest(value: object) -> None:
+        if not isinstance(value, str) or len(value) != _HEX_DIGEST_LENGTH:
+            raise ValueError("checkpoint digest must be 64 hexadecimal characters")
+        try:
+            bytes.fromhex(value)
+        except ValueError as exc:
+            raise ValueError("checkpoint digest must be hexadecimal") from exc
 
     def _journal_entry_hash(self, entry: JournalEntry) -> str:
         payload = asdict(entry)
@@ -780,7 +851,9 @@ class Sparse3DBitVM:
         ).encode("utf-8")
 
     @staticmethod
-    def _pack_bits(bits: Iterable[int]) -> bytes:
+    def _pack_bits_lsb_first(bits: Iterable[int]) -> bytes:
+        """Pack the first addressed bit into bit 0 of the first output byte."""
+
         packed = bytearray()
         value = 0
         width = 0
