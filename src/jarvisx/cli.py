@@ -119,6 +119,29 @@ def cmd_verify_equivalence(args):
     with open(args.refactored) as f:
         refactored = f.read()
 
+    # If SMT-based proof requested, run symbolic bounded verifier
+    if getattr(args, "prove", False):
+        try:
+            from jarvisx.verification import check_equivalence_bounded
+
+            eq, cex = check_equivalence_bounded(
+                original, refactored, bound=args.prove_bound, timeout_ms=args.prove_timeout
+            )
+            if eq:
+                print("✓ PROVED EQUIVALENT (bounded)")
+            else:
+                print("✗ COUNTEREXAMPLE FOUND (bounded)")
+                if cex:
+                    print("Example initial registers:")
+                    for k, v in cex.items():
+                        print(f"  {k} = {v}")
+                else:
+                    print("No concrete counterexample (timeout or unknown)")
+            return
+        except ImportError as e:
+            print("SMT prover not available:", e)
+            print("Falling back to concrete execution check")
+
     # Execute both
     vm1 = CodexVM()
     vm1.load(Assembler().assemble(Parser().parse(original)))
@@ -136,7 +159,11 @@ def cmd_verify_equivalence(args):
         print("✓ FUNCTIONALLY EQUIVALENT")
         improvement = vm1.cycle_counter - vm2.cycle_counter
         if improvement > 0:
-            print(f"✓ IMPROVEMENT: {improvement} cycles saved ({100*improvement/vm1.cycle_counter:.1f}%)")
+            try:
+                pct = 100 * improvement / vm1.cycle_counter
+            except Exception:
+                pct = 0
+            print(f"✓ IMPROVEMENT: {improvement} cycles saved ({pct:.1f}%)")
         elif improvement < 0:
             print(f"⚠ REGRESSION: {-improvement} cycles added")
         else:
@@ -238,6 +265,9 @@ def main():
     )
     verify_parser.add_argument("original", help="Original assembly file")
     verify_parser.add_argument("refactored", help="Refactored assembly file")
+    verify_parser.add_argument("--prove", action="store_true", help="Run SMT bounded equivalence prover (requires z3)")
+    verify_parser.add_argument("--prove-bound", type=int, default=64, help="SMT prover unroll bound (default: 64)")
+    verify_parser.add_argument("--prove-timeout", type=int, default=5000, help="SMT prover timeout in ms (default: 5000)")
     verify_parser.set_defaults(func=cmd_verify_equivalence)
 
     # API command

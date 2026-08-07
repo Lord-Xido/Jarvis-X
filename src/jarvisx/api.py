@@ -101,6 +101,18 @@ def verify_equivalence():
     original = data.get("original", "")
     refactored = data.get("refactored", "")
 
+    # Optional SMT proof
+    if data.get("prove"):
+        try:
+            from jarvisx.verification import check_equivalence_bounded
+
+            bound = int(data.get("prove_bound", 64))
+            timeout_ms = int(data.get("prove_timeout", 5000))
+            eq, cex = check_equivalence_bounded(original, refactored, bound=bound, timeout_ms=timeout_ms)
+            return jsonify({"proved_equivalent": eq, "counterexample": cex})
+        except ImportError as e:
+            return jsonify({"error": "SMT prover not available", "detail": str(e)}), 500
+
     # Execute both
     vm1 = CodexVM()
     vm1.load(Assembler().assemble(Parser().parse(original)))
