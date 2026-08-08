@@ -160,3 +160,12 @@ jarvisx_harden(jarvisx-riof3d-tests)
 
 add_test(NAME riof3d-regressions COMMAND jarvisx-riof3d-tests)
 set_tests_properties(riof3d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-riof-permeation-tests
+    tests/riof_permeation_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-riof-permeation-tests)
+jarvisx_harden(jarvisx-riof-permeation-tests)
+
+add_test(NAME riof-permeation-regressions COMMAND jarvisx-riof-permeation-tests)
+set_tests_properties(riof-permeation-regressions PROPERTIES TIMEOUT 120)
