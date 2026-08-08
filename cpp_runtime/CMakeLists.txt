@@ -50,6 +50,12 @@ add_executable(jarvisx-dmso-fused-benchmark
 jarvisx_include_runtime(jarvisx-dmso-fused-benchmark)
 jarvisx_harden(jarvisx-dmso-fused-benchmark)
 
+add_executable(jarvisx-dmso-os
+    src/dmso_os_main.cpp
+)
+jarvisx_include_runtime(jarvisx-dmso-os)
+jarvisx_harden(jarvisx-dmso-os)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -115,6 +121,12 @@ add_test(
 )
 set_tests_properties(multimedia4d-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME dmso-os-runtime-smoke
+    COMMAND jarvisx-dmso-os 8 2
+)
+set_tests_properties(dmso-os-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -150,3 +162,12 @@ jarvisx_harden(jarvisx-dmso-fused-tests)
 
 add_test(NAME dmso-fused-regressions COMMAND jarvisx-dmso-fused-tests)
 set_tests_properties(dmso-fused-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-dmso-os-tests
+    tests/dmso_os_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-dmso-os-tests)
+jarvisx_harden(jarvisx-dmso-os-tests)
+
+add_test(NAME dmso-os-regressions COMMAND jarvisx-dmso-os-tests)
+set_tests_properties(dmso-os-regressions PROPERTIES TIMEOUT 120)
