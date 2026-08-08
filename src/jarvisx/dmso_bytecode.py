@@ -167,7 +167,7 @@ def verify_fused_equivalence(
         raise ValueError("tolerance must be a finite non-negative value")
     primitive = PrimitiveCellInterpreter().execute(context, parameters, definition.expansion)
     fused = FusedOperatorCompiler.compile(definition).execute(context, parameters)
-    error = max(abs(left - right) for left, right in zip(primitive.value, fused.value))
+    error = float(max(abs(left - right) for left, right in zip(primitive.value, fused.value)))
     if error > tolerance:
         raise RuntimeError(f"fused operator failed semantic verification: error={error}")
     return error
