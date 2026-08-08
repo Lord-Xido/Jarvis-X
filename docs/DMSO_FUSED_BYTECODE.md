@@ -4,6 +4,11 @@
 
 Executable reference backend for PR #84. This layer gives a promoted level-1 DMSO operator an actual execution meaning beyond description compression.
 
+Two reference implementations are provided:
+
+- `src/jarvisx/dmso_bytecode.py`: Python primitive interpreter and fused kernel with benchmark telemetry;
+- `cpp_runtime/include/jarvisx/dmso_fused.hpp`: dependency-free C++17 primitive and native fused kernels.
+
 ## Canonical primitive trace
 
 The current cell update is represented as seven primitive operations:
@@ -50,7 +55,7 @@ m = \tanh(z)
 s' = s + \alpha(m-s)
 ```
 
-Before benchmarking, the backend executes both the primitive program and the fused operator and requires exact floating-point equality for the reference formula. If the values differ, the benchmark aborts.
+Before benchmarking, the backend executes both the primitive program and the fused operator and requires exact reference equality. If the values differ, benchmarking aborts.
 
 ## What is accelerated
 
@@ -64,30 +69,62 @@ structural dispatch reduction:        7x
 
 The benchmark additionally records wall-clock nanoseconds per call and a measured speedup for the specific host and run. Timing is telemetry only; it is never used to prove correctness, select authoritative state, or claim a portable speedup.
 
+### Python reference
+
 Run:
 
 ```bash
 python examples/dmso_fused_benchmark.py
 ```
 
-The JSON result reports:
+A local reference run on the development host measured approximately `2.46x` fused-versus-primitive speedup with zero output error. That number is host-specific telemetry, not a guaranteed result.
+
+### C++17 native reference
+
+Build through the existing processor laboratory:
+
+```bash
+cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release
+cmake --build build/cpp-runtime --config Release --parallel
+ctest --test-dir build/cpp-runtime -C Release --output-on-failure
+```
+
+Run the benchmark:
+
+```bash
+./build/cpp-runtime/jarvisx-dmso-fused-benchmark --repetitions 500000
+```
+
+The native benchmark reports JSON containing:
 
 - primitive and fused dispatch counts;
-- dispatch-reduction ratio;
-- median primitive and fused nanoseconds per call;
+- structural dispatch-reduction ratio;
+- primitive and fused nanoseconds per call;
 - measured host-specific speedup;
-- maximum absolute semantic error.
+- maximum absolute semantic error;
+- a checksum that keeps the benchmark result live.
+
+A strict local C++17 build using `-Wall -Wextra -Wpedantic -Wconversion -Wshadow` passed. A 100,000-iteration development run measured approximately `2.59x` on that host with zero semantic error. Repository CI remains authoritative.
+
+## Verification boundary
+
+The C++ regression target `jarvisx-dmso-fused-tests` verifies:
+
+- primitive execution dispatches exactly seven canonical operations;
+- fused execution dispatches once;
+- the primitive and fused reference outputs are exactly equal;
+- non-finite execution inputs are rejected.
+
+No wall-clock threshold appears in CTest because machine timing is not deterministic enough to be a correctness invariant.
 
 ## Current boundary
 
-This backend is still Python. It proves that a promoted operator can move from a symbolic macro to a directly executable fused operation with semantic verification and measurable dispatch reduction.
+This PR now provides both Python-level and C++17 native direct fusion for the canonical level-1 operator. It does **not** yet provide:
 
-It does **not** yet provide:
-
-- native machine-code generation;
-- LLVM or JIT compilation;
+- LLVM or runtime JIT code generation;
 - GPU kernel fusion;
 - recursive fusion of arbitrary higher-order operators;
+- dynamic native code mutation;
 - cross-platform performance guarantees.
 
-Those are subsequent implementation layers. A native backend should preserve the same rule: compile only verified operator expansions, compare against the primitive reference on bounded fixtures, and treat timing as measured telemetry rather than an authority signal.
+Subsequent backends should preserve the same rule: compile only verified operator expansions, compare against the primitive reference on bounded fixtures, and treat performance timing as measured telemetry rather than an authority signal.
