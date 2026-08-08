@@ -2,9 +2,9 @@
 
 The runtime implements a bounded sparse voxel field with 26-neighbour message passing,
 front-projection decode, prior-preserving re-encoding, relaxed fixed-point iteration,
-small analytic parameter updates, exact trace-macro promotion, and deterministic
-verification. Operator promotion compresses the execution description and does not imply
-native-code acceleration.
+bounded analytic parameter updates, exact trace-macro promotion, and deterministic
+verification. Operator promotion compresses execution descriptions; acceleration is measured
+separately by an execution backend.
 """
 
 from __future__ import annotations
@@ -165,7 +165,7 @@ class DMSORuntime:
     def decode(self, state: Mapping[Coordinate, Vector] | None = None) -> Dict[Pixel, Vector]:
         """Front-project by selecting the smallest occupied z for each (x, y)."""
 
-        source = self._state if state is None else dict(state)
+        source = self._state if state is None else state
         front: Dict[Pixel, Tuple[int, Vector]] = {}
         for (x, y, z), value in source.items():
             current = front.get((x, y))
@@ -180,7 +180,7 @@ class DMSORuntime:
         prior: Mapping[Coordinate, Vector],
         support: Iterable[Coordinate],
     ) -> Dict[Coordinate, Vector]:
-        """Evaluate E(D(S), U, S) on a bounded support without authoritative mutation."""
+        """Evaluate E(D(S), U, S) on bounded support without authoritative mutation."""
 
         visible_depth = self._visible_depth(prior)
         candidate: Dict[Coordinate, Vector] = {}
@@ -194,17 +194,16 @@ class DMSORuntime:
                 else self._zero()
             )
             stimulus = external.get(coordinate, self._zero())
-            values = []
-            for channel in range(self.config.channels):
-                preactivation = (
+            candidate[coordinate] = tuple(
+                math.tanh(
                     self.parameters.self_gain * current[channel]
                     + self.parameters.neighbour_gain * neighbours[channel]
                     + self.parameters.projection_gain * projected[channel]
                     + self.parameters.input_gain * stimulus[channel]
                     + self.parameters.bias
                 )
-                values.append(math.tanh(preactivation))
-            candidate[coordinate] = tuple(values)
+                for channel in range(self.config.channels)
+            )
         return candidate
 
     def step(
@@ -228,6 +227,7 @@ class DMSORuntime:
         staged: Dict[Coordinate, Vector] = {}
         squared_delta = 0.0
         scalar_count = max(1, len(support) * self.config.channels)
+
         for coordinate in sorted(support):
             current = snapshot.get(coordinate, self._zero())
             mapped_value = mapped[coordinate]
@@ -271,8 +271,6 @@ class DMSORuntime:
         self,
         external: Mapping[Coordinate, Sequence[float] | float] | None = None,
     ) -> DMSOMetrics:
-        """Iterate the fast state clock until the fixed-point residual meets tolerance."""
-
         metrics = self.metrics()
         for _ in range(self.config.max_settle_steps):
             metrics = self.step(external=external)
@@ -287,8 +285,6 @@ class DMSORuntime:
         human_approved: bool = False,
         observed_repeats: int = 1,
     ) -> OperatorDefinition:
-        """Register an exact macro after depth, provenance and human-gate checks."""
-
         normalized = tuple(expansion)
         if len(normalized) < 2:
             raise ValueError("composite operator requires at least two children")
@@ -325,8 +321,6 @@ class DMSORuntime:
         return self._operators[operator_id]
 
     def verify(self) -> bool:
-        """Check bounded state, parameters, operator provenance, and abstraction depth."""
-
         self._validate_parameters(self.parameters)
         if len(self._state) > self.config.max_active_cells:
             return False
@@ -349,19 +343,18 @@ class DMSORuntime:
         task_loss: float = 0.0,
         residual: float | None = None,
     ) -> DMSOMetrics:
-        if residual is None:
-            residual = self._fixed_point_residual()
+        current_residual = self._fixed_point_residual() if residual is None else residual
         raw = self._raw_trace_occurrences * len(PRIMITIVE_TRACE) * 4
         encoded = self._encoded_trace_occurrences * 4
         unresolved = self._raw_trace_occurrences - self._encoded_trace_occurrences
         encoded += unresolved * len(PRIMITIVE_TRACE) * 4
-        ratio = (raw / encoded) if encoded else 1.0
+        ratio = raw / encoded if encoded else 1.0
         return DMSOMetrics(
             cycle=self._cycle,
             active_cells=len(self._state),
-            fixed_point_residual=residual,
+            fixed_point_residual=current_residual,
             task_loss=task_loss,
-            stable=residual <= self.config.tolerance,
+            stable=current_residual <= self.config.tolerance,
             parameter_version=self._parameter_version,
             operator_count=len(self._operators),
             trace_bytes_raw=raw,
@@ -382,7 +375,7 @@ class DMSORuntime:
             "operators": [asdict(item) for item in self.operators],
         }
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        return hashlib.sha256(b"jarvisx-dmso-v1\0" + encoded).hexdigest()
+        return hashlib.sha256(b"jarvisx-dmso-v2\0" + encoded).hexdigest()
 
     def _fixed_point_residual(self) -> float:
         if not self._state:
@@ -407,7 +400,7 @@ class DMSORuntime:
         support: Iterable[Coordinate],
     ) -> DMSOParameters:
         visible_depth = self._visible_depth(snapshot)
-        gradients = {
+        gradients: Dict[str, float] = {
             "self_gain": 0.0,
             "neighbour_gain": 0.0,
             "projection_gain": 0.0,
@@ -416,7 +409,8 @@ class DMSORuntime:
         }
         scalar_count = max(1, len(targets) * self.config.channels)
         for coordinate in sorted(support):
-            if coordinate not in targets:
+            target = targets.get(coordinate)
+            if target is None:
                 continue
             x, y, z = coordinate
             current = snapshot.get(coordinate, self._zero())
@@ -427,7 +421,6 @@ class DMSORuntime:
                 else self._zero()
             )
             stimulus = external.get(coordinate, self._zero())
-            target = targets[coordinate]
             for channel in range(self.config.channels):
                 features = {
                     "self_gain": current[channel],
@@ -436,21 +429,20 @@ class DMSORuntime:
                     "input_gain": stimulus[channel],
                     "bias": 1.0,
                 }
-                preactivation = (
-                    self.parameters.self_gain * features["self_gain"]
-                    + self.parameters.neighbour_gain * features["neighbour_gain"]
-                    + self.parameters.projection_gain * features["projection_gain"]
-                    + self.parameters.input_gain * features["input_gain"]
-                    + self.parameters.bias
+                preactivation = sum(
+                    getattr(self.parameters, name) * feature
+                    for name, feature in features.items()
                 )
                 mapped_value = math.tanh(preactivation)
-                relaxed = current[channel] + self.config.alpha * (mapped_value - current[channel])
+                relaxed = current[channel] + self.config.alpha * (
+                    mapped_value - current[channel]
+                )
                 dloss = 2.0 * (relaxed - target[channel]) / scalar_count
                 common = dloss * self.config.alpha * (1.0 - mapped_value * mapped_value)
                 for name, feature in features.items():
                     gradients[name] += common * feature
 
-        updates = {}
+        updates: Dict[str, float] = {}
         limit = self.config.parameter_limit
         for name, gradient in gradients.items():
             value = getattr(self.parameters, name) - self.config.learning_rate * gradient
@@ -469,10 +461,10 @@ class DMSORuntime:
             self._encoded_trace_occurrences += occurrences
 
     def _operator_for_expansion(self, trace: Tuple[str, ...]) -> OperatorDefinition | None:
-        for definition in self._operators.values():
-            if definition.expansion == trace:
-                return definition
-        return None
+        return next(
+            (definition for definition in self._operators.values() if definition.expansion == trace),
+            None,
+        )
 
     def _task_loss(
         self,
@@ -490,7 +482,8 @@ class DMSORuntime:
                 count += 1
         return squared / max(1, count)
 
-    def _visible_depth(self, state: Mapping[Coordinate, Vector]) -> Dict[Pixel, int]:
+    @staticmethod
+    def _visible_depth(state: Mapping[Coordinate, Vector]) -> Dict[Pixel, int]:
         visible: Dict[Pixel, int] = {}
         for x, y, z in state:
             pixel = (x, y)
@@ -528,8 +521,11 @@ class DMSORuntime:
         normalized: Dict[Coordinate, Vector] = {}
         for coordinate, value in values.items():
             checked = self._validate_coordinate(coordinate)
-            if self.config.channels == 1 and isinstance(value, (int, float)) and not isinstance(
-                value, bool
+            vector: Vector
+            if (
+                self.config.channels == 1
+                and isinstance(value, (int, float))
+                and not isinstance(value, bool)
             ):
                 vector = (float(value),)
             else:
@@ -537,7 +533,9 @@ class DMSORuntime:
                     raise TypeError(f"{name} values must match channel count")
                 vector = tuple(float(item) for item in value)
             if len(vector) != self.config.channels:
-                raise ValueError(f"{name} values must contain exactly {self.config.channels} channels")
+                raise ValueError(
+                    f"{name} values must contain exactly {self.config.channels} channels"
+                )
             self._require_finite_vector(vector, name)
             normalized[checked] = vector
         return normalized
@@ -557,9 +555,10 @@ class DMSORuntime:
     def _validate_parameters(self, parameters: DMSOParameters) -> None:
         limit = self.config.parameter_limit
         for name, value in asdict(parameters).items():
-            if not math.isfinite(value):
+            numeric_value = float(value)
+            if not math.isfinite(numeric_value):
                 raise ValueError(f"parameter {name} must be finite")
-            if abs(value) > limit:
+            if abs(numeric_value) > limit:
                 raise ValueError(f"parameter {name} exceeds configured bound")
 
     @staticmethod
