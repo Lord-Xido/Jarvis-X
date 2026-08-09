@@ -42,7 +42,7 @@ jarvisx-volumetric decode state.jx3d restored.bin
 
 The final command verifies that the reconstructed bytes match the hash committed in the artifact.
 
-## HTTP API
+## HTTP API and live 3D dashboard
 
 Start the service:
 
@@ -56,14 +56,29 @@ or:
 uvicorn jarvisx.volumetric_api:app --host 0.0.0.0 --port 8090
 ```
 
+Open `http://127.0.0.1:8090/` in a browser. The packaged Three.js dashboard is served by the API process itself. It continuously performs real encode -> artifact -> decode -> verification cycles and renders measured telemetry from those executions.
+
+Dashboard telemetry includes:
+
+- sparse virtual capacity and logical cube dimensions;
+- measured compression ratio from the generated artifact;
+- actual artifact byte size and chunk count;
+- encode/decode latency;
+- committed payload SHA-256;
+- end-to-end bit-exact verification state.
+
+The 3D node lattice is a visualization of runtime activity; it does not pretend that all 1.7 trillion logical cells are resident GPU objects.
+
 Endpoints:
 
+- `GET /` — live Three.js operational dashboard
 - `GET /health`
 - `GET /v1/volumetric/metrics`
 - `POST /v1/volumetric/encode` with raw request bytes
 - `POST /v1/volumetric/decode` with raw `.jx3d` artifact bytes
+- `POST /v1/volumetric/cycle` with raw request bytes for a complete verified encode/decode cycle
 
-The encode endpoint returns the artifact as Base64 plus an execution receipt. The decode endpoint returns the reconstructed bytes and verification headers.
+The encode endpoint returns the artifact as Base64 plus an execution receipt. The decode endpoint returns the reconstructed bytes and verification headers. The cycle endpoint intentionally omits the artifact body and returns encode/decode receipts plus a final `verified` boolean, making it appropriate for live telemetry.
 
 ## Verification invariants
 
@@ -76,3 +91,7 @@ SHA256(decoded_chunk_i) == committed_chunk_sha256_i
 ```
 
 A corrupt or truncated artifact raises `ArtifactError` and does not produce reconstructed output.
+
+## Dashboard provenance
+
+The dashboard is derived from the Universal 3D Bit ANN Matrix visualization and preserves its interactive Three.js lattice, drag rotation, zoom, auto-cycle control, and substrate log presentation. Its former randomized compression/fidelity telemetry has been replaced with values returned by the operational API.
