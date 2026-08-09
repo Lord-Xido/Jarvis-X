@@ -17,6 +17,18 @@ engine = Universal3DAutoEncoder()
 _DASHBOARD_PATH = Path(__file__).with_name("volumetric_dashboard.html")
 
 
+def execute_cycle(payload: bytes) -> dict[str, object]:
+    """Execute encode -> artifact -> decode -> verification for a byte payload."""
+
+    artifact, encoded = engine.encode(payload)
+    restored, decoded = engine.decode(artifact)
+    return {
+        "verified": restored == payload and decoded.verified,
+        "encode": encoded.to_dict(),
+        "decode": decoded.to_dict(),
+    }
+
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def dashboard() -> HTMLResponse:
     return HTMLResponse(_DASHBOARD_PATH.read_text(encoding="utf-8"))
@@ -69,20 +81,13 @@ async def decode(request: Request) -> Response:
 
 @app.post("/v1/volumetric/cycle")
 async def cycle(request: Request) -> dict[str, object]:
-    """Execute encode -> artifact -> decode -> verification in one request."""
+    """HTTP wrapper for one verified end-to-end execution cycle."""
 
     payload = await request.body()
     try:
-        artifact, encoded = engine.encode(payload)
-        restored, decoded = engine.decode(artifact)
+        return execute_cycle(payload)
     except (TypeError, ValueError, ArtifactError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    return {
-        "verified": restored == payload and decoded.verified,
-        "encode": encoded.to_dict(),
-        "decode": decoded.to_dict(),
-    }
 
 
 def main() -> None:
