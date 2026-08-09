@@ -1,7 +1,7 @@
 """Deterministic DM-vOmegaXi+ spatial-kernel reference.
 
 The module turns the symbolic three-axis Dr Moagi spatial equation into a bounded,
-auditable bytecode machine. It deliberately distinguishes a logical ROM capacity from
+auditable bytecode machine.  It deliberately distinguishes a logical ROM capacity from
 the tiny physical program image used by the reference implementation.
 """
 
@@ -237,7 +237,7 @@ class _WorkingCycle:
 class OME6400SpatialKernel:
     """Bounded bytecode executor for the DM-vOmegaXi+ SK-3D equation.
 
-    One bytecode program execution is one complete spatial cycle. All work occurs on a
+    One bytecode program execution is one complete spatial cycle.  All work occurs on a
     shadow state and is committed only after HALT, so malformed programs or non-finite
     transitions cannot partially mutate authoritative state.
     """
@@ -306,16 +306,18 @@ class OME6400SpatialKernel:
         self._state = committed
 
         axes, singularity = self.geometry(committed)
-        vertices = self._tetrahedron(committed, axes[2])
-        vertices = tuple(
-            self._rotate_and_scale(vertex, committed.rotation_angle, committed.pulse)
-            for vertex in vertices
+        base_vertices = self._tetrahedron(committed, axes[2])
+        vertices = (
+            self._rotate_and_scale(base_vertices[0], committed.rotation_angle, committed.pulse),
+            self._rotate_and_scale(base_vertices[1], committed.rotation_angle, committed.pulse),
+            self._rotate_and_scale(base_vertices[2], committed.rotation_angle, committed.pulse),
+            self._rotate_and_scale(base_vertices[3], committed.rotation_angle, committed.pulse),
         )
         return SpatialFrame(
             cycle=committed.cycle,
             axes=axes,
             singularity=singularity,
-            vertices=vertices,  # type: ignore[arg-type]
+            vertices=vertices,
             rotation_angle=committed.rotation_angle,
             pulse=committed.pulse,
             residual=committed.residual,
@@ -392,7 +394,7 @@ class OME6400SpatialKernel:
             working.state = self._seal(working.state)
         elif opcode is SpatialOpcode.HALT:
             working.halted = True
-        else:  # pragma: no cover
+        else:  # pragma: no cover - IntEnum validation makes this unreachable.
             raise RuntimeError(f"unhandled opcode {opcode!r}")
 
         self._validate_state(working.state)
@@ -426,9 +428,7 @@ class OME6400SpatialKernel:
         limit = self.config.projection_limit
         return min(limit, max(-limit, value))
 
-    def _tetrahedron(
-        self, state: SpatialState, recursion: float
-    ) -> Tuple[Vector3, Vector3, Vector3, Vector3]:
+    def _tetrahedron(self, state: SpatialState, recursion: float) -> Tuple[Vector3, Vector3, Vector3, Vector3]:
         return (
             (0.0, state.psi, 0.0),
             (self.config.phi, 0.0, 0.0),
@@ -438,6 +438,7 @@ class OME6400SpatialKernel:
 
     @staticmethod
     def _rotate_and_scale(vertex: Vector3, angle: float, scale: float) -> Vector3:
+        # Rodrigues rotation around normalized axis (1,1,1)/sqrt(3).
         x, y, z = vertex
         ux = uy = uz = 1.0 / math.sqrt(3.0)
         cosine = math.cos(angle)
