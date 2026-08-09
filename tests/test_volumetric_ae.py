@@ -3,6 +3,7 @@ import hashlib
 import pytest
 
 from jarvisx.volumetric_ae import ArtifactError, Universal3DAutoEncoder, VirtualVolumeSpec
+from jarvisx.volumetric_api import dashboard, execute_cycle
 
 
 def test_6400_gib_q16_16_metrics_are_virtual() -> None:
@@ -50,3 +51,20 @@ def test_self_test_reports_success() -> None:
     report = Universal3DAutoEncoder(VirtualVolumeSpec(chunk_bytes=256)).self_test()
     assert report["ok"] is True
     assert report["decode"]["verified"] is True
+
+
+def test_api_cycle_executes_real_encode_decode_verification() -> None:
+    payload = b"DM-vOmegaXi-live-cycle" * 2048
+    report = execute_cycle(payload)
+    assert report["verified"] is True
+    assert report["encode"]["payload_bytes"] == len(payload)
+    assert report["decode"]["payload_sha256"] == hashlib.sha256(payload).hexdigest()
+
+
+def test_dashboard_is_packaged_and_targets_live_runtime() -> None:
+    response = dashboard()
+    body = response.body.decode("utf-8")
+    assert "Live Runtime Telemetry" in body
+    assert "/v1/volumetric/metrics" in body
+    assert "/v1/volumetric/cycle" in body
+    assert "Measured Ratio" in body
