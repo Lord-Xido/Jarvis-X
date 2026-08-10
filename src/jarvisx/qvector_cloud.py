@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import Callable, Sequence
 
 from .cloud_os import DrMoagiCloudOS
-from .qvector3d import QVectorAutoencoder3D, QVectorField3D, QVectorRoundTrip3D
+from .qvector3d import (
+    Q_ONE,
+    QVectorAutoencoder3D,
+    QVectorField3D,
+    QVectorRoundTrip3D,
+    q16_from_float,
+)
 
 QVECTOR_CLOUD_PROTOCOL = "jarvisx.dr-moagi-qvector-cloud.v1"
 
@@ -42,6 +48,41 @@ def _volume(shape: Sequence[int]) -> int:
 def _shape3(shape: Sequence[int]) -> tuple[int, int, int]:
     _volume(shape)
     return (int(shape[0]), int(shape[1]), int(shape[2]))
+
+
+def _raw_sse(source: QVectorField3D, reconstruction: QVectorField3D) -> int:
+    """Return exact summed squared error in raw Q32.32 integer units."""
+
+    if source.shape != reconstruction.shape:
+        raise ValueError("raw SSE requires vector fields with identical shapes")
+    total = 0
+    for original, decoded in zip(source.vectors, reconstruction.vectors):
+        dx = original.x - decoded.x
+        dy = original.y - decoded.y
+        dz = original.z - decoded.z
+        total += dx * dx + dy * dy + dz * dz
+    return total
+
+
+def _objective_numerator(
+    source: QVectorField3D,
+    round_trip: QVectorRoundTrip3D,
+    complexity_weight_q16: int,
+) -> int:
+    """Exact common-denominator objective used for deterministic candidate ranking.
+
+    The displayed objective is
+
+        component_mse + weight * compression_ratio
+
+    with weight represented in Q16.16.  Multiplication by the common denominator
+    ``3 * N_source * Q_ONE^2`` yields the integer numerator below, so every
+    candidate for the same source can be ranked using integers only.
+    """
+
+    return _raw_sse(source, round_trip.reconstruction) + (
+        3 * Q_ONE * int(complexity_weight_q16) * round_trip.latent.cells
+    )
 
 
 @dataclass(slots=True)
@@ -227,6 +268,8 @@ class DrMoagiQVectorCloudEngine3D:
     ) -> QVectorCloudJob:
         if not math.isfinite(complexity_weight) or complexity_weight < 0.0:
             raise ValueError("complexity_weight must be finite and non-negative")
+        complexity_weight_q16 = q16_from_float(complexity_weight)
+        effective_weight = complexity_weight_q16 / Q_ONE
 
         if candidates is None:
             candidate_shapes = self._candidate_shapes(field.shape)
@@ -240,27 +283,44 @@ class DrMoagiQVectorCloudEngine3D:
                 raise ValueError("candidate latent dimensions cannot exceed source dimensions")
 
         def execute() -> dict[str, object]:
-            evaluated: list[tuple[float, int, tuple[int, int, int], QVectorRoundTrip3D]] = []
+            denominator = 3 * field.cells * Q_ONE * Q_ONE
+            evaluated: list[
+                tuple[int, int, tuple[int, int, int], QVectorRoundTrip3D]
+            ] = []
             for candidate in candidate_shapes:
                 round_trip = self.encoder.round_trip(field, candidate)
-                objective = (
-                    round_trip.component_mse
-                    + complexity_weight * round_trip.compression_ratio
+                objective_num = _objective_numerator(
+                    field,
+                    round_trip,
+                    complexity_weight_q16,
                 )
-                evaluated.append((objective, round_trip.latent.cells, candidate, round_trip))
+                evaluated.append(
+                    (objective_num, round_trip.latent.cells, candidate, round_trip)
+                )
 
-            objective, _, selected_shape, selected = min(
+            objective_num, _, selected_shape, selected = min(
                 evaluated,
                 key=lambda item: (item[0], item[1], item[2]),
             )
+            objective = objective_num / denominator
             return {
                 "objective": objective,
+                "objective_q": {
+                    "numerator": objective_num,
+                    "denominator": denominator,
+                },
                 "complexity_weight": complexity_weight,
+                "complexity_weight_q16": complexity_weight_q16,
+                "effective_complexity_weight": effective_weight,
                 "selected_latent_shape": list(selected_shape),
                 "candidates": [
                     {
                         "latent_shape": list(candidate),
-                        "objective": score,
+                        "objective": score / denominator,
+                        "objective_q": {
+                            "numerator": score,
+                            "denominator": denominator,
+                        },
                         "axis_mse": list(result.axis_mse),
                         "component_mse": result.component_mse,
                         "vector_mse": result.vector_mse,
