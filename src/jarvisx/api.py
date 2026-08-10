@@ -85,7 +85,15 @@ def run_code(payload: RunRequest) -> dict[str, object]:
         receipt = execute_source(payload.source)
     except (TypeError, ValueError, RuntimeError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-    return receipt.to_dict()
+
+    response: dict[str, object] = {
+        "registers": dict(receipt.registers),
+        "cycles": receipt.cycles,
+        "ledger_entries": receipt.ledger_entries,
+        "ledger_valid": receipt.ledger_valid,
+        "trace_entries": receipt.trace_entries,
+    }
+    return response
 
 
 @app.post("/codec/roundtrip")
