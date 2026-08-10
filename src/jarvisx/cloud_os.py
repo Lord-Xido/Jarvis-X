@@ -17,7 +17,7 @@ import json
 import math
 import os
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
@@ -325,10 +325,10 @@ class DrMoagiCloudOS:
 
     @staticmethod
     def _candidate_shapes(shape: tuple[int, int, int]) -> tuple[tuple[int, int, int], ...]:
-        candidates = {
+        candidates: set[tuple[int, int, int]] = {
             shape,
-            tuple(max(1, axis // 2) for axis in shape),
-            tuple(max(1, axis // 4) for axis in shape),
+            _shape3(tuple(max(1, axis // 2) for axis in shape)),
+            _shape3(tuple(max(1, axis // 4) for axis in shape)),
             (1, 1, 1),
         }
         return tuple(sorted(candidates, key=lambda item: (_volume(item), item)))
@@ -519,8 +519,25 @@ class DrMoagiCloudOS:
                 job = self.jobs[job_id]
             except KeyError as error:
                 raise KeyError(f"unknown job {job_id!r}") from error
-            return asdict(job)
+            return {
+                "job_id": job.job_id,
+                "request_id": job.request_id,
+                "node_id": job.node_id,
+                "operation": job.operation,
+                "status": job.status,
+                "result": job.result,
+                "error": job.error,
+            }
 
     def node_snapshots(self) -> list[dict[str, object]]:
         with self._lock:
-            return [asdict(self.nodes[node_id]) for node_id in sorted(self.nodes)]
+            return [
+                {
+                    "node_id": node.node_id,
+                    "max_cells": node.max_cells,
+                    "max_concurrency": node.max_concurrency,
+                    "active_jobs": node.active_jobs,
+                    "healthy": node.healthy,
+                }
+                for node in (self.nodes[node_id] for node_id in sorted(self.nodes))
+            ]
