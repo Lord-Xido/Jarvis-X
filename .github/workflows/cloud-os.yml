@@ -7,12 +7,18 @@ on:
       - "src/jarvisx/cloud_os.py"
       - "src/jarvisx/cloud_service.py"
       - "src/jarvisx/bytecode3d.py"
+      - "src/jarvisx/qvector3d.py"
+      - "src/jarvisx/qvector_cloud.py"
+      - "src/jarvisx/qvector_bytecode3d.py"
       - "tests/test_cloud_os.py"
       - "tests/test_cloud_service.py"
       - "tests/test_bytecode3d.py"
+      - "tests/test_qvector3d.py"
       - "docs/DR_MOAGI_CLOUD_OS.md"
       - "docs/DR_MOAGI_BYTECODE3D.md"
+      - "docs/DR_MOAGI_QVECTOR3D.md"
       - "examples/bytecode3d_demo.py"
+      - "examples/qvector3d_demo.py"
       - "Dockerfile.cloud"
       - "docker-compose.cloud.yml"
       - ".github/workflows/cloud-os.yml"
@@ -40,18 +46,32 @@ jobs:
           src/jarvisx/cloud_os.py
           src/jarvisx/cloud_service.py
           src/jarvisx/bytecode3d.py
+          src/jarvisx/qvector3d.py
+          src/jarvisx/qvector_cloud.py
+          src/jarvisx/qvector_bytecode3d.py
           tests/test_cloud_os.py
           tests/test_cloud_service.py
           tests/test_bytecode3d.py
+          tests/test_qvector3d.py
           examples/bytecode3d_demo.py
+          examples/qvector3d_demo.py
 
-      - name: Test cloud OS and bytecode engine
-        run: pytest -q tests/test_cloud_os.py tests/test_cloud_service.py tests/test_bytecode3d.py --no-cov
+      - name: Test cloud OS, scalar bytecode, and Q16.16x3 engine
+        run: >-
+          pytest -q
+          tests/test_cloud_os.py
+          tests/test_cloud_service.py
+          tests/test_bytecode3d.py
+          tests/test_qvector3d.py
+          --no-cov
 
-      - name: Run bytecode smoke demo
+      - name: Run scalar bytecode smoke demo
         env:
           JARVISX_CLOUD_LEDGER: /tmp/jarvisx-cloud-os-demo-ledger.jsonl
         run: python examples/bytecode3d_demo.py
+
+      - name: Run Q16.16x3 bytecode smoke demo
+        run: python examples/qvector3d_demo.py
 
       - name: Import API
         env:
