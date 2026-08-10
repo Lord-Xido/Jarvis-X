@@ -6,8 +6,13 @@ on:
     paths:
       - "src/jarvisx/cloud_os.py"
       - "src/jarvisx/cloud_service.py"
+      - "src/jarvisx/bytecode3d.py"
       - "tests/test_cloud_os.py"
       - "tests/test_cloud_service.py"
+      - "tests/test_bytecode3d.py"
+      - "docs/DR_MOAGI_CLOUD_OS.md"
+      - "docs/DR_MOAGI_BYTECODE3D.md"
+      - "examples/bytecode3d_demo.py"
       - "Dockerfile.cloud"
       - "docker-compose.cloud.yml"
       - ".github/workflows/cloud-os.yml"
@@ -30,10 +35,23 @@ jobs:
         run: python -m pip install -e ".[test]"
 
       - name: Compile
-        run: python -m compileall -q src/jarvisx/cloud_os.py src/jarvisx/cloud_service.py tests/test_cloud_os.py tests/test_cloud_service.py
+        run: >-
+          python -m compileall -q
+          src/jarvisx/cloud_os.py
+          src/jarvisx/cloud_service.py
+          src/jarvisx/bytecode3d.py
+          tests/test_cloud_os.py
+          tests/test_cloud_service.py
+          tests/test_bytecode3d.py
+          examples/bytecode3d_demo.py
 
-      - name: Test cloud OS
-        run: pytest -q tests/test_cloud_os.py tests/test_cloud_service.py --no-cov
+      - name: Test cloud OS and bytecode engine
+        run: pytest -q tests/test_cloud_os.py tests/test_cloud_service.py tests/test_bytecode3d.py --no-cov
+
+      - name: Run bytecode smoke demo
+        env:
+          JARVISX_CLOUD_LEDGER: /tmp/jarvisx-cloud-os-demo-ledger.jsonl
+        run: python examples/bytecode3d_demo.py
 
       - name: Import API
         env:
