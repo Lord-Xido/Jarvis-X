@@ -8,7 +8,7 @@ import math
 import threading
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Any, Callable, Sequence
 
 from .cloud_os import DrMoagiCloudOS
 from .qvector3d import (
@@ -92,7 +92,9 @@ class QVectorCloudJob:
     node_id: str
     operation: str
     status: str = "queued"
-    result: dict[str, object] | None = None
+    # Results cross a JSON-style control-plane boundary. Individual consumers
+    # validate/narrow fields before converting them into typed VM state.
+    result: dict[str, Any] | None = None
     error: str | None = None
 
 
