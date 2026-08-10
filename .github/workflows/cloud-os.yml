@@ -18,6 +18,7 @@ on:
       - "tests/test_qvector3d.py"
       - "tests/test_qvector_v2.py"
       - "tests/test_qvector_field_bytecode.py"
+      - "tests/test_qvector_optimizer_v2.py"
       - "docs/DR_MOAGI_CLOUD_OS.md"
       - "docs/DR_MOAGI_BYTECODE3D.md"
       - "docs/DR_MOAGI_QVECTOR3D.md"
@@ -63,6 +64,7 @@ jobs:
           tests/test_qvector3d.py
           tests/test_qvector_v2.py
           tests/test_qvector_field_bytecode.py
+          tests/test_qvector_optimizer_v2.py
           examples/bytecode3d_demo.py
           examples/qvector3d_demo.py
           examples/qvector_field_v2_demo.py
@@ -76,6 +78,7 @@ jobs:
           tests/test_qvector3d.py
           tests/test_qvector_v2.py
           tests/test_qvector_field_bytecode.py
+          tests/test_qvector_optimizer_v2.py
           --no-cov
 
       - name: Run scalar bytecode smoke demo
