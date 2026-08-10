@@ -94,7 +94,7 @@ class QVectorCloudJob:
     status: str = "queued"
     # Results cross a JSON-style control-plane boundary. Individual consumers
     # validate/narrow fields before converting them into typed VM state.
-    result: dict[str, Any] | None = None
+    result: Any = None
     error: str | None = None
 
 
