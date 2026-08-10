@@ -34,7 +34,7 @@ jobs:
         run: python -m compileall -q src/jarvisx/dr_moagi_codec_3d.py src/jarvisx/api.py tests/test_dr_moagi_codec_3d.py
 
       - name: Run codec invariants
-        run: pytest tests/test_dr_moagi_codec_3d.py
+        run: pytest -o addopts="-ra --strict-config --strict-markers --tb=short" tests/test_dr_moagi_codec_3d.py
 
   container:
     name: API container smoke test
