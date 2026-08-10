@@ -14,6 +14,7 @@ on:
       - "src/jarvisx/qvector_field_bytecode.py"
       - "tests/test_cloud_os.py"
       - "tests/test_cloud_service.py"
+      - "tests/test_cloud_service_v2.py"
       - "tests/test_bytecode3d.py"
       - "tests/test_qvector3d.py"
       - "tests/test_qvector_v2.py"
@@ -60,6 +61,7 @@ jobs:
           src/jarvisx/qvector_field_bytecode.py
           tests/test_cloud_os.py
           tests/test_cloud_service.py
+          tests/test_cloud_service_v2.py
           tests/test_bytecode3d.py
           tests/test_qvector3d.py
           tests/test_qvector_v2.py
@@ -74,6 +76,7 @@ jobs:
           pytest -q
           tests/test_cloud_os.py
           tests/test_cloud_service.py
+          tests/test_cloud_service_v2.py
           tests/test_bytecode3d.py
           tests/test_qvector3d.py
           tests/test_qvector_v2.py
@@ -95,7 +98,8 @@ jobs:
       - name: Import API
         env:
           JARVISX_CLOUD_LEDGER: /tmp/jarvisx-cloud-os-ledger.jsonl
-        run: python -c "from jarvisx.cloud_service import app; assert app.title"
+        run: >-
+          python -c "from jarvisx.cloud_service import app; assert app.title; assert app.version == '2.0.0'"
 
       - name: Build container
         run: docker build -f Dockerfile.cloud -t jarvisx-cloud-os:pr .
