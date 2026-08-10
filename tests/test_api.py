@@ -1,7 +1,21 @@
 import pytest
 from fastapi import HTTPException
 
-from jarvisx.api import CodecRoundTripRequest, RunRequest, codec_roundtrip, health, run_code
+from jarvisx.api import (
+    CodecRoundTripRequest,
+    RunRequest,
+    codec_roundtrip,
+    dashboard,
+    health,
+    run_code,
+)
+
+
+def test_dashboard_is_served_from_unified_runtime() -> None:
+    html = dashboard()
+
+    assert "Jarvis-X Operational Console" in html
+    assert "fetch('/run'" in html
 
 
 def test_health_reports_bounded_capability_boundary() -> None:
