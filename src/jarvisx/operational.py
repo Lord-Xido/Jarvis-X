@@ -69,6 +69,7 @@ def capability_manifest() -> dict[str, object]:
             "deterministic_vm": True,
             "transactional_vm": True,
             "bounded_vm_cycles": True,
+            "dr_moagi_codec_3d_reference": True,
             "codec_integrity_digest": True,
             "codec_anchor_preservation": True,
             "codec_commit_or_rollback": True,
