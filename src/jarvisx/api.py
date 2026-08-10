@@ -4,6 +4,7 @@ import hashlib
 from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from .assembler import Assembler
@@ -13,6 +14,30 @@ from .parser import Parser
 
 _MAX_SOURCE_CHARS = 1_000_000
 _MAX_API_VOXELS = 262_144
+
+_DASHBOARD_HTML = """<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Jarvis-X</title></head>
+<body>
+<h1>Jarvis-X Operational Console</h1>
+<p>Deterministic VM + bounded Dr Moagi 3D codec reference.</p>
+<textarea id="source" rows="10" cols="70">SET Ψ 10\nSET Φ 20\nADD A Ψ Φ\nHALT</textarea><br>
+<button id="run">Run VM</button>
+<pre id="result"></pre>
+<script>
+document.getElementById('run').onclick = async () => {
+  const source = document.getElementById('source').value;
+  const response = await fetch('/run', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({source})
+  });
+  document.getElementById('result').textContent = JSON.stringify(await response.json(), null, 2);
+};
+</script>
+</body>
+</html>
+"""
 
 app = FastAPI(
     title="Jarvis-X API",
@@ -33,6 +58,11 @@ class CodecRoundTripRequest(BaseModel):
     max_anchor_mse: float | None = None
     max_rate_bpv: float | None = None
     virtual_depth: int = 1
+
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard() -> str:
+    return _DASHBOARD_HTML
 
 
 @app.get("/health")
