@@ -122,3 +122,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 no_implicit_optional = true
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "jarvisx.qvector_bytecode3d"
+warn_return_any = false
