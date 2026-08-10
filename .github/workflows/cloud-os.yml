@@ -7,6 +7,7 @@ on:
       - "src/jarvisx/cloud_os.py"
       - "src/jarvisx/cloud_service.py"
       - "tests/test_cloud_os.py"
+      - "tests/test_cloud_service.py"
       - "Dockerfile.cloud"
       - "docker-compose.cloud.yml"
       - ".github/workflows/cloud-os.yml"
@@ -29,10 +30,10 @@ jobs:
         run: python -m pip install -e ".[test]"
 
       - name: Compile
-        run: python -m compileall -q src/jarvisx/cloud_os.py src/jarvisx/cloud_service.py tests/test_cloud_os.py
+        run: python -m compileall -q src/jarvisx/cloud_os.py src/jarvisx/cloud_service.py tests/test_cloud_os.py tests/test_cloud_service.py
 
       - name: Test cloud OS
-        run: pytest -q tests/test_cloud_os.py --no-cov
+        run: pytest -q tests/test_cloud_os.py tests/test_cloud_service.py --no-cov
 
       - name: Import API
         env:
