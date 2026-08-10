@@ -66,6 +66,7 @@ def capability_manifest() -> dict[str, object]:
             "visualization": "non-authoritative interface",
         },
         "invariants": {
+            "deterministic_vm": True,
             "transactional_vm": True,
             "bounded_vm_cycles": True,
             "codec_integrity_digest": True,
