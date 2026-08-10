@@ -8,11 +8,9 @@ from pathlib import Path
 from typing import Sequence
 
 from .api import start_api
-from .assembler import Assembler
-from .core import CodexVM
 from .dr_moagi_codec_3d import CodecConfig, DrMoagiCodec3D, Volume3D
 from .node import CodexNode
-from .parser import Parser
+from .operational import execute_source
 from .web import start_web
 
 
@@ -46,25 +44,8 @@ def _write_volume(path: Path, volume: Volume3D) -> None:
 
 
 def _run_source(path: Path, max_cycles: int) -> int:
-    source = path.read_text(encoding="utf-8")
-    ast = Parser().parse(source)
-    bytecode = Assembler().assemble(ast)
-    vm = CodexVM(max_cycles=max_cycles)
-    vm.load(bytecode)
-    registers = vm.run()
-    print(
-        json.dumps(
-            {
-                "registers": registers,
-                "cycles": vm.cycles,
-                "ledger_entries": len(vm.ledger.chain),
-                "ledger_valid": vm.ledger.verify(),
-            },
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-        )
-    )
+    receipt = execute_source(path.read_text(encoding="utf-8"), max_cycles=max_cycles)
+    print(json.dumps(receipt.to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 
 
