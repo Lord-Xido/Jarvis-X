@@ -5,7 +5,7 @@ from __future__ import annotations
 import hmac
 import os
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -97,7 +97,7 @@ def create_app(runtime: DrMoagiCloudOS | None = None) -> FastAPI:
 
     @app.get("/v1/nodes", dependencies=[Depends(authorize)])
     def list_nodes() -> list[dict[str, object]]:
-        return cloud.node_snapshots()
+        return cast(list[dict[str, object]], cloud.node_snapshots())
 
     @app.post(
         "/v1/nodes",
@@ -131,7 +131,7 @@ def create_app(runtime: DrMoagiCloudOS | None = None) -> FastAPI:
             )
         except (ValueError, RuntimeError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
-        return cloud.job_snapshot(job.job_id)
+        return cast(dict[str, object], cloud.job_snapshot(job.job_id))
 
     @app.post("/v1/auto-optimize", dependencies=[Depends(authorize)])
     def auto_optimize(request: OptimizeRequest) -> dict[str, object]:
@@ -145,12 +145,12 @@ def create_app(runtime: DrMoagiCloudOS | None = None) -> FastAPI:
             )
         except (ValueError, RuntimeError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
-        return cloud.job_snapshot(job.job_id)
+        return cast(dict[str, object], cloud.job_snapshot(job.job_id))
 
     @app.get("/v1/jobs/{job_id}", dependencies=[Depends(authorize)])
     def get_job(job_id: str) -> dict[str, object]:
         try:
-            return cloud.job_snapshot(job_id)
+            return cast(dict[str, object], cloud.job_snapshot(job_id))
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
 
