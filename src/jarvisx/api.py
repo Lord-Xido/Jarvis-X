@@ -7,10 +7,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from .assembler import Assembler
-from .core import CodexVM
 from .dr_moagi_codec_3d import CodecConfig, DrMoagiCodec3D, Volume3D
-from .parser import Parser
+from .operational import capability_manifest, execute_source
 
 _MAX_SOURCE_CHARS = 1_000_000
 _MAX_API_VOXELS = 262_144
@@ -67,40 +65,27 @@ def dashboard() -> str:
 
 @app.get("/health")
 def health() -> dict[str, object]:
+    manifest = capability_manifest()
+    invariants = manifest["invariants"]
     return {
         "status": "ok",
-        "system": "Jarvis-X",
-        "capabilities": {
-            "deterministic_vm": True,
-            "transactional_vm": True,
-            "dr_moagi_codec_3d_reference": True,
-            "virtual_depth_is_physical_throughput": False,
-        },
+        "system": manifest["system"],
+        "schema": manifest["schema"],
+        "authority": manifest["authority"],
+        "capabilities": invariants,
     }
 
 
 @app.post("/run")
 def run_code(payload: RunRequest) -> dict[str, object]:
-    if not payload.source.strip():
-        raise HTTPException(status_code=400, detail="source cannot be empty")
     if len(payload.source) > _MAX_SOURCE_CHARS:
         raise HTTPException(status_code=413, detail="source exceeds API size limit")
 
     try:
-        ast = Parser().parse(payload.source)
-        bytecode = Assembler().assemble(ast)
-        vm = CodexVM()
-        vm.load(bytecode)
-        registers = vm.run()
+        receipt = execute_source(payload.source)
     except (TypeError, ValueError, RuntimeError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-
-    return {
-        "registers": registers,
-        "cycles": vm.cycles,
-        "ledger_entries": len(vm.ledger.chain),
-        "ledger_valid": vm.ledger.verify(),
-    }
+    return receipt.to_dict()
 
 
 @app.post("/codec/roundtrip")
