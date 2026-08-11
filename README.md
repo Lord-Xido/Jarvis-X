@@ -8,9 +8,9 @@
 
 **Jarvis-X is a deterministic, auditable bytecode virtual machine and sparse-computing research platform.**
 
-The project investigates how large virtual state spaces, geometric representations, residual memory and bounded adaptation can be implemented as reproducible software without confusing virtual extent with physical allocation or simulation with deployed intelligence.
+The project investigates how large virtual state spaces, geometric and physical representations, residual memory and bounded adaptation can be implemented as reproducible software without confusing virtual extent with physical allocation, numerical approximation with calibrated physics, or simulation with deployed intelligence.
 
-> **Current status:** alpha research software. The repository contains a stable reference VM foundation, validated sparse and numerical components, a bounded C++ processor laboratory and experimental integration tracks. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
+> **Current status:** alpha research software. The repository contains a stable reference VM foundation, transactional sparse systems, numerical references, a bounded C++ processor laboratory and experimental integration tracks. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
 
 ## Why Jarvis-X exists
 
@@ -21,7 +21,8 @@ Jarvis-X develops one coherent systems thesis:
 3. measure prediction or reconstruction error explicitly;
 4. retain bounded correction memory;
 5. verify proposed state transitions before commit;
-6. journal enough information to audit and replay decisions.
+6. journal enough information to audit and replay decisions;
+7. keep physical, numerical and visual claims tied to explicit models and evidence.
 
 The symbolic vocabulary used in the research documents maps to ordinary engineering mechanisms:
 
@@ -34,18 +35,20 @@ The symbolic vocabulary used in the research documents maps to ordinary engineer
 | Π | projection into a valid state set |
 | Ξ | integrated runtime state |
 
-## Capabilities on `main`
+## Capabilities
 
 | Area | Implemented capability | Maturity |
 |---|---|---|
 | Bytecode VM | parser, assembler, decoder, registers and minimal 64-bit instruction execution | Alpha |
 | Core ISA | `SET`, `ADD`, `SUB`, `HALT` | Alpha |
-| Runtime controls | policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
+| Runtime controls | transactional cycle, policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
+| Sparse 3D systems | billion-address field and bounded transactional decimal-1-PB BitVM | Stable references |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
+| Photonic pixel field | spectral detector integration, deterministic tiling, frame digest, rollback and `1000³` lattice projection | Integration candidate |
 | Model packaging | Hugging Face-compatible configuration, model and safetensors exporter | Reference |
-| Research specifications | reality-grounded observer dynamics, spatial bytecode and bounded optimization documents | Proposed / reference |
+| Research specifications | observer dynamics, spatial bytecode, bounded optimization and agentic orchestration boundaries | Proposed / reference |
 
 Experimental engines remain in draft pull requests until their tests, interfaces and capability claims are reconciled with the canonical core.
 
@@ -121,6 +124,50 @@ assert result.field.variance < field.variance
 
 The solver uses a dependency-free separable direct DFT for small correctness fixtures. See [Hierarchical 3D Fractional Smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md) for the equations, complexity and production boundary.
 
+### Render a photonic reference frame
+
+```python
+from jarvisx.photonic_rendering import (
+    Camera,
+    Material,
+    PhotonicRenderer,
+    PhotonicScene,
+    PointEmitter,
+    RenderConfig,
+    Sphere,
+    Spectrum,
+)
+
+scene = PhotonicScene(
+    spheres=(
+        Sphere(
+            center=(0.0, 0.0, -3.5),
+            radius=1.2,
+            material=Material(reflectance=(0.8, 0.32, 0.14), roughness=0.35),
+        ),
+    ),
+    emitters=(
+        PointEmitter(
+            position=(-2.5, 3.0, 0.0),
+            spectrum=Spectrum.white_reference(),
+            intensity=120.0,
+        ),
+    ),
+)
+
+frame, state, receipt = PhotonicRenderer().cycle(
+    scene,
+    Camera(width=32, height=18),
+    RenderConfig(samples_per_axis=2, tile_edge=8),
+)
+
+assert receipt.committed
+assert frame is not None
+assert state.frame_digest == frame.digest
+```
+
+The photonic path is a deterministic geometric/radiometric reference. It does not solve the full Maxwell equations and does not claim production GPU performance. See [Electromagnetic-Photonic Pixel-Field Runtime](docs/PHOTONIC_RENDERING_RUNTIME.md).
+
 ### Build the C++ processor laboratory
 
 ```bash
@@ -142,26 +189,20 @@ See [`cpp_runtime/README.md`](cpp_runtime/README.md) for its state artifacts, de
 ## Architecture
 
 ```text
-Source assembly
-      │
-      ▼
-Parser → Assembler → 64-bit bytecode
-                         │
-                         ▼
-             ┌─────────────────────┐
-             │      CodexVM        │
-             │ decode → authorize  │
-             │ execute → trace     │
-             │ journal → constrain │
-             └─────────────────────┘
-                         │
-              ┌──────────┴──────────┐
-              ▼                     ▼
-      authoritative state    isolated research layers
-      registers / memory     C++ / numerical / visual
+physical or digital input
+          |
+          v
+representation -> validation -> transactional execution -> observation -> journal
+          |                         |
+          |                         +-> authoritative VM state
+          |
+          +-> sparse coordinates / numerical fields / photonic detector tiles
+                                      |
+                                      +-> bounded CPU, GPU or cloud backend
+                                      +-> verified output or rollback
 ```
 
-The canonical design rules are documented in [Architecture](docs/ARCHITECTURE.md).
+The canonical design rules are documented in [Architecture](docs/ARCHITECTURE.md). The integrated ten-stage workflow, 3D coordinate conventions and authority boundaries are documented in [System Operational Framework](docs/SYSTEM_OPERATIONAL_FRAMEWORK.md).
 
 ## Sparse fractal octree
 
@@ -190,6 +231,7 @@ At depth `D`:
 | Backlog consolidation | select canonical implementations and close superseded research branches | Issue #48 |
 | Repository protection | required checks, secret scanning and private vulnerability reporting | Issue #49 |
 | Public profile | account-level profile README and pinned-project cleanup | Issue #50 |
+| Photonic pixel field | establish detector semantics before GPU acceleration | Integration candidate |
 | Browser engines | bounded interactive 3D visual-computing demonstrations | Separate repository |
 
 Draft status is intentional: experimental subsystems are not represented as canonical until CI, review and integration boundaries are satisfied.
@@ -220,12 +262,14 @@ Every canonical subsystem should provide:
 - reproducible tests and examples;
 - honest implemented-versus-proposed boundaries;
 - transaction, rollback or failure semantics where state is mutated;
-- no performance or intelligence claim without measurement.
+- no performance, physical or intelligence claim without measurement.
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [System operational framework](docs/SYSTEM_OPERATIONAL_FRAMEWORK.md)
 - [Project status](docs/PROJECT_STATUS.md)
+- [Electromagnetic-photonic pixel-field runtime](docs/PHOTONIC_RENDERING_RUNTIME.md)
 - [Hierarchical 3D fractional smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md)
 - [Roadmap](ROADMAP.md)
 - [Governance](GOVERNANCE.md)
@@ -235,7 +279,7 @@ Every canonical subsystem should provide:
 
 ## Contributing
 
-Jarvis-X welcomes focused improvements in VM correctness, bytecode formats, sparse spatial computation, deterministic testing, performance measurement and documentation. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+Jarvis-X welcomes focused improvements in VM correctness, bytecode formats, sparse spatial computation, deterministic numerical methods, performance measurement and documentation. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 Large architectural proposals should begin as an issue or specification. Production claims must include reproducible evidence.
 
@@ -243,7 +287,7 @@ Large architectural proposals should begin as an issue or specification. Product
 
 Jarvis-X is an experimental software and mathematical research project. It does not claim consciousness, unrestricted autonomous self-modification, lossless compression of arbitrary high-dimensional inputs into smaller states, or production safety merely because a policy layer is present.
 
-Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code. The fractional solver is a small-grid CPU reference, not a calibrated physical model or production FFT implementation.
+Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. A geometric or radiometric rendering model is not a full electromagnetic solver. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code. The fractional solver is a small-grid CPU reference, not a calibrated physical model or production FFT implementation.
 
 ## Citation
 
