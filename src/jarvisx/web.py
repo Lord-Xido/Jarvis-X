@@ -1,42 +1,12 @@
-from flask import Flask, render_template_string, request
-from .core import CodexVM
-from .parser import Parser
-from .assembler import Assembler
+from __future__ import annotations
 
-app = Flask(__name__)
-vm = CodexVM()
+from .api import app, start_api
 
-HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Jarvis-X Dashboard</title>
-</head>
-<body>
-  <h1>Jarvis-X Control Panel</h1>
-  <form method="post">
-    <textarea name="code" rows="10" cols="60"></textarea><br>
-    <button type="submit">Run</button>
-  </form>
-  {% if result %}
-    <h3>Registers</h3>
-    <pre>{{ result }}</pre>
-  {% endif %}
-</body>
-</html>
-"""
 
-@app.route("/", methods=["GET","POST"])
-def home():
-    result = None
-    if request.method == "POST":
-        source = request.form["code"]
-        ast = Parser().parse(source)
-        bytecode = Assembler().assemble(ast)
-        vm.load(bytecode)
-        vm.run()
-        result = vm.regs.snapshot()
-    return render_template_string(HTML, result=result)
+def start_web(host: str = "0.0.0.0", port: int = 8080) -> None:
+    """Compatibility entrypoint for the unified FastAPI dashboard/API service."""
 
-def start_web():
-    app.run(host="0.0.0.0", port=5000)
+    start_api(host=host, port=port)
+
+
+__all__ = ["app", "start_web"]

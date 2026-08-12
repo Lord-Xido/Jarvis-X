@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-08-01  
+**Last reviewed:** 2026-08-10  
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -33,6 +33,8 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database or proof of long-memory quality |
 | Sparse billion-address field | Stable reference | `dr_moagi_billion_field.py`, transaction/digest/checkpoint tests | virtual `1000³` address space; active sparse coordinates alone are materialized |
+| Dr Moagi 3D codec reference | Alpha | `dr_moagi_codec_3d.py`, focused invariants, ADR-002 | bounded scalar correctness reference using uniform quantization and zlib; not a trained neural codec or literal million-pass runtime |
+| FastAPI operational surface | Alpha | `api.py`, `Dockerfile`, codec-runtime workflow | development/reference API with request bounds; not an authenticated hostile-network security boundary |
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
 | 3D swarm bytecode architecture | Specification | `docs/DR_MOAGI_3D_SWARM_BYTECODE_ISA.md` | document does not establish hardware performance |
@@ -55,6 +57,8 @@ The gate currently tests five falsifiable properties:
 3. sparse-field insertion-order invariance, checkpoint replay and atomic rollback;
 4. fractal-octree agreement with exact recursive closed forms;
 5. fractional-smoothing conservation, dissipation and semigroup tolerances.
+
+The Dr Moagi codec reference adds focused CI invariants for deterministic bitstream generation, quantization error bounds, payload integrity, immutable-anchor rollback, resource rejection and virtual-versus-measured depth reporting. These focused tests are additive to the package-wide empirical evidence gate until the next evidence-schema revision.
 
 The `Empirical Validation` GitHub Actions workflow publishes the machine-readable report as a retained workflow artifact. See [Empirical Validation](EMPIRICAL_VALIDATION.md) for protocols, thresholds and inference boundaries.
 
@@ -88,7 +92,8 @@ Jarvis-X does not currently claim:
 - safety certification from the presence of a policy or coherence gate;
 - bit-exact cross-platform floating-point results from the C++ research processor;
 - production-scale fractional PDE performance or physical validity from the numerical reference solver;
-- empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines.
+- empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines;
+- one million physically executed codec transitions from `virtual_depth = 1_000_000` telemetry.
 
 ## Canonical promotion checklist
 
@@ -130,6 +135,7 @@ A capability moves to `main` only when all applicable items are satisfied:
 
 ### `0.4.0` — Bounded adaptive laboratory
 
+- versioned 3D codec reference promoted into the consolidated empirical evidence artifact;
 - shadow evaluation API;
 - reproducible candidate generation;
 - rollback-complete state transitions;
