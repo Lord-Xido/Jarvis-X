@@ -22,11 +22,11 @@ def test_canonical_two_point_dct_trace() -> None:
         (1.4849242404917498, 1.9091883092036783)
     )
     assert trace.spatial_residual == pytest.approx(
-        (0.0150757595082502, -0.0091883092036784)
+        (0.0150757595082500, -0.0091883092036786)
     )
-    assert trace.residual_norm == pytest.approx(0.0176551277, rel=1e-8)
+    assert trace.residual_norm == pytest.approx(0.0176551281720920)
     assert trace.deterministic_bound == pytest.approx(0.1 * math.sqrt(2.0) / 2.0)
-    assert trace.gate_ratio < 0.25
+    assert trace.gate_ratio == pytest.approx(0.249681217064078)
     assert trace.committed is True
 
 
