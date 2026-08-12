@@ -341,3 +341,57 @@ Virtual/logical scale is always reported separately from measured hardware perfo
 ## 17. Canonical interpretation
 
 The Moagi-Helmholtz system is a conditional 3D generative, refinement and multimedia archival architecture. Its canonical strength is not a claim of magical inversion; it is the explicit coupling of generation, geometry, codec economics, inverse inference, evidence and reversible adaptation inside one auditable Jarvis-X state machine.
+
+## 18. Orthogonal transform precision gate
+
+Transform-based latent or archive adapters that claim an orthonormal reconstruction boundary additionally inherit ADR-005.
+
+For
+
+```text
+X       = D x
+A_k     = round_nearest(X_k / delta_k)
+Xhat_k  = delta_k A_k
+xhat    = D^T Xhat
+D^T D   = I
+```
+
+the deterministic precision envelope is
+
+```text
+B_Q = 0.5 * sqrt(sum_k delta_k^2)
+||x - xhat||_2 <= B_Q.
+```
+
+For a uniform step `Delta`,
+
+```text
+B_Q = Delta * sqrt(M) / 2.
+```
+
+The transform gate is
+
+```text
+Lambda_Q = ||x - xhat||_2 / B_Q <= 1.
+```
+
+A precision-gate failure is diagnosed before the enclosing codec or geometry tolerance is changed.  In particular, the runtime must distinguish transform normalization/inverse defects from genuine quantization distortion.
+
+The canonical verification order is
+
+```text
+render / latent state
+-> declared transform
+-> verify D^T D ~= I
+-> quantize / dequantize
+-> reconstruct with D^T
+-> Lambda_Q
+-> rate/distortion accounting
+-> archive reconstruction / cycle metrics
+-> Pi_Lambda
+-> COMMIT or ROLLBACK.
+```
+
+The precision receipt reports its own transform error, quantization bound and gate ratio separately from render distortion and `E_cycle`.  This prevents one numerical layer from hiding defects inside a broader multimedia error budget.
+
+The reference implementation is `src/jarvisx/orthogonal_quantization.py`; the normative numerical contract is `DR_MOAGI_ORTHOGONAL_QUANTIZATION.md`.

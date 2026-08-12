@@ -35,6 +35,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Sparse billion-address field | Stable reference | `dr_moagi_billion_field.py`, transaction/digest/checkpoint tests | virtual `1000³` address space; active sparse coordinates alone are materialized |
 | Dr Moagi Field Runtime v2 | Reference laboratory | `dr_moagi_field_runtime.py`, `test_dr_moagi_field_runtime.py`, ADR-003 | same-space sparse field equation; codec-dependent stability beyond the conservative reference guard remains empirical |
 | Moagi-Helmholtz orchestration runtime | Reference laboratory | `moagi_helmholtz.py`, `test_moagi_helmholtz.py`, ADR-004 | deterministic orchestration contract; bundled renderer/archive/inverse components are conformance fixtures, not production neural or MP4 implementations |
+| Orthogonal quantization precision gate | Numerical reference | `orthogonal_quantization.py`, `test_orthogonal_quantization.py`, ADR-005 | proves normalization and nearest-neighbour error bounds for declared orthonormal transforms; not a production DCT/video codec kernel |
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
 | 3D swarm bytecode architecture | Specification | `docs/DR_MOAGI_3D_SWARM_BYTECODE_ISA.md` | document does not establish hardware performance |
@@ -58,7 +59,7 @@ The gate currently tests five falsifiable properties:
 4. fractal-octree agreement with exact recursive closed forms;
 5. fractional-smoothing conservation, dissipation and semigroup tolerances.
 
-The Field Runtime v2 and Moagi-Helmholtz orchestration runtime are covered by focused unit tests in the normal CI suite. They are not yet promoted into the consolidated empirical-validation artifact; that remains a follow-up integration target.
+The Field Runtime v2, Moagi-Helmholtz orchestration runtime and orthogonal quantization precision gate are covered by focused unit tests in the normal CI suite. They are not yet promoted into the consolidated empirical-validation artifact; that remains a follow-up integration target.
 
 The `Empirical Validation` GitHub Actions workflow publishes the machine-readable report as a retained workflow artifact. See [Empirical Validation](EMPIRICAL_VALIDATION.md) for protocols, thresholds and inference boundaries.
 
@@ -89,6 +90,8 @@ Jarvis-X does not currently claim:
 - lossless compression of arbitrary data into a smaller state without side information;
 - global invertibility of ordinary RGB/video rendering to the original 3D mesh;
 - that MP4 is itself a global 3D-DCT codec;
+- that every transform used by a production codec is orthogonal or governed by ADR-005;
+- that a failed orthogonal precision gate may be repaired by simply doubling the admissible quantization threshold;
 - unique convergence of arbitrary learned Moagi-Helmholtz pipelines without sufficient mathematical assumptions;
 - physical hardware performance from a virtual address-space description;
 - trained model quality from deterministic initialized weights;
@@ -144,7 +147,8 @@ A capability moves to `main` only when all applicable items are satisfied:
 - rollback-complete state transitions;
 - codec/model version binding for adaptive field runtimes;
 - Moagi-Helmholtz conditioner/geometry/renderer/archive backend adapters with measured capability boundaries;
-- rate-distortion and cycle-reconstruction telemetry;
+- orthogonal transform receipts carrying basis/version, step vector, rounding rule, `B_Q` and `Lambda_Q`;
+- rate-distortion and cycle-reconstruction telemetry separated from transform precision telemetry;
 - anchor-drift and reconstruction telemetry in the consolidated empirical evidence artifact;
 - metric-hacking tests;
 - experiment manifests and replay.
