@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-08-01  
+**Last reviewed:** 2026-08-12  
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -33,6 +33,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database or proof of long-memory quality |
 | Sparse billion-address field | Stable reference | `dr_moagi_billion_field.py`, transaction/digest/checkpoint tests | virtual `1000³` address space; active sparse coordinates alone are materialized |
+| Dr Moagi Field Runtime v2 | Reference laboratory | `dr_moagi_field_runtime.py`, `test_dr_moagi_field_runtime.py`, ADR-003 | same-space sparse field equation; codec-dependent stability beyond the conservative reference guard remains empirical |
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
 | 3D swarm bytecode architecture | Specification | `docs/DR_MOAGI_3D_SWARM_BYTECODE_ISA.md` | document does not establish hardware performance |
@@ -55,6 +56,8 @@ The gate currently tests five falsifiable properties:
 3. sparse-field insertion-order invariance, checkpoint replay and atomic rollback;
 4. fractal-octree agreement with exact recursive closed forms;
 5. fractional-smoothing conservation, dissipation and semigroup tolerances.
+
+The Field Runtime v2 is covered by focused unit tests in the normal CI suite. It is not yet promoted into the consolidated empirical-validation artifact; that remains a follow-up integration target.
 
 The `Empirical Validation` GitHub Actions workflow publishes the machine-readable report as a retained workflow artifact. See [Empirical Validation](EMPIRICAL_VALIDATION.md) for protocols, thresholds and inference boundaries.
 
@@ -88,6 +91,7 @@ Jarvis-X does not currently claim:
 - safety certification from the presence of a policy or coherence gate;
 - bit-exact cross-platform floating-point results from the C++ research processor;
 - production-scale fractional PDE performance or physical validity from the numerical reference solver;
+- convergence of arbitrary learned Dr Moagi codecs from the reference explicit-step guard alone;
 - empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines.
 
 ## Canonical promotion checklist
@@ -126,6 +130,7 @@ A capability moves to `main` only when all applicable items are satisfied:
 - durable block storage;
 - deterministic serialization;
 - transactional concurrency;
+- same-space sparse field operators with explicit topology and boundary semantics;
 - benchmark corpus with named baselines and uncertainty reporting.
 
 ### `0.4.0` — Bounded adaptive laboratory
@@ -133,5 +138,7 @@ A capability moves to `main` only when all applicable items are satisfied:
 - shadow evaluation API;
 - reproducible candidate generation;
 - rollback-complete state transitions;
+- codec/model version binding for adaptive field runtimes;
+- anchor-drift and reconstruction telemetry in the consolidated empirical evidence artifact;
 - metric-hacking tests;
 - experiment manifests and replay.
