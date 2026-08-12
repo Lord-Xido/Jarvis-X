@@ -105,6 +105,7 @@ Responsibilities may include:
 - bounded geometric refinement;
 - rendering orchestration;
 - multimedia codec and archive adapters;
+- orthogonal transform precision verification;
 - inverse geometric inference;
 - rate-distortion measurement;
 - parameter candidate generation;
@@ -118,6 +119,8 @@ Adaptive systems must optimize constrained representations, not rewrite arbitrar
 For volumetric autoencoding systems, additive evolution terms must inhabit the same authoritative field space. Latent tensors are transformed through an explicit decoder before they participate in a field residual.
 
 The Moagi-Helmholtz functional is the canonical Layer 5 orchestration contract for multimodal-conditioned geometry generation, refinement, archival coding and reverse inference. It does not require the canonical VM to depend on a neural, renderer or codec backend.
+
+Orthogonal transform adapters additionally inherit ADR-005: normalization is verified before transpose-as-inverse reconstruction, quantization error receives its own deterministic envelope, and a transform defect cannot be hidden by widening a multimedia distortion threshold.
 
 ### Layer 6 — Interfaces and visualization
 
@@ -179,6 +182,9 @@ The research transform cannot make itself authoritative merely by computing a ca
 13. **No false inverse:** ordinary lossy rendering or video coding is not treated as globally invertible to original geometry.
 14. **Rate-distortion visibility:** codec optimization reports both distortion and coded representation size.
 15. **Convergence by evidence:** unique convergence is claimed only under sufficient mathematical assumptions or a validated restricted domain.
+16. **Transform precision separation:** orthogonal transform/quantization error is measured against its own deterministic bound and is not absorbed into render, cycle or perceptual tolerances.
+17. **Normalize before inversion:** a backend may use `D^T` as the inverse only when the declared transform has passed its orthonormality contract within tolerance.
+18. **Diagnose before widening:** a precision-gate failure triggers transform/payload/precision diagnosis before any quantization threshold is relaxed.
 
 ## 5. Data contracts
 
@@ -288,6 +294,46 @@ A -> Demux -> B -> Decode -> F_hat -> I_phi -> (z_hat,c_hat) -> D -> V_hat0 -> R
 
 The reverse path is inference unless sufficient side information establishes exact replay.
 
+### Orthogonal quantization candidate
+
+An adapter that claims the ADR-005 precision contract declares:
+
+```text
+input dimension M
+transform/basis identity and version
+orthogonality tolerance
+measured ||D^T D - I||_max
+coefficient step vector or uniform Delta
+rounding convention
+quantized integer coefficients
+transform-domain residual
+spatial reconstruction residual
+B_Q
+Lambda_Q
+verification tolerance
+precision-gate result
+```
+
+The canonical law is
+
+```text
+X       = D x
+A_k     = round_nearest(X_k / delta_k)
+Xhat_k  = delta_k A_k
+xhat    = D^T Xhat
+B_Q     = 0.5 * sqrt(sum_k delta_k^2)
+Lambda_Q= ||x-xhat||_2 / B_Q
+```
+
+with
+
+```text
+D^T D = I
+Lambda_Q <= 1.
+```
+
+For uniform `Delta`, `B_Q = Delta * sqrt(M) / 2`.
+
 ## 6. Integration rule
 
 A research subsystem may enter the canonical package only when it provides:
@@ -306,6 +352,8 @@ Large pull requests should be decomposed into infrastructure, kernel, integratio
 A field or latent runtime must additionally demonstrate sparse support confinement, candidate rollback, explicit timestep/resource limits, and honest information-capacity claims for its latent representation.
 
 A generative/archive runtime must additionally separate renderer, codec and container semantics; account for side information; expose cycle error and archive size; and reject candidates before publication when validation fails.
+
+An orthogonal transform backend must additionally prove its normalization/inverse pairing, document its rounding convention, reproduce the deterministic coefficient/spatial error envelope, and fail closed on malformed/non-finite inputs.
 
 ## 7. Decision records
 
@@ -326,6 +374,8 @@ ADR-003 extends ADR-002 by defining the same-space Dr Moagi field evolution cont
 
 ADR-004 extends ADR-003 by defining the Moagi-Helmholtz multimodal generative, geometric, rendering, archival and inverse-inference orchestration contract.
 
+ADR-005 extends ADR-004 by defining the orthogonal transform normalization, quantization error envelope and precision-gate semantics used by eligible latent/archive backends.
+
 ## 8. Security boundary
 
 The policy layer is an application-level guard, not a complete security sandbox. Untrusted bytecode, native plugins, model files and browser content require dedicated threat models. See [`SECURITY.md`](../SECURITY.md).
@@ -333,6 +383,8 @@ The policy layer is an application-level guard, not a complete security sandbox.
 Self-modification is never equivalent to unrestricted writes into authoritative code memory. Adaptive code, model, tile, or schedule changes are represented as candidate patches that require validation and commit; otherwise the prior authoritative state remains active.
 
 Decoded multimedia, model weights, geometry sidecars and archive metadata are also untrusted inputs. Backend adapters must validate sizes, formats, coordinate ranges and version bindings before allocating or publishing authoritative state.
+
+Transform metadata is untrusted as well. A payload may not assert orthogonality, a step vector, or a basis version without local validation against the implementation contract.
 
 ## 9. Dr Moagi Field Runtime v2 integration
 
@@ -432,3 +484,40 @@ browser/3D UI        -> visualization and telemetry unless separately promoted
 ```
 
 None of these backends may bypass the canonical evidence, resource, policy, provenance, or rollback boundaries.
+
+## 11. Orthogonal quantization system-wide permeation
+
+The transform precision layer sits inside any eligible latent or archive backend and before its enclosing transaction gate:
+
+```text
+state x
+  -> load declared basis D
+  -> verify D^T D ~= I
+  -> X = D x
+  -> A = Q_delta(X)
+  -> Xhat = Q_delta^-1(A)
+  -> xhat = D^T Xhat
+  -> E_Q = ||x-xhat||_2
+  -> B_Q = 0.5 * sqrt(sum delta_k^2)
+  -> Lambda_Q = E_Q / B_Q
+  -> precision PASS / FAIL
+  -> rate-distortion / cycle / policy checks
+  -> Pi_Lambda
+  -> COMMIT / ROLLBACK
+  -> provenance
+```
+
+The precision layer reports independently from broader multimedia metrics:
+
+```text
+E_Q       transform/quantization reconstruction error
+B_Q       deterministic transform precision bound
+Lambda_Q  bound utilization
+E_render  renderer/video distortion
+E_cycle   end-to-end geometry cycle error
+E_anchor  drift from immutable source anchor
+```
+
+A backend is not permitted to trade a failed `Lambda_Q` against a permissive `E_render` or `E_cycle`.  Numerical correctness at the transform boundary is a prerequisite for higher-level quality optimization.
+
+The reference implementation is `src/jarvisx/orthogonal_quantization.py`.  Optimized C++, CUDA, DMEB, FPGA, native SIMD or codec-specific implementations must reproduce the same declared transform, quantizer and receipt semantics before promotion.
