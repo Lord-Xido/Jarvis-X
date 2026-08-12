@@ -85,15 +85,21 @@ Responsibilities:
 - sparse blocks, bricks, tiles or octrees;
 - exact logical-to-physical addressing;
 - bounded materialization;
-- topology and geometry validation.
+- topology and geometry validation;
+- explicitly signed discrete spatial operators and boundary conditions;
+- bounded support closure for local field updates.
 
 A large virtual extent never implies dense allocation. Every implementation must state its resident working-set bound.
+
+The Dr Moagi Field Runtime v2 is the canonical reference for a same-space sparse volumetric transition. Its default logical extent may be `1000^3`, while its physical state remains an explicitly bounded active support with deterministic background semantics.
 
 ### Layer 5 — Adaptive research systems
 
 Responsibilities may include:
 
 - residual correction memory;
+- autoencoder/decoder closure operators;
+- inward latent or field recurrence;
 - parameter candidate generation;
 - shadow evaluation;
 - bounded schedule search;
@@ -101,6 +107,8 @@ Responsibilities may include:
 - commit and rollback decisions.
 
 Adaptive systems must optimize constrained representations, not rewrite arbitrary native instructions. Fitness must exclude uncontrolled nondeterministic signals unless repeated statistical evaluation is explicitly part of the contract.
+
+For volumetric autoencoding systems, additive evolution terms must inhabit the same authoritative field space. Latent tensors are transformed through an explicit decoder before they participate in a field residual.
 
 ### Layer 6 — Interfaces and visualization
 
@@ -132,6 +140,19 @@ fetch
 
 Reflex correction is opt-in. It must never silently change normal assembly semantics.
 
+Research runtimes that operate outside the core instruction loop use the analogous candidate-first boundary:
+
+```text
+snapshot
+  → bounded research transform
+  → candidate state
+  → projection / policy / resource validation
+  → commit or rollback
+  → telemetry / provenance
+```
+
+The research transform cannot make itself authoritative merely by computing a candidate.
+
 ## 4. Core invariants
 
 1. **Determinism:** identical authoritative inputs produce identical VM state, excluding explicitly recorded environmental values such as production timestamps.
@@ -142,6 +163,9 @@ Reflex correction is opt-in. It must never silently change normal assembly seman
 6. **Separation of authority:** visual, predictive and adaptive layers cannot silently mutate the canonical VM state.
 7. **Honest scale:** virtual geometry is reported separately from resident memory and measured throughput.
 8. **No claim by naming:** terms such as intelligence, cognition, self-evolution or neural do not establish those capabilities without operational tests.
+9. **Same-space evolution:** terms combined in one authoritative state equation must share a defined state type and compatible units.
+10. **Candidate-first adaptation:** active model, schedule, topology, bytecode, or field state is not replaced until its candidate passes the declared admission gate.
+11. **Immutable drift reference:** self-referential research loops that measure generational preservation retain an immutable source anchor for the duration of a run.
 
 ## 5. Data contracts
 
@@ -155,6 +179,8 @@ Canonical bytecode words are unsigned 64-bit integers. Persistent binary formats
 - capacity rules;
 - integrity checks;
 - malformed-input behavior.
+
+Experimental tensor instruction formats such as 256-bit, 512-bit, DMEB-32, CUDA, FPGA or native-extension encodings are adapters/research targets until a separate accepted ADR promotes them. They may not silently redefine the canonical core bytecode format.
 
 ### Journal
 
@@ -184,6 +210,36 @@ Every spatial subsystem must define:
 - serialization order;
 - neighborhood topology.
 
+### Dr Moagi field candidate
+
+A Field Runtime v2 candidate must declare:
+
+- logical side length and active-support ceiling;
+- codec/version identity;
+- timestep and coefficients `alpha`, `lambda`, `eta`;
+- reconstruction residual definition;
+- Laplacian and glyph sign conventions;
+- boundary conditions;
+- projection limits;
+- immutable anchor identity;
+- commit/rejection outcome and telemetry.
+
+The canonical field law is
+
+```text
+R(Psi) = Psi - D(E(Psi))
+
+dPsi/dt = -alpha R(Psi)
+          + lambda Delta_6 R(Psi)
+          + eta (G_moagi * Psi).
+```
+
+With the canonical glyph stencil,
+
+```text
+G_moagi * Psi = -(1/6) Delta_6 Psi.
+```
+
 ## 6. Integration rule
 
 A research subsystem may enter the canonical package only when it provides:
@@ -198,6 +254,8 @@ A research subsystem may enter the canonical package only when it provides:
 - no unresolved conflict with existing authoritative state.
 
 Large pull requests should be decomposed into infrastructure, kernel, integration and demonstration stages.
+
+A field or latent runtime must additionally demonstrate sparse support confinement, candidate rollback, explicit timestep/resource limits, and honest information-capacity claims for its latent representation.
 
 ## 7. Decision records
 
@@ -214,6 +272,64 @@ Validation
 
 A newer accepted ADR may supersede an older one, but historical records should remain available.
 
+ADR-003 extends ADR-002 by defining the same-space Dr Moagi field evolution contract and its executable sparse transaction semantics.
+
 ## 8. Security boundary
 
 The policy layer is an application-level guard, not a complete security sandbox. Untrusted bytecode, native plugins, model files and browser content require dedicated threat models. See [`SECURITY.md`](../SECURITY.md).
+
+Self-modification is never equivalent to unrestricted writes into authoritative code memory. Adaptive code, model, tile, or schedule changes are represented as candidate patches that require validation and commit; otherwise the prior authoritative state remains active.
+
+## 9. Dr Moagi Field Runtime v2 integration
+
+The evolved system architecture is:
+
+```text
+Canonical authority
+  Layer 0  representation / 64-bit bytecode
+  Layer 1  deterministic execution
+  Layer 2  policy + transaction control
+  Layer 3  provenance + replay
+       |
+       v
+Research compute envelope
+  Layer 4  sparse 3D support
+           -> six-neighbour topology
+           -> Delta_6
+           -> G_moagi
+       |
+       v
+  Layer 5  encode -> decode -> residual
+           -> inward field recurrence
+           -> candidate adaptation
+           -> Pi_Lambda
+       |
+       v
+Admission boundary
+  verify -> COMMIT / ROLLBACK -> provenance
+       |
+       v
+  Layer 6  API / CLI / visualization / hardware adapters
+```
+
+The operational cycle for the Dr Moagi field subsystem is:
+
+```text
+Psi_n
+  -> freeze snapshot
+  -> bounded support closure
+  -> E_theta(Psi_n)
+  -> D_theta(z, support)
+  -> R_n = Psi_n - Psi_hat_n
+  -> H_n = Delta_6 R_n
+  -> P_n = G_moagi * Psi_n
+  -> rhs_n = -alpha R_n + lambda H_n + eta P_n
+  -> candidate = Psi_n + dt rhs_n
+  -> Pi_Lambda
+  -> shadow/validator checks
+  -> COMMIT or ROLLBACK
+  -> reconstruction + anchor + resource telemetry
+  -> next inward cycle
+```
+
+This architecture is backend-neutral. Pure Python, C++, PyTorch/CUDA, distributed sparse workers, FPGA soft cores, and experimental tensor bytecodes may implement the transform, provided they preserve the same state, resource, and transaction semantics.
