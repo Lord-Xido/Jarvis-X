@@ -271,8 +271,13 @@ class ReferenceGeometryCodec:
     def decode(self, latent: Any, condition: Any) -> Mesh:
         del condition
         return Mesh(
-            vertices=tuple(tuple(float(v) for v in vertex) for vertex in latent["vertices"]),
-            faces=tuple(tuple(int(i) for i in face) for face in latent["faces"]),
+            vertices=tuple(
+                (float(vertex[0]), float(vertex[1]), float(vertex[2]))
+                for vertex in latent["vertices"]
+            ),
+            faces=tuple(
+                (int(face[0]), int(face[1]), int(face[2])) for face in latent["faces"]
+            ),
         )
 
 
