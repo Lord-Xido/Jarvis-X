@@ -1,0 +1,25 @@
+services:
+  mmvm:
+    build:
+      context: ../..
+      dockerfile: apps/mmvm-fullstack/Dockerfile
+    container_name: jarvis-x-mmvm
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      MMVM_DB: /data/mmvm.sqlite3
+      MMVM_FRONTEND: /app/apps/mmvm-fullstack/index.html
+      MMVM_WORKER_INTERVAL: "0.05"
+    volumes:
+      - mmvm-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: 2.0
+
+volumes:
+  mmvm-data:
