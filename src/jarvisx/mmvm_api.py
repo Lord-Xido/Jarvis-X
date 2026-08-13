@@ -6,7 +6,7 @@ import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, Response
@@ -87,7 +87,7 @@ def health() -> dict[str, Any]:
 
 @app.get("/api/status")
 def status() -> dict[str, Any]:
-    return kernel.status()
+    return cast(dict[str, Any], kernel.status())
 
 
 @app.post("/api/submit", status_code=202)
@@ -107,7 +107,7 @@ def submit(request: SubmitRequest) -> dict[str, Any]:
         )
     except (ValueError, TypeError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return task.public()
+    return cast(dict[str, Any], task.public())
 
 
 @app.post("/api/cycle")
@@ -118,7 +118,7 @@ async def cycle() -> dict[str, Any]:
 
 @app.get("/api/tasks")
 def tasks(limit: int = Query(default=50, ge=1, le=500)) -> list[dict[str, Any]]:
-    return kernel.tasks(limit)
+    return cast(list[dict[str, Any]], kernel.tasks(limit))
 
 
 @app.get("/api/tasks/{task_id}")
@@ -126,12 +126,12 @@ def task(task_id: str) -> dict[str, Any]:
     result = kernel.task(task_id)
     if result is None:
         raise HTTPException(status_code=404, detail="task not found")
-    return result
+    return cast(dict[str, Any], result)
 
 
 @app.get("/api/memory")
 def memory() -> dict[str, Any]:
-    return kernel.memory.stats()
+    return cast(dict[str, Any], kernel.memory.stats())
 
 
 @app.get("/api/objects/{object_id}")
