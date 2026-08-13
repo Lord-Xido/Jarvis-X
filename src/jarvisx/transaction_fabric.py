@@ -7,7 +7,7 @@ OBSERVE -> NORMALIZE -> PROVENANCE -> AUTHORIZE -> ENCODE -> TRANSFORM
 -> COMMIT/ROLLBACK -> OMEGA RECEIPT.
 
 The fabric is deliberately adapter-driven. Research subsystems may propose state but
-cannot become authoritative without passing the transaction gate.
+cannot become authoritative without passing the gate.
 """
 
 from __future__ import annotations
@@ -17,9 +17,9 @@ import json
 import math
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Mapping, MutableMapping, Protocol, Sequence
+from typing import Any, Mapping, MutableMapping, Protocol, Sequence
 
-from .m3_acme import RuntimeReport, process_records
+from .m3_acme import M3ACMERuntime, RuntimeReport, webbit_from_mapping
 
 
 class FabricError(RuntimeError):
@@ -27,7 +27,7 @@ class FabricError(RuntimeError):
 
 
 class AdmissionRejected(FabricError):
-    """Raised when a candidate cannot cross Pi_Lambda."""
+    """Raised when transaction-level admission limits reject an input."""
 
 
 class TransactionAdapter(Protocol):
@@ -94,7 +94,7 @@ class OmegaChain:
     def verify(self) -> bool:
         previous_hash = "0" * 64
         for entry in self.entries:
-            payload = {k: v for k, v in entry.items() if k not in {"previous_hash", "hash"}}
+            payload = {key: value for key, value in entry.items() if key not in {"previous_hash", "hash"}}
             expected = hashlib.sha256(previous_hash.encode("ascii") + _canonical_bytes(payload)).hexdigest()
             if entry.get("previous_hash") != previous_hash or entry.get("hash") != expected:
                 return False
@@ -114,7 +114,7 @@ def _state_size(value: Any) -> int:
     return len(_canonical_bytes(value))
 
 
-def _validate_numeric_tree(value: Any, limits: FabricLimits, path: str = "$.") -> list[str]:
+def _validate_numeric_tree(value: Any, limits: FabricLimits, path: str = "$") -> list[str]:
     failures: list[str] = []
     if isinstance(value, bool) or value is None or isinstance(value, str):
         return failures
@@ -127,11 +127,11 @@ def _validate_numeric_tree(value: Any, limits: FabricLimits, path: str = "$.") -
         return failures
     if isinstance(value, Mapping):
         for key, item in value.items():
-            failures.extend(_validate_numeric_tree(item, limits, f"{path}{key}."))
+            failures.extend(_validate_numeric_tree(item, limits, f"{path}.{key}"))
         return failures
     if isinstance(value, (list, tuple)):
         for index, item in enumerate(value):
-            failures.extend(_validate_numeric_tree(item, limits, f"{path}{index}."))
+            failures.extend(_validate_numeric_tree(item, limits, f"{path}[{index}]"))
     return failures
 
 
@@ -184,13 +184,12 @@ def execute_transaction(
     """Execute one complete bounded Jarvis-X research transaction.
 
     M3-ACME performs the admission/encode/abstract/decode/loss boundary. Optional adapters
-    then receive isolated candidate state. Each adapter must pass Pi_Lambda before its state
-    can become authoritative. A rejected adapter is rolled back atomically to the previous
-    authoritative state and recorded in the receipt.
+    receive an isolated snapshot and propose candidate state. Each candidate must pass the
+    common gate and adapter validation before it can replace authoritative transaction state.
     """
 
     effective_limits = limits or FabricLimits()
-    chain = omega or OmegaChain()
+    chain = omega if omega is not None else OmegaChain()
     timestamp = now or datetime.now(timezone.utc)
     if timestamp.tzinfo is None or timestamp.utcoffset() is None:
         raise ValueError("now must be timezone-aware")
@@ -200,7 +199,8 @@ def execute_transaction(
         raise AdmissionRejected("adapter count exceeds configured max_adapters")
 
     input_digest = _digest(records)
-    report = process_records(records, now=timestamp)
+    bits = [webbit_from_mapping(record) for record in records]
+    report = M3ACMERuntime().process(bits, now=timestamp)
     authoritative: MutableMapping[str, Any] = _report_to_state(report)
     decisions: list[CandidateDecision] = []
 
@@ -210,7 +210,7 @@ def execute_transaction(
         try:
             candidate = dict(adapter.transform(before))
             failures = _pi_lambda(before, candidate, adapter, effective_limits)
-        except Exception as exc:  # fail closed at the adapter boundary
+        except Exception as exc:
             candidate = None
             failures = (f"adapter exception: {type(exc).__name__}: {exc}",)
 
