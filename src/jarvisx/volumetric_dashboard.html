@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jarvis-X Universal 3D Volumetric Runtime</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #030712; color: #f3f4f6; overflow: hidden; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    canvas { display: block; width: 100vw; height: 100vh; position: fixed; inset: 0; z-index: 0; }
+    .glass-panel { background: rgba(17, 24, 39, 0.78); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.10); }
+    .metric-value { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="selection:bg-indigo-500 selection:text-white">
+  <div id="canvas-container" class="absolute inset-0"></div>
+
+  <header class="relative z-10 flex items-center justify-between px-6 py-4 glass-panel border-b border-gray-800">
+    <div class="flex items-center space-x-3">
+      <div id="status-dot" class="w-3 h-3 bg-amber-400 rounded-full animate-pulse shadow-[0_0_12px_#f59e0b]"></div>
+      <h1 class="text-lg font-bold tracking-wider text-white">JARVIS-X <span class="text-indigo-400 font-light">6400 GiB 3D VOLUMETRIC RUNTIME</span></h1>
+    </div>
+    <div class="hidden md:flex items-center space-x-6 text-xs mono text-gray-400">
+      <div>STATUS: <span id="sys-status" class="text-amber-300 font-semibold">CONNECTING</span></div>
+      <div>ALLOCATION: <span class="text-indigo-300">SPARSE VIRTUAL</span></div>
+      <div>VERIFY: <span id="header-verify" class="text-gray-400">PENDING</span></div>
+    </div>
+  </header>
+
+  <main class="relative z-10 grid grid-cols-1 lg:grid-cols-4 gap-6 p-6 pointer-events-none h-[calc(100vh-73px)]">
+    <section class="lg:col-span-1 flex flex-col space-y-4 pointer-events-auto overflow-y-auto max-h-full pr-1">
+      <div class="glass-panel p-5 rounded-2xl shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xs uppercase tracking-widest font-semibold text-gray-400">Live Runtime Telemetry</h2>
+          <span id="api-badge" class="text-[10px] mono px-2 py-1 rounded-full bg-gray-900 text-gray-500 border border-gray-800">API</span>
+        </div>
+
+        <div class="space-y-2.5 text-sm">
+          <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-gray-400 text-xs">Virtual Capacity</span>
+            <span id="metric-capacity" class="mono metric-value font-semibold text-indigo-300">—</span>
+          </div>
+          <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-gray-400 text-xs">Logical Cube Side</span>
+            <span id="metric-side" class="mono metric-value font-semibold text-cyan-300">—</span>
+          </div>
+          <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-gray-400 text-xs">Logical Cells</span>
+            <span id="metric-cells" class="mono metric-value font-semibold text-cyan-300">—</span>
+          </div>
+          <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-gray-400 text-xs">Measured Ratio</span>
+            <span id="metric-comp" class="mono metric-value font-semibold text-emerald-300">—</span>
+          </div>
+          <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-gray-400 text-xs">Artifact / Chunks</span>
+            <span id="metric-artifact" class="mono metric-value font-semibold text-violet-300">—</span>
+          </div>
+          <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-gray-400 text-xs">Encode / Decode</span>
+            <span id="metric-latency" class="mono metric-value font-semibold text-amber-300">—</span>
+          </div>
+          <div class="flex justify-between items-center bg-gray-900/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-gray-400 text-xs">Bit-Exact Verify</span>
+            <span id="metric-verify" class="mono metric-value font-semibold text-gray-400">PENDING</span>
+          </div>
+        </div>
+
+        <div class="mt-4 bg-gray-950/70 border border-gray-900 rounded-xl p-3">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 mb-1">Payload SHA-256</div>
+          <div id="metric-hash" class="mono text-[10px] text-cyan-300 break-all">—</div>
+        </div>
+
+        <div class="mt-5 pt-4 border-t border-gray-800/80 grid grid-cols-2 gap-2">
+          <button id="toggle-exec" class="py-3 px-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
+            <span id="btn-text">Pause Auto-Cycle</span>
+          </button>
+          <button id="run-once" class="py-3 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium text-xs rounded-xl transition-all active:scale-95">Run Once</button>
+        </div>
+      </div>
+
+      <div class="glass-panel p-5 rounded-2xl shadow-2xl flex-1 flex flex-col min-h-[180px]">
+        <h2 class="text-xs uppercase tracking-widest font-semibold text-gray-400 mb-3">Verified Execution Stream</h2>
+        <div id="log-container" class="mono text-[11px] bg-gray-950/80 p-3 rounded-xl border border-gray-900 flex-1 overflow-y-auto space-y-2 text-gray-300 max-h-52 lg:max-h-none">
+          <div class="text-amber-300">[BOOT] Connecting dashboard to volumetric runtime…</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lg:col-span-3 flex flex-col justify-between items-end pointer-events-none pb-6 pr-2">
+      <div class="mt-2 glass-panel px-4 py-3 rounded-xl text-[11px] mono text-gray-400 max-w-xl">
+        <div class="text-indigo-300 mb-1">DM–vΩΞ⁺ execution surface</div>
+        <div>Payload → chunk map (x,y,z) → reversible latent artifact → integrity decode → byte-exact verification</div>
+      </div>
+      <div class="glass-panel px-4 py-2 rounded-xl text-xs mono text-gray-400 flex items-center space-x-2">
+        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
+        <span>Drag to rotate • Scroll to zoom • Live pulses follow API cycles</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let isExecuting = true;
+    let cycleInFlight = false;
+    let frameCount = 0;
+    let cycleCounter = 0;
+    let lastVerified = false;
+
+    const $ = (id) => document.getElementById(id);
+    const formatInt = (value) => Number(value).toLocaleString('en-US');
+    const formatBytes = (value) => {
+      const n = Number(value);
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KiB`;
+      return `${(n / 1024 ** 2).toFixed(2)} MiB`;
+    };
+
+    function setSystemState(state, detail = '') {
+      const status = $('sys-status');
+      const dot = $('status-dot');
+      const badge = $('api-badge');
+      if (state === 'online') {
+        status.textContent = isExecuting ? 'AUTO-EXECUTING' : 'PAUSED';
+        status.className = isExecuting ? 'text-emerald-400 font-semibold' : 'text-amber-300 font-semibold';
+        dot.className = isExecuting
+          ? 'w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]'
+          : 'w-3 h-3 bg-amber-400 rounded-full shadow-[0_0_12px_#f59e0b]';
+        badge.textContent = 'API LIVE';
+        badge.className = 'text-[10px] mono px-2 py-1 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-900';
+      } else if (state === 'busy') {
+        status.textContent = 'EXECUTING';
+        status.className = 'text-cyan-300 font-semibold';
+        badge.textContent = 'API BUSY';
+        badge.className = 'text-[10px] mono px-2 py-1 rounded-full bg-cyan-950/70 text-cyan-300 border border-cyan-900';
+      } else {
+        status.textContent = 'OFFLINE';
+        status.className = 'text-rose-400 font-semibold';
+        dot.className = 'w-3 h-3 bg-rose-500 rounded-full shadow-[0_0_12px_#f43f5e]';
+        badge.textContent = detail || 'API ERROR';
+        badge.className = 'text-[10px] mono px-2 py-1 rounded-full bg-rose-950/70 text-rose-300 border border-rose-900';
+      }
+    }
+
+    function appendLog(message, colorClass = 'text-gray-300') {
+      const container = $('log-container');
+      const stamp = new Date().toLocaleTimeString('en-GB', { hour12: false }) + '.' + String(new Date().getMilliseconds()).padStart(3, '0');
+      const div = document.createElement('div');
+      div.className = colorClass;
+      div.textContent = `[${stamp}] ${message}`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      while (container.children.length > 36) container.removeChild(container.firstChild);
+    }
+
+    function makeCyclePayload() {
+      cycleCounter += 1;
+      const seed = `JARVIS-X|DM-vOmegaXi|cycle=${cycleCounter}|`;
+      const block = `${seed}ENCODE>LATENT>DECODE>VERIFY|`;
+      return new TextEncoder().encode(block.repeat(4096));
+    }
+
+    async function loadMetrics() {
+      const response = await fetch('/v1/volumetric/metrics', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`metrics HTTP ${response.status}`);
+      const m = await response.json();
+      $('metric-capacity').textContent = `${formatInt(m.capacity_gib)} GiB`;
+      $('metric-side').textContent = `${formatInt(m.logical_cube_side_cells)}³`;
+      $('metric-cells').textContent = formatInt(m.total_cells);
+      appendLog(`SUBSTRATE: ${formatInt(m.total_cells)} logical ${m.cell_bits}-bit cells; idle resident allocation ${formatBytes(m.resident_bytes_at_idle)}.`, 'text-indigo-300');
+    }
+
+    async function runCycle(manual = false) {
+      if (cycleInFlight) return;
+      cycleInFlight = true;
+      setSystemState('busy');
+      try {
+        const payload = makeCyclePayload();
+        const response = await fetch('/v1/volumetric/cycle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: payload,
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`cycle HTTP ${response.status}: ${text.slice(0, 120)}`);
+        }
+        const result = await response.json();
+        const enc = result.encode;
+        const dec = result.decode;
+        lastVerified = Boolean(result.verified && dec.verified);
+
+        $('metric-comp').textContent = `${Number(enc.compression_ratio).toFixed(3)}×`;
+        $('metric-artifact').textContent = `${formatBytes(enc.artifact_bytes)} / ${formatInt(enc.chunk_count)}`;
+        $('metric-latency').textContent = `${Number(enc.latency_ms).toFixed(2)} / ${Number(dec.latency_ms).toFixed(2)} ms`;
+        $('metric-hash').textContent = enc.payload_sha256;
+        $('metric-verify').textContent = lastVerified ? 'BIT-EXACT' : 'FAILED';
+        $('metric-verify').className = lastVerified
+          ? 'mono metric-value font-semibold text-emerald-300'
+          : 'mono metric-value font-semibold text-rose-300';
+        $('header-verify').textContent = lastVerified ? 'BIT-EXACT' : 'FAILED';
+        $('header-verify').className = lastVerified ? 'text-emerald-300' : 'text-rose-300';
+
+        appendLog(`ENCODER: ${formatBytes(enc.payload_bytes)} → ${formatBytes(enc.artifact_bytes)} across ${enc.chunk_count} chunk(s), measured ${Number(enc.compression_ratio).toFixed(3)}×.`, 'text-cyan-300');
+        appendLog(`DECODER: SHA-256 ${dec.payload_sha256.slice(0, 16)}… verified=${dec.verified}; reconstructed bit-exact=${result.verified}.`, lastVerified ? 'text-emerald-300' : 'text-rose-300');
+        if (manual) appendLog('CONTROL: Manual end-to-end cycle completed.', 'text-violet-300');
+        setSystemState('online');
+      } catch (error) {
+        lastVerified = false;
+        $('metric-verify').textContent = 'ERROR';
+        $('metric-verify').className = 'mono metric-value font-semibold text-rose-300';
+        $('header-verify').textContent = 'ERROR';
+        $('header-verify').className = 'text-rose-300';
+        appendLog(`API: ${error.message}`, 'text-rose-300');
+        setSystemState('offline');
+      } finally {
+        cycleInFlight = false;
+      }
+    }
+
+    const container = $('canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x030712, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 15, 35);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.78));
+    const pointLight = new THREE.PointLight(0x6366f1, 3, 60);
+    pointLight.position.set(0, 10, 0);
+    scene.add(pointLight);
+
+    const gridGroup = new THREE.Group();
+    scene.add(gridGroup);
+
+    const nodeCountX = 10;
+    const nodeCountY = 6;
+    const nodeCountZ = 10;
+    const spacing = 3.2;
+    const sphereGeo = new THREE.SphereGeometry(0.18, 16, 16);
+    const baseMaterial = new THREE.MeshStandardMaterial({
+      color: 0x818cf8,
+      emissive: 0x4f46e5,
+      emissiveIntensity: 0.6,
+      roughness: 0.2,
+      metalness: 0.8,
+    });
+
+    const nodes = [];
+    for (let x = 0; x < nodeCountX; x++) {
+      for (let y = 0; y < nodeCountY; y++) {
+        for (let z = 0; z < nodeCountZ; z++) {
+          const mesh = new THREE.Mesh(sphereGeo, baseMaterial.clone());
+          mesh.position.set(
+            (x - nodeCountX / 2) * spacing + spacing / 2,
+            (y - nodeCountY / 2) * spacing + spacing / 2,
+            (z - nodeCountZ / 2) * spacing + spacing / 2,
+          );
+          mesh.userData = {
+            origY: mesh.position.y,
+            phase: Math.random() * Math.PI * 2,
+          };
+          gridGroup.add(mesh);
+          nodes.push(mesh);
+        }
+      }
+    }
+
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x312e81, transparent: true, opacity: 0.18 });
+    const box = new THREE.BoxGeometry((nodeCountX - 1) * spacing, (nodeCountY - 1) * spacing, (nodeCountZ - 1) * spacing);
+    const edges = new THREE.EdgesGeometry(box);
+    const frame = new THREE.LineSegments(edges, lineMaterial);
+    gridGroup.add(frame);
+
+    const particleCount = 420;
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particlePositions.length; i += 3) {
+      particlePositions[i] = (Math.random() - 0.5) * 35;
+      particlePositions[i + 1] = (Math.random() - 0.5) * 20;
+      particlePositions[i + 2] = (Math.random() - 0.5) * 35;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleSystem = new THREE.Points(
+      particleGeo,
+      new THREE.PointsMaterial({
+        color: 0x38bdf8,
+        size: 0.25,
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    scene.add(particleSystem);
+
+    let isDragging = false;
+    let previousPointer = { x: 0, y: 0 };
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+
+    function beginDrag(x, y) {
+      isDragging = true;
+      previousPointer = { x, y };
+    }
+    function dragTo(x, y) {
+      if (!isDragging) return;
+      targetRotationY += (x - previousPointer.x) * 0.005;
+      targetRotationX += (y - previousPointer.y) * 0.005;
+      targetRotationX = Math.max(-1.2, Math.min(1.2, targetRotationX));
+      previousPointer = { x, y };
+    }
+
+    window.addEventListener('mousedown', (e) => beginDrag(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => dragTo(e.clientX, e.clientY));
+    window.addEventListener('mouseup', () => { isDragging = false; });
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) beginDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1) dragTo(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener('touchend', () => { isDragging = false; });
+    window.addEventListener('wheel', (e) => {
+      camera.position.z = Math.max(18, Math.min(70, camera.position.z + e.deltaY * 0.02));
+    }, { passive: true });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    $('toggle-exec').addEventListener('click', () => {
+      isExecuting = !isExecuting;
+      $('btn-text').textContent = isExecuting ? 'Pause Auto-Cycle' : 'Resume Auto-Cycle';
+      appendLog(`CONTROL: Auto-cycle ${isExecuting ? 'resumed' : 'paused'}.`, isExecuting ? 'text-emerald-300' : 'text-amber-300');
+      setSystemState('online');
+      if (isExecuting) runCycle(false);
+    });
+    $('run-once').addEventListener('click', () => runCycle(true));
+
+    function animate() {
+      requestAnimationFrame(animate);
+      frameCount += 1;
+      const time = Date.now() * 0.002;
+
+      if (isExecuting) {
+        gridGroup.rotation.y += 0.0015;
+        gridGroup.rotation.x += (targetRotationX - gridGroup.rotation.x) * 0.05;
+        gridGroup.rotation.y += (targetRotationY - gridGroup.rotation.y) * 0.05;
+
+        nodes.forEach((node, index) => {
+          const pulse = Math.abs(Math.sin(time * 1.8 + node.userData.phase));
+          node.position.y = node.userData.origY + Math.sin(time + node.userData.phase) * 0.55;
+          node.material.emissiveIntensity = (lastVerified ? 0.3 : 0.12) + pulse * (lastVerified ? 0.85 : 0.35);
+          if (cycleInFlight && index % 7 === frameCount % 7) node.scale.setScalar(1.7);
+          else node.scale.lerp(new THREE.Vector3(1, 1, 1), 0.18);
+        });
+
+        const positions = particleGeo.attributes.position.array;
+        for (let i = 0; i < positions.length; i += 3) {
+          positions[i + 1] -= cycleInFlight ? 0.24 : 0.10;
+          if (positions[i + 1] < -12) positions[i + 1] = 12;
+        }
+        particleGeo.attributes.position.needsUpdate = true;
+      } else {
+        gridGroup.rotation.x += (targetRotationX - gridGroup.rotation.x) * 0.03;
+        gridGroup.rotation.y += (targetRotationY - gridGroup.rotation.y) * 0.03;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    async function boot() {
+      try {
+        await loadMetrics();
+        setSystemState('online');
+        appendLog('API: Live metrics endpoint connected.', 'text-emerald-300');
+        await runCycle(false);
+      } catch (error) {
+        appendLog(`BOOT: ${error.message}`, 'text-rose-300');
+        setSystemState('offline');
+      }
+      setInterval(() => {
+        if (isExecuting) runCycle(false);
+      }, 3000);
+    }
+
+    animate();
+    boot();
+  </script>
+</body>
+</html>

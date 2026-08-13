@@ -62,9 +62,14 @@ Changelog = "https://github.com/Lord-Xido/Jarvis-X/blob/main/CHANGELOG.md"
 [project.scripts]
 jarvisx = "jarvisx.cli:main"
 jarvisx-hyperion = "jarvisx.hyperion_cli:main"
+jarvisx-volumetric = "jarvisx.volumetric_cli:main"
+jarvisx-volumetric-api = "jarvisx.volumetric_api:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+jarvisx = ["*.html"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,0 +1,86 @@
+name: Volumetric AE Runtime
+
+on:
+  pull_request:
+    paths:
+      - "src/jarvisx/volumetric_ae.py"
+      - "src/jarvisx/volumetric_cli.py"
+      - "src/jarvisx/volumetric_api.py"
+      - "src/jarvisx/volumetric_dashboard.html"
+      - "tests/test_volumetric_ae.py"
+      - "pyproject.toml"
+      - ".github/workflows/volumetric-ae.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/volumetric_ae.py"
+      - "src/jarvisx/volumetric_cli.py"
+      - "src/jarvisx/volumetric_api.py"
+      - "src/jarvisx/volumetric_dashboard.html"
+      - "tests/test_volumetric_ae.py"
+      - "pyproject.toml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: python -m pip install -e '.[test]'
+      - name: Unit tests
+        run: pytest tests/test_volumetric_ae.py --no-cov -q
+      - name: Runtime self-test
+        run: jarvisx-volumetric --chunk-bytes 4096 selftest
+      - name: Live API and dashboard smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m uvicorn jarvisx.volumetric_api:app --host 127.0.0.1 --port 8090 > /tmp/jarvisx-volumetric.log 2>&1 &
+          api_pid=$!
+          trap 'kill ${api_pid} 2>/dev/null || true' EXIT
+          python - <<'PY'
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+
+          base = "http://127.0.0.1:8090"
+          for _ in range(40):
+              try:
+                  with urllib.request.urlopen(base + "/health", timeout=1) as response:
+                      if response.status == 200:
+                          break
+              except (OSError, urllib.error.URLError):
+                  time.sleep(0.25)
+          else:
+              raise SystemExit("volumetric API did not become ready")
+
+          with urllib.request.urlopen(base + "/", timeout=2) as response:
+              dashboard = response.read().decode("utf-8")
+          assert "Live Runtime Telemetry" in dashboard
+          assert "/v1/volumetric/cycle" in dashboard
+
+          payload = (b"JARVIS-X-LIVE-CI-CYCLE|" * 4096)
+          request = urllib.request.Request(
+              base + "/v1/volumetric/cycle",
+              data=payload,
+              method="POST",
+              headers={"Content-Type": "application/octet-stream"},
+          )
+          with urllib.request.urlopen(request, timeout=5) as response:
+              report = json.load(response)
+          assert report["verified"] is True
+          assert report["decode"]["verified"] is True
+          print(json.dumps({
+              "verified": report["verified"],
+              "ratio": report["encode"]["compression_ratio"],
+              "artifact_bytes": report["encode"]["artifact_bytes"],
+          }, sort_keys=True))
+          PY
