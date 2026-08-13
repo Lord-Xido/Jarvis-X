@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, Response
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from .mmvm import MMVMKernel, decode_base64
 
@@ -64,12 +64,6 @@ class SubmitRequest(BaseModel):
     modality: str = Field(default="text", min_length=1, max_length=32)
     generate: str | None = None
 
-    @model_validator(mode="after")
-    def require_one_payload(self) -> "SubmitRequest":
-        if (self.text is None) == (self.payload_base64 is None):
-            raise ValueError("provide exactly one of text or payload_base64")
-        return self
-
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> HTMLResponse:
@@ -99,6 +93,8 @@ def status() -> dict[str, Any]:
 @app.post("/api/submit", status_code=202)
 def submit(request: SubmitRequest) -> dict[str, Any]:
     try:
+        if (request.text is None) == (request.payload_base64 is None):
+            raise ValueError("provide exactly one of text or payload_base64")
         payload = (
             request.text.encode("utf-8")
             if request.text is not None
