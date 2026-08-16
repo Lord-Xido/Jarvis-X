@@ -1,0 +1,77 @@
+name: DM VRAM Swarm Windows
+
+on:
+  pull_request:
+    paths:
+      - "apps/windows/dm-vomega-xi-6400-swarm/**"
+      - "tests/test_dm_vram_swarm_isa.py"
+      - "docs/adr/0009-dm-vomega-xi-6400-swarm-isa.md"
+      - ".github/workflows/dm-vram-swarm-windows.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/windows/dm-vomega-xi-6400-swarm/**"
+      - "tests/test_dm_vram_swarm_isa.py"
+      - "docs/adr/0009-dm-vomega-xi-6400-swarm-isa.md"
+      - ".github/workflows/dm-vram-swarm-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM PE toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld llvm python3 python3-pytest zip binutils
+
+      - name: Check ISA conformance test
+        run: python3 -m pytest -q tests/test_dm_vram_swarm_isa.py
+
+      - name: Build twice and prove reproducibility
+        shell: bash
+        run: |
+          cp -a apps/windows/dm-vomega-xi-6400-swarm /tmp/dm-a
+          cp -a apps/windows/dm-vomega-xi-6400-swarm /tmp/dm-b
+          /tmp/dm-a/build-windows.sh
+          /tmp/dm-b/build-windows.sh
+          cmp /tmp/dm-a/DM_vOmegaXi_6400GB_3D_VRAM_Swarm_ISA.exe /tmp/dm-b/DM_vOmegaXi_6400GB_3D_VRAM_Swarm_ISA.exe
+
+      - name: Verify PE structure and import surface
+        shell: bash
+        run: |
+          APP=/tmp/dm-a
+          file "$APP/DM_vOmegaXi_6400GB_3D_VRAM_Swarm_ISA.exe" | tee /tmp/dm-file.txt
+          grep -q 'PE32+ executable.*x86-64' /tmp/dm-file.txt
+          objdump -x "$APP/DM_vOmegaXi_6400GB_3D_VRAM_Swarm_ISA.exe" > /tmp/dm-pe.txt
+          grep -q 'Subsystem.*Windows CUI' /tmp/dm-pe.txt
+          grep -q 'DLL Name: KERNEL32.dll' /tmp/dm-pe.txt
+          test "$(grep -c 'DLL Name:' /tmp/dm-pe.txt)" -eq 1
+          grep -q 'GetStdHandle' /tmp/dm-pe.txt
+          grep -q 'WriteFile' /tmp/dm-pe.txt
+          grep -q 'Sleep' /tmp/dm-pe.txt
+          grep -q 'ExitProcess' /tmp/dm-pe.txt
+
+      - name: Package Windows artifact
+        shell: bash
+        run: |
+          APP=/tmp/dm-a
+          cd "$APP"
+          zip -9 DM-vOmegaXi-6400GB-3D-VRAM-Swarm-ISA-Windows-x64.zip \
+            DM_vOmegaXi_6400GB_3D_VRAM_Swarm_ISA.exe README.md ISA.md SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DM-vOmegaXi-6400GB-3D-VRAM-Swarm-ISA-Windows-x64
+          path: |
+            /tmp/dm-a/DM_vOmegaXi_6400GB_3D_VRAM_Swarm_ISA.exe
+            /tmp/dm-a/DM-vOmegaXi-6400GB-3D-VRAM-Swarm-ISA-Windows-x64.zip
+            /tmp/dm-a/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
