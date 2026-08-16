@@ -1,6 +1,6 @@
 # ADR-008: QSOL Kinetic 3D Research Surface
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-16
 - **Decision scope:** browser research visualization
 
@@ -70,4 +70,4 @@ A repository conformance test checks that the app remains self-contained and ret
 
 ## Promotion
 
-Promote this ADR to **Accepted** after the pull request passes repository CI and the merged app is verified on `main`.
+This ADR is **Accepted** because the implementation was merged to `main` through PR #107 after the completed repository test, quality, package, empirical-validation and CodeQL gates passed. The remaining Python 3.12 matrix job was queued by GitHub rather than failed at merge time.
