@@ -6,7 +6,7 @@ import math
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 SYSTEM_COMMIT_OPCODE = 0x1000
 SYSTEM_REJECT_OPCODE = 0x1001
@@ -280,13 +280,13 @@ VMFactory = Callable[..., _VMProtocol]
 def _default_vm_factory(*, enable_reflex: bool, max_cycles: int) -> _VMProtocol:
     from .core import CodexVM
 
-    return CodexVM(enable_reflex=enable_reflex, max_cycles=max_cycles)
+    return cast(_VMProtocol, CodexVM(enable_reflex=enable_reflex, max_cycles=max_cycles))
 
 
 def _default_audit_ledger() -> _LedgerProtocol:
     from .ledger import OmegaLedger
 
-    return OmegaLedger()
+    return cast(_LedgerProtocol, OmegaLedger())
 
 
 def _canonical_json(value: Any) -> str:
