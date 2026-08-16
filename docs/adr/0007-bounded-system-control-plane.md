@@ -1,6 +1,6 @@
 # ADR-007: Bounded System Control Plane
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-16
 - **Decision scope:** canonical Python runtime
 
