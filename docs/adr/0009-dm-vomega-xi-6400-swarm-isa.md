@@ -1,6 +1,6 @@
 # ADR-009: DM–vΩΞ⁺ 6400³ Virtual VRAM Swarm ISA
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-16
 - **Decision scope:** native Windows research/runtime surface
 
@@ -50,7 +50,7 @@ This native swarm engine remains outside the authoritative Jarvis-X task-state p
 
 ## Validation
 
-Repository validation must check:
+Repository validation checks:
 
 - exact preservation of the supplied 13 canonical machine words;
 - presence of the dt-corrected execution stream;
@@ -61,4 +61,4 @@ Repository validation must check:
 
 ## Promotion
 
-Promote this ADR to **Accepted** only after the implementation PR and Windows artifact workflow pass repository validation.
+This ADR is **Accepted**. PR #109 merged the implementation to `main` after the ISA conformance tests, Python 3.10–3.13 suite, quality/type checks, dependency audit, package build and smoke test, CodeQL, empirical validation, and the dedicated DM VRAM Swarm Windows workflow all passed. The Windows workflow produced two byte-for-byte identical PE32+ builds, verified the CUI/KERNEL32-only import surface, packaged the executable, checksum manifest and documentation, and uploaded the Windows x64 artifact.
