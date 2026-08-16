@@ -48,8 +48,8 @@ jobs:
         run: |
           cp -a apps/windows/dm-vomega-xi-6400-swarm /tmp/dm-a
           cp -a apps/windows/dm-vomega-xi-6400-swarm /tmp/dm-b
-          /tmp/dm-a/build-windows.sh
-          /tmp/dm-b/build-windows.sh
+          bash /tmp/dm-a/build-windows.sh
+          bash /tmp/dm-b/build-windows.sh
           cmp /tmp/dm-a/DM_vOmegaXi_6400GB_3D_VRAM_Swarm_ISA.exe /tmp/dm-b/DM_vOmegaXi_6400GB_3D_VRAM_Swarm_ISA.exe
 
       - name: Verify PE structure and import surface
