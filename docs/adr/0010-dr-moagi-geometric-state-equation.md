@@ -7,7 +7,9 @@
 
 ADR-002 accepts the Dr Moagi 3D adaptive codec-runtime as a bounded research architecture, while `docs/ARCHITECTURE.md` requires same-space evolution, candidate-first adaptation, fail-closed validation, honest scale reporting, and separation between research layers and the deterministic VM core.
 
-The canonical research specification already contains codec, latent refinement, predictive branching, memory, inward recurrence and `Pi_Lambda` concepts. What was missing was one explicit executable contract for the compact geometric recurrence:
+The compact geometric recurrence is a state-space law. Every additive term must therefore inhabit the declared `Xi/Z` state space. Earlier notation placed `grad_Theta L` directly inside that recurrence even though a parameter gradient inhabits parameter space. The hardened Codex already separates parameter learning from latent-state evolution, so the Layer-5 recurrence must use the same type discipline.
+
+The canonical same-space form is:
 
 \[
 \Xi_{t+1}^{3D}
@@ -18,24 +20,38 @@ The canonical research specification already contains codec, latent refinement, 
 -E_t^{3D}
 +\Omega_t^{3D}
 +\kappa_tR_t^{\circlearrowleft}
--\eta_t\nabla_\Theta L_t
+-\eta_{Z,t}\nabla_Z L_t
 -\zeta_t\nabla_HC_t
 \right].
 \]
 
-Without a typed boundary, the notation can be interpreted inconsistently across visualization, codec, swarm, field and optimization layers.
+Parameter learning remains a separate transition:
+
+\[
+\Theta_{t+1}^{cand}
+=
+\Theta_t-\eta_{\Theta,t}\nabla_\Theta L_t.
+\]
+
+A parameter gradient may participate in the state equation only through an explicit transport map
+
+\[
+T_{\Theta\rightarrow Z}(\nabla_\Theta L)\in Z,
+\]
+
+whose output type, units and support are declared and validated.
 
 ## Decision
 
-Jarvis-X will treat the equation above as a **Layer-5 candidate-state operator**, not as a replacement for the canonical VM instruction loop.
+Jarvis-X treats the geometric equation as a **Layer-5 candidate-state operator**, not as a replacement for the canonical VM instruction loop.
 
-A conforming implementation must satisfy the following execution order:
+A conforming implementation must execute:
 
 ```text
 snapshot Xi_t
   -> evaluate P_1:M on the frozen snapshot
   -> merge predictive branches deterministically
-  -> acquire same-space E_t, Omega_t, R_t, grad_Theta L_t, grad_H C_t
+  -> acquire same-space E_t, Omega_t, R_t, grad_Z L_t, grad_H C_t
   -> form raw candidate
   -> apply Pi_Lambda
   -> validate candidate
@@ -43,23 +59,9 @@ snapshot Xi_t
   -> emit telemetry/provenance
 ```
 
-The initial reference implementation lives at:
+Parameter-space learning occurs outside this additive state update and remains subject to the higher-level epistemic and authority commit gates.
 
-```text
-src/jarvisx/dr_moagi_state_equation.py
-```
-
-with conformance tests at:
-
-```text
-tests/test_dr_moagi_state_equation.py
-```
-
-and the detailed systems mapping at:
-
-```text
-docs/research/DR_MOAGI_3D_GEOMETRIC_STATE_EQUATION.md
-```
+The reference implementation lives at `src/jarvisx/dr_moagi_state_equation.py` with conformance tests in `tests/test_dr_moagi_state_equation.py`.
 
 ## Semantic contract
 
@@ -72,7 +74,13 @@ Xi_t : Coordinate3D -> scalar
 Coordinate3D = (x, y, z)
 ```
 
-Vector, tensor or structured voxel values may be introduced later, but all additive terms in one authoritative update must share a declared compatible state type and units.
+All additive terms in one authoritative update must share a declared compatible state type and units.
+
+### Gradient-space separation
+
+`grad_Z L` is a state-space correction and may be additive only when it shares the `Xi/Z` support and units.
+
+`grad_Theta L` is a parameter-space object and updates `Theta`; it is not implicitly reinterpreted as a spatial field. Any cross-space contribution requires an explicit typed transport/Jacobian map.
 
 ### Predictive branching
 
@@ -83,62 +91,39 @@ Vector, tensor or structured voxel values may be introduced later, but all addit
 \qquad a_m\ge0,\quad \sum_m a_m=1.
 \]
 
-This prevents prediction magnitude from increasing merely because branch count `M` increases. Other deterministic aggregators are permitted if they document their scaling law and preserve the declared state type.
+This prevents prediction magnitude from increasing merely because branch count `M` increases.
 
-### Projection
+### Projection and authority
 
-`Pi_Lambda` is a real admission boundary. It may clip, normalize, project, reject, enforce resource ceilings, check version compatibility, or apply a richer policy manifold. Projection cannot silently escape the authoritative support or introduce non-finite state.
-
-### Candidate-first authority
-
-The raw and projected candidates are non-authoritative until validation succeeds. Rejection returns the frozen input state unchanged. Research code may not bypass the core architectural rule that adaptive or predictive outputs do not become canonical VM state by naming or visualization.
+`Pi_Lambda` is a real admission boundary. It may project, reject, enforce resource ceilings, check version compatibility, or apply a richer policy manifold. The raw and projected candidates are non-authoritative until validation succeeds. Rejection returns the frozen input state unchanged.
 
 ## Required invariants
 
 1. **Same-space evolution:** every additive term has compatible support, type and units.
-2. **Frozen-snapshot evaluation:** terms for one step are evaluated against one logical `Xi_t` snapshot unless an implementation explicitly defines a staged operator composition.
-3. **Finite arithmetic:** non-finite inputs or candidates fail closed.
-4. **Bounded support:** materialized active state has an explicit cell/resource ceiling.
-5. **Deterministic branch merge:** fixed branches and weights produce the same merged field.
-6. **Projection before authority:** `Pi_Lambda` runs before commit.
-7. **Rollback:** validator rejection preserves `Xi_t`.
-8. **Support integrity:** projection cannot add or remove authoritative cells silently when same-support mode is selected.
-9. **Separation of authority:** this Layer-5 operator cannot silently mutate Layer-0/1 VM state.
-10. **Measured claims:** branch count, virtual depth and visual frame rate are not physical throughput metrics.
+2. **Gradient-space separation:** `grad_Theta L` cannot be added to `Xi/Z` without an explicit transport map; the direct state correction is `grad_Z L`.
+3. **Frozen-snapshot evaluation:** terms for one step are evaluated against one logical `Xi_t` snapshot unless explicitly staged.
+4. **Finite arithmetic:** non-finite inputs or candidates fail closed.
+5. **Bounded support:** materialized active state has an explicit cell/resource ceiling.
+6. **Deterministic branch merge:** fixed branches and weights produce the same merged field.
+7. **Projection before authority:** `Pi_Lambda` runs before commit.
+8. **Rollback:** validator rejection preserves `Xi_t`.
+9. **Support integrity:** projection cannot silently add or remove authoritative cells in same-support mode.
+10. **Separation of authority:** this Layer-5 operator cannot silently mutate Layer-0/1 VM state.
+11. **Measured claims:** branch count, virtual depth and visual frame rate are not physical throughput metrics.
 
 ## Relationship to existing runtimes
 
-- **ADR-002 / codec runtime:** supplies encoded/decoded representations, residuals, memory, rate-distortion objectives and inward latent refinement.
-- **ADR-003 / field runtime:** supplies bounded sparse same-space field semantics and candidate-first commit behavior.
-- **ADR-006 / geometric diffusion:** may provide one implementation of a refinement or propagation field.
-- **ADR-007 / control plane:** may supply policy/resource constraints consumed by `Pi_Lambda`.
-- **Layer 6 visualization:** may render the equation geometrically but remains observational unless bound to the authoritative Layer-5 transition and validated.
+- **ADR-002 / codec runtime:** encoded/decoded representations, residuals, memory, rate-distortion objectives and inward latent refinement.
+- **ADR-003 / field runtime:** bounded sparse same-space field semantics and candidate-first commit behavior.
+- **ADR-006 / geometric diffusion:** refinement or propagation field semantics.
+- **ADR-007 / control plane:** policy/resource constraints for authoritative execution.
+- **ADR-0011 / epistemic gate:** promotion from decoded hypothesis to verified research state and parameter-learning eligibility.
+- **Layer 6 visualization:** observational unless bound to an admitted and committed transition.
 
 ## Consequences
 
-### Positive
-
-- the geometric equation now has executable, testable semantics;
-- notation is aligned with same-space field invariants;
-- predictive branching has an explicit bounded aggregation rule;
-- projection and rollback are structural rather than decorative concepts;
-- the deterministic VM boundary is preserved.
-
-### Negative
-
-- the compact equation does not by itself define how each field is learned or generated;
-- richer tensor-valued states will require explicit algebra and unit contracts;
-- a convex branch merge is deliberately conservative and may not match every research predictor;
-- stability still depends on the operators, coefficients and projection manifold.
+The geometric equation now has executable, testable and type-coherent semantics. Older callers using `eta` / `loss_gradient` must migrate to `eta_z` / `latent_gradient`. Cross-space optimization requires explicit transport operators rather than shorthand notation.
 
 ## Validation
 
-Acceptance requires at minimum:
-
-- exact arithmetic tests for the recurrence;
-- predictive-branch scaling tests;
-- same-support rejection tests;
-- non-finite rejection tests;
-- projection-boundary tests;
-- rollback tests;
-- explicit documentation that the implementation remains Layer 5 and candidate-first.
+Acceptance requires exact arithmetic tests, explicit `grad_Z` terminology in the executable API, predictive-branch scaling tests, same-support and non-finite rejection tests, projection-boundary and rollback tests, and documentation that `grad_Theta` remains outside the additive state equation.
