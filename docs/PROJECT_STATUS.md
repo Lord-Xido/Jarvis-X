@@ -1,6 +1,7 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-08-12  
+**Last reviewed:** 2026-08-17
+
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -36,6 +37,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Dr Moagi Field Runtime v2 | Reference laboratory | `dr_moagi_field_runtime.py`, `test_dr_moagi_field_runtime.py`, ADR-003 | same-space sparse field equation; codec-dependent stability beyond the conservative reference guard remains empirical |
 | Moagi-Helmholtz orchestration runtime | Reference laboratory | `moagi_helmholtz.py`, `test_moagi_helmholtz.py`, ADR-004 | deterministic orchestration contract; bundled renderer/archive/inverse components are conformance fixtures, not production neural or MP4 implementations |
 | Orthogonal quantization precision gate | Numerical reference | `orthogonal_quantization.py`, `test_orthogonal_quantization.py`, ADR-005 | proves normalization and nearest-neighbour error bounds for declared orthonormal transforms; not a production DCT/video codec kernel |
+| 3D multiparallel pipeline | Integration candidate | `multiparallel.py`, focused tests, ADR-010, issue #113 | local bounded pipeline; v1 linear DAG; tuple reference rather than NumPy kernel; timing is non-selection telemetry; no canonical VM authority |
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
 | 3D swarm bytecode architecture | Specification | `docs/DR_MOAGI_3D_SWARM_BYTECODE_ISA.md` | document does not establish hardware performance |

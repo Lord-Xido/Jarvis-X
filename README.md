@@ -191,6 +191,7 @@ At depth `D`:
 | Repository protection | required checks, secret scanning and private vulnerability reporting | Issue #49 |
 | Public profile | account-level profile README and pinned-project cleanup | Issue #50 |
 | Browser engines | bounded interactive 3D visual-computing demonstrations | Separate repository |
+| 3D multiparallel pipeline | deterministic packages, framing, branches and bounded topology search | Issue #113 / integration candidate |
 
 Draft status is intentional: experimental subsystems are not represented as canonical until CI, review and integration boundaries are satisfied.
 
@@ -227,6 +228,7 @@ Every canonical subsystem should provide:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
 - [Hierarchical 3D fractional smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md)
+- [3D multiparallel pipeline](docs/JARVIS_X_3D_MULTIPARALLEL_PIPELINE.md)
 - [Roadmap](ROADMAP.md)
 - [Governance](GOVERNANCE.md)
 - [Security policy](SECURITY.md)
