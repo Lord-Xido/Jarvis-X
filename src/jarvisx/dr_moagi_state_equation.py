@@ -8,7 +8,7 @@ The research-layer equation is
         - E[t]
         + Omega[t]
         + kappa * R[t]^inward
-        - eta * grad_Theta L[t]
+        - eta_z * grad_Z L[t]
         - zeta * grad_H C[t]
     )
 
@@ -16,6 +16,11 @@ This module deliberately does not mutate the canonical Jarvis-X VM. It is a
 pure Layer-5 same-space operator: every additive term must inhabit the same
 sparse 3D support as Xi, the proposed state is passed through Pi_Lambda, and a
 candidate becomes the returned next state only after optional validation.
+
+Parameter-space learning is deliberately excluded from this equation.
+``grad_Theta L`` belongs to the separately versioned parameter update and may
+enter this same-space recurrence only through an explicit transport map whose
+output is a declared Xi/Z-space field.
 """
 
 from __future__ import annotations
@@ -36,7 +41,7 @@ class DrMoagiEquationConfig:
     """Scalar coefficients and resource limits for the geometric recurrence."""
 
     kappa: float = 1.0
-    eta: float = 1.0
+    eta_z: float = 1.0
     zeta: float = 1.0
     max_active_cells: int = 100_000
     enforce_same_support: bool = True
@@ -48,7 +53,7 @@ class DrMoagiEquationConfig:
             or self.max_active_cells <= 0
         ):
             raise ValueError("max_active_cells must be a positive integer")
-        for name in ("kappa", "eta", "zeta"):
+        for name in ("kappa", "eta_z", "zeta"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise TypeError(f"{name} must be numeric")
@@ -64,7 +69,7 @@ class DrMoagiEquationTerms:
     error: SparseField
     memory: SparseField
     refinement: SparseField
-    loss_gradient: SparseField
+    latent_gradient: SparseField
     constraint_gradient: SparseField
 
 
@@ -212,7 +217,7 @@ class DrMoagiStateEquation:
         error: FieldLike,
         memory: FieldLike,
         refinement: FieldLike,
-        loss_gradient: FieldLike,
+        latent_gradient: FieldLike,
         constraint_gradient: FieldLike,
         prediction_weights: Sequence[float] | None = None,
         validator: Validator | None = None,
@@ -250,9 +255,9 @@ class DrMoagiStateEquation:
             support=support,
             enforce_same_support=self.config.enforce_same_support,
         )
-        loss_field = _validated_field(
-            "grad_Theta L_t",
-            loss_gradient,
+        latent_gradient_field = _validated_field(
+            "grad_Z L_t",
+            latent_gradient,
             support=support,
             enforce_same_support=self.config.enforce_same_support,
         )
@@ -268,7 +273,7 @@ class DrMoagiStateEquation:
             error=error_field,
             memory=memory_field,
             refinement=refinement_field,
-            loss_gradient=loss_field,
+            latent_gradient=latent_gradient_field,
             constraint_gradient=constraint_field,
         )
 
@@ -279,7 +284,7 @@ class DrMoagiStateEquation:
                 - error_field[coordinate]
                 + memory_field[coordinate]
                 + self.config.kappa * refinement_field[coordinate]
-                - self.config.eta * loss_field[coordinate]
+                - self.config.eta_z * latent_gradient_field[coordinate]
                 - self.config.zeta * constraint_field[coordinate]
             )
             for coordinate in support
