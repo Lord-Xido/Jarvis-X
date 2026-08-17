@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Mapping, Protocol, Sequence
+from typing import Any, Callable, Mapping, Protocol, Sequence, cast
 
 JsonObject = dict[str, Any]
 Verifier = Callable[[Mapping[str, Any], Mapping[str, Any]], tuple[bool, str]]
@@ -101,7 +101,28 @@ def sha256_hex(value: object) -> str:
 
 
 def _json_compatible(value: object) -> Any:
+    """Canonicalize a value through JSON serialization.
+
+    This low-level helper intentionally returns ``Any`` because ``json.loads``
+    does. Public typed boundaries validate the resulting container shape before
+    returning it.
+    """
+
     return json.loads(canonical_json_bytes(value).decode("utf-8"))
+
+
+def _json_object(value: object, *, name: str = "value") -> JsonObject:
+    converted = _json_compatible(value)
+    if not isinstance(converted, dict):
+        raise TypeError(f"{name} must canonicalize to a JSON object")
+    return cast(JsonObject, converted)
+
+
+def _json_event_sequence(value: object) -> Sequence[Mapping[str, Any]]:
+    converted = _json_compatible(value)
+    if not isinstance(converted, list) or any(not isinstance(item, dict) for item in converted):
+        raise TypeError("events must canonicalize to a list of JSON objects")
+    return cast(list[Mapping[str, Any]], converted)
 
 
 def default_verifier(result: Mapping[str, Any], context: Mapping[str, Any]) -> tuple[bool, str]:
@@ -156,10 +177,10 @@ class AtomicJobStore:
             value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict):
             raise ValueError("stored job must be a JSON object")
-        return value
+        return cast(JsonObject, value)
 
     def count(self) -> int:
-        return sum(1 for p in self.root.glob("*.json") if p.is_file())
+        return sum(1 for path in self.root.glob("*.json") if path.is_file())
 
     def ready(self) -> bool:
         probe = self.root / ".ready"
@@ -211,7 +232,7 @@ class DrMoagiCloudCoordinator:
     ) -> JsonObject:
         principal = self._validate_principal(principal)
         operation = self._validate_operation(operation)
-        payload_json = _json_compatible(payload)
+        payload_json = _json_object(payload, name="payload")
         input_bytes = canonical_json_bytes(payload_json)
         if len(input_bytes) > self.policy.limits.max_input_bytes:
             raise ValueError("input exceeds max_input_bytes")
@@ -260,7 +281,7 @@ class DrMoagiCloudCoordinator:
             started_ns = time.perf_counter_ns()
             result = self.executors[operation].execute(payload_json, self.policy.limits)
             runtime_ms = (time.perf_counter_ns() - started_ns) / 1_000_000.0
-            result_json = _json_compatible(result)
+            result_json = _json_object(result, name="executor result")
             output_bytes = canonical_json_bytes(result_json)
             resource_usage = {
                 "input_bytes": len(input_bytes),
@@ -294,7 +315,7 @@ class DrMoagiCloudCoordinator:
                 {"result_digest": envelope["result_digest"]},
             )
             self._transition(envelope, JobState.COMMITTED, {"committed": True})
-            return _json_compatible(envelope)
+            return _json_object(envelope, name="job envelope")
         except Exception as error:
             self._fail(envelope, error)
             raise
@@ -322,7 +343,7 @@ class DrMoagiCloudCoordinator:
         events = envelope.get("events")
         if not isinstance(events, list):
             raise ValueError("job events are invalid")
-        return _json_compatible(events)
+        return _json_event_sequence(events)
 
     def _transition(
         self, envelope: JsonObject, state: JobState, details: Mapping[str, Any]
@@ -339,7 +360,7 @@ class DrMoagiCloudCoordinator:
             "reason": reason,
         }
         self._transition(envelope, JobState.REJECTED, {"reason": reason})
-        return _json_compatible(envelope)
+        return _json_object(envelope, name="job envelope")
 
     def _fail(self, envelope: JsonObject, error: Exception) -> None:
         if envelope.get("state") in {state.value for state in TERMINAL_STATES}:
@@ -362,7 +383,7 @@ class DrMoagiCloudCoordinator:
             "sequence": len(events),
             "state": state.value,
             "timestamp_ms": self.clock_ms(),
-            "details": _json_compatible(details),
+            "details": _json_object(details, name="event details"),
             "previous_digest": previous,
         }
         event = dict(core)
@@ -371,7 +392,7 @@ class DrMoagiCloudCoordinator:
 
     @staticmethod
     def _seal(envelope: JsonObject) -> None:
-        unsigned = {k: v for k, v in envelope.items() if k != "envelope_digest"}
+        unsigned = {key: value for key, value in envelope.items() if key != "envelope_digest"}
         envelope["envelope_digest"] = sha256_hex(unsigned)
 
     @staticmethod
@@ -381,7 +402,7 @@ class DrMoagiCloudCoordinator:
         expected = envelope.get("envelope_digest")
         if not isinstance(expected, str):
             return False, "envelope digest missing"
-        unsigned = {k: v for k, v in envelope.items() if k != "envelope_digest"}
+        unsigned = {key: value for key, value in envelope.items() if key != "envelope_digest"}
         if expected != sha256_hex(unsigned):
             return False, "envelope digest mismatch"
         events = envelope.get("events")
@@ -392,7 +413,7 @@ class DrMoagiCloudCoordinator:
             if not isinstance(event, dict):
                 return False, f"event {index} invalid"
             digest = event.get("event_digest")
-            core = {k: v for k, v in event.items() if k != "event_digest"}
+            core = {key: value for key, value in event.items() if key != "event_digest"}
             if event.get("sequence") != index:
                 return False, f"event {index} sequence mismatch"
             if event.get("previous_digest") != previous:
