@@ -17,6 +17,7 @@ from .dr_moagi_cloud_runtime import (
     DrMoagiCloudCoordinator,
     EchoExecutor,
     JobPolicy,
+    JsonObject,
     ResourceLimits,
 )
 
@@ -156,9 +157,9 @@ def create_app(
     def create_job(
         request: JobRequest,
         principal: str = Depends(authenticated_principal),
-    ) -> Mapping[str, object]:
+    ) -> JsonObject:
         try:
-            job = runtime.submit(
+            return runtime.submit(
                 principal=principal,
                 operation=request.operation,
                 payload=request.input,
@@ -168,13 +169,12 @@ def create_app(
             raise HTTPException(status_code=403, detail=str(error)) from error
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
-        return job
 
     @app.get("/api/v1/jobs/{job_id}")
     def get_job(
         job_id: str,
         principal: str = Depends(authenticated_principal),
-    ) -> Mapping[str, object]:
+    ) -> JsonObject:
         del principal
         try:
             return runtime.get(job_id)
@@ -187,7 +187,7 @@ def create_app(
     def get_events(
         job_id: str,
         principal: str = Depends(authenticated_principal),
-    ) -> Mapping[str, object]:
+    ) -> JsonObject:
         del principal
         try:
             return {"job_id": job_id, "events": runtime.events(job_id)}
@@ -200,7 +200,7 @@ def create_app(
     def verify_job(
         job_id: str,
         principal: str = Depends(authenticated_principal),
-    ) -> Mapping[str, object]:
+    ) -> JsonObject:
         del principal
         try:
             return runtime.verify_job(job_id)
