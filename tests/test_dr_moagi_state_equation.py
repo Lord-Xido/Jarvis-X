@@ -21,7 +21,7 @@ def singleton(value: float):
 
 def test_exact_recurrence_then_pi_lambda_projection():
     equation = DrMoagiStateEquation(
-        DrMoagiEquationConfig(kappa=2.0, eta=0.1, zeta=0.2),
+        DrMoagiEquationConfig(kappa=2.0, eta_z=0.1, zeta=0.2),
         projector=box_projector(-2.0, 2.0),
     )
 
@@ -32,7 +32,7 @@ def test_exact_recurrence_then_pi_lambda_projection():
         error=singleton(0.5),
         memory=singleton(0.25),
         refinement=singleton(1.0),
-        loss_gradient=singleton(0.5),
+        latent_gradient=singleton(0.5),
         constraint_gradient=singleton(0.25),
     )
 
@@ -41,6 +41,7 @@ def test_exact_recurrence_then_pi_lambda_projection():
     assert step.raw_candidate[CENTER] == pytest.approx(6.15)
     assert step.projected_candidate[CENTER] == pytest.approx(2.0)
     assert step.next_state[CENTER] == pytest.approx(2.0)
+    assert step.terms.latent_gradient[CENTER] == pytest.approx(0.5)
     assert step.committed
     assert step.branch_count == 2
 
@@ -71,7 +72,7 @@ def test_same_space_invariant_rejects_support_mismatch():
             error={(0, 0, 0): 0.0},
             memory=singleton(0.0),
             refinement=singleton(0.0),
-            loss_gradient=singleton(0.0),
+            latent_gradient=singleton(0.0),
             constraint_gradient=singleton(0.0),
         )
 
@@ -86,7 +87,7 @@ def test_validator_rejection_rolls_back_to_snapshot():
         error=singleton(0.0),
         memory=singleton(0.0),
         refinement=singleton(0.0),
-        loss_gradient=singleton(0.0),
+        latent_gradient=singleton(0.0),
         constraint_gradient=singleton(0.0),
         validator=lambda candidate: False,
     )
@@ -108,7 +109,7 @@ def test_non_finite_term_fails_closed_before_projection():
             error=singleton(math.inf),
             memory=singleton(0.0),
             refinement=singleton(0.0),
-            loss_gradient=singleton(0.0),
+            latent_gradient=singleton(0.0),
             constraint_gradient=singleton(0.0),
         )
 
@@ -128,7 +129,7 @@ def test_projection_cannot_escape_authoritative_support():
             error=singleton(0.0),
             memory=singleton(0.0),
             refinement=singleton(0.0),
-            loss_gradient=singleton(0.0),
+            latent_gradient=singleton(0.0),
             constraint_gradient=singleton(0.0),
         )
 
