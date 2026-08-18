@@ -26,12 +26,17 @@ permissions:
 
 jobs:
   conformance:
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install test dependencies
         run: python -m pip install -e ".[test]"
@@ -41,3 +46,50 @@ jobs:
           tests/test_dr_moagi_permeation.py
           tests/test_dr_moagi_permeation_cloud.py
           --no-cov
+
+  quality:
+    name: Permeation quality gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install development dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: Compile permeation sources and tests
+        run: >-
+          python -m compileall -q
+          src/jarvisx/dr_moagi_permeation.py
+          src/jarvisx/dr_moagi_permeation_operation.py
+          src/jarvisx/dr_moagi_cloud_service.py
+          tests/test_dr_moagi_permeation.py
+          tests/test_dr_moagi_permeation_cloud.py
+      - name: Reject syntax errors and undefined names
+        run: >-
+          flake8
+          src/jarvisx/dr_moagi_permeation.py
+          src/jarvisx/dr_moagi_permeation_operation.py
+          src/jarvisx/dr_moagi_cloud_service.py
+          tests/test_dr_moagi_permeation.py
+          tests/test_dr_moagi_permeation_cloud.py
+          --select=E9,F63,F7,F82
+          --show-source
+          --statistics
+      - name: Check permeation formatting
+        run: >-
+          black --check --diff
+          src/jarvisx/dr_moagi_permeation.py
+          src/jarvisx/dr_moagi_permeation_operation.py
+          tests/test_dr_moagi_permeation.py
+          tests/test_dr_moagi_permeation_cloud.py
+      - name: Check permeation import order
+        run: >-
+          isort --check-only --diff
+          src/jarvisx/dr_moagi_permeation.py
+          src/jarvisx/dr_moagi_permeation_operation.py
+          tests/test_dr_moagi_permeation.py
+          tests/test_dr_moagi_permeation_cloud.py
+      - name: Type-check package
+        run: mypy src/jarvisx --ignore-missing-imports
