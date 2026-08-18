@@ -1,0 +1,43 @@
+name: Dr Moagi Permeation Transport
+
+on:
+  pull_request:
+    paths:
+      - "src/jarvisx/dr_moagi_permeation.py"
+      - "src/jarvisx/dr_moagi_permeation_operation.py"
+      - "src/jarvisx/dr_moagi_cloud_service.py"
+      - "tests/test_dr_moagi_permeation.py"
+      - "tests/test_dr_moagi_permeation_cloud.py"
+      - "docs/DR_MOAGI_PERMEATION_TRANSPORT_V1.md"
+      - "docs/adr/0011-dr-moagi-permeation-transport-v1.md"
+      - ".github/workflows/dr-moagi-permeation.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/jarvisx/dr_moagi_permeation.py"
+      - "src/jarvisx/dr_moagi_permeation_operation.py"
+      - "src/jarvisx/dr_moagi_cloud_service.py"
+      - "tests/test_dr_moagi_permeation.py"
+      - "tests/test_dr_moagi_permeation_cloud.py"
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install test dependencies
+        run: python -m pip install -e ".[test]"
+      - name: Run permeation conformance tests
+        run: >-
+          python -m pytest
+          tests/test_dr_moagi_permeation.py
+          tests/test_dr_moagi_permeation_cloud.py
+          --no-cov
