@@ -13,7 +13,7 @@ import json
 import math
 import random
 from dataclasses import dataclass, replace
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence, cast
 
 PROTOCOL = "jarvisx.dr-moagi-permeation.v1"
 
@@ -204,7 +204,7 @@ def absorb(frame: ReceivedFrame) -> dict[str, Any]:
         raise PermeationIntegrityError("reconstructed payload is not valid JSON") from error
     if not isinstance(value, dict):
         raise PermeationIntegrityError("reconstructed payload must be a JSON object")
-    return value
+    return cast(dict[str, Any], value)
 
 
 def simulate_round_trip(payload: Mapping[str, Any], config: PermeationConfig) -> dict[str, Any]:
