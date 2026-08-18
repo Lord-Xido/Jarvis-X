@@ -44,9 +44,7 @@ def test_round_trip_reconstructs_16d_state_exactly():
 def test_focus_rotates_the_quadrupole_axis_without_claiming_one_sided_beamforming():
     aligned = PermeationConfig(axis=(0.0, 1.0, 0.0), receiver_direction=(0.0, 1.0, 0.0))
     perpendicular = aligned.focused((1.0, 0.0, 0.0))
-    opposite = PermeationConfig(
-        axis=(0.0, -1.0, 0.0), receiver_direction=(0.0, 1.0, 0.0)
-    )
+    opposite = PermeationConfig(axis=(0.0, -1.0, 0.0), receiver_direction=(0.0, 1.0, 0.0))
 
     assert aligned.angular_gain == pytest.approx(1.0)
     assert perpendicular.angular_gain == pytest.approx(0.4)
