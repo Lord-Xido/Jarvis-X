@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, cast
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -96,7 +96,7 @@ def _loop_config(payload: AutoCodecRequest) -> AutoCodecLoopConfig:
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard() -> str:
-    return DASHBOARD_HTML
+    return cast(str, DASHBOARD_HTML)
 
 
 @app.get("/health")
@@ -139,7 +139,8 @@ def run_auto_codec(payload: AutoCodecRequest) -> dict[str, Any]:
         runtime = DrMoagiFieldRuntime(codec, _field_config(payload))
         loop = AutoCodecLoop(runtime, _loop_config(payload))
         loop.load(field)
-        return loop.run().to_dict()
+        result = cast(dict[str, Any], loop.run().to_dict())
+        return result
     except (TypeError, ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -167,7 +168,7 @@ def run_auto_codec_3d(payload: AutoCodec3DRequest) -> dict[str, Any]:
             max_render_points=payload.max_render_points,
             max_frames=payload.max_frames,
         )
-        result = system.run(field).to_dict()
+        result = cast(dict[str, Any], system.run(field).to_dict())
         result["run_id"] = run_id
         result["persisted"] = run_id is not None
         if run_id is not None:
@@ -182,7 +183,8 @@ def run_auto_codec_3d(payload: AutoCodec3DRequest) -> dict[str, Any]:
 @app.get("/codec/3d/runs/{run_id}")
 def get_auto_codec_3d_run(run_id: str) -> dict[str, Any]:
     try:
-        return RUN_STORE.read_summary(run_id)
+        summary = cast(dict[str, Any], RUN_STORE.read_summary(run_id))
+        return summary
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="run not found") from exc
     except ValueError as exc:
@@ -194,7 +196,7 @@ def get_auto_codec_3d_run(run_id: str) -> dict[str, Any]:
 @app.get("/codec/3d/runs/{run_id}/verify")
 def verify_auto_codec_3d_run(run_id: str) -> dict[str, Any]:
     try:
-        verification = RUN_STORE.verify(run_id)
+        verification = cast(dict[str, Any], RUN_STORE.verify(run_id))
         if not verification["verified"]:
             raise HTTPException(status_code=409, detail=verification)
         return verification
