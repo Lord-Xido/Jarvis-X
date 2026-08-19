@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable
 from dataclasses import dataclass
 from os import PathLike
 
+from .control_plane import OmegaEvidenceChain, StateEnvelope
 from .debugger import Debugger
 from .decoder import Decoder
 from .ethics import LambdaShield
@@ -25,15 +27,17 @@ class _VMCheckpoint:
     running: bool
     ledger_length: int
     trace_length: int
+    control_length: int
 
 
 class CodexVM:
     """Deterministic transactional Jarvis-X bytecode virtual machine.
 
     Each instruction executes against a complete authoritative-state checkpoint.
-    A failed execution, validation, journal write, or trace write restores the
-    checkpoint and stops the VM. Reflex stabilization is opt-in and occurs
-    before the canonical post-instruction snapshot is journalled and traced.
+    A failed execution, validation, journal write, trace write, or unified
+    control-plane receipt restores the checkpoint and stops the VM. Reflex
+    stabilization is opt-in and occurs before the canonical post-instruction
+    snapshot is journalled, traced and admitted into the common evidence plane.
     """
 
     def __init__(
@@ -57,6 +61,7 @@ class CodexVM:
         self.sandbox = Sandbox(max_cycles=max_cycles)
         self.debugger = Debugger(self)
         self.tracer = Tracer()
+        self.control_plane = OmegaEvidenceChain()
         self.program: list[int] = []
         self.cycles = 0
         self.running = False
@@ -69,6 +74,7 @@ class CodexVM:
             running=self.running,
             ledger_length=self.ledger.checkpoint(),
             trace_length=self.tracer.checkpoint(),
+            control_length=self.control_plane.checkpoint(),
         )
 
     def _restore(self, checkpoint: _VMCheckpoint) -> None:
@@ -78,6 +84,29 @@ class CodexVM:
         self.running = checkpoint.running
         self.ledger.restore(checkpoint.ledger_length)
         self.tracer.restore(checkpoint.trace_length)
+        self.control_plane.restore(checkpoint.control_length)
+
+    def _control_payload(self) -> dict[str, object]:
+        memory = self.mem.snapshot()
+        return {
+            "registers": self.regs.snapshot(),
+            "memory_sha256": hashlib.sha256(memory).hexdigest(),
+            "memory_bytes": len(memory),
+            "cycles": self.cycles,
+            "running": self.running,
+        }
+
+    def _control_envelope(self, *, authoritative: bool) -> StateEnvelope:
+        payload = self._control_payload()
+        registers = payload["registers"]
+        assert isinstance(registers, dict)
+        return StateEnvelope.from_payload(
+            state_type="jarvisx.vm-state",
+            state_version=1,
+            dimensions=(len(registers), int(payload["memory_bytes"])),
+            payload=payload,
+            authoritative=authoritative,
+        )
 
     def load(self, bytecode: Iterable[int]) -> None:
         program = list(bytecode)
@@ -109,6 +138,7 @@ class CodexVM:
             raise RuntimeError("Lambda policy blocked instruction")
 
         checkpoint = self._checkpoint()
+        before = self._control_envelope(authoritative=True)
         try:
             next_cycles = self.cycles + 1
             self.sandbox.enforce(next_cycles)
@@ -124,6 +154,18 @@ class CodexVM:
             snapshot = self.regs.snapshot()
             self.ledger.log(snapshot, instruction.opcode)
             self.tracer.record(instruction, snapshot)
+
+            candidate = self._control_envelope(authoritative=False)
+            after = self._control_envelope(authoritative=True)
+            self.control_plane.append(
+                subsystem="codex-vm",
+                operation=f"opcode:{int(instruction.opcode)}",
+                decision="commit",
+                before=before,
+                candidate=candidate,
+                after=after,
+                metrics={"cycles": self.cycles},
+            )
         except Exception:
             try:
                 self._restore(checkpoint)
