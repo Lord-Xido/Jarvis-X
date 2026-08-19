@@ -1,14 +1,9 @@
-"""Operational 3D spatial codec and telemetry for the Dr Moagi field runtime.
+"""Operational 3D spatial codec and authoritative frame telemetry.
 
-The module keeps spatial execution explicit. Integer ``(x, y, z)`` lattice
-coordinates are encoded into reversible Morton (Z-order) addresses and scalar
-field values are quantized independently. The resulting latent representation
-therefore retains a deterministic spatial address instead of treating the 3D
-coordinates as UI-only metadata.
-
-This is a bounded reference implementation. It does not claim that Morton
-ordering is an optimal learned latent geometry or that the reported packed-byte
-estimate is Python object memory usage.
+Integer lattice coordinates are encoded as reversible 63-bit Morton/Z-order
+keys and scalar values are quantized into signed 32-bit codes. The module is a
+bounded deterministic reference implementation: 3D coordinates are part of the
+codec contract and emitted frames are derived from authoritative runtime state.
 """
 
 from __future__ import annotations
@@ -25,9 +20,11 @@ from .dr_moagi_field_runtime import Coordinate, SparseField, Validator
 
 MORTON_BITS_PER_AXIS = 21
 MORTON_MAX_COORDINATE = (1 << MORTON_BITS_PER_AXIS) - 1
+SIGNED_INT32_MIN = -(1 << 31)
+SIGNED_INT32_MAX = (1 << 31) - 1
 
 
-def _coordinate_component(value: int, name: str) -> int:
+def _axis(value: int, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"{name} must be an integer")
     if value < 0 or value > MORTON_MAX_COORDINATE:
@@ -37,12 +34,22 @@ def _coordinate_component(value: int, name: str) -> int:
     return value
 
 
+def _field_coordinate(coordinate: Coordinate, side: int) -> Coordinate:
+    if (
+        not isinstance(coordinate, tuple)
+        or len(coordinate) != 3
+        or any(isinstance(value, bool) or not isinstance(value, int) for value in coordinate)
+    ):
+        raise TypeError("coordinates must be integer (x, y, z) tuples")
+    if any(value < 0 or value >= side for value in coordinate):
+        raise ValueError("coordinate is outside the configured 3D side length")
+    return coordinate
+
+
 def morton_encode_3d(x: int, y: int, z: int) -> int:
     """Interleave 21 bits from each axis into one reversible 63-bit key."""
 
-    x = _coordinate_component(x, "x")
-    y = _coordinate_component(y, "y")
-    z = _coordinate_component(z, "z")
+    x, y, z = _axis(x, "x"), _axis(y, "y"), _axis(z, "z")
     code = 0
     for bit in range(MORTON_BITS_PER_AXIS):
         code |= ((x >> bit) & 1) << (3 * bit)
@@ -52,7 +59,7 @@ def morton_encode_3d(x: int, y: int, z: int) -> int:
 
 
 def morton_decode_3d(code: int) -> Coordinate:
-    """Recover ``(x, y, z)`` from a 63-bit Morton key."""
+    """Recover ``(x, y, z)`` from a supported Morton key."""
 
     if isinstance(code, bool) or not isinstance(code, int):
         raise TypeError("Morton code must be an integer")
@@ -68,14 +75,14 @@ def morton_decode_3d(code: int) -> Coordinate:
 
 @dataclass(frozen=True)
 class MortonQuantizedLatent3D:
-    """Sparse 3D latent: reversible Morton address -> signed quantized code."""
+    """Sparse 3D latent: Morton address -> signed 32-bit quantized value."""
 
     step: float
     entries: dict[int, int]
 
 
 class MortonQuantizedFieldCodec3D:
-    """Deterministic spatial codec implementing the field-runtime codec contract."""
+    """Deterministic 3D field codec with an explicit packed-record contract."""
 
     def __init__(
         self,
@@ -100,19 +107,22 @@ class MortonQuantizedFieldCodec3D:
     def encode(self, field: Mapping[Coordinate, float]) -> MortonQuantizedLatent3D:
         entries: dict[int, int] = {}
         for coordinate, raw_value in field.items():
-            self._validate_coordinate(coordinate)
+            coordinate = _field_coordinate(coordinate, self.side)
             if isinstance(raw_value, bool) or not isinstance(raw_value, (int, float)):
                 raise TypeError("field values must be numeric")
             value = float(raw_value)
             if not math.isfinite(value):
                 raise ValueError("field values must be finite")
-            code = int(round(value / self.step))
-            if code != 0 or not self.prune_zero_codes:
-                key = morton_encode_3d(*coordinate)
-                if key in entries:
-                    raise RuntimeError("Morton address collision detected")
-                entries[key] = code
-        return MortonQuantizedLatent3D(step=self.step, entries=entries)
+            value_code = int(round(value / self.step))
+            if value_code < SIGNED_INT32_MIN or value_code > SIGNED_INT32_MAX:
+                raise ValueError("quantized value exceeds signed 32-bit latent range")
+            if value_code == 0 and self.prune_zero_codes:
+                continue
+            key = morton_encode_3d(*coordinate)
+            if key in entries:
+                raise RuntimeError("Morton address collision detected")
+            entries[key] = value_code
+        return MortonQuantizedLatent3D(self.step, entries)
 
     def decode(
         self,
@@ -125,21 +135,12 @@ class MortonQuantizedFieldCodec3D:
             raise ValueError("latent quantization step does not match codec")
         result: SparseField = {}
         for coordinate in support:
-            self._validate_coordinate(coordinate)
-            key = morton_encode_3d(*coordinate)
-            result[coordinate] = float(latent.entries.get(key, 0)) * self.step
+            coordinate = _field_coordinate(coordinate, self.side)
+            value_code = latent.entries.get(morton_encode_3d(*coordinate), 0)
+            if value_code < SIGNED_INT32_MIN or value_code > SIGNED_INT32_MAX:
+                raise ValueError("latent contains a value outside signed 32-bit range")
+            result[coordinate] = float(value_code) * self.step
         return result
-
-    def _validate_coordinate(self, coordinate: Coordinate) -> Coordinate:
-        if (
-            not isinstance(coordinate, tuple)
-            or len(coordinate) != 3
-            or any(isinstance(value, bool) or not isinstance(value, int) for value in coordinate)
-        ):
-            raise TypeError("coordinates must be integer (x, y, z) tuples")
-        if any(value < 0 or value >= self.side for value in coordinate):
-            raise ValueError("coordinate is outside the configured 3D side length")
-        return coordinate
 
 
 @dataclass(frozen=True)
@@ -173,69 +174,52 @@ class SpatialMetrics3D:
 
 
 def measure_spatial_field(field: Mapping[Coordinate, float], *, side: int) -> SpatialMetrics3D:
-    """Measure geometry directly from the active sparse 3D state."""
+    """Measure spatial geometry directly from active authoritative cells."""
 
     if isinstance(side, bool) or not isinstance(side, int) or side <= 0:
         raise ValueError("side must be a positive integer")
     if not field:
         return SpatialMetrics3D(0, None, None, None, None, 0.0, 0.0, 0.0, 0, 0.0)
 
-    coordinates = tuple(field)
-    for coordinate in coordinates:
-        if (
-            not isinstance(coordinate, tuple)
-            or len(coordinate) != 3
-            or any(isinstance(value, bool) or not isinstance(value, int) for value in coordinate)
-        ):
-            raise TypeError("coordinates must be integer (x, y, z) tuples")
-        if any(value < 0 or value >= side for value in coordinate):
-            raise ValueError("coordinate is outside the configured 3D side length")
+    coordinates = tuple(_field_coordinate(coordinate, side) for coordinate in field)
+    values = tuple(float(field[coordinate]) for coordinate in coordinates)
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError("field values must be finite")
 
-    xs = tuple(coordinate[0] for coordinate in coordinates)
-    ys = tuple(coordinate[1] for coordinate in coordinates)
-    zs = tuple(coordinate[2] for coordinate in coordinates)
     count = len(coordinates)
+    xs = tuple(item[0] for item in coordinates)
+    ys = tuple(item[1] for item in coordinates)
+    zs = tuple(item[2] for item in coordinates)
     centroid = (sum(xs) / count, sum(ys) / count, sum(zs) / count)
 
-    weights = tuple(abs(float(field[coordinate])) for coordinate in coordinates)
-    if not all(math.isfinite(weight) for weight in weights):
-        raise ValueError("field values must be finite")
-    weight_sum = sum(weights)
+    weights = tuple(abs(value) for value in values)
+    total_weight = sum(weights)
     weighted_centroid = (
         (
-            sum(coordinate[0] * weight for coordinate, weight in zip(coordinates, weights))
-            / weight_sum,
-            sum(coordinate[1] * weight for coordinate, weight in zip(coordinates, weights))
-            / weight_sum,
-            sum(coordinate[2] * weight for coordinate, weight in zip(coordinates, weights))
-            / weight_sum,
+            sum(c[0] * w for c, w in zip(coordinates, weights)) / total_weight,
+            sum(c[1] * w for c, w in zip(coordinates, weights)) / total_weight,
+            sum(c[2] * w for c, w in zip(coordinates, weights)) / total_weight,
         )
-        if weight_sum > 0.0
+        if total_weight > 0.0
         else centroid
     )
 
     rms_radius = math.sqrt(
         sum(
-            (coordinate[0] - centroid[0]) ** 2
-            + (coordinate[1] - centroid[1]) ** 2
-            + (coordinate[2] - centroid[2]) ** 2
-            for coordinate in coordinates
+            (c[0] - centroid[0]) ** 2
+            + (c[1] - centroid[1]) ** 2
+            + (c[2] - centroid[2]) ** 2
+            for c in coordinates
         )
         / count
     )
-    values = tuple(float(field[coordinate]) for coordinate in coordinates)
-    if not all(math.isfinite(value) for value in values):
-        raise ValueError("field values must be finite")
-    l1_energy = sum(abs(value) for value in values)
-    l2_energy = sum(value * value for value in values)
-
     support = set(coordinates)
-    links = 0
-    for x, y, z in coordinates:
-        for neighbor in ((x + 1, y, z), (x, y + 1, z), (x, y, z + 1)):
-            if neighbor in support:
-                links += 1
-
+    links = sum(
+        1
+        for x, y, z in coordinates
+        for neighbor in ((x + 1, y, z), (x, y + 1, z), (x, y, z + 1))
+        if neighbor in support
+    )
     return SpatialMetrics3D(
         active_cells=count,
         bounds_min=(min(xs), min(ys), min(zs)),
@@ -243,8 +227,8 @@ def measure_spatial_field(field: Mapping[Coordinate, float], *, side: int) -> Sp
         centroid=centroid,
         weighted_centroid=weighted_centroid,
         rms_radius=rms_radius,
-        l1_energy=l1_energy,
-        l2_energy=l2_energy,
+        l1_energy=sum(abs(value) for value in values),
+        l2_energy=sum(value * value for value in values),
         six_face_links=links,
         occupancy_ratio=count / float(side**3),
     )
@@ -273,13 +257,12 @@ def spatial_frame(
     cycle: int,
     max_render_points: int = 4096,
 ) -> SpatialFrame3D:
-    """Create a deterministic bounded point-cloud frame from authoritative state."""
+    """Create a deterministic bounded Morton-ordered point-cloud frame."""
 
     if isinstance(max_render_points, bool) or not isinstance(max_render_points, int):
         raise TypeError("max_render_points must be an integer")
     if max_render_points <= 0:
         raise ValueError("max_render_points must be positive")
-
     ordered = sorted(field.items(), key=lambda item: morton_encode_3d(*item[0]))
     if len(ordered) > max_render_points:
         stride = math.ceil(len(ordered) / max_render_points)
@@ -313,8 +296,6 @@ def digest_latent(latent: MortonQuantizedLatent3D) -> str:
 
 @dataclass(frozen=True)
 class SpatialAutoCodec3DSummary:
-    """Machine-readable result for one bounded spatial auto-codec execution."""
-
     codec: str
     latent_entries: int
     latent_digest: str
@@ -342,7 +323,7 @@ class SpatialAutoCodec3DSummary:
 
 
 class SpatialAutoCodec3DSystem:
-    """Coordinate-aware 3D wrapper around the bounded auto-codec loop."""
+    """Coordinate-aware 3D execution wrapper around ``AutoCodecLoop``."""
 
     def __init__(
         self,
@@ -398,10 +379,10 @@ class SpatialAutoCodec3DSystem:
             )
             if len(frames) < self.max_frames:
                 frames.append(frame)
-            elif frames:
+            else:
                 frames[-1] = frame
 
-        summary = self.loop.run(validator=validator, on_cycle=capture)
+        loop_summary = self.loop.run(validator=validator, on_cycle=capture)
         final_state = self.loop.runtime.snapshot()
         final_frame = spatial_frame(
             final_state,
@@ -416,7 +397,7 @@ class SpatialAutoCodec3DSystem:
                 frames[-1] = final_frame
 
         latent = self.codec.encode(final_state)
-        # A portable packed record would use uint64 Morton key + int32 value code.
+        # Guaranteed by codec range checks: uint64 Morton key + int32 value code.
         packed_bytes = len(latent.entries) * 12
         return SpatialAutoCodec3DSummary(
             codec="MortonQuantizedFieldCodec3D",
@@ -426,5 +407,5 @@ class SpatialAutoCodec3DSystem:
             input_frame=input_frame,
             final_frame=final_frame,
             frames=tuple(frames),
-            loop=summary,
+            loop=loop_summary,
         )
