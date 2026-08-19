@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, replace
 from typing import Any
 
@@ -149,6 +149,9 @@ class AutoCodecRunSummary:
         }
 
 
+CycleObserver = Callable[[int, SparseField], None]
+
+
 class AutoCodecLoop:
     """Bounded closed-loop controller around :class:`DrMoagiFieldRuntime`."""
 
@@ -193,7 +196,12 @@ class AutoCodecLoop:
         )
         return receipt
 
-    def run(self, validator: Validator | None = None) -> AutoCodecRunSummary:
+    def run(
+        self,
+        validator: Validator | None = None,
+        *,
+        on_cycle: CycleObserver | None = None,
+    ) -> AutoCodecRunSummary:
         if not self._loaded:
             raise RuntimeError("load a field before running the auto-codec loop")
 
@@ -210,6 +218,8 @@ class AutoCodecLoop:
             receipt = self.step(validator=validator)
             last_receipt = receipt
             executed = self.runtime.cycle - start_cycle
+            if on_cycle is not None:
+                on_cycle(receipt.cycle, self.runtime.snapshot())
 
             if receipt.committed:
                 committed += 1
