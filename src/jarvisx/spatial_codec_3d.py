@@ -13,7 +13,7 @@ import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from .auto_codec_loop import AutoCodecLoop, AutoCodecRunSummary, digest_field
 from .dr_moagi_field_runtime import Coordinate, SparseField, Validator
@@ -133,7 +133,7 @@ class MortonQuantizedFieldCodec3D:
             raise TypeError("latent must be a MortonQuantizedLatent3D")
         if latent.step != self.step:
             raise ValueError("latent quantization step does not match codec")
-        result: SparseField = {}
+        result: dict[Coordinate, float] = {}
         for coordinate in support:
             coordinate = _field_coordinate(coordinate, self.side)
             value_code = latent.entries.get(morton_encode_3d(*coordinate), 0)
@@ -306,7 +306,7 @@ class SpatialAutoCodec3DSummary:
     loop: AutoCodecRunSummary
 
     def to_dict(self) -> dict[str, Any]:
-        result = self.loop.to_dict()
+        result = cast(dict[str, Any], self.loop.to_dict())
         result.update(
             {
                 "spatial_mode": "3d-morton-quantized",
@@ -397,7 +397,6 @@ class SpatialAutoCodec3DSystem:
                 frames[-1] = final_frame
 
         latent = self.codec.encode(final_state)
-        # Guaranteed by codec range checks: uint64 Morton key + int32 value code.
         packed_bytes = len(latent.entries) * 12
         return SpatialAutoCodec3DSummary(
             codec="MortonQuantizedFieldCodec3D",
