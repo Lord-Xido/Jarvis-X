@@ -1,4 +1,5 @@
 #include "jarvisx/dr_moagi_state_space.hpp"
+#include "jarvisx/electromagnetic_flow.hpp"
 
 #include <chrono>
 #include <iomanip>
@@ -38,8 +39,11 @@ int main() {
             u = engine.encode_ingress(active_ingress);
         }
 
+        const std::vector<double> before_state = engine.state();
         std::vector<double> delta_context(config.latent_dim, 0.005);
         engine.step_state_space(u, delta_context);
+        const auto switching = ElectromagneticFlowLogic::measure_transition(
+            before_state, engine.state());
         const auto tiles = engine.decode_and_dispatch_tiles();
 
         double total_power_mw = 0.0;
@@ -54,11 +58,16 @@ int main() {
                   << " LatentNorm=" << engine.latent_norm()
                   << " | ||Phi||_inf=" << engine.transition_infinity_norm()
                   << " | growth_est(Phi)=" << engine.transition_growth_estimate()
+                  << " | Q16.raw_alpha=" << switching.raw_activity_factor
+                  << " | Q16.DBI_alpha=" << switching.dbi_activity_factor
+                  << " | Q16.toggles=" << switching.raw_bit_toggles
                   << " | tile_power_model=" << total_power_mw << " mW"
                   << " | latency=" << frame_ms << " ms\n";
     }
 
     std::cout << "\n[STATE] Linear transition bound enforced. "
+              << "Q16.16 switching telemetry observes logical state transitions only; "
+              << "physical power/EM fields require an explicit hardware model. "
               << "Full nonlinear closed-loop Jacobian stability is not asserted by this harness.\n";
     return 0;
 }
