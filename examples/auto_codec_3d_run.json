@@ -1,0 +1,32 @@
+{
+  "cells": [
+    {"x": 20, "y": 20, "z": 20, "value": 0.86},
+    {"x": 21, "y": 20, "z": 20, "value": 0.62},
+    {"x": 20, "y": 21, "z": 20, "value": -0.55},
+    {"x": 20, "y": 20, "z": 21, "value": 0.44},
+    {"x": 21, "y": 21, "z": 21, "value": -0.31}
+  ],
+  "quantization_step": 0.1,
+  "field_config": {
+    "side": 64,
+    "alpha": 1.0,
+    "lambda_residual": 0.05,
+    "eta": 0.02,
+    "dt": 0.02,
+    "max_active_cells": 100000,
+    "expand_halo": true,
+    "prune_epsilon": 0.000001
+  },
+  "loop_config": {
+    "max_cycles": 32,
+    "min_cycles": 1,
+    "reconstruction_mse_target": 0.001,
+    "max_consecutive_rejections": 3,
+    "stop_on_fixed_point": true
+  },
+  "spatial_config": {
+    "frame_stride": 1,
+    "max_render_points": 4096,
+    "max_frames": 64
+  }
+}
