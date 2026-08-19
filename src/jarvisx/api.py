@@ -156,12 +156,8 @@ def run_auto_codec_3d(payload: AutoCodec3DRequest) -> dict[str, Any]:
         )
         runtime = DrMoagiFieldRuntime(codec, _field_config(payload))
 
-        run_id: str | None = None
-        ledger = None
-        if payload.persist:
-            run_id = RUN_STORE.new_run_id()
-            ledger = RUN_STORE.ledger(run_id)
-
+        run_id = RUN_STORE.new_run_id() if payload.persist else None
+        ledger = RUN_STORE.ledger(run_id) if run_id is not None else None
         loop = AutoCodecLoop(runtime, _loop_config(payload), ledger=ledger)
         system = SpatialAutoCodec3DSystem(
             loop,
