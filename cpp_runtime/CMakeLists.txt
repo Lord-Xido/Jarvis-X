@@ -44,6 +44,12 @@ add_executable(jarvisx-multimedia4d
 jarvisx_include_runtime(jarvisx-multimedia4d)
 jarvisx_harden(jarvisx-multimedia4d)
 
+add_executable(jarvisx-dr-moagi-state-space
+    src/dr_moagi_state_space_main.cpp
+)
+jarvisx_include_runtime(jarvisx-dr-moagi-state-space)
+jarvisx_harden(jarvisx-dr-moagi-state-space)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -109,6 +115,12 @@ add_test(
 )
 set_tests_properties(multimedia4d-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME dr-moagi-state-space-smoke
+    COMMAND jarvisx-dr-moagi-state-space
+)
+set_tests_properties(dr-moagi-state-space-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -135,3 +147,12 @@ jarvisx_harden(jarvisx-multimedia4d-tests)
 
 add_test(NAME multimedia4d-regressions COMMAND jarvisx-multimedia4d-tests)
 set_tests_properties(multimedia4d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-dr-moagi-state-space-tests
+    tests/dr_moagi_state_space_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-dr-moagi-state-space-tests)
+jarvisx_harden(jarvisx-dr-moagi-state-space-tests)
+
+add_test(NAME dr-moagi-state-space-regressions COMMAND jarvisx-dr-moagi-state-space-tests)
+set_tests_properties(dr-moagi-state-space-regressions PROPERTIES TIMEOUT 120)
