@@ -156,3 +156,12 @@ jarvisx_harden(jarvisx-dr-moagi-state-space-tests)
 
 add_test(NAME dr-moagi-state-space-regressions COMMAND jarvisx-dr-moagi-state-space-tests)
 set_tests_properties(dr-moagi-state-space-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-electromagnetic-flow-tests
+    tests/electromagnetic_flow_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-electromagnetic-flow-tests)
+jarvisx_harden(jarvisx-electromagnetic-flow-tests)
+
+add_test(NAME electromagnetic-flow-regressions COMMAND jarvisx-electromagnetic-flow-tests)
+set_tests_properties(electromagnetic-flow-regressions PROPERTIES TIMEOUT 120)
