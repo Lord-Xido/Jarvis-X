@@ -99,11 +99,13 @@ class CodexVM:
     def _control_envelope(self, *, authoritative: bool) -> StateEnvelope:
         payload = self._control_payload()
         registers = payload["registers"]
+        memory_bytes = payload["memory_bytes"]
         assert isinstance(registers, dict)
+        assert isinstance(memory_bytes, int)
         return StateEnvelope.from_payload(
             state_type="jarvisx.vm-state",
             state_version=1,
-            dimensions=(len(registers), int(payload["memory_bytes"])),
+            dimensions=(len(registers), memory_bytes),
             payload=payload,
             authoritative=authoritative,
         )
