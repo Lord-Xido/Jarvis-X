@@ -1,0 +1,24 @@
+{
+  "cells": [
+    {"x": 2, "y": 2, "z": 2, "value": 0.26},
+    {"x": 3, "y": 2, "z": 2, "value": -0.37}
+  ],
+  "quantization_step": 0.1,
+  "field_config": {
+    "side": 64,
+    "alpha": 1.0,
+    "lambda_residual": 0.0,
+    "eta": 0.0,
+    "dt": 0.1,
+    "max_active_cells": 100000,
+    "expand_halo": false,
+    "prune_epsilon": 0.0
+  },
+  "loop_config": {
+    "max_cycles": 64,
+    "min_cycles": 1,
+    "reconstruction_mse_target": 0.001,
+    "max_consecutive_rejections": 3,
+    "stop_on_fixed_point": true
+  }
+}
