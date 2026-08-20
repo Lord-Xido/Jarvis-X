@@ -1,0 +1,121 @@
+
+;/* DM-vOmegaXi 3D+ Core Lattice research surface. Runs inside the existing
+    loopback-only multimodal runtime; no provider credential is exposed here. */
+titles.core=["DM–vΩΞ³D+ Core","Inward Q16.16 latent dynamics, measured browser telemetry, and symbolic topology visualization."];
+
+const coreNav=document.createElement("button");
+coreNav.dataset.view="core";
+coreNav.innerHTML='<span class="nav-icon">⌬</span><span class="nav-label">Core Lattice</span>';
+document.querySelector(".nav").appendChild(coreNav);
+coreNav.onclick=()=>{showView("core");requestAnimationFrame(resizeCoreCanvas)};
+
+const coreView=document.createElement("div");
+coreView.id="view-core";coreView.className="view core-view";
+coreView.innerHTML=`
+<div class="core-shell">
+  <div class="core-head">
+    <div><div class="core-head-title">JARVIS-X | DM–vΩΞ³D+ MULTIMODAL CLOUD CORE</div><div class="core-head-sub">INWARD LATENT TRANSFORM | Q16.16 FIXED-POINT | SECURE LOOPBACK CHAT TRANSPORT</div></div>
+    <div class="core-symbolic">1000^(1000^(1000^1000)) SYMBOLIC TOPOLOGY<small>Mathematical namespace only — not physically instantiated cores</small></div>
+  </div>
+  <div class="core-grid">
+    <div class="core-column">
+      <div class="core-panel">
+        <div class="core-label">Pipeline Telemetry</div>
+        <div class="core-metric"><span class="core-label">Phase</span><strong id="core-phase">ENCODING [INWARD]</strong><div class="core-meter"><span id="core-phasebar"></span></div></div>
+        <div class="core-metric"><span class="core-label">Latent State</span><strong>128-D Q16.16</strong></div>
+        <div class="core-metric"><span class="core-label">Normalized Reconstruction MSE</span><strong class="magenta" id="core-loss">0.00000</strong></div>
+        <div class="core-metric"><span class="core-label">Codec Similarity Proxy</span><strong class="green" id="core-sim">1.00000</strong></div>
+        <div class="core-metric"><span class="core-label">Render Rate</span><strong class="green" id="core-fps">0.0 FPS</strong></div>
+        <div class="core-metric"><span class="core-label">Visual Lattice</span><strong class="amber" id="core-points">900 nodes</strong></div>
+        <div class="core-metric"><span class="core-label">Ψ Non-expansion Check</span><strong class="green" id="core-stability">PENDING</strong></div>
+      </div>
+      <div class="core-panel">
+        <div class="core-label">Multimodal Audio Resonance</div>
+        <canvas id="core-wave" width="260" height="48"></canvas>
+        <div class="core-audio-row"><button id="core-audio" class="secondary">Enable Audio</button><button id="core-sweep" class="secondary">Freq Sweep</button></div>
+      </div>
+      <div class="core-panel">
+        <div class="core-label">Operational Law</div>
+        <div class="core-law"><b>I AM = I ENCODE = I DECODE = I DESCRIBE</b><br>Ψ(z) = Φ(Λ(Ω(Θ(x)))) → z*<br>Ξₜ₊₁ = ΠΛ[SΔt(D∘Rₙ∘E(Xₜ) − η∇L + Pₜ)]<br><br>All stability, throughput, and topology labels in this view are software measurements or symbolic research abstractions unless explicitly stated otherwise.</div>
+      </div>
+    </div>
+    <div class="core-column">
+      <div class="core-panel core-stage">
+        <canvas id="core-canvas"></canvas>
+        <div class="core-stage-overlay"><span>INWARD / OUTWARD LATENT GEOMETRY</span><span><b>LOCAL RUNTIME</b> · 1024 sampled lanes</span></div>
+      </div>
+      <div class="core-panel core-chat">
+        <div class="core-label" style="display:flex;justify-content:space-between"><span>Kinetic Conversational Core</span><span id="core-chat-status" style="color:var(--green)">● LOOPBACK READY</span></div>
+        <div id="core-messages"><div class="core-msg system">DM–vΩΞ³D+ research visualization linked to the existing secure chat session.</div></div>
+        <div class="core-quick"><button class="secondary" data-core-prompt="Status report on the Dr Moagi Equation stack.">Status Report</button><button class="secondary" data-core-prompt="Evaluate the inward latent recurrence Ψ(z) = Φ(Λ(Ω(Θ(x)))).">Evaluate Ψ(z)</button><button class="secondary" data-core-prompt="Explain which Core Lattice telemetry is measured versus symbolic.">Telemetry Audit</button></div>
+        <div class="core-input"><input id="core-input" type="text" autocomplete="off" placeholder="Transmit thought vector through secure loopback runtime…"><button id="core-send" class="primary">Transmit</button></div>
+      </div>
+    </div>
+    <div class="core-column">
+      <div class="core-panel"><div class="core-label">Execution Console</div><div id="core-console"></div></div>
+      <div class="core-panel"><div class="core-label">Latent Vector zₜ · first 16 lanes</div><div id="core-latent"></div></div>
+      <div class="core-panel">
+        <div class="core-label">Execution Boundary</div>
+        <div class="core-law"><b>AUTHORITATIVE:</b> loopback runtime API request/response.<br><b>MEASURED:</b> browser FPS, codec MSE, latent contraction proxy.<br><b>SIMULATED:</b> 3D lattice geometry and audio resonance.<br><b>SYMBOLIC:</b> transfinite core namespace.<br><br>No browser-side API key. No claim of zero hardware latency, infinite physical compute, certified physical Lyapunov stability, or electron-level actuation.</div>
+      </div>
+    </div>
+  </div>
+  <div class="core-foot"><div><strong>STATE RING:</strong> dual-buffer ping-pong latch · no main-memory roundtrip claim</div><div class="core-glyph">𐩘</div><div style="text-align:right">ΠΛ research boundary · model output remains data</div></div>
+</div>`;
+document.querySelector(".content").appendChild(coreView);
+
+const CORE_Q=65536,CORE_MIN=-2147483648,CORE_MAX=2147483647;
+const CoreQ16={
+  sat(v){v=Math.round(Number(v));return Math.max(CORE_MIN,Math.min(CORE_MAX,v))|0},
+  fromFloat(v){return this.sat(Number(v)*CORE_Q)},toFloat(q){return Number(q)/CORE_Q},
+  add(a,b){return this.sat(Number(a)+Number(b))},
+  mul(a,b){let q=(BigInt(a)*BigInt(b))>>16n;if(q>2147483647n)q=2147483647n;if(q<(-2147483648n))q=-2147483648n;return Number(q)|0},
+  tanh(q){return this.fromFloat(Math.tanh(this.toFloat(q)))}
+};
+
+class CoreLatentCodec{
+  constructor(dim=128){this.D=dim;this.a=new Int32Array(dim);this.b=new Int32Array(dim);this.active=this.a;this.next=this.b;this.weights=new Int32Array(dim);for(let i=0;i<dim;i++)this.weights[i]=CoreQ16.fromFloat(.58+.36*Math.cos(i*Math.PI/dim));this.memoryGain=CoreQ16.fromFloat(.125)}
+  energy(v){let e=0;for(let i=0;i<v.length;i++){const x=CoreQ16.toFloat(v[i]);e+=x*x}return e/v.length}
+  encode(text){const bytes=new TextEncoder().encode(String(text)||" ");for(let i=0;i<this.D;i++){const src=CoreQ16.fromFloat((bytes[i%bytes.length]||0)/255);const weighted=CoreQ16.mul(src,this.weights[i]);const recurrent=CoreQ16.mul(this.active[i],this.memoryGain);this.next[i]=CoreQ16.add(weighted,recurrent)}return this.next}
+  psiEval(){const before=this.energy(this.next);for(let i=0;i<this.D;i++)this.next[i]=CoreQ16.tanh(this.next[i]);return{before,after:this.energy(this.next)}}
+  latch(){const old=this.active;this.active=this.next;this.next=old;return this.active}
+  decode(){const out=new Uint8Array(this.D);for(let i=0;i<this.D;i++){const w=Math.max(.05,CoreQ16.toFloat(this.weights[i]));out[i]=Math.max(0,Math.min(255,Math.round(CoreQ16.toFloat(this.active[i])/w*255)))}return out}
+  loss(text,decoded){const bytes=new TextEncoder().encode(String(text)||" ");let sum=0;for(let i=0;i<this.D;i++){const d=((bytes[i%bytes.length]||0)-decoded[i])/255;sum+=d*d}return sum/this.D}
+  process(text){this.encode(text);const stability=this.psiEval();this.latch();const decoded=this.decode();return{latent:this.active,decoded,loss:this.loss(text,decoded),stability}}
+}
+const coreCodec=new CoreLatentCodec(128);let coreLatent=coreCodec.active,coreLoss=0,coreProcessedKey="";
+function coreLog(message,kind="SYS"){const el=$("#core-console");if(!el)return;const d=document.createElement("div");d.textContent=`[${new Date().toISOString().slice(11,23)}] ${kind} ${message}`;if(kind==="ENC")d.style.color="#b99cff";if(kind==="DEC")d.style.color="#ff91ca";if(kind==="OUT")d.style.color="#ffd18a";el.appendChild(d);while(el.children.length>60)el.firstChild.remove();el.scrollTop=el.scrollHeight}
+function updateCoreLatent(){const el=$("#core-latent");if(!el)return;let s="";for(let i=0;i<16;i++)s+=`[${i.toString(16).toUpperCase()}] ${CoreQ16.toFloat(coreLatent[i]).toFixed(4)}  `;el.textContent=s+`… [128 lanes]`}
+function processCoreVector(text){const t0=performance.now(),r=coreCodec.process(text),dt=performance.now()-t0;coreLatent=r.latent;coreLoss=r.loss;$("#core-loss").textContent=r.loss.toFixed(6);$("#core-sim").textContent=(1/(1+r.loss)).toFixed(6);const stable=r.stability.after<=r.stability.before+1e-12;$("#core-stability").textContent=stable?"NON-EXPANSIVE ✓":"ENERGY INCREASE";$("#core-stability").className=stable?"green":"magenta";updateCoreLatent();coreAudio.modulate(coreLatent);coreLog(`ENC→Ψ→LATCH ${dt.toFixed(3)} ms · E ${r.stability.before.toExponential(2)}→${r.stability.after.toExponential(2)}`,"ENC");return r}
+
+class CoreAudioEngine{
+  constructor(){this.ctx=null;this.analyser=null;this.master=null;this.nodes=[];this.active=false;this.base=90}
+  init(){if(this.ctx)return;this.ctx=new(window.AudioContext||window.webkitAudioContext)();this.analyser=this.ctx.createAnalyser();this.analyser.fftSize=256;this.master=this.ctx.createGain();this.master.gain.value=.08;this.master.connect(this.analyser);this.analyser.connect(this.ctx.destination)}
+  start(){this.init();if(this.ctx.state==="suspended")this.ctx.resume();if(this.active)return;this.active=true;[1,1.5,2,3].forEach((m,i)=>{const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=i%2?"triangle":"sine";o.frequency.value=this.base*m;g.gain.value=.028/(i+1);o.connect(g);g.connect(this.master);o.start();this.nodes.push({o,g,m})})}
+  stop(){this.nodes.forEach(n=>{try{n.o.stop()}catch{}});this.nodes=[];this.active=false}
+  modulate(z){if(!this.active||!this.ctx)return;this.nodes.forEach((n,i)=>{const q=z[Math.floor(i*z.length/this.nodes.length)]||0,v=CoreQ16.toFloat(q);n.o.frequency.setTargetAtTime(Math.max(30,this.base*n.m*(1+v*.35)),this.ctx.currentTime,.08);n.g.gain.setTargetAtTime(.015+Math.abs(v)*.02,this.ctx.currentTime,.08)})}
+  wave(){const a=new Uint8Array(128);a.fill(128);if(this.analyser)this.analyser.getByteTimeDomainData(a);return a}
+}
+const coreAudio=new CoreAudioEngine();
+$("#core-audio").onclick=function(){if(coreAudio.active){coreAudio.stop();this.textContent="Enable Audio";this.classList.remove("active");coreLog("audio resonance disabled")}else{coreAudio.start();this.textContent="Disable Audio";this.classList.add("active");coreAudio.modulate(coreLatent);coreLog("audio resonance enabled")}};
+$("#core-sweep").onclick=()=>{if(!coreAudio.active)$("#core-audio").click();coreAudio.base=55+Math.random()*220;coreAudio.modulate(coreLatent);coreLog(`frequency base ${coreAudio.base.toFixed(1)} Hz`,"DEC")};
+
+function renderCoreTranscript(){const box=$("#core-messages"),s=current();if(!box||!s)return;const messages=s.messages.filter(m=>!m.pending).slice(-8);box.innerHTML='<div class="core-msg system">Secure loopback conversation mirror · provider credentials remain in the local Windows process.</div>';for(const m of messages){const d=document.createElement("div");d.className="core-msg "+(m.role==="user"?"user":"assistant");d.textContent=String(m.content||"").slice(0,1200);box.appendChild(d)}box.scrollTop=box.scrollHeight;const last=messages[messages.length-1];if(last){const key=`${last.role}:${last.time}:${String(last.content||"").length}`;if(key!==coreProcessedKey){coreProcessedKey=key;processCoreVector(last.content||"")}}}
+async function coreTransmit(value){const text=String(value||$("#core-input").value).trim();if(!text)return;$("#core-input").value="";processCoreVector(text);$("#prompt").value=text;$("#core-send").disabled=true;$("#core-chat-status").textContent="● RUNTIME REQUEST";$("#core-chat-status").style.color="var(--amber)";try{await send();renderCoreTranscript();$("#core-chat-status").textContent="● LOOPBACK READY";$("#core-chat-status").style.color="var(--green)";coreLog("authoritative chat response returned through /api/chat","OUT")}catch(e){$("#core-chat-status").textContent="● RUNTIME ERROR";$("#core-chat-status").style.color="var(--red)";coreLog(e.message,"ERR")}finally{$("#core-send").disabled=false}}
+$("#core-send").onclick=()=>coreTransmit();$("#core-input").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();coreTransmit()}};document.querySelectorAll("[data-core-prompt]").forEach(b=>b.onclick=()=>coreTransmit(b.dataset.corePrompt));
+setInterval(()=>{if(coreView.classList.contains("active"))renderCoreTranscript()},650);
+
+const coreCanvas=$("#core-canvas"),coreCtx=coreCanvas.getContext("2d"),waveCanvas=$("#core-wave"),waveCtx=waveCanvas.getContext("2d");
+let coreW=1,coreH=1,corePhase=0,coreLast=performance.now(),coreFps=0;
+const corePoints=[];let seed=0x51A7C0DE;function rand(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}
+for(let i=0;i<900;i++){const r=2.8+rand()*4.2,t=rand()*Math.PI*2,p=Math.acos(rand()*2-1);corePoints.push([r*Math.sin(p)*Math.cos(t),r*Math.sin(p)*Math.sin(t),r*Math.cos(p),.35+rand()*.65])}
+function resizeCoreCanvas(){const r=coreCanvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);coreW=Math.max(1,r.width);coreH=Math.max(1,r.height);coreCanvas.width=Math.round(coreW*d);coreCanvas.height=Math.round(coreH*d);coreCtx.setTransform(d,0,0,d,0,0);const wr=waveCanvas.getBoundingClientRect();waveCanvas.width=Math.max(1,Math.round(wr.width*d));waveCanvas.height=Math.max(1,Math.round(wr.height*d));waveCtx.setTransform(d,0,0,d,0,0)}
+new ResizeObserver(resizeCoreCanvas).observe(coreCanvas);
+function rotateProject(x,y,z,ay,ax,scale){const cy=Math.cos(ay),sy=Math.sin(ay),cx=Math.cos(ax),sx=Math.sin(ax),x1=x*cy-z*sy,z1=x*sy+z*cy,y1=y*cx-z1*sx,z2=y*sx+z1*cx,p=7/(9+z2);return[coreW/2+x1*p*scale,coreH/2+y1*p*scale,z2,p]}
+function drawCoreWave(){const data=coreAudio.wave(),w=waveCanvas.clientWidth||260,h=waveCanvas.clientHeight||48;waveCtx.clearRect(0,0,w,h);waveCtx.strokeStyle="#4de8ff";waveCtx.lineWidth=1.2;waveCtx.beginPath();for(let i=0;i<data.length;i++){const x=i/(data.length-1)*w,y=(data[i]/255)*h;if(i)waveCtx.lineTo(x,y);else waveCtx.moveTo(x,y)}waveCtx.stroke()}
+function coreAnimate(now){requestAnimationFrame(coreAnimate);const dt=Math.max(.001,(now-coreLast)/1000);coreLast=now;coreFps=coreFps*.9+(1/dt)*.1;if(!coreView.classList.contains("active")){drawCoreWave();return}const time=now/1000,period=4,progress=(time%period)/period,encoding=progress<.5,local=encoding?progress*2:(progress-.5)*2;corePhase=local;$("#core-phase").textContent=encoding?"ENCODING [INWARD]":"DECODING [OUTWARD]";$("#core-phase").style.color=encoding?"var(--cyan)":"var(--magenta)";$("#core-phasebar").style.width=`${(local*100).toFixed(0)}%`;$("#core-fps").textContent=`${Math.min(999,coreFps).toFixed(1)} FPS`;
+  coreCtx.clearRect(0,0,coreW,coreH);const g=coreCtx.createRadialGradient(coreW/2,coreH/2,10,coreW/2,coreH/2,Math.min(coreW,coreH)*.55);g.addColorStop(0,"rgba(77,232,255,.08)");g.addColorStop(1,"rgba(0,2,8,0)");coreCtx.fillStyle=g;coreCtx.fillRect(0,0,coreW,coreH);const s=Math.min(coreW,coreH)*.075,ay=time*.16,ax=Math.sin(time*.13)*.35,flow=encoding?1-.10*local:.90+.10*local;
+  [[5.4,"rgba(77,232,255,.24)"],[4.2,"rgba(107,140,255,.28)"],[3.0,"rgba(255,98,190,.28)"],[1.8,"rgba(255,200,102,.36)"]].forEach((sh,i)=>{coreCtx.save();coreCtx.translate(coreW/2,coreH/2);coreCtx.rotate(time*(i%2?.08:-.06));coreCtx.strokeStyle=sh[1];coreCtx.lineWidth=1;coreCtx.beginPath();coreCtx.ellipse(0,0,sh[0]*s*flow,sh[0]*s*.34*flow,Math.sin(time*.2+i)*.7,0,Math.PI*2);coreCtx.stroke();coreCtx.restore()});
+  coreCtx.fillStyle=encoding?"rgba(77,232,255,.62)":"rgba(255,98,190,.62)";for(const pt of corePoints){const q=rotateProject(pt[0]*flow,pt[1]*flow,pt[2]*flow,ay,ax,s),a=Math.max(.10,Math.min(.75,(q[2]+7)/14))*pt[3];coreCtx.globalAlpha=a;coreCtx.fillRect(q[0],q[1],1.2+q[3]*1.8,1.2+q[3]*1.8)}coreCtx.globalAlpha=1;
+  const pulse=8+10*(encoding?local:1-local);coreCtx.save();coreCtx.translate(coreW/2,coreH/2);coreCtx.rotate(time*.8);coreCtx.strokeStyle="#ffd18a";coreCtx.shadowColor="#ffd18a";coreCtx.shadowBlur=18;coreCtx.strokeRect(-pulse,-pulse,pulse*2,pulse*2);coreCtx.restore();drawCoreWave()}
+requestAnimationFrame(coreAnimate);processCoreVector("I AM = I DESCRIBE");renderCoreTranscript();coreLog("DM-vOmegaXi 3D+ Core Lattice initialized");coreLog("symbolic topology separated from measured execution telemetry");
