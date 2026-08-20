@@ -56,7 +56,7 @@ coreView.innerHTML=`
       <div class="core-panel"><div class="core-label">Latent Vector zₜ · first 16 lanes</div><div id="core-latent"></div></div>
       <div class="core-panel">
         <div class="core-label">Execution Boundary</div>
-        <div class="core-law"><b>AUTHORITATIVE:</b> loopback runtime API request/response.<br><b>MEASURED:</b> browser FPS, codec MSE, latent contraction proxy.<br><b>SIMULATED:</b> 3D lattice geometry and audio resonance.<br><b>SYMBOLIC:</b> transfinite core namespace.<br><br>No browser-side API key. No claim of zero hardware latency, infinite physical compute, certified physical Lyapunov stability, or electron-level actuation.</div>
+        <div class="core-law"><b>AUTHORITATIVE:</b> loopback runtime API request/response.<br><b>MEASURED:</b> browser FPS, codec MSE, local non-expansion proxy.<br><b>SIMULATED:</b> 3D lattice geometry and audio resonance.<br><b>SYMBOLIC:</b> transfinite core namespace.<br><br>No browser-side API key. No claim of zero hardware latency, infinite physical compute, certified physical Lyapunov stability, or electron-level actuation.</div>
       </div>
     </div>
   </div>
