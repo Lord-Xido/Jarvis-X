@@ -26,7 +26,12 @@ The project follows semantic versioning where practical during alpha development
 - analytic constant-forcing updates for `du/dt = -D(-Delta)^alpha u + Omega`;
 - `2×2×2` restriction, prolongation and coarse-to-fine fusion;
 - ordered mechanistic traces, mass drift, gradient energy, residual and convergence telemetry;
-- independent direct-DFT, spatial-stencil and semigroup validation tests.
+- independent direct-DFT, spatial-stencil and semigroup validation tests;
+- bounded deterministic 3D multiparallel package pipeline with sequential and process backends;
+- versioned `JXMP` framing, bounded zlib decode and per-chunk SHA-256 verification;
+- read-only Python code geometry, immutable branch snapshots and ordered typed merging;
+- seeded candidate-first topology search with wall-clock timing excluded from fitness;
+- `jarvisx-multiparallel` run, map-code and evolve command-line surface.
 
 ### Changed
 

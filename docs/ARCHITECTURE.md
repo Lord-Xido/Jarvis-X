@@ -111,6 +111,9 @@ Responsibilities may include:
 - parameter candidate generation;
 - shadow evaluation;
 - bounded schedule search;
+- bounded multiparallel package pipelines;
+- deterministic reconciliation of asynchronous package results;
+- versioned, integrity-checked multi-package framing;
 - coherence projection;
 - commit and rollback decisions.
 
@@ -121,6 +124,11 @@ For volumetric autoencoding systems, additive evolution terms must inhabit the s
 The Moagi-Helmholtz functional is the canonical Layer 5 orchestration contract for multimodal-conditioned geometry generation, refinement, archival coding and reverse inference. It does not require the canonical VM to depend on a neural, renderer or codec backend.
 
 Orthogonal transform adapters additionally inherit ADR-005: normalization is verified before transpose-as-inverse reconstruction, quantization error receives its own deterministic envelope, and a transform defect cannot be hidden by widening a multimedia distortion threshold.
+
+Multiparallel pipeline candidates additionally inherit ADR-010: worker completion order
+cannot affect reconciliation, topology data cannot carry arbitrary callables, source
+geometry remains observational, wall-clock telemetry cannot drive deterministic
+promotion, and an active topology changes only after candidate verification.
 
 ### Layer 6 — Interfaces and visualization
 
@@ -185,6 +193,9 @@ The research transform cannot make itself authoritative merely by computing a ca
 16. **Transform precision separation:** orthogonal transform/quantization error is measured against its own deterministic bound and is not absorbed into render, cycle or perceptual tolerances.
 17. **Normalize before inversion:** a backend may use `D^T` as the inverse only when the declared transform has passed its orthonormality contract within tolerance.
 18. **Diagnose before widening:** a precision-gate failure triggers transform/payload/precision diagnosis before any quantization threshold is relaxed.
+19. **Ordered reconciliation:** parallel package results are reconciled by declared source order rather than environmental completion order.
+20. **Observational code geometry:** geometric transforms of code coordinates cannot silently rewrite or reorder authoritative source.
+21. **Timing separation:** wall-clock measurements are telemetry unless a statistical benchmark contract explicitly admits them; they are not deterministic replay inputs.
 
 ## 5. Data contracts
 
