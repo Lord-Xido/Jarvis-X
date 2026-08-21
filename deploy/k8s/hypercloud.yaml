@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jarvisx-hypercloud
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jarvisx-hypercloud
+  template:
+    metadata:
+      labels:
+        app: jarvisx-hypercloud
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/lord-xido/jarvis-x:hypercloud
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jarvisx-hypercloud
+spec:
+  selector:
+    app: jarvisx-hypercloud
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
