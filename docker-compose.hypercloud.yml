@@ -1,0 +1,41 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.cloud
+    image: jarvisx-hypercloud:local
+    restart: unless-stopped
+    environment:
+      JARVISX_STATE_DB: /var/lib/jarvisx/state.db
+      JARVISX_OBJECT_ROOT: /var/lib/jarvisx/objects
+      JARVISX_LATTICE_SHAPE: ${JARVISX_LATTICE_SHAPE:-16,16,16}
+      JARVISX_API_KEY: ${JARVISX_API_KEY:-}
+      JARVISX_MODEL_BASE_URL: ${JARVISX_MODEL_BASE_URL:-}
+      JARVISX_MODEL_NAME: ${JARVISX_MODEL_NAME:-}
+      JARVISX_MODEL_API_KEY: ${JARVISX_MODEL_API_KEY:-}
+      JARVISX_MODEL_TIMEOUT_SECONDS: ${JARVISX_MODEL_TIMEOUT_SECONDS:-120}
+    ports:
+      - "${JARVISX_PORT:-8080}:8080"
+    volumes:
+      - hypercloud-state:/var/lib/jarvisx
+
+  worker:
+    image: jarvisx-hypercloud:local
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["python", "-m", "jarvisx.cloud.worker"]
+    environment:
+      JARVISX_STATE_DB: /var/lib/jarvisx/state.db
+      JARVISX_OBJECT_ROOT: /var/lib/jarvisx/objects
+      JARVISX_MODEL_BASE_URL: ${JARVISX_MODEL_BASE_URL:-}
+      JARVISX_MODEL_NAME: ${JARVISX_MODEL_NAME:-}
+      JARVISX_MODEL_API_KEY: ${JARVISX_MODEL_API_KEY:-}
+      JARVISX_MODEL_TIMEOUT_SECONDS: ${JARVISX_MODEL_TIMEOUT_SECONDS:-120}
+      JARVISX_WORKER_POLL_SECONDS: ${JARVISX_WORKER_POLL_SECONDS:-0.25}
+    volumes:
+      - hypercloud-state:/var/lib/jarvisx
+
+volumes:
+  hypercloud-state:
