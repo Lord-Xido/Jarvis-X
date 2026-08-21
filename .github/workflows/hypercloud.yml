@@ -1,0 +1,43 @@
+name: HyperCloud Runtime
+
+on:
+  pull_request:
+    paths:
+      - "src/jarvisx/cloud/**"
+      - "tests/test_hypercloud_runtime.py"
+      - "Dockerfile.cloud"
+      - "deploy/k8s/hypercloud.yaml"
+      - ".github/workflows/hypercloud.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/jarvisx/cloud/**"
+      - "tests/test_hypercloud_runtime.py"
+      - "Dockerfile.cloud"
+      - "deploy/k8s/hypercloud.yaml"
+      - ".github/workflows/hypercloud.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install package
+        run: python -m pip install -e ".[test]"
+      - name: Run HyperCloud tests
+        run: pytest tests/test_hypercloud_runtime.py --no-cov
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build reference image
+        run: docker build -f Dockerfile.cloud -t jarvisx-hypercloud:ci .
