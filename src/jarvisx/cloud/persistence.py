@@ -112,7 +112,8 @@ class SQLiteStateStore:
 
     def ping(self) -> bool:
         with self._lock:
-            return self._connection.execute("SELECT 1").fetchone()[0] == 1
+            row = self._connection.execute("SELECT 1").fetchone()
+        return row is not None and int(row[0]) == 1
 
     # ---- sparse parameters -------------------------------------------------
     def set_parameter(self, namespace: str, address: str, value: float) -> None:
