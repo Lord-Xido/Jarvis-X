@@ -35,7 +35,7 @@ jobs:
       - name: Install package
         run: python -m pip install -e ".[test]"
       - name: Run HyperCloud tests
-        run: pytest tests/test_hypercloud_runtime.py tests/test_hypercloud_operational.py --no-cov
+        run: pytest tests/test_hypercloud*.py --no-cov
 
   full-stack:
     runs-on: ubuntu-latest
