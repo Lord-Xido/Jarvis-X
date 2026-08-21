@@ -12,6 +12,12 @@ from .operational import OperationalHyperCloud
 from .persistence import JobRecord, SQLiteStateStore
 from .routing import ShardCoordinate, SpatialShardRouter
 from .runtime import HyperCloudRuntime, SparseParameterStore
+from .topology import (
+    PlacementDecision,
+    TopologyScheduler,
+    WorkerDescriptor,
+    manhattan_distance,
+)
 from .worker import HyperCloudWorker
 
 __all__ = [
@@ -24,9 +30,13 @@ __all__ = [
     "MediaEnvelope",
     "MediaKind",
     "OperationalHyperCloud",
+    "PlacementDecision",
     "ShardCoordinate",
     "SparseParameterStore",
     "SpatialShardRouter",
     "SQLiteStateStore",
     "SymbolicParameterExtent",
+    "TopologyScheduler",
+    "WorkerDescriptor",
+    "manhattan_distance",
 ]
