@@ -1,0 +1,24 @@
+services:
+  kinetic3d:
+    build:
+      context: ../..
+      dockerfile: deploy/kinetic3d/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8081:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    restart: unless-stopped
+    depends_on:
+      kinetic3d:
+        condition: service_healthy
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9091:9090"

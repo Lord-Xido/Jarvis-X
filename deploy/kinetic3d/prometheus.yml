@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: jarvisx-kinetic3d
+    static_configs:
+      - targets: ["kinetic3d:8000"]
+    metrics_path: /metrics

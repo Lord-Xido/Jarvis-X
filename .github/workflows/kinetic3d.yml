@@ -1,0 +1,75 @@
+name: Kinetic 3D Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/jarvisx/kinetic3d.py"
+      - "src/jarvisx/kinetic3d_api.py"
+      - "tests/test_kinetic3d.py"
+      - "deploy/kinetic3d/**"
+      - ".github/workflows/kinetic3d.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/kinetic3d.py"
+      - "src/jarvisx/kinetic3d_api.py"
+      - "tests/test_kinetic3d.py"
+      - "deploy/kinetic3d/**"
+      - ".github/workflows/kinetic3d.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reference-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[test]"
+      - name: Unit tests
+        run: pytest -q tests/test_kinetic3d.py
+      - name: Compile modules
+        run: python -m compileall -q src/jarvisx/kinetic3d.py src/jarvisx/kinetic3d_api.py
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build runtime image
+        run: docker build -f deploy/kinetic3d/Dockerfile -t jarvisx-kinetic3d:test .
+      - name: Start runtime
+        run: docker run -d --rm --name jarvisx-kinetic3d -p 8000:8000 jarvisx-kinetic3d:test
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs jarvisx-kinetic3d
+          exit 1
+      - name: Execute initial 3D transition
+        run: |
+          response=$(curl --fail --silent \
+            -H 'content-type: application/json' \
+            -d '{"session_id":"ci","shape":[2,2,2],"values":[1,1,1,1,1,1,1,1],"active_threshold":0,"coarse_factor":2,"refine_threshold":0,"tolerance":0}' \
+            http://127.0.0.1:8000/v1/kinetic3d/execute)
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["verification"]["passed"]; assert d["committed"]; assert d["epoch_after"] == 1; assert d["telemetry"]["latent_values"] == 1' "$response"
+      - name: Execute sparse kinetic update
+        run: |
+          response=$(curl --fail --silent \
+            -H 'content-type: application/json' \
+            -d '{"session_id":"ci","shape":[2,2,2],"values":[1,1,1,1,1,1,9,1],"active_threshold":0.1,"coarse_factor":2,"refine_threshold":0,"tolerance":0}' \
+            http://127.0.0.1:8000/v1/kinetic3d/execute)
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["verification"]["passed"]; assert d["epoch_after"] == 2; assert d["active_indices"] == [6]; assert d["telemetry"]["active_cells"] == 1' "$response"
+      - name: Inspect committed world state
+        run: |
+          state=$(curl --fail --silent http://127.0.0.1:8000/v1/kinetic3d/state/ci)
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["epoch"] == 2; assert d["world"][6] == 9.0' "$state"
