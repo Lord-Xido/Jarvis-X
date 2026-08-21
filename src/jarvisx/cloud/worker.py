@@ -30,9 +30,9 @@ class HyperCloudWorker:
     def execute(self, job: JobRecord) -> dict[str, Any]:
         if job.operation == "codec_roundtrip":
             digest = str(job.input["media_sha256"])
-            media = self.state.get_media(digest)
+            media = self.state.get_media(job.namespace, digest)
             if media is None:
-                raise KeyError(f"media object not found: {digest}")
+                raise KeyError(f"media object not found in namespace {job.namespace}: {digest}")
             result = self.codec.roundtrip(media)
             result["operation"] = job.operation
             return result
