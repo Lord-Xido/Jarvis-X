@@ -1,0 +1,36 @@
+services:
+  bitcode3d:
+    build:
+      context: ../..
+      dockerfile: deploy/bitcode3d/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  envoy:
+    image: envoyproxy/envoy:v1.31.0
+    restart: unless-stopped
+    depends_on:
+      bitcode3d:
+        condition: service_healthy
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    ports:
+      - "8080:8080"
+      - "9901:9901"
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    restart: unless-stopped
+    depends_on:
+      bitcode3d:
+        condition: service_healthy
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"

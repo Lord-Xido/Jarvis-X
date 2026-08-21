@@ -1,0 +1,64 @@
+name: 3D Bit Code E2E
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/jarvisx/bitcode3d.py"
+      - "src/jarvisx/bitcode3d_api.py"
+      - "tests/test_bitcode3d.py"
+      - "deploy/bitcode3d/**"
+      - ".github/workflows/bitcode3d-e2e.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/bitcode3d.py"
+      - "src/jarvisx/bitcode3d_api.py"
+      - "tests/test_bitcode3d.py"
+      - "deploy/bitcode3d/**"
+      - ".github/workflows/bitcode3d-e2e.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reference-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[test]"
+      - name: Unit tests
+        run: pytest -q tests/test_bitcode3d.py
+      - name: Compile modules
+        run: python -m compileall -q src/jarvisx/bitcode3d.py src/jarvisx/bitcode3d_api.py
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build runtime image
+        run: docker build -f deploy/bitcode3d/Dockerfile -t jarvisx-bitcode3d:test .
+      - name: Start runtime
+        run: docker run -d --rm --name jarvisx-bitcode3d -p 8000:8000 jarvisx-bitcode3d:test
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs jarvisx-bitcode3d
+          exit 1
+      - name: Execute 3D Bit Code request
+        run: |
+          response=$(curl --fail --silent \
+            -H 'content-type: application/json' \
+            -d '{"shape":[2,2,2],"values":[0,1,2,3,4,5,6,7],"pool":2,"tolerance":4}' \
+            http://127.0.0.1:8000/v1/bitcode3d/execute)
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["verification"]["passed"]; assert len(d["bytecode"]) == 11' "$response"
