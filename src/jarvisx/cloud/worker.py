@@ -33,12 +33,11 @@ class HyperCloudWorker:
             media = self.state.get_media(job.namespace, digest)
             if media is None:
                 raise KeyError(f"media object not found in namespace {job.namespace}: {digest}")
-            result = self.codec.roundtrip(media)
-            result["operation"] = job.operation
-            return result
+            codec_result = self.codec.roundtrip(media)
+            return {**codec_result, "operation": job.operation}
 
         if job.operation == "chat":
-            result = self.backend.generate(
+            chat_result = self.backend.generate(
                 prompt=str(job.input.get("prompt", "")),
                 system=(
                     None
@@ -46,8 +45,7 @@ class HyperCloudWorker:
                     else str(job.input.get("system"))
                 ),
             )
-            result["operation"] = job.operation
-            return result
+            return {**chat_result, "operation": job.operation}
 
         raise ValueError(f"unsupported job operation: {job.operation}")
 
