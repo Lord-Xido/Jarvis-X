@@ -13,13 +13,14 @@ from pydantic import BaseModel, Field
 from .extent import HierarchicalAddress
 from .multimodal import MediaEnvelope, MediaKind
 from .operational import OperationalHyperCloud
+from .topology import WorkerDescriptor
 
 app = FastAPI(
     title="Jarvis-X 3D HyperCloud",
-    version="0.2.0",
+    version="0.3.0",
     description=(
-        "Operational sparse virtual-parameter cloud with durable multimedia state, "
-        "deterministic 3D routing and asynchronous model/codec execution."
+        "Operational sparse virtual-parameter cloud with leased 3D workers, durable "
+        "multimedia state, topology-aware routing and asynchronous model/codec execution."
     ),
 )
 runtime = OperationalHyperCloud.from_environment()
@@ -84,6 +85,21 @@ def _backend_name() -> str:
     )
 
 
+def _worker_payload(worker: WorkerDescriptor) -> dict[str, object]:
+    return {
+        "worker_id": worker.worker_id,
+        "coordinate": {
+            "x": worker.coordinate.x,
+            "y": worker.coordinate.y,
+            "z": worker.coordinate.z,
+        },
+        "capabilities": list(worker.capabilities),
+        "backend": worker.backend,
+        "load": worker.load,
+        "last_seen": worker.last_seen,
+    }
+
+
 @app.get("/healthz")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -101,6 +117,8 @@ def readiness() -> dict[str, str]:
 def metrics() -> Response:
     assert runtime.state is not None
     jobs = runtime.state.job_counts()
+    worker_ttl = float(os.getenv("JARVISX_WORKER_TTL_SECONDS", "30"))
+    workers = runtime.state.active_workers(ttl_seconds=worker_ttl)
     lines = [
         "# HELP jarvisx_hypercloud_materialized_parameters Sparse materialized parameter count.",
         "# TYPE jarvisx_hypercloud_materialized_parameters gauge",
@@ -108,6 +126,9 @@ def metrics() -> Response:
         "# HELP jarvisx_hypercloud_media_objects Namespace-scoped media metadata count.",
         "# TYPE jarvisx_hypercloud_media_objects gauge",
         f"jarvisx_hypercloud_media_objects {runtime.state.media_count()}",
+        "# HELP jarvisx_hypercloud_active_workers Live workers inside the heartbeat TTL.",
+        "# TYPE jarvisx_hypercloud_active_workers gauge",
+        f"jarvisx_hypercloud_active_workers {len(workers)}",
         "# HELP jarvisx_hypercloud_jobs Jobs by durable state.",
         "# TYPE jarvisx_hypercloud_jobs gauge",
     ]
@@ -123,6 +144,18 @@ def describe_runtime() -> dict[str, object]:
         "api_key_required": bool(os.getenv("JARVISX_API_KEY", ""))
     }
     return description
+
+
+@app.get("/v1/workers", dependencies=[Depends(_authorize)])
+def list_workers() -> dict[str, object]:
+    assert runtime.state is not None
+    worker_ttl = float(os.getenv("JARVISX_WORKER_TTL_SECONDS", "30"))
+    workers = runtime.state.active_workers(ttl_seconds=worker_ttl)
+    return {
+        "ttl_seconds": worker_ttl,
+        "count": len(workers),
+        "workers": [_worker_payload(worker) for worker in workers],
+    }
 
 
 @app.post("/v1/route", dependencies=[Depends(_authorize)])
@@ -214,3 +247,30 @@ def get_job(job_id: str) -> dict[str, object]:
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
     return job.as_dict()
+
+
+@app.get("/v1/jobs/{job_id}/placement", dependencies=[Depends(_authorize)])
+def job_placement(job_id: str) -> dict[str, object]:
+    job = runtime.job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    if job.target is None:
+        return {"job_id": job_id, "target": None, "placement": None}
+    decision = runtime.placement_preview(job_id)
+    placement = None
+    if decision is not None:
+        placement = {
+            "worker_id": decision.worker_id,
+            "coordinate": {
+                "x": decision.coordinate.x,
+                "y": decision.coordinate.y,
+                "z": decision.coordinate.z,
+            },
+            "distance": decision.distance,
+            "score": decision.score,
+        }
+    return {
+        "job_id": job_id,
+        "target": {"x": job.target.x, "y": job.target.y, "z": job.target.z},
+        "placement": placement,
+    }
