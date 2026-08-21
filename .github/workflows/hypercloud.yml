@@ -4,8 +4,9 @@ on:
   pull_request:
     paths:
       - "src/jarvisx/cloud/**"
-      - "tests/test_hypercloud_runtime.py"
+      - "tests/test_hypercloud*.py"
       - "Dockerfile.cloud"
+      - "docker-compose.hypercloud.yml"
       - "deploy/k8s/hypercloud.yaml"
       - ".github/workflows/hypercloud.yml"
   push:
@@ -13,8 +14,9 @@ on:
       - main
     paths:
       - "src/jarvisx/cloud/**"
-      - "tests/test_hypercloud_runtime.py"
+      - "tests/test_hypercloud*.py"
       - "Dockerfile.cloud"
+      - "docker-compose.hypercloud.yml"
       - "deploy/k8s/hypercloud.yaml"
       - ".github/workflows/hypercloud.yml"
 
@@ -33,11 +35,53 @@ jobs:
       - name: Install package
         run: python -m pip install -e ".[test]"
       - name: Run HyperCloud tests
-        run: pytest tests/test_hypercloud_runtime.py --no-cov
+        run: pytest tests/test_hypercloud_runtime.py tests/test_hypercloud_operational.py --no-cov
 
-  container:
+  full-stack:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build reference image
-        run: docker build -f Dockerfile.cloud -t jarvisx-hypercloud:ci .
+      - name: Validate Compose configuration
+        run: docker compose -f docker-compose.hypercloud.yml config
+      - name: Boot API and worker
+        run: docker compose -f docker-compose.hypercloud.yml up -d --build
+      - name: Wait for API readiness
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8080/readyz; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose -f docker-compose.hypercloud.yml logs
+          exit 1
+      - name: Submit and complete durable chat job
+        run: |
+          response=$(curl -fsS \
+            -H 'Content-Type: application/json' \
+            -d '{"namespace":"ci","prompt":"hypercloud smoke test"}' \
+            http://127.0.0.1:8080/v1/chat)
+          job_id=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$response")
+          for i in $(seq 1 40); do
+            state=$(curl -fsS "http://127.0.0.1:8080/v1/jobs/${job_id}")
+            status=$(python -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<< "$state")
+            if [ "$status" = "succeeded" ]; then
+              echo "$state"
+              exit 0
+            fi
+            if [ "$status" = "failed" ]; then
+              echo "$state"
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "job did not complete"
+          exit 1
+      - name: Verify metrics
+        run: curl -fsS http://127.0.0.1:8080/metrics | grep 'jarvisx_hypercloud_jobs{status="succeeded"} 1'
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.hypercloud.yml logs
+      - name: Shutdown stack
+        if: always()
+        run: docker compose -f docker-compose.hypercloud.yml down -v
