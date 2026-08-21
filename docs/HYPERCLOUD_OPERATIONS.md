@@ -1,7 +1,7 @@
 # Jarvis-X HyperCloud Operations
 
-**Status:** operational single-node/stateful reference deployment  
-**Scope:** durable sparse state, content-addressed multimedia, deterministic 3D routing, persistent jobs, codec execution, pluggable chat inference
+**Status:** operational permeated single-node/stateful reference deployment  
+**Scope:** durable sparse state, content-addressed multimedia, deterministic 3D routing, leased multiparallel workers, persistent jobs, codec execution, pluggable chat inference
 
 ## 1. Start the complete stack
 
@@ -14,7 +14,8 @@ docker compose --env-file .env -f docker-compose.hypercloud.yml up -d --build
 The stack contains:
 
 - `api`: FastAPI control plane on port 8080 by default;
-- `worker`: persistent job executor;
+- `worker-a`: leased execution cell at `(4,4,4)` by default;
+- `worker-b`: leased execution cell at `(12,12,12)` by default;
 - `hypercloud-state`: shared durable volume containing SQLite/WAL state and content-addressed objects.
 
 Verify:
@@ -23,25 +24,57 @@ Verify:
 curl http://127.0.0.1:8080/healthz
 curl http://127.0.0.1:8080/readyz
 curl http://127.0.0.1:8080/metrics
+curl http://127.0.0.1:8080/v1/workers
 ```
 
-If `JARVISX_API_KEY` is set, add either:
+If `JARVISX_API_KEY` is set, add either `Authorization: Bearer <key>` or `X-API-Key: <key>` to `/v1/*` calls.
+
+## 2. Permeated 3D execution loop
+
+Every executable job is assigned a deterministic target coordinate in the finite deployment lattice:
 
 ```text
-Authorization: Bearer <key>
+request / media digest
+        |
+        v
+hierarchical sparse address
+        |
+        v
+3D target (x,y,z)
+        |
+        v
+live worker registry
+        |
+        v
+nearest capable worker
+        |
+        v
+expiring ownership lease
+        |
+        v
+execute -> verify -> commit
 ```
 
-or:
+The worker registry records:
 
-```text
-X-API-Key: <key>
+- worker identity;
+- 3D coordinate;
+- capability set (`chat`, `codec`, or future capabilities);
+- backend identity;
+- current load;
+- heartbeat timestamp.
+
+Placement is intentionally transparent. The scheduler scores compatible workers using spatial distance plus a bounded load penalty. A queued worker claim independently prefers spatially nearest jobs, so geometry participates in execution rather than remaining decorative metadata.
+
+Inspect a queued job's target and current placement recommendation:
+
+```bash
+curl http://127.0.0.1:8080/v1/jobs/<id>/placement
 ```
 
-for `/v1/*` calls.
+## 3. Execute a chat job
 
-## 2. Execute a chat job
-
-With the default configuration the worker uses the deterministic local reference backend. This validates the entire persistent execution path but is **not** represented as a neural LLM.
+With the default configuration workers use the deterministic local reference backend. This validates the complete persistent execution path but is **not** represented as a neural LLM.
 
 ```bash
 python examples/hypercloud_client.py "Explain the 3D sparse routing model"
@@ -56,7 +89,7 @@ curl -sS \
   http://127.0.0.1:8080/v1/chat
 ```
 
-The response contains a durable `id`. Poll:
+The response contains a durable `id` and a non-null 3D `target`. Poll:
 
 ```bash
 curl http://127.0.0.1:8080/v1/jobs/<id>
@@ -64,7 +97,46 @@ curl http://127.0.0.1:8080/v1/jobs/<id>
 
 until `status` becomes `succeeded` or `failed`.
 
-## 3. Attach a real model server
+## 4. Worker leases and failure recovery
+
+The durable job state machine is:
+
+```text
+queued
+  |
+  | claim + lease
+  v
+running ------------------> succeeded
+  |
+  +-----------------------> failed
+  |
+  | lease expires, attempts remain
+  v
+queued
+```
+
+Each claim records:
+
+- `lease_owner`;
+- `lease_expires_at`;
+- `attempts`;
+- `max_attempts`.
+
+If a worker disappears, expired running work is automatically returned to `queued` while attempts remain. When the maximum attempt count is exhausted, the job becomes `failed` with an explicit lease-expiry error.
+
+Completion and failure writes are fenced by `lease_owner`; a stale worker cannot overwrite a job after ownership has moved to another worker.
+
+Reference settings:
+
+```text
+JARVISX_JOB_LEASE_SECONDS=300
+JARVISX_WORKER_TTL_SECONDS=30
+JARVISX_WORKER_POLL_SECONDS=0.25
+```
+
+The lease is deliberately much longer than the heartbeat TTL in the local reference deployment. Long-running production inference should evolve to renewable leases before reducing this safety margin.
+
+## 5. Attach a real model server
 
 HyperCloud can execute against an OpenAI-compatible chat-completions endpoint. This may be a self-hosted inference server or a managed provider.
 
@@ -77,7 +149,7 @@ export JARVISX_MODEL_API_KEY='optional-secret'
 docker compose -f docker-compose.hypercloud.yml up -d
 ```
 
-The worker sends:
+Workers send:
 
 ```text
 POST ${JARVISX_MODEL_BASE_URL}/v1/chat/completions
@@ -87,7 +159,7 @@ using `JARVISX_MODEL_NAME`. API keys are read from the environment and are never
 
 A configured external model endpoint proves only that a model backend is attached. It does not by itself prove GPU acceleration, model size, throughput, or quality; those require backend telemetry and benchmarks.
 
-## 4. Persist sparse parameters
+## 6. Persist sparse parameters
 
 Write an addressed value:
 
@@ -118,7 +190,7 @@ curl -sS \
 
 Physical allocation remains proportional to touched addresses; the symbolic astronomical upper bound is never expanded densely.
 
-## 5. Ingest and auto-encode/decode multimedia
+## 7. Ingest and auto-encode/decode multimedia
 
 Media ingestion accepts base64 bytes and an explicit modality:
 
@@ -131,13 +203,7 @@ Media ingestion accepts base64 bytes and an explicit modality:
 }
 ```
 
-POST this payload to:
-
-```text
-POST /v1/media
-```
-
-The returned SHA-256 digest is scoped by namespace. Submit an executable codec round-trip:
+POST to `/v1/media`. The returned SHA-256 digest is scoped by namespace. Submit an executable codec round-trip by POSTing:
 
 ```json
 {
@@ -146,13 +212,9 @@ The returned SHA-256 digest is scoped by namespace. Submit an executable codec r
 }
 ```
 
-POST to:
+to `/v1/jobs/codec`.
 
-```text
-POST /v1/jobs/codec
-```
-
-The worker performs:
+A worker performs:
 
 ```text
 media bytes
@@ -161,9 +223,9 @@ media bytes
   -> byte-for-byte reconstruction check
 ```
 
-This is a real deterministic auto-encoding/decoding transport primitive, but it is explicitly a lossless codec rather than a learned neural autoencoder. Learned image/audio/video codecs can replace or supplement this adapter later without changing the job/state contract.
+This is a real deterministic auto-encoding/decoding transport primitive, explicitly a lossless codec rather than a learned neural autoencoder. Learned image/audio/video codecs can attach later without changing the job/state contract.
 
-## 6. Data layout
+## 8. Data layout
 
 Default container paths:
 
@@ -178,40 +240,26 @@ SQLite stores:
 
 - sparse parameter values;
 - namespace-scoped media metadata;
-- durable job inputs/results/errors.
+- durable job inputs/results/errors;
+- 3D job targets and lease state;
+- worker coordinates, capabilities, load and heartbeats.
 
 Object bytes are content-addressed and deduplicated globally by SHA-256 while metadata ownership remains namespace-scoped.
 
-## 7. Failure semantics
+## 9. Observability
 
-Worker execution is transactional at the job-state boundary:
-
-```text
-queued -> running -> succeeded
-                  -> failed
-```
-
-An exception is stored in the job's `error` field. The API process and worker process are isolated so model/backend failures do not crash the control plane.
-
-The current worker intentionally does not auto-retry failed jobs. Retry policy should be added only with operation idempotency rules, attempt counters, backoff and dead-letter semantics.
-
-## 8. Observability
-
-Prometheus text metrics are available at:
-
-```text
-GET /metrics
-```
+Prometheus text metrics are available at `GET /metrics`.
 
 Current gauges include:
 
 - materialized sparse parameters;
 - namespace-scoped media metadata objects;
+- active workers inside the heartbeat TTL;
 - queued/running/succeeded/failed job counts.
 
-Readiness checks SQLite availability at `/readyz`; liveness is exposed at `/healthz`.
+Worker topology is available at `GET /v1/workers`. Readiness checks SQLite availability at `/readyz`; liveness is exposed at `/healthz`.
 
-## 9. Kubernetes
+## 10. Kubernetes
 
 Apply:
 
@@ -219,11 +267,11 @@ Apply:
 kubectl apply -f deploy/k8s/hypercloud.yaml
 ```
 
-The manifest intentionally runs **one pod** containing both API and worker with a `ReadWriteOnce` persistent volume. This is the correct topology for the SQLite/WAL reference backend.
+The manifest intentionally runs **one pod** containing API plus two worker sidecars sharing a `ReadWriteOnce` persistent volume. This exercises concurrent leased workers while respecting SQLite/WAL's single-node state boundary.
 
-Do not increase replicas while using this manifest's local SQLite state plane. Horizontal production scale requires replacing the persistence adapter with distributed state/object services and then introducing topology-aware workers.
+Do not increase pod replicas while using this manifest's SQLite state plane. Cross-node horizontal scale requires a distributed transactional job/metadata store and distributed object store first.
 
-## 10. Operational capability boundary
+## 11. Operational capability boundary
 
 Implemented and runnable:
 
@@ -234,19 +282,23 @@ Implemented and runnable:
 - content-addressed object persistence;
 - lossless multimedia encode/decode execution;
 - durable asynchronous jobs;
-- worker isolation and persisted failures;
+- deterministic 3D job targets;
+- multiworker registration and heartbeat state;
+- capability-aware spatial placement;
+- expiring worker leases and abandoned-job recovery;
+- retry limits and lease-owner fencing;
 - offline local response backend;
 - OpenAI-compatible neural model adapter;
 - optional API-key enforcement;
 - readiness/liveness/metrics;
-- Docker Compose deployment;
-- Kubernetes single-pod stateful deployment;
-- CI unit and full-stack execution tests.
+- Docker Compose two-cell worker deployment;
+- Kubernetes single-pod/two-worker stateful deployment;
+- CI unit and full-stack multiprocess execution tests.
 
 Not yet established by this reference deployment:
 
-- distributed database/object state;
-- multi-node worker leasing/heartbeats;
+- distributed database/object state across nodes;
+- renewable leases for arbitrarily long model calls;
 - GPU-aware scheduler or verified accelerator execution;
 - tensor/expert/pipeline parallel training;
 - learned image/audio/video generation adapters;
@@ -254,4 +306,4 @@ Not yet established by this reference deployment:
 - production tenant IAM, quotas and billing;
 - measured SLOs or astronomical physical model capacity.
 
-Those are infrastructure and model-data-plane increments, not properties that can be truthfully inferred from the symbolic virtual parameter extent.
+Those are infrastructure and model-data-plane increments, not properties that can be inferred from the symbolic virtual parameter extent.
