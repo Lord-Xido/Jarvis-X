@@ -59,7 +59,8 @@ def execute_bitcode3d(request: ExecuteRequest) -> dict[str, object]:
         _executions += 1
         _total_cycles += result.telemetry.cycles
         _total_active_cells += result.telemetry.active_cells
-    return result.as_payload()
+    payload: dict[str, object] = result.as_payload()
+    return payload
 
 
 @app.get("/metrics", response_class=Response)
