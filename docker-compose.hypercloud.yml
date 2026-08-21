@@ -9,6 +9,7 @@ services:
       JARVISX_STATE_DB: /var/lib/jarvisx/state.db
       JARVISX_OBJECT_ROOT: /var/lib/jarvisx/objects
       JARVISX_LATTICE_SHAPE: ${JARVISX_LATTICE_SHAPE:-16,16,16}
+      JARVISX_WORKER_TTL_SECONDS: ${JARVISX_WORKER_TTL_SECONDS:-30}
       JARVISX_API_KEY: ${JARVISX_API_KEY:-}
       JARVISX_MODEL_BASE_URL: ${JARVISX_MODEL_BASE_URL:-}
       JARVISX_MODEL_NAME: ${JARVISX_MODEL_NAME:-}
@@ -19,7 +20,7 @@ services:
     volumes:
       - hypercloud-state:/var/lib/jarvisx
 
-  worker:
+  worker-a:
     image: jarvisx-hypercloud:local
     restart: unless-stopped
     depends_on:
@@ -29,6 +30,34 @@ services:
     environment:
       JARVISX_STATE_DB: /var/lib/jarvisx/state.db
       JARVISX_OBJECT_ROOT: /var/lib/jarvisx/objects
+      JARVISX_LATTICE_SHAPE: ${JARVISX_LATTICE_SHAPE:-16,16,16}
+      JARVISX_WORKER_ID: hypercloud-worker-a
+      JARVISX_WORKER_COORD: ${JARVISX_WORKER_A_COORD:-4,4,4}
+      JARVISX_WORKER_CAPABILITIES: ${JARVISX_WORKER_A_CAPABILITIES:-chat,codec}
+      JARVISX_JOB_LEASE_SECONDS: ${JARVISX_JOB_LEASE_SECONDS:-300}
+      JARVISX_MODEL_BASE_URL: ${JARVISX_MODEL_BASE_URL:-}
+      JARVISX_MODEL_NAME: ${JARVISX_MODEL_NAME:-}
+      JARVISX_MODEL_API_KEY: ${JARVISX_MODEL_API_KEY:-}
+      JARVISX_MODEL_TIMEOUT_SECONDS: ${JARVISX_MODEL_TIMEOUT_SECONDS:-120}
+      JARVISX_WORKER_POLL_SECONDS: ${JARVISX_WORKER_POLL_SECONDS:-0.25}
+    volumes:
+      - hypercloud-state:/var/lib/jarvisx
+
+  worker-b:
+    image: jarvisx-hypercloud:local
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["python", "-m", "jarvisx.cloud.worker"]
+    environment:
+      JARVISX_STATE_DB: /var/lib/jarvisx/state.db
+      JARVISX_OBJECT_ROOT: /var/lib/jarvisx/objects
+      JARVISX_LATTICE_SHAPE: ${JARVISX_LATTICE_SHAPE:-16,16,16}
+      JARVISX_WORKER_ID: hypercloud-worker-b
+      JARVISX_WORKER_COORD: ${JARVISX_WORKER_B_COORD:-12,12,12}
+      JARVISX_WORKER_CAPABILITIES: ${JARVISX_WORKER_B_CAPABILITIES:-chat,codec}
+      JARVISX_JOB_LEASE_SECONDS: ${JARVISX_JOB_LEASE_SECONDS:-300}
       JARVISX_MODEL_BASE_URL: ${JARVISX_MODEL_BASE_URL:-}
       JARVISX_MODEL_NAME: ${JARVISX_MODEL_NAME:-}
       JARVISX_MODEL_API_KEY: ${JARVISX_MODEL_API_KEY:-}
