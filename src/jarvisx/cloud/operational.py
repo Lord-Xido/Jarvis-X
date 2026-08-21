@@ -67,7 +67,7 @@ class OperationalHyperCloud:
 
     def enqueue_codec(self, namespace: str, digest: str) -> JobRecord:
         assert self.state is not None
-        if self.state.media_record(digest) is None:
+        if self.state.media_record(namespace, digest) is None:
             raise KeyError(digest)
         return self.state.create_job(namespace, "codec_roundtrip", {"media_sha256": digest})
 
