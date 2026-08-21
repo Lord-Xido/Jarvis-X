@@ -14,8 +14,9 @@ kind: Deployment
 metadata:
   name: jarvisx-hypercloud
 spec:
-  # SQLite/WAL is the operational single-pod reference state backend.
-  # Use a distributed state adapter before increasing replicas.
+  # SQLite/WAL is the operational single-pod reference state backend. Multiple
+  # worker sidecars share this one transactional volume. Replace the state
+  # adapter before increasing pod replicas across nodes.
   replicas: 1
   strategy:
     type: Recreate
@@ -40,6 +41,8 @@ spec:
               value: /var/lib/jarvisx/objects
             - name: JARVISX_LATTICE_SHAPE
               value: "16,16,16"
+            - name: JARVISX_WORKER_TTL_SECONDS
+              value: "30"
           ports:
             - containerPort: 8080
           readinessProbe:
@@ -65,7 +68,7 @@ spec:
             - name: state
               mountPath: /var/lib/jarvisx
 
-        - name: worker
+        - name: worker-a
           image: ghcr.io/lord-xido/jarvis-x:hypercloud
           imagePullPolicy: IfNotPresent
           command: ["python", "-m", "jarvisx.cloud.worker"]
@@ -74,6 +77,46 @@ spec:
               value: /var/lib/jarvisx/state.db
             - name: JARVISX_OBJECT_ROOT
               value: /var/lib/jarvisx/objects
+            - name: JARVISX_LATTICE_SHAPE
+              value: "16,16,16"
+            - name: JARVISX_WORKER_ID
+              value: hypercloud-worker-a
+            - name: JARVISX_WORKER_COORD
+              value: "4,4,4"
+            - name: JARVISX_WORKER_CAPABILITIES
+              value: "chat,codec"
+            - name: JARVISX_JOB_LEASE_SECONDS
+              value: "300"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/jarvisx
+
+        - name: worker-b
+          image: ghcr.io/lord-xido/jarvis-x:hypercloud
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "jarvisx.cloud.worker"]
+          env:
+            - name: JARVISX_STATE_DB
+              value: /var/lib/jarvisx/state.db
+            - name: JARVISX_OBJECT_ROOT
+              value: /var/lib/jarvisx/objects
+            - name: JARVISX_LATTICE_SHAPE
+              value: "16,16,16"
+            - name: JARVISX_WORKER_ID
+              value: hypercloud-worker-b
+            - name: JARVISX_WORKER_COORD
+              value: "12,12,12"
+            - name: JARVISX_WORKER_CAPABILITIES
+              value: "chat,codec"
+            - name: JARVISX_JOB_LEASE_SECONDS
+              value: "300"
           resources:
             requests:
               cpu: "100m"
