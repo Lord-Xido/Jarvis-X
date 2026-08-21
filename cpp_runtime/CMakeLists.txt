@@ -44,6 +44,12 @@ add_executable(jarvisx-multimedia4d
 jarvisx_include_runtime(jarvisx-multimedia4d)
 jarvisx_harden(jarvisx-multimedia4d)
 
+add_executable(jarvisx-dm-verification-v4
+    src/dm_verification_core_v4.cpp
+)
+jarvisx_include_runtime(jarvisx-dm-verification-v4)
+jarvisx_harden(jarvisx-dm-verification-v4)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -108,6 +114,12 @@ add_test(
         --quiet
 )
 set_tests_properties(multimedia4d-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_test(
+    NAME dm-verification-v4-regressions
+    COMMAND jarvisx-dm-verification-v4
+)
+set_tests_properties(dm-verification-v4-regressions PROPERTIES TIMEOUT 120)
 
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
