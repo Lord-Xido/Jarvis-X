@@ -105,7 +105,7 @@ def metrics() -> Response:
         "# HELP jarvisx_hypercloud_materialized_parameters Sparse materialized parameter count.",
         "# TYPE jarvisx_hypercloud_materialized_parameters gauge",
         f"jarvisx_hypercloud_materialized_parameters {runtime.state.parameter_count()}",
-        "# HELP jarvisx_hypercloud_media_objects Content-addressed media object count.",
+        "# HELP jarvisx_hypercloud_media_objects Namespace-scoped media metadata count.",
         "# TYPE jarvisx_hypercloud_media_objects gauge",
         f"jarvisx_hypercloud_media_objects {runtime.state.media_count()}",
         "# HELP jarvisx_hypercloud_jobs Jobs by durable state.",
@@ -182,9 +182,9 @@ def ingest_media(request: MediaIngestRequest) -> dict[str, str | int | float]:
 
 
 @app.get("/v1/media/{digest}", dependencies=[Depends(_authorize)])
-def media_metadata(digest: str) -> dict[str, str | int | float]:
+def media_metadata(digest: str, namespace: str) -> dict[str, str | int | float]:
     assert runtime.state is not None
-    record = runtime.state.media_record(digest)
+    record = runtime.state.media_record(namespace, digest)
     if record is None:
         raise HTTPException(status_code=404, detail="media object not found")
     return record
