@@ -80,13 +80,14 @@ class SQLiteStateStore:
             );
 
             CREATE TABLE IF NOT EXISTS media (
-                digest TEXT PRIMARY KEY,
                 namespace TEXT NOT NULL,
+                digest TEXT NOT NULL,
                 kind TEXT NOT NULL,
                 content_type TEXT NOT NULL,
                 size_bytes INTEGER NOT NULL,
                 object_path TEXT NOT NULL,
-                created_at REAL NOT NULL
+                created_at REAL NOT NULL,
+                PRIMARY KEY(namespace, digest)
             );
 
             CREATE TABLE IF NOT EXISTS jobs (
@@ -103,6 +104,8 @@ class SQLiteStateStore:
 
             CREATE INDEX IF NOT EXISTS jobs_status_created_idx
                 ON jobs(status, created_at);
+            CREATE INDEX IF NOT EXISTS media_digest_idx
+                ON media(digest);
             """
         )
         self._connection.commit()
@@ -153,17 +156,17 @@ class SQLiteStateStore:
         with self._lock:
             self._connection.execute(
                 """
-                INSERT INTO media(digest, namespace, kind, content_type, size_bytes, object_path, created_at)
+                INSERT INTO media(namespace, digest, kind, content_type, size_bytes, object_path, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(digest) DO UPDATE SET
-                    namespace = excluded.namespace,
+                ON CONFLICT(namespace, digest) DO UPDATE SET
                     kind = excluded.kind,
                     content_type = excluded.content_type,
-                    size_bytes = excluded.size_bytes
+                    size_bytes = excluded.size_bytes,
+                    object_path = excluded.object_path
                 """,
                 (
-                    digest,
                     namespace,
+                    digest,
                     media.kind.value,
                     media.content_type,
                     media.size_bytes,
@@ -172,16 +175,16 @@ class SQLiteStateStore:
                 ),
             )
             self._connection.commit()
-        return self.media_record(digest) or {}
+        return self.media_record(namespace, digest) or {}
 
-    def media_record(self, digest: str) -> dict[str, str | int | float] | None:
+    def media_record(self, namespace: str, digest: str) -> dict[str, str | int | float] | None:
         with self._lock:
             row = self._connection.execute(
                 """
                 SELECT digest, namespace, kind, content_type, size_bytes, created_at
-                FROM media WHERE digest=?
+                FROM media WHERE namespace=? AND digest=?
                 """,
-                (digest,),
+                (namespace, digest),
             ).fetchone()
         if row is None:
             return None
@@ -194,11 +197,14 @@ class SQLiteStateStore:
             "created_at": float(row["created_at"]),
         }
 
-    def get_media(self, digest: str) -> MediaEnvelope | None:
+    def get_media(self, namespace: str, digest: str) -> MediaEnvelope | None:
         with self._lock:
             row = self._connection.execute(
-                "SELECT kind, content_type, object_path FROM media WHERE digest=?",
-                (digest,),
+                """
+                SELECT kind, content_type, object_path
+                FROM media WHERE namespace=? AND digest=?
+                """,
+                (namespace, digest),
             ).fetchone()
         if row is None:
             return None
