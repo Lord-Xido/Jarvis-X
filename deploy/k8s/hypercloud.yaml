@@ -1,9 +1,24 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jarvisx-hypercloud-state
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: jarvisx-hypercloud
 spec:
-  replicas: 3
+  # SQLite/WAL is the operational single-pod reference state backend.
+  # Use a distributed state adapter before increasing replicas.
+  replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: jarvisx-hypercloud
@@ -12,15 +27,24 @@ spec:
       labels:
         app: jarvisx-hypercloud
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: api
           image: ghcr.io/lord-xido/jarvis-x:hypercloud
           imagePullPolicy: IfNotPresent
+          env:
+            - name: JARVISX_STATE_DB
+              value: /var/lib/jarvisx/state.db
+            - name: JARVISX_OBJECT_ROOT
+              value: /var/lib/jarvisx/objects
+            - name: JARVISX_LATTICE_SHAPE
+              value: "16,16,16"
           ports:
             - containerPort: 8080
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: 8080
             initialDelaySeconds: 2
             periodSeconds: 5
@@ -37,6 +61,33 @@ spec:
             limits:
               cpu: "1"
               memory: "512Mi"
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/jarvisx
+
+        - name: worker
+          image: ghcr.io/lord-xido/jarvis-x:hypercloud
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "jarvisx.cloud.worker"]
+          env:
+            - name: JARVISX_STATE_DB
+              value: /var/lib/jarvisx/state.db
+            - name: JARVISX_OBJECT_ROOT
+              value: /var/lib/jarvisx/objects
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/jarvisx
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: jarvisx-hypercloud-state
 ---
 apiVersion: v1
 kind: Service
