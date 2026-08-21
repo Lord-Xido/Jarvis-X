@@ -158,10 +158,12 @@ def test_spatial_ir_forms_inward_outward_kinetic_wave() -> None:
 def test_refine_threshold_trades_accuracy_for_latent_size() -> None:
     runtime = Kinetic3DRuntime()
     values = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+    previous = [-1.0] * 8
 
     result = runtime.execute(
         values,
         (2, 2, 2),
+        previous=previous,
         coarse_factor=2,
         refine_threshold=10.0,
         tolerance=4.0,
