@@ -66,8 +66,18 @@ def test_native_backend_matches_reference_for_sparse_change() -> None:
     actual = native.step(current, prediction, (4, 4, 4), **kwargs)
 
     assert actual.active_indices == expected.active_indices
-    assert actual.coarse_values == pytest.approx(expected.coarse_values)
-    assert actual.fine_corrections == pytest.approx(expected.fine_corrections)
+    assert [block for block, _ in actual.coarse_values] == [
+        block for block, _ in expected.coarse_values
+    ]
+    assert [value for _, value in actual.coarse_values] == pytest.approx(
+        [value for _, value in expected.coarse_values]
+    )
+    assert [index for index, _ in actual.fine_corrections] == [
+        index for index, _ in expected.fine_corrections
+    ]
+    assert [value for _, value in actual.fine_corrections] == pytest.approx(
+        [value for _, value in expected.fine_corrections]
+    )
     assert actual.residual == pytest.approx(expected.residual)
     assert actual.reconstructed == pytest.approx(expected.reconstructed)
 
