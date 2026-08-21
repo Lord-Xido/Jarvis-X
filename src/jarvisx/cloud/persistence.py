@@ -1,7 +1,7 @@
 """Durable state for the operational HyperCloud reference deployment.
 
 SQLite/WAL remains the zero-dependency single-node state backend. The schema
-also models worker registration, topology coordinates and expiring job leases
+also models worker registration, topology coordinates and renewable job leases
 so the same service contract can be moved to a distributed database later.
 """
 
@@ -135,7 +135,6 @@ class SQLiteStateStore:
                 ON workers(last_seen);
             """
         )
-        # Forward-compatible migration for databases created by HyperCloud 0.2.
         self._ensure_column("jobs", "target_x", "INTEGER")
         self._ensure_column("jobs", "target_y", "INTEGER")
         self._ensure_column("jobs", "target_z", "INTEGER")
@@ -285,6 +284,7 @@ class SQLiteStateStore:
         if not normalized:
             raise ValueError("worker requires at least one capability")
         now = time.time()
+        bounded_load = min(1.0, max(0.0, float(load)))
         with self._lock:
             self._connection.execute(
                 """
@@ -302,12 +302,12 @@ class SQLiteStateStore:
                     coordinate.z,
                     json.dumps(normalized),
                     backend,
-                    min(1.0, max(0.0, float(load))),
+                    bounded_load,
                     now,
                 ),
             )
             self._connection.commit()
-        return WorkerDescriptor(worker_id, coordinate, normalized, backend, float(load), now)
+        return WorkerDescriptor(worker_id, coordinate, normalized, backend, bounded_load, now)
 
     def heartbeat_worker(self, worker_id: str, *, load: float) -> bool:
         with self._lock:
@@ -355,7 +355,7 @@ class SQLiteStateStore:
             raise ValueError("max_attempts must be positive")
         job_id = uuid.uuid4().hex
         now = time.time()
-        target_values = (None, None, None)
+        target_values: tuple[int | None, int | None, int | None] = (None, None, None)
         if target is not None:
             target_values = (target.x, target.y, target.z)
         with self._lock:
@@ -474,7 +474,29 @@ class SQLiteStateStore:
                 raise
         return self.get_job(str(selected["id"]))
 
-    def complete_job(self, job_id: str, result: dict[str, Any], *, worker_id: str | None = None) -> bool:
+    def renew_job_lease(self, job_id: str, *, worker_id: str, lease_seconds: float) -> bool:
+        if lease_seconds <= 0:
+            raise ValueError("lease_seconds must be positive")
+        now = time.time()
+        with self._lock:
+            cursor = self._connection.execute(
+                """
+                UPDATE jobs
+                SET lease_expires_at=?, updated_at=?
+                WHERE id=? AND status='running' AND lease_owner=?
+                """,
+                (now + lease_seconds, now, job_id, worker_id),
+            )
+            self._connection.commit()
+            return cursor.rowcount == 1
+
+    def complete_job(
+        self,
+        job_id: str,
+        result: dict[str, Any],
+        *,
+        worker_id: str | None = None,
+    ) -> bool:
         query = (
             "UPDATE jobs SET status='succeeded', result_json=?, error=NULL, "
             "lease_owner=NULL, lease_expires_at=NULL, updated_at=? WHERE id=? AND status='running'"
