@@ -6,11 +6,12 @@ from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from .kinetic3d import Kinetic3DRuntime, MAX_KINETIC_VOXELS, Shape3D
+from .kinetic3d_backend import available_backends
 
 app = FastAPI(
     title="Jarvis-X Kinetic 3D Runtime",
-    version="1.0.0",
-    description="Predictive sparse 3D execution with hierarchical residuals and verify-before-commit state.",
+    version="1.1.0",
+    description="Predictive sparse 3D execution with native backend routing and verify-before-commit state.",
 )
 
 _sessions: dict[str, Kinetic3DRuntime] = {}
@@ -32,6 +33,7 @@ class KineticExecuteRequest(BaseModel):
     coarse_factor: int = Field(default=2, ge=1, le=32)
     refine_threshold: float = Field(default=0.0, ge=0.0)
     tolerance: float = Field(default=0.0, ge=0.0)
+    backend: str = Field(default="auto", min_length=1, max_length=32)
 
 
 def _runtime_for(session_id: str) -> Kinetic3DRuntime:
@@ -48,7 +50,8 @@ def healthz() -> dict[str, object]:
     return {
         "status": "ok",
         "runtime": "kinetic3d",
-        "backend": "cpu-reference",
+        "backend_policy": "auto",
+        "available_backends": list(available_backends()),
         "max_voxels": MAX_KINETIC_VOXELS,
         "execution_model": "predict-residual-active-encode-refine-decode-verify-commit",
     }
@@ -69,6 +72,7 @@ def execute_kinetic3d(request: KineticExecuteRequest) -> dict[str, object]:
                 coarse_factor=request.coarse_factor,
                 refine_threshold=request.refine_threshold,
                 tolerance=request.tolerance,
+                backend=request.backend,
             )
     except ValueError as exc:
         with _metrics_lock:
