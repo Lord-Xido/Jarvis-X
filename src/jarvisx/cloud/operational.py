@@ -116,7 +116,12 @@ class OperationalHyperCloud:
         assert self.state is not None
         return self.state.get_job(job_id)
 
-    def placement_preview(self, job_id: str, *, worker_ttl_seconds: float = 30.0) -> PlacementDecision | None:
+    def placement_preview(
+        self,
+        job_id: str,
+        *,
+        worker_ttl_seconds: float = 30.0,
+    ) -> PlacementDecision | None:
         assert self.state is not None
         job = self.state.get_job(job_id)
         if job is None or job.target is None:
@@ -151,6 +156,7 @@ class OperationalHyperCloud:
                 "durable_local_state": True,
                 "persistent_job_queue": True,
                 "leased_worker_execution": True,
+                "renewable_worker_leases": True,
                 "abandoned_job_recovery": True,
                 "topology_aware_3d_placement": True,
                 "lossless_multimodal_codec": True,
