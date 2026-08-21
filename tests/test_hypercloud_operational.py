@@ -46,12 +46,30 @@ def test_media_is_content_addressed_and_integrity_checked(tmp_path) -> None:
     )
 
     record = service.ingest("demo", media)
-    restored = state.get_media(media.digest)
+    restored = state.get_media("demo", media.digest)
 
     assert record["sha256"] == media.digest
     assert restored is not None
     assert restored.payload == media.payload
     assert state.media_count() == 1
+    state.close()
+
+
+def test_identical_media_can_exist_in_multiple_namespaces_without_metadata_collision(tmp_path) -> None:
+    state = _state(tmp_path)
+    service = OperationalHyperCloud(state=state)
+    media = MediaEnvelope(
+        kind=MediaKind.AUDIO,
+        payload=b"same-audio-bytes" * 50,
+        content_type="audio/example",
+    )
+
+    service.ingest("tenant-a", media)
+    service.ingest("tenant-b", media)
+
+    assert state.media_record("tenant-a", media.digest)["namespace"] == "tenant-a"
+    assert state.media_record("tenant-b", media.digest)["namespace"] == "tenant-b"
+    assert state.media_count() == 2
     state.close()
 
 
@@ -76,6 +94,21 @@ def test_codec_job_runs_end_to_end_through_durable_worker(tmp_path) -> None:
     assert completed.result["lossless"] is True
     assert completed.result["reconstructed_sha256"] == media.digest
     assert completed.result["compression_ratio"] < 1.0
+    state.close()
+
+
+def test_codec_job_cannot_cross_namespace_boundary(tmp_path) -> None:
+    state = _state(tmp_path)
+    service = OperationalHyperCloud(state=state)
+    media = MediaEnvelope(
+        kind=MediaKind.BINARY,
+        payload=b"private-tenant-object",
+        content_type="application/octet-stream",
+    )
+    service.ingest("tenant-a", media)
+
+    with pytest.raises(KeyError):
+        service.enqueue_codec("tenant-b", media.digest)
     state.close()
 
 
@@ -126,4 +159,5 @@ def test_runtime_description_reports_operational_boundaries(tmp_path) -> None:
     assert description["claims"]["durable_local_state"] is True
     assert description["claims"]["lossless_multimodal_codec"] is True
     assert description["claims"]["dense_parameter_allocation"] is False
+    assert description["claims"]["distributed_accelerator_backend"] is False
     state.close()
