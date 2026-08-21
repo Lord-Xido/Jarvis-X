@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate Compose configuration
         run: docker compose -f docker-compose.hypercloud.yml config
-      - name: Boot API and worker
+      - name: Boot API and two-cell worker fabric
         run: docker compose -f docker-compose.hypercloud.yml up -d --build
       - name: Wait for API readiness
         run: |
@@ -55,13 +55,29 @@ jobs:
           done
           docker compose -f docker-compose.hypercloud.yml logs
           exit 1
+      - name: Verify worker fabric registration
+        run: |
+          for i in $(seq 1 40); do
+            workers=$(curl -fsS http://127.0.0.1:8080/v1/workers)
+            count=$(python -c 'import json,sys; print(json.load(sys.stdin)["count"])' <<< "$workers")
+            if [ "$count" -ge 2 ]; then
+              echo "$workers"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "two workers did not register"
+          docker compose -f docker-compose.hypercloud.yml logs
+          exit 1
       - name: Submit and complete durable chat job
         run: |
           response=$(curl -fsS \
             -H 'Content-Type: application/json' \
-            -d '{"namespace":"ci","prompt":"hypercloud smoke test"}' \
+            -d '{"namespace":"ci","prompt":"hypercloud permeation smoke test"}' \
             http://127.0.0.1:8080/v1/chat)
           job_id=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$response")
+          target=$(python -c 'import json,sys; print(json.load(sys.stdin)["target"] is not None)' <<< "$response")
+          test "$target" = "True"
           for i in $(seq 1 40); do
             state=$(curl -fsS "http://127.0.0.1:8080/v1/jobs/${job_id}")
             status=$(python -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<< "$state")
@@ -77,8 +93,10 @@ jobs:
           done
           echo "job did not complete"
           exit 1
-      - name: Verify metrics
-        run: curl -fsS http://127.0.0.1:8080/metrics | grep 'jarvisx_hypercloud_jobs{status="succeeded"} 1'
+      - name: Verify topology and metrics
+        run: |
+          curl -fsS http://127.0.0.1:8080/metrics | grep 'jarvisx_hypercloud_active_workers 2'
+          curl -fsS http://127.0.0.1:8080/metrics | grep 'jarvisx_hypercloud_jobs{status="succeeded"} 1'
       - name: Show logs on failure
         if: failure()
         run: docker compose -f docker-compose.hypercloud.yml logs
