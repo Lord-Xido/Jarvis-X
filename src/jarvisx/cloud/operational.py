@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from hashlib import sha256
 from pathlib import Path
 
 from .extent import HierarchicalAddress, SymbolicParameterExtent
 from .multimodal import MediaEnvelope
 from .persistence import JobRecord, SQLiteStateStore
 from .routing import ShardCoordinate, SpatialShardRouter
+from .topology import PlacementDecision, TopologyScheduler
 
 
 @dataclass
@@ -17,6 +19,7 @@ class OperationalHyperCloud:
     extent: SymbolicParameterExtent = field(default_factory=SymbolicParameterExtent)
     router: SpatialShardRouter = field(default_factory=SpatialShardRouter)
     state: SQLiteStateStore | None = None
+    scheduler: TopologyScheduler = field(default_factory=TopologyScheduler)
 
     def __post_init__(self) -> None:
         if self.state is None:
@@ -49,6 +52,23 @@ class OperationalHyperCloud:
         address.validate(radix=self.extent.address_radix)
         return self.router.route(namespace=namespace, modality=modality, address=address)
 
+    def _address_for_key(self, key: str) -> HierarchicalAddress:
+        digest = sha256(key.encode("utf-8")).digest()
+        digits = tuple(
+            int.from_bytes(digest[offset : offset + 4], "big") % self.extent.address_radix
+            for offset in range(0, 24, 4)
+        )
+        address = HierarchicalAddress(digits)
+        address.validate(radix=self.extent.address_radix)
+        return address
+
+    def _job_target(self, *, namespace: str, modality: str, key: str) -> ShardCoordinate:
+        return self.route(
+            namespace=namespace,
+            modality=modality,
+            address=self._address_for_key(key),
+        )
+
     def set_parameter(self, namespace: str, address: HierarchicalAddress, value: float) -> None:
         address.validate(radix=self.extent.address_radix)
         assert self.state is not None
@@ -67,34 +87,60 @@ class OperationalHyperCloud:
 
     def enqueue_codec(self, namespace: str, digest: str) -> JobRecord:
         assert self.state is not None
-        if self.state.media_record(namespace, digest) is None:
+        record = self.state.media_record(namespace, digest)
+        if record is None:
             raise KeyError(digest)
-        return self.state.create_job(namespace, "codec_roundtrip", {"media_sha256": digest})
+        modality = str(record["kind"])
+        target = self._job_target(namespace=namespace, modality=modality, key=digest)
+        return self.state.create_job(
+            namespace,
+            "codec_roundtrip",
+            {"media_sha256": digest},
+            target=target,
+        )
 
     def enqueue_chat(self, namespace: str, prompt: str, system: str | None = None) -> JobRecord:
         if not prompt.strip():
             raise ValueError("prompt must not be empty")
         assert self.state is not None
+        key = f"{system or ''}\x1f{prompt}"
+        target = self._job_target(namespace=namespace, modality="text", key=key)
         return self.state.create_job(
             namespace,
             "chat",
             {"prompt": prompt, "system": system},
+            target=target,
         )
 
     def job(self, job_id: str) -> JobRecord | None:
         assert self.state is not None
         return self.state.get_job(job_id)
 
+    def placement_preview(self, job_id: str, *, worker_ttl_seconds: float = 30.0) -> PlacementDecision | None:
+        assert self.state is not None
+        job = self.state.get_job(job_id)
+        if job is None or job.target is None:
+            return None
+        capability = "chat" if job.operation == "chat" else "codec"
+        return self.scheduler.choose(
+            target=job.target,
+            workers=self.state.active_workers(ttl_seconds=worker_ttl_seconds),
+            capability=capability,
+        )
+
     def describe(self, *, backend_name: str | None = None) -> dict[str, object]:
         assert self.state is not None
         external_model_backend = bool(os.getenv("JARVISX_MODEL_BASE_URL", "").strip())
+        worker_ttl = float(os.getenv("JARVISX_WORKER_TTL_SECONDS", "30"))
+        workers = self.state.active_workers(ttl_seconds=worker_ttl)
         return {
             "runtime": "jarvisx-3d-hypercloud",
-            "status": "operational-reference",
+            "status": "operational-permeated",
             "virtual_parameter_extent": self.extent.metadata(),
             "deployment_lattice": {
                 "shape": self.router.shape,
                 "shards": self.router.shard_count,
+                "active_workers": len(workers),
             },
             "materialized_parameters": self.state.parameter_count(),
             "ingested_media_objects": self.state.media_count(),
@@ -104,6 +150,9 @@ class OperationalHyperCloud:
                 "dense_parameter_allocation": False,
                 "durable_local_state": True,
                 "persistent_job_queue": True,
+                "leased_worker_execution": True,
+                "abandoned_job_recovery": True,
+                "topology_aware_3d_placement": True,
                 "lossless_multimodal_codec": True,
                 "openai_compatible_model_adapter": True,
                 "external_model_backend_configured": external_model_backend,
