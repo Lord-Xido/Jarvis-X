@@ -8,6 +8,8 @@ from struct import pack
 from time import perf_counter
 from typing import Sequence
 
+from .kinetic3d_backend import resolve_backend
+
 Shape3D = tuple[int, int, int]
 Block3D = tuple[int, int, int]
 MAX_KINETIC_VOXELS = 1_048_576
@@ -244,17 +246,17 @@ def compile_kinetic_ir() -> tuple[SpatialIRNode, ...]:
 class Kinetic3DRuntime:
     """Transactional predictive 3D runtime with sparse residual execution.
 
-    This is a deterministic CPU reference backend. It operationalizes four ideas:
-    persistent world prediction, active-volume execution, hierarchical latent
-    residuals, and verify-before-commit state transitions. The backend boundary is
-    intentionally explicit so GPU/Triton lowering can replace the reference loops
-    without changing observable state semantics.
+    The state/IR/verification contract is backend-neutral. ``auto`` uses the native
+    C++ active-volume kernel when it is explicitly installed and falls back to the
+    pure Python correctness oracle otherwise. Future Triton/CUDA backends can enter
+    through the same boundary without changing the observable kinetic semantics.
     """
 
-    def __init__(self, *, max_voxels: int = MAX_KINETIC_VOXELS) -> None:
+    def __init__(self, *, max_voxels: int = MAX_KINETIC_VOXELS, backend: str = "auto") -> None:
         if max_voxels < 1:
             raise ValueError("max_voxels must be positive")
         self.max_voxels = max_voxels
+        self.backend = backend
         self._committed_world: tuple[float, ...] | None = None
         self._committed_shape: Shape3D | None = None
         self._epoch = 0
@@ -295,6 +297,7 @@ class Kinetic3DRuntime:
         coarse_factor: int = 2,
         refine_threshold: float = 0.0,
         tolerance: float = 0.0,
+        backend: str | None = None,
     ) -> Kinetic3DResult:
         count = _validate_shape(shape, self.max_voxels)
         observed = _validate_vector("current", current, count)
@@ -311,22 +314,29 @@ class Kinetic3DRuntime:
         epoch_before = self._epoch
         ir = compile_kinetic_ir()
         prediction = self._prediction(previous, shape, count)
-        residual = [value - predicted for value, predicted in zip(observed, prediction)]
-        active_indices = tuple(
-            index for index, error in enumerate(residual) if abs(error) > active_threshold
+        selected_backend = resolve_backend(backend or self.backend)
+        backend_result = selected_backend.step(
+            observed,
+            prediction,
+            shape,
+            active_threshold=active_threshold,
+            coarse_factor=coarse_factor,
+            refine_threshold=refine_threshold,
         )
+        residual = list(backend_result.residual)
+        active_indices = backend_result.active_indices
+        reconstructed = list(backend_result.reconstructed)
+        coarse_values = dict(backend_result.coarse_values)
 
         grouped: dict[Block3D, list[int]] = {}
         for index in active_indices:
             grouped.setdefault(_block_for(shape, index, coarse_factor), []).append(index)
 
-        coarse_values: dict[Block3D, float] = {}
         coarse_latent: list[CoarseLatent] = []
         schedule: list[PathAssignment] = []
         for path_id, block in enumerate(sorted(grouped)):
             indices = grouped[block]
-            value = sum(residual[index] for index in indices) / len(indices)
-            coarse_values[block] = value
+            value = coarse_values[block]
             coarse_latent.append(
                 CoarseLatent(block=block, residual=value, active_count=len(indices))
             )
@@ -335,21 +345,15 @@ class Kinetic3DRuntime:
                     path_id=path_id,
                     block=block,
                     active_cells=len(indices),
-                    resource="cpu-reference:0",
+                    resource=f"{selected_backend.name}:0",
                     estimated_cost=float(len(indices)),
                 )
             )
 
-        reconstructed = list(prediction)
-        fine_corrections: list[FineCorrection] = []
-        for index in active_indices:
-            block = _block_for(shape, index, coarse_factor)
-            coarse = coarse_values[block]
-            reconstructed[index] += coarse
-            correction = residual[index] - coarse
-            if abs(correction) > refine_threshold:
-                reconstructed[index] += correction
-                fine_corrections.append(FineCorrection(index=index, correction=correction))
+        fine_corrections = [
+            FineCorrection(index=index, correction=correction)
+            for index, correction in backend_result.fine_corrections
+        ]
 
         errors = [source - target for source, target in zip(observed, reconstructed)]
         mse = sum(error * error for error in errors) / count
@@ -388,7 +392,7 @@ class Kinetic3DRuntime:
             value_compression_ratio=value_compression_ratio,
             estimated_bytes_moved=estimated_bytes_moved,
             elapsed_ms=(perf_counter() - started) * 1000.0,
-            backend="cpu-reference",
+            backend=selected_backend.name,
         )
 
         return Kinetic3DResult(
