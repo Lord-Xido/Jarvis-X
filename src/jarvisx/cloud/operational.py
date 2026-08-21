@@ -87,6 +87,7 @@ class OperationalHyperCloud:
 
     def describe(self, *, backend_name: str | None = None) -> dict[str, object]:
         assert self.state is not None
+        external_model_backend = bool(os.getenv("JARVISX_MODEL_BASE_URL", "").strip())
         return {
             "runtime": "jarvisx-3d-hypercloud",
             "status": "operational-reference",
@@ -105,9 +106,8 @@ class OperationalHyperCloud:
                 "persistent_job_queue": True,
                 "lossless_multimodal_codec": True,
                 "openai_compatible_model_adapter": True,
-                "distributed_accelerator_backend": bool(
-                    os.getenv("JARVISX_MODEL_BASE_URL", "").strip()
-                ),
+                "external_model_backend_configured": external_model_backend,
+                "distributed_accelerator_backend": False,
                 "deterministic_3d_routing": True,
             },
         }
