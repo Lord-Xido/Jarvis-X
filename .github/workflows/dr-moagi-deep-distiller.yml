@@ -1,0 +1,42 @@
+name: Dr Moagi Deep Distiller
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/jarvisx/dr_moagi_deep_distiller*.py"
+      - "src/jarvisx/dm_vo_xi_operational.py"
+      - "tests/test_dr_moagi_deep_distiller.py"
+      - "docs/DR_MOAGI_DEEP_DISTILLER.md"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-deep-distiller.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/dr_moagi_deep_distiller*.py"
+      - "src/jarvisx/dm_vo_xi_operational.py"
+      - "tests/test_dr_moagi_deep_distiller.py"
+      - "docs/DR_MOAGI_DEEP_DISTILLER.md"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-deep-distiller.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deep-distiller:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[test]"
+      - name: Compile runtime
+        run: python -m py_compile src/jarvisx/dr_moagi_deep_distiller.py src/jarvisx/dr_moagi_deep_distiller_cli.py src/jarvisx/dm_vo_xi_operational.py
+      - name: Constitutional regression suite
+        run: pytest tests/test_dr_moagi_deep_distiller.py --no-cov
+      - name: CLI smoke
+        run: jarvisx-deep-distiller --side 16 --steps 4 --max-active 64 --max-latent 32
