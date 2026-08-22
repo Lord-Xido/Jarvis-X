@@ -1,0 +1,38 @@
+name: Bit Matrix 3D Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/jarvisx/bitmatrix3d*.py"
+      - "tests/test_bitmatrix3d.py"
+      - "pyproject.toml"
+      - ".github/workflows/bitmatrix3d.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/bitmatrix3d*.py"
+      - "tests/test_bitmatrix3d.py"
+      - "pyproject.toml"
+      - ".github/workflows/bitmatrix3d.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  codec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[test]"
+      - name: Bit Matrix invariant suite
+        run: pytest tests/test_bitmatrix3d.py --no-cov
+      - name: Compile smoke
+        run: python -m compileall -q src/jarvisx/bitmatrix3d.py src/jarvisx/bitmatrix3d_cli.py
+      - name: CLI round-trip smoke
+        run: jarvisx-bitmatrix3d "JARVIS X" --x 8 --y 8 --z 8
