@@ -509,7 +509,7 @@ class DrMoagiAutoExecutionEngine:
             )
         ):
             return False
-        return len(candidate) <= self.config.field_config.max_active_cells
+        return bool(len(candidate) <= int(self.config.field_config.max_active_cells))
 
     def _best_policy(self, field: Mapping[Coordinate, float]) -> tuple[AutoExecPolicy, float]:
         current = self.policy
@@ -550,7 +550,7 @@ class DrMoagiAutoExecutionEngine:
         policy: AutoExecPolicy,
     ) -> float:
         if not field:
-            return (
+            return float(
                 self.config.fidelity_weight
                 + self.config.compression_weight
                 + self.config.execution_weight
@@ -573,7 +573,7 @@ class DrMoagiAutoExecutionEngine:
         fidelity = 1.0 / (1.0 + mse)
         compression_gain = 1.0 - latent.latent_cells / max(1, len(field))
         execution_saving = 1.0 - len(filtered) / max(1, len(field))
-        return (
+        return float(
             self.config.fidelity_weight * fidelity
             + self.config.compression_weight * compression_gain
             + self.config.execution_weight * execution_saving
