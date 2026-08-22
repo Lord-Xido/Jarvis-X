@@ -65,6 +65,7 @@ jarvisx-hyperion = "jarvisx.hyperion_cli:main"
 jarvisx-dr-moagi = "jarvisx.dr_moagi_autoexec_cli:main"
 jarvisx-dr-moagi-os = "jarvisx.dr_moagi_os_cli:main"
 jarvisx-dr-moagi-frontier = "jarvisx.dr_moagi_frontier_cli:main"
+jarvisx-bitmatrix3d = "jarvisx.bitmatrix3d_cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
