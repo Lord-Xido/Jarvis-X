@@ -1,0 +1,44 @@
+{
+  "schema": "jarvisx.dm-vomegaxi-fixed-point-law/v1",
+  "law_id": "DM-vOmegaXi+",
+  "locked": true,
+  "fixed_point_equation": "H* = F_DM(H*)",
+  "operator_stack": [
+    "Psi",
+    "Phi",
+    "Lambda^-1",
+    "Omega",
+    "Theta"
+  ],
+  "decoder_pairing": "D(Phi(Psi))",
+  "logical_hypervolume_tb": "1000000000000000000000000000",
+  "materialization": "sparse-active-support-only",
+  "semantic_uncertainty": {
+    "symbol": "hbar_semantic",
+    "metric": "gamma = max(semantic_floor, reconstruction_rms)",
+    "semantic_floor": 1e-12,
+    "interpretation": "internal reconstruction-gap proxy; never epistemic identity with external reality"
+  },
+  "lambda_inverse": {
+    "latent_bound": 1.0,
+    "operation": "clip latent amplitudes into [-latent_bound, +latent_bound]"
+  },
+  "omega": {
+    "historical_retention": 0.5,
+    "operation": "Omega_{t+1} = rho * Omega_t + (1-rho) * D_t"
+  },
+  "theta": {
+    "gain": 0.5,
+    "max_delta": 0.25,
+    "operation": "bounded projection toward Omega_{t+1}",
+    "policy_gate": "optional external callable; rejection is transactional"
+  },
+  "fixed_point_acceptance": {
+    "tolerance": 1e-6,
+    "condition": "max(||H_{t+1}-H_t||, ||H_{t+1}-D_t||, ||H_{t+1}-Omega_{t+1}||) <= tolerance"
+  },
+  "audit": {
+    "algorithm": "SHA-256",
+    "mode": "append-only hash chain"
+  }
+}
