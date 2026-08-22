@@ -100,6 +100,10 @@ def _integer(value: object, default: int = 0) -> int:
     return int(value)
 
 
+def _payload(value: object) -> dict[str, object]:
+    return cast(dict[str, object], value)
+
+
 @app.get("/", response_class=HTMLResponse)
 def dashboard() -> HTMLResponse:
     return HTMLResponse(DR_MOAGI_OS_HTML)
@@ -120,7 +124,7 @@ def healthz() -> dict[str, object]:
 @app.post("/v1/os/boot")
 def boot() -> dict[str, object]:
     try:
-        return _kernel.boot(restore=True)
+        return _payload(_kernel.boot(restore=True))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -128,14 +132,14 @@ def boot() -> dict[str, object]:
 @app.post("/v1/os/shutdown")
 def shutdown() -> dict[str, object]:
     try:
-        return _kernel.shutdown()
+        return _payload(_kernel.shutdown())
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
 
 @app.get("/v1/os/status")
 def status() -> dict[str, object]:
-    return _kernel.status()
+    return _payload(_kernel.status())
 
 
 @app.post("/v1/os/load")
@@ -143,7 +147,7 @@ def load(request: LoadRequest) -> dict[str, object]:
     try:
         if _kernel.lifecycle.value == "offline":
             _kernel.boot(restore=False)
-        return _kernel.load(_field_from_request(request))
+        return _payload(_kernel.load(_field_from_request(request)))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -153,7 +157,7 @@ def load_demo() -> dict[str, object]:
     try:
         if _kernel.lifecycle.value == "offline":
             _kernel.boot(restore=False)
-        return _kernel.load(demo_field(_kernel.config.side))
+        return _payload(_kernel.load(demo_field(_kernel.config.side)))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -161,7 +165,7 @@ def load_demo() -> dict[str, object]:
 @app.post("/v1/os/step")
 def step() -> dict[str, object]:
     try:
-        return _kernel.step().as_dict()
+        return _payload(_kernel.step().as_dict())
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -181,7 +185,7 @@ def run(request: RunRequest) -> dict[str, object]:
 @app.post("/v1/os/autorun/start")
 def autorun_start(request: AutorunRequest) -> dict[str, object]:
     try:
-        return _kernel.start_autorun(request.interval_seconds)
+        return _payload(_kernel.start_autorun(request.interval_seconds))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -189,7 +193,7 @@ def autorun_start(request: AutorunRequest) -> dict[str, object]:
 @app.post("/v1/os/autorun/stop")
 def autorun_stop() -> dict[str, object]:
     try:
-        return _kernel.stop_autorun()
+        return _payload(_kernel.stop_autorun())
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -197,7 +201,7 @@ def autorun_stop() -> dict[str, object]:
 @app.post("/v1/os/halt/reset")
 def halt_reset() -> dict[str, object]:
     try:
-        return _kernel.reset_halt()
+        return _payload(_kernel.reset_halt())
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -205,7 +209,7 @@ def halt_reset() -> dict[str, object]:
 @app.get("/v1/os/snapshot")
 def snapshot(limit: int = Query(default=2_048, ge=1, le=20_000)) -> dict[str, object]:
     try:
-        return _kernel.snapshot(limit)
+        return _payload(_kernel.snapshot(limit))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -213,7 +217,7 @@ def snapshot(limit: int = Query(default=2_048, ge=1, le=20_000)) -> dict[str, ob
 @app.get("/v1/os/bitplane")
 def bitplane(limit: int = Query(default=256, ge=1, le=4_096)) -> dict[str, object]:
     try:
-        return _kernel.bitplane(limit)
+        return _payload(_kernel.bitplane(limit))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
