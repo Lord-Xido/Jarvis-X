@@ -1,0 +1,74 @@
+name: Dr Moagi 3D OS
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/jarvisx/dr_moagi_os*.py"
+      - "src/jarvisx/dr_moagi_bitplane.py"
+      - "tests/test_dr_moagi_os.py"
+      - "deploy/dr_moagi_os/**"
+      - "compose.dr-moagi-os.yml"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-os.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/dr_moagi_os*.py"
+      - "src/jarvisx/dr_moagi_bitplane.py"
+      - "tests/test_dr_moagi_os.py"
+      - "deploy/dr_moagi_os/**"
+      - "compose.dr-moagi-os.yml"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-os.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[test]"
+      - name: Unit and integration tests
+        run: pytest tests/test_dr_moagi_os.py
+      - name: CLI smoke
+        run: jarvisx-dr-moagi-os demo --side 16 --cycles 2 --state-dir /tmp/dr-moagi-os
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build container
+        run: docker build -f deploy/dr_moagi_os/Dockerfile -t jarvisx-dr-moagi-os:test .
+      - name: Run container
+        run: |
+          docker run -d --rm --name dr-moagi-os -p 10000:10000 jarvisx-dr-moagi-os:test
+          python - <<'PY'
+          import json
+          import time
+          import urllib.request
+
+          for _ in range(30):
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:10000/healthz", timeout=2) as response:
+                      payload = json.load(response)
+                  assert payload["status"] == "ok"
+                  break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise SystemExit("service did not become healthy")
+          PY
+      - name: Show logs on failure
+        if: failure()
+        run: docker logs dr-moagi-os || true
+      - name: Stop container
+        if: always()
+        run: docker stop dr-moagi-os || true
