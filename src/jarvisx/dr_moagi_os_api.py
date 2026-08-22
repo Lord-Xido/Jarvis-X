@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import NoReturn, cast
 
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
@@ -73,7 +74,7 @@ class AutorunRequest(BaseModel):
     interval_seconds: float = Field(default=0.5, ge=0.05, le=60.0)
 
 
-def _raise_http(exc: Exception) -> None:
+def _raise_http(exc: Exception) -> NoReturn:
     if isinstance(exc, ValueError):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -85,6 +86,18 @@ def _field_from_request(request: LoadRequest) -> SparseField:
         coordinate = (cell.x, cell.y, cell.z)
         field[coordinate] = float(cell.value)
     return field
+
+
+def _numeric(value: object, default: float = 0.0) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return default
+    return float(value)
+
+
+def _integer(value: object, default: int = 0) -> int:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return default
+    return int(value)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -110,7 +123,6 @@ def boot() -> dict[str, object]:
         return _kernel.boot(restore=True)
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.post("/v1/os/shutdown")
@@ -119,7 +131,6 @@ def shutdown() -> dict[str, object]:
         return _kernel.shutdown()
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.get("/v1/os/status")
@@ -135,7 +146,6 @@ def load(request: LoadRequest) -> dict[str, object]:
         return _kernel.load(_field_from_request(request))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.post("/v1/os/demo")
@@ -146,7 +156,6 @@ def load_demo() -> dict[str, object]:
         return _kernel.load(demo_field(_kernel.config.side))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.post("/v1/os/step")
@@ -155,7 +164,6 @@ def step() -> dict[str, object]:
         return _kernel.step().as_dict()
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.post("/v1/os/run")
@@ -168,7 +176,6 @@ def run(request: RunRequest) -> dict[str, object]:
         }
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.post("/v1/os/autorun/start")
@@ -177,7 +184,6 @@ def autorun_start(request: AutorunRequest) -> dict[str, object]:
         return _kernel.start_autorun(request.interval_seconds)
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.post("/v1/os/autorun/stop")
@@ -186,7 +192,6 @@ def autorun_stop() -> dict[str, object]:
         return _kernel.stop_autorun()
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.post("/v1/os/halt/reset")
@@ -195,7 +200,6 @@ def halt_reset() -> dict[str, object]:
         return _kernel.reset_halt()
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.get("/v1/os/snapshot")
@@ -204,7 +208,6 @@ def snapshot(limit: int = Query(default=2_048, ge=1, le=20_000)) -> dict[str, ob
         return _kernel.snapshot(limit)
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.get("/v1/os/bitplane")
@@ -213,29 +216,27 @@ def bitplane(limit: int = Query(default=256, ge=1, le=4_096)) -> dict[str, objec
         return _kernel.bitplane(limit)
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
-        raise AssertionError("unreachable")
 
 
 @app.get("/metrics", response_class=Response)
 def metrics() -> Response:
     state = _kernel.status()
-    plane = state["bitplane"]
-    if not isinstance(plane, dict):
-        plane = {}
+    plane_raw = state.get("bitplane")
+    plane = cast(dict[str, object], plane_raw) if isinstance(plane_raw, dict) else {}
     body = "\n".join(
         [
             "# HELP jarvisx_dr_moagi_os_cycles Authoritative committed OS cycles.",
             "# TYPE jarvisx_dr_moagi_os_cycles gauge",
-            f"jarvisx_dr_moagi_os_cycles {int(state['cycle'])}",
+            f"jarvisx_dr_moagi_os_cycles {_integer(state.get('cycle'))}",
             "# HELP jarvisx_dr_moagi_os_active_cells Current sparse active cells.",
             "# TYPE jarvisx_dr_moagi_os_active_cells gauge",
-            f"jarvisx_dr_moagi_os_active_cells {int(state['active_cells'])}",
+            f"jarvisx_dr_moagi_os_active_cells {_integer(state.get('active_cells'))}",
             "# HELP jarvisx_dr_moagi_os_bit_density Current binary voxel density.",
             "# TYPE jarvisx_dr_moagi_os_bit_density gauge",
-            f"jarvisx_dr_moagi_os_bit_density {float(plane.get('density', 0.0))}",
+            f"jarvisx_dr_moagi_os_bit_density {_numeric(plane.get('density'))}",
             "# HELP jarvisx_dr_moagi_os_spatial_entropy Binary occupancy entropy.",
             "# TYPE jarvisx_dr_moagi_os_spatial_entropy gauge",
-            f"jarvisx_dr_moagi_os_spatial_entropy {float(plane.get('entropy', 0.0))}",
+            f"jarvisx_dr_moagi_os_spatial_entropy {_numeric(plane.get('entropy'))}",
             "",
         ]
     )
