@@ -1,0 +1,26 @@
+services:
+  dr-moagi-os:
+    build:
+      context: .
+      dockerfile: deploy/dr_moagi_os/Dockerfile
+    image: jarvisx-dr-moagi-os:local
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    environment:
+      PORT: "10000"
+      JARVISX_STATE_DIR: /var/lib/jarvisx
+      JARVISX_OS_SIDE: "64"
+      JARVISX_OS_MAX_ACTIVE_CELLS: "50000"
+      JARVISX_OS_THRESHOLD: "0.5"
+      JARVISX_OS_CONTRACTION: "0.08"
+      JARVISX_OS_ATTENUATION: "0.10"
+      JARVISX_OS_BLOCK_SIZE: "2"
+      JARVISX_OS_QUANTIZATION: "0.01"
+      JARVISX_OS_FIXED_POINT_PASSES: "1"
+      JARVISX_OS_AUTORUN_INTERVAL: "0.5"
+    volumes:
+      - dr-moagi-os-state:/var/lib/jarvisx
+
+volumes:
+  dr-moagi-os-state:
