@@ -1,19 +1,19 @@
 """Bounded inward 3D meta-optimization for the Dr Moagi operating runtime.
 
 The optimizer turns the runtime onto its *configuration*, not onto arbitrary
-source code.  It searches a three-axis neighbourhood:
+source code. It searches a three-axis neighbourhood:
 
     X: compression geometry  (block size, quantization, pruning)
     Y: adaptive dynamics     (DM-DD learning rate, memory and pass depth)
     Z: spatial dynamics      (fold/attenuation and fixed-point depth)
 
 Every candidate is replayed in an isolated DrMoagiOSKernel against deterministic
-robustness workloads.  Promotion is allowed only when the candidate improves a
+robustness workloads. Promotion is allowed only when the candidate improves a
 multi-metric objective without materially regressing reconstruction or anchor
-fidelity.  The production state remains authoritative until the meta gate accepts
+fidelity. The production state remains authoritative until the meta gate accepts
 and the wrapper atomically swaps to the promoted kernel configuration.
 
-This is self-optimization of a bounded policy/model configuration.  It does not
+This is self-optimization of a bounded policy/model configuration. It does not
 rewrite Python source, execute host commands, or assert state-of-the-art status
 without matched external benchmark evidence.
 """
@@ -62,11 +62,21 @@ class MetaSearchConfig:
     rejection_penalty: float = 1_000.0
 
     def __post_init__(self) -> None:
-        for name in ("max_candidates", "probe_cycles", "confirm_cycles", "max_eval_cells", "survivors"):
+        for name in (
+            "max_candidates",
+            "probe_cycles",
+            "confirm_cycles",
+            "max_eval_cells",
+            "survivors",
+        ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise ValueError(f"{name} must be a positive integer")
-        for name in ("min_relative_improvement", "max_metric_regression", "rejection_penalty"):
+        for name in (
+            "min_relative_improvement",
+            "max_metric_regression",
+            "rejection_penalty",
+        ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise TypeError(f"{name} must be numeric")
@@ -115,6 +125,7 @@ class MetaOptimizationReport:
     relative_improvement: float
     evaluated_candidates: int
     promoted_config: DrMoagiOSConfig | None
+    evaluations: tuple[MetaCandidateResult, ...]
     claim_status: str = "unverified_against_external_sota"
 
     def as_dict(self) -> dict[str, object]:
@@ -127,6 +138,7 @@ class MetaOptimizationReport:
             "promoted_config": (
                 _config_dict(self.promoted_config) if self.promoted_config is not None else None
             ),
+            "evaluations": [item.as_dict() for item in self.evaluations],
             "claim_status": self.claim_status,
         }
 
@@ -183,13 +195,15 @@ class DrMoagi3DMetaOptimizer:
         best = min([baseline, *confirmed], key=lambda result: (result.metrics.score, result.vector))
         relative = _relative_improvement(baseline.metrics.score, best.metrics.score)
         promoted = best.vector != MetaVector3D() and self._promotion_gate(baseline, best, relative)
+        evaluations = (baseline, *probes, *confirmed)
         return MetaOptimizationReport(
             baseline=baseline,
             best=best,
             promoted=promoted,
             relative_improvement=relative,
-            evaluated_candidates=1 + len(probes) + len(confirmed),
+            evaluated_candidates=len(evaluations),
             promoted_config=(best.config if promoted else None),
+            evaluations=evaluations,
         )
 
     def candidate_config(
@@ -257,6 +271,27 @@ class DrMoagi3DMetaOptimizer:
             auto_optimize=False,
             state_dir=None,
         )
+
+    def candidate_lattice(self, base_config: DrMoagiOSConfig) -> tuple[dict[str, object], ...]:
+        """Describe the center and all 26 bounded neighbouring configurations."""
+
+        center_config = replace(base_config, state_dir=None, auto_optimize=False)
+        nodes: list[dict[str, object]] = [
+            {
+                "vector": asdict(MetaVector3D()),
+                "role": "incumbent",
+                "config": _config_dict(center_config),
+            }
+        ]
+        for vector in self._vectors():
+            nodes.append(
+                {
+                    "vector": asdict(vector),
+                    "role": "candidate",
+                    "config": _config_dict(self.candidate_config(base_config, vector)),
+                }
+            )
+        return tuple(nodes)
 
     def _vectors(self) -> list[MetaVector3D]:
         values = (-1, 0, 1)
@@ -429,6 +464,29 @@ class SelfOptimizing3DSystem:
     def run(self, cycles: int):
         return self.kernel.run(cycles)
 
+    def meta_lattice(self) -> dict[str, object]:
+        """Return the live 3D candidate neighbourhood and latest measured evaluations."""
+
+        return {
+            "epoch": self.meta_epoch,
+            "axes": {
+                "x": "compression geometry",
+                "y": "adaptive dynamics",
+                "z": "spatial/fixed-point dynamics",
+            },
+            "current_config": _config_dict(self.kernel.config),
+            "nodes": list(self.optimizer.candidate_lattice(self.kernel.config)),
+            "last_report": (
+                self.last_meta_report.as_dict() if self.last_meta_report is not None else None
+            ),
+            "claim_status": (
+                self.last_meta_report.claim_status
+                if self.last_meta_report is not None
+                else "unverified_against_external_sota"
+            ),
+            "external_sota_verified": False,
+        }
+
     def status(self) -> dict[str, object]:
         return {
             **self.kernel.status(),
@@ -440,10 +498,16 @@ class SelfOptimizing3DSystem:
                     "y": "adaptive dynamics",
                     "z": "spatial/fixed-point dynamics",
                 },
+                "current_config": _config_dict(self.kernel.config),
                 "journal_head": self.meta_journal.head,
                 "journal_valid": self.meta_journal.verify(),
                 "last_report": (
                     self.last_meta_report.as_dict() if self.last_meta_report is not None else None
+                ),
+                "claim_status": (
+                    self.last_meta_report.claim_status
+                    if self.last_meta_report is not None
+                    else "unverified_against_external_sota"
                 ),
                 "external_sota_verified": False,
             },
