@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Any, Mapping, cast
 
 from .dr_moagi_deep_distiller import (
     DeepDistiller,
@@ -34,15 +34,16 @@ class OSDeepDistiller(DeepDistiller):
 
     @property
     def iteration(self) -> int:
-        return self._iteration
+        runtime = cast(Any, self)
+        return int(runtime._iteration)
 
     def adaptive_snapshot(self) -> AdaptiveSnapshot:
         self._require_loaded()
         return AdaptiveSnapshot(
-            state=dict(self._state),
-            omega=dict(self._omega),
-            theta=self._theta,
-            iteration=self._iteration,
+            state=self.snapshot(),
+            omega=self.omega_snapshot(),
+            theta=self.theta,
+            iteration=self.iteration,
         )
 
     def restore_adaptive_state(
@@ -61,7 +62,7 @@ class OSDeepDistiller(DeepDistiller):
         if isinstance(iteration, bool) or not isinstance(iteration, int) or iteration < 0:
             raise ValueError("iteration must be a non-negative integer")
         parsed = self.parser.parse(state)
-        selected_theta = theta or self._theta
+        selected_theta = theta or self.theta
         self._validate_theta(selected_theta)
         parsed_omega = self._validate_omega(omega or {})
         candidate = DeepDistillerCandidate(
@@ -73,12 +74,17 @@ class OSDeepDistiller(DeepDistiller):
         passed, reason = self.pi_lambda(candidate)
         if not passed:
             raise ValueError(f"adaptive state rejected by Pi_Lambda: {reason}")
-        self._state = dict(candidate.state)
-        self._omega = dict(candidate.omega)
-        self._theta = candidate.theta
-        self._iteration = iteration
+
+        # DeepDistiller deliberately keeps mutation private.  This bridge is the
+        # sole OS recovery/staging boundary and writes the complete validated
+        # tuple together after Pi_Lambda has accepted it.
+        runtime = cast(Any, self)
+        runtime._state = dict(candidate.state)
+        runtime._omega = dict(candidate.omega)
+        runtime._theta = candidate.theta
+        runtime._iteration = iteration
         self.reports.clear()
-        self._loaded = True
+        runtime._loaded = True
         return self.snapshot()
 
     def _validate_omega(self, source: Mapping[Coordinate, float]) -> SparseField:
