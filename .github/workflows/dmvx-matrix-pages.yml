@@ -1,4 +1,4 @@
-name: DMVX Matrix Runtime Pages
+name: Jarvis-X Runtime Pages
 
 on:
   push:
@@ -7,10 +7,12 @@ on:
       - agent/dmvx-1-transactional-firmware
     paths:
       - "apps/dmvx-matrix/**"
+      - "apps/permeation-transport/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   pull_request:
     paths:
       - "apps/dmvx-matrix/**"
+      - "apps/permeation-transport/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   workflow_dispatch:
 
@@ -21,7 +23,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: dmvx-matrix-pages
+  group: jarvis-x-runtime-pages
   cancel-in-progress: true
 
 jobs:
@@ -36,6 +38,12 @@ jobs:
           node-version: 22
       - name: Run matrix runtime invariants
         run: node --test apps/dmvx-matrix/test_core.mjs
+      - name: Run permeation transport invariants
+        run: node --test apps/permeation-transport/test_core.mjs
+      - name: Smoke-check permeation browser entrypoint
+        run: |
+          grep -q "DM-vΩΞ⁺ PERMEATION TRANSPORT CORE" apps/permeation-transport/index.html
+          grep -q "FixedStepEngine" apps/permeation-transport/index.html
 
   deploy:
     if: github.event_name != 'pull_request'
@@ -55,12 +63,18 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
-      - name: Upload static runtime
+      - name: Assemble shared static site
+        run: |
+          rm -rf dist
+          mkdir -p dist/permeation-transport
+          cp -a apps/dmvx-matrix/. dist/
+          cp -a apps/permeation-transport/. dist/permeation-transport/
+      - name: Upload static runtimes
         id: upload
         continue-on-error: true
         uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/dmvx-matrix
+          path: dist
       - name: Deploy to GitHub Pages
         id: deployment
         continue-on-error: true
@@ -88,12 +102,13 @@ jobs:
               repo: context.repo.repo,
               issue_number: 70,
               body: [
-                'DMVX matrix runtime deployment outcome:',
+                'Jarvis-X runtime Pages deployment outcome:',
                 '',
-                `- live URL: ${pageUrl}`,
+                `- root runtime: ${pageUrl}`,
+                `- permeation transport: ${pageUrl.replace(/\/$/, '')}/permeation-transport/`,
                 `- deployed commit: \`${context.sha}\``,
                 `- invariant test job: ${process.env.TEST_RESULT}`,
                 `- Pages deployment job: ${process.env.DEPLOY_RESULT}`,
-                '- release path: GitHub Pages artifact deployment',
+                '- release path: shared GitHub Pages artifact deployment',
               ].join('\n'),
             });
