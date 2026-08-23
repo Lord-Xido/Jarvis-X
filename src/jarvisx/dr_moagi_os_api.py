@@ -151,7 +151,7 @@ def healthz() -> dict[str, object]:
 
 @app.get("/v1/os/capabilities")
 def capabilities() -> dict[str, object]:
-    return _kernel.capabilities()
+    return _payload(_kernel.capabilities())
 
 
 @app.post("/v1/os/boot")
