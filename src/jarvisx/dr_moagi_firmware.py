@@ -1,20 +1,15 @@
 """Verified 1 GiB firmware-container runtime for the Dr Moagi architecture.
 
-This module turns the earlier conceptual byte map into a concrete, deterministic
-container format with an exact 1 GiB *logical* image size.  The image is sparse
-on filesystems that support sparse files: only the used payload bytes are
-written; the large reserved regions remain holes.
+The container is exactly one GiB logically but is written as a sparse file where
+supported.  It separates immutable executable material from sparse state, metric
+state, and audit data.  A canonical manifest can be authenticated with Ed25519;
+QSOL and metric sections can be protected with AES-256-GCM using HKDF-derived
+per-section keys.
 
-The container deliberately separates immutable executable material from mutable
-state.  It embeds a valid minimal RV64 ELF monitor stub (or a caller-provided
-RISC-V ELF), exact DMOS2 sparse state, a sparse symmetric-positive-definite 3D
-metric packet, and a hash-chain trace anchor.  The manifest may be authenticated
-with Ed25519 and the state/metric payloads may be encrypted with AES-256-GCM.
-
-This is a reference firmware/runtime layer.  It does not claim that the Python
-host is bare metal or that a generic GPU executes RISC-V instructions directly.
-Board-specific startup code and accelerator binaries can replace the reference
-ELF payload while retaining the verified container contract.
+The default RISC-V payload is a valid minimal RV64 ELF monitor stub, not a
+board-specific bare-metal supervisor.  The verified boot path executes the
+existing bounded Dr Moagi OS/meta/architecture runtime on the host after all
+container invariants pass.
 """
 
 from __future__ import annotations
@@ -29,7 +24,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Mapping, Sequence, cast
 
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, InvalidTag
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -43,7 +38,7 @@ from .dr_moagi_os_store import SparseStateCodec3D
 from .dr_moagi_system_evolution import AutonomicRunReport, SelfEvolving3DArchitecture
 
 MIB = 1 << 20
-IMAGE_SIZE = 1 << 30  # exactly 1 GiB / 1,073,741,824 bytes
+IMAGE_SIZE = 1 << 30
 HEADER_SIZE = 512
 MANIFEST_OFFSET = HEADER_SIZE
 
@@ -52,7 +47,6 @@ _CONTAINER_VERSION = 1
 _HEADER_STRUCT = struct.Struct("<8sIIQII32s64s")
 _FLAG_SIGNED = 1 << 0
 _FLAG_ENCRYPTED = 1 << 1
-
 _METRIC_MAGIC = b"DMMET1"
 _TRACE_MAGIC = b"DMTRC1"
 _RISCV_MACHINE = 243
@@ -83,6 +77,17 @@ _REGION_BY_NAME = {region.name: region for region in FIRMWARE_LAYOUT}
 
 MetricComponents = tuple[float, float, float, float, float, float]
 MetricField3D = dict[Coordinate, MetricComponents]
+
+
+@dataclass(frozen=True)
+class FirmwareHeader:
+    version: int
+    header_size: int
+    image_size: int
+    manifest_length: int
+    flags: int
+    manifest_sha256: bytes
+    signature: bytes
 
 
 @dataclass(frozen=True)
@@ -122,8 +127,6 @@ class FirmwareRunReport:
 
 
 def validate_layout() -> None:
-    """Assert that the firmware map is contiguous and closes at exactly 1 GiB."""
-
     cursor = 0
     for region in FIRMWARE_LAYOUT:
         if region.offset != cursor:
@@ -138,8 +141,6 @@ def validate_layout() -> None:
 
 
 def generate_ed25519_keypair() -> tuple[bytes, bytes]:
-    """Return raw 32-byte Ed25519 private and public keys."""
-
     private = Ed25519PrivateKey.generate()
     private_raw = private.private_bytes(
         serialization.Encoding.Raw,
@@ -158,26 +159,21 @@ def generate_aes256_key() -> bytes:
 
 
 def build_reference_riscv_elf() -> bytes:
-    """Build a minimal valid ELF64 little-endian RISC-V executable.
-
-    The payload is a monitor stub, not a board-specific supervisor.  It contains
-    ``addi a0, x0, 0`` followed by ``jal x0, 0`` (an intentional idle loop).
-    Production boards should replace this payload with their signed supervisor.
-    """
+    """Return a valid ELF64 RISC-V monitor stub with one executable segment."""
 
     entry = 0x80000000
     ident = bytearray(16)
     ident[0:4] = b"\x7fELF"
-    ident[4] = 2  # ELFCLASS64
-    ident[5] = 1  # little endian
-    ident[6] = 1  # ELF version
+    ident[4] = 2
+    ident[5] = 1
+    ident[6] = 1
     header = bytes(ident) + struct.pack(
         "<HHIQQQIHHHHHH",
-        2,  # ET_EXEC
+        2,
         _RISCV_MACHINE,
         1,
         entry,
-        64,  # program header table immediately after ELF header
+        64,
         0,
         0,
         64,
@@ -189,8 +185,8 @@ def build_reference_riscv_elf() -> bytes:
     )
     program = struct.pack(
         "<IIQQQQQQ",
-        1,  # PT_LOAD
-        5,  # PF_R | PF_X
+        1,
+        5,
         0x1000,
         entry,
         entry,
@@ -219,19 +215,19 @@ def inspect_riscv_elf(payload: bytes) -> dict[str, int]:
         raise ValueError("kernel ELF has invalid program-header metadata")
     if phoff + phentsize * phnum > len(payload):
         raise ValueError("kernel ELF program headers are truncated")
-    loadable = False
+    executable = False
     for index in range(phnum):
         p_type, p_flags = struct.unpack_from("<II", payload, phoff + index * phentsize)
         if p_type == 1 and p_flags & 1:
-            loadable = True
+            executable = True
             break
-    if not loadable:
+    if not executable:
         raise ValueError("kernel ELF has no executable PT_LOAD segment")
     return {"machine": machine, "entry": entry, "program_headers": phnum}
 
 
 class SparseMetricCodec3D:
-    """Lossless-for-float32 sparse packet for symmetric positive-definite 3D metrics."""
+    """Sparse float32 codec for symmetric positive-definite 3D metrics."""
 
     _record = struct.Struct("<Q6f")
 
@@ -264,8 +260,7 @@ class SparseMetricCodec3D:
         side, count = struct.unpack_from("<II", raw, len(_METRIC_MAGIC))
         _validate_side(side)
         cursor = len(_METRIC_MAGIC) + 8
-        expected = cursor + count * self._record.size
-        if expected != len(raw):
+        if cursor + count * self._record.size != len(raw):
             raise ValueError("metric packet size/count mismatch")
         field: MetricField3D = {}
         previous = -1
@@ -290,27 +285,19 @@ def identity_metric_for_state(field: Mapping[Coordinate, float]) -> MetricField3
 
 
 def relax_metric_field(
-    field: Mapping[Coordinate, Sequence[float]],
-    *,
-    side: int,
-    alpha: float = 0.05,
+    field: Mapping[Coordinate, Sequence[float]], *, side: int, alpha: float = 0.05
 ) -> MetricField3D:
-    """Perform a bounded SPD-preserving metric diffusion step.
-
-    This is intentionally described as metric relaxation, not Ricci flow.  Every
-    candidate is a convex combination of SPD tensors (explicit neighbours or
-    identity), so the SPD invariant is preserved for ``alpha in [0, 1]``.
-    """
+    """Apply an SPD-preserving local diffusion step; this is not Ricci flow."""
 
     _validate_side(side)
     if not math.isfinite(float(alpha)) or not 0.0 <= float(alpha) <= 1.0:
         raise ValueError("alpha must be finite and in [0, 1]")
     current: MetricField3D = {}
-    for coordinate, metric in field.items():
+    for coordinate, raw in field.items():
         coord = _validate_coordinate(coordinate, side)
-        parsed = _metric_tuple(metric)
-        _validate_spd(parsed)
-        current[coord] = parsed
+        metric = _metric_tuple(raw)
+        _validate_spd(metric)
+        current[coord] = metric
     identity: MetricComponents = (1.0, 1.0, 1.0, 0.0, 0.0, 0.0)
     offsets = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
     result: MetricField3D = {}
@@ -318,17 +305,24 @@ def relax_metric_field(
         neighbours: list[MetricComponents] = []
         x, y, z = coordinate
         for dx, dy, dz in offsets:
-            candidate = x + dx, y + dy, z + dz
+            candidate = (x + dx, y + dy, z + dz)
             if all(0 <= axis < side for axis in candidate):
                 neighbours.append(current.get(candidate, identity))
         if not neighbours:
             neighbours = [identity]
-        average = tuple(
+        averages = [
             sum(item[index] for item in neighbours) / len(neighbours) for index in range(6)
-        )
-        blended = cast(
-            MetricComponents,
-            tuple((1.0 - alpha) * metric[index] + alpha * average[index] for index in range(6)),
+        ]
+        values = [
+            (1.0 - alpha) * metric[index] + alpha * averages[index] for index in range(6)
+        ]
+        blended: MetricComponents = (
+            values[0],
+            values[1],
+            values[2],
+            values[3],
+            values[4],
+            values[5],
         )
         _validate_spd(blended)
         result[coordinate] = blended
@@ -336,8 +330,6 @@ def relax_metric_field(
 
 
 class FirmwareBuilder:
-    """Build exact-size sparse firmware images."""
-
     def __init__(self) -> None:
         validate_layout()
         self.state_codec = SparseStateCodec3D()
@@ -357,9 +349,9 @@ class FirmwareBuilder:
         _validate_side(side)
         if not state:
             raise ValueError("firmware state must be non-empty")
-        state_packet = self.state_codec.encode(state, side=side)
-        qsol_plain = state_packet.payload
-        metric_field = identity_metric_for_state(state) if metric is None else dict(metric)
+        qsol_plain = self.state_codec.encode(state, side=side).payload
+        metric_field: Mapping[Coordinate, Sequence[float]]
+        metric_field = identity_metric_for_state(state) if metric is None else metric
         metric_plain = self.metric_codec.encode(metric_field, side=side)
         kernel_plain = build_reference_riscv_elf() if supervisor_elf is None else supervisor_elf
         kernel_info = inspect_riscv_elf(kernel_plain)
@@ -375,18 +367,19 @@ class FirmwareBuilder:
         if encryption_key is not None and len(encryption_key) != 32:
             raise ValueError("encryption key must contain exactly 32 bytes")
         salt = os.urandom(16) if encrypted else b""
-        sections: dict[str, bytes] = {}
+        stored_sections: dict[str, bytes] = {}
         section_meta: dict[str, dict[str, object]] = {}
-        for name, plaintext, codec, encryptable in (
+        section_inputs = (
             ("qsol", qsol_plain, "DMOS2", True),
             ("metric", metric_plain, "DMMET1+DEFLATE", True),
             ("kernel", kernel_plain, "ELF64-RISCV", False),
             ("trace", trace_plain, "DMTRC1", False),
-        ):
+        )
+        for name, plaintext, codec, encryptable in section_inputs:
             stored = plaintext
             nonce = b""
-            is_encrypted = encrypted and encryptable
-            if is_encrypted:
+            section_encrypted = encrypted and encryptable
+            if section_encrypted:
                 assert encryption_key is not None
                 nonce = os.urandom(12)
                 stored = _encrypt_section(name, plaintext, encryption_key, salt, nonce)
@@ -395,20 +388,20 @@ class FirmwareBuilder:
                 raise ValueError(
                     f"{name} payload uses {len(stored)} bytes but region capacity is {region.capacity}"
                 )
-            sections[name] = stored
+            stored_sections[name] = stored
             section_meta[name] = {
                 "offset": region.offset,
                 "capacity": region.capacity,
                 "used_bytes": len(stored),
                 "codec": codec,
-                "encrypted": is_encrypted,
+                "encrypted": section_encrypted,
                 "nonce": nonce.hex(),
                 "stored_sha256": hashlib.sha256(stored).hexdigest(),
                 "content_sha256": hashlib.sha256(plaintext).hexdigest(),
             }
 
-        signer_fingerprint = ""
         private: Ed25519PrivateKey | None = None
+        signer_fingerprint = ""
         if signing_private_key is not None:
             if len(signing_private_key) != 32:
                 raise ValueError("Ed25519 private key must contain exactly 32 raw bytes")
@@ -419,7 +412,7 @@ class FirmwareBuilder:
             )
             signer_fingerprint = hashlib.sha256(public_raw).hexdigest()
 
-        manifest = {
+        manifest: dict[str, object] = {
             "format": "DMLAMBDA-1G",
             "version": _CONTAINER_VERSION,
             "image_size": IMAGE_SIZE,
@@ -458,13 +451,10 @@ class FirmwareBuilder:
             },
         }
         manifest_bytes = _canonical_json(manifest)
-        genesis_capacity = _REGION_BY_NAME["genesis"].capacity
-        if MANIFEST_OFFSET + len(manifest_bytes) > genesis_capacity:
+        if MANIFEST_OFFSET + len(manifest_bytes) > _REGION_BY_NAME["genesis"].end:
             raise ValueError("manifest does not fit genesis region")
         manifest_digest = hashlib.sha256(manifest_bytes).digest()
-        signature = (
-            private.sign(_signature_message(manifest_bytes)) if private is not None else bytes(64)
-        )
+        signature = private.sign(_signature_message(manifest_bytes)) if private else bytes(64)
         flags = (_FLAG_SIGNED if signed else 0) | (_FLAG_ENCRYPTED if encrypted else 0)
         header_core = _HEADER_STRUCT.pack(
             _CONTAINER_MAGIC,
@@ -484,7 +474,7 @@ class FirmwareBuilder:
             handle.write(header)
             handle.seek(MANIFEST_OFFSET)
             handle.write(manifest_bytes)
-            for name, stored in sections.items():
+            for name, stored in stored_sections.items():
                 handle.seek(_REGION_BY_NAME[name].offset)
                 handle.write(stored)
             handle.flush()
@@ -501,19 +491,17 @@ class FirmwareBuilder:
 
 
 class FirmwareImage:
-    """Read, verify, decrypt and boot a DMLAMBDA firmware image."""
-
     def __init__(self, path: Path) -> None:
         self.path = path
-        self._header, self.manifest, self.manifest_bytes = self._read_header_manifest()
+        self.header, self.manifest, self.manifest_bytes = self._read_header_manifest()
 
     @property
     def signed(self) -> bool:
-        return bool(self._header[5] & _FLAG_SIGNED)
+        return bool(self.header.flags & _FLAG_SIGNED)
 
     @property
     def encrypted(self) -> bool:
-        return bool(self._header[5] & _FLAG_ENCRYPTED)
+        return bool(self.header.flags & _FLAG_ENCRYPTED)
 
     def verify(
         self,
@@ -524,19 +512,21 @@ class FirmwareImage:
         if self.path.stat().st_size != IMAGE_SIZE:
             raise ValueError("firmware image is not exactly 1 GiB")
         manifest_digest = hashlib.sha256(self.manifest_bytes).digest()
-        if manifest_digest != self._header[6]:
+        if manifest_digest != self.header.manifest_sha256:
             raise ValueError("firmware manifest checksum mismatch")
         signature_valid = not self.signed
         if self.signed:
             if public_key is None or len(public_key) != 32:
                 raise ValueError("a 32-byte Ed25519 public trust anchor is required")
-            fingerprint = hashlib.sha256(public_key).hexdigest()
-            expected = str(self.manifest["crypto"]["signer_public_key_sha256"])
-            if fingerprint != expected:
+            crypto = self._manifest_mapping("crypto")
+            expected = crypto.get("signer_public_key_sha256")
+            if not isinstance(expected, str):
+                raise ValueError("firmware signer fingerprint metadata is invalid")
+            if hashlib.sha256(public_key).hexdigest() != expected:
                 raise ValueError("firmware signer fingerprint does not match trust anchor")
             try:
                 Ed25519PublicKey.from_public_bytes(public_key).verify(
-                    self._header[7], _signature_message(self.manifest_bytes)
+                    self.header.signature, _signature_message(self.manifest_bytes)
                 )
             except InvalidSignature as exc:
                 raise ValueError("firmware manifest signature is invalid") from exc
@@ -547,13 +537,16 @@ class FirmwareImage:
         decoded = self._decoded_sections(encryption_key=encryption_key)
         state_packet, state = SparseStateCodec3D().decode_payload(decoded["qsol"])
         metric_side, metric = SparseMetricCodec3D().decode(decoded["metric"])
-        side = int(self.manifest["side"])
+        side = self._manifest_integer("side")
         if state_packet.side != side or metric_side != side:
             raise ValueError("firmware section logical-side mismatch")
         kernel = inspect_riscv_elf(decoded["kernel"])
         trace_head = _decode_trace(decoded["trace"])
-        if trace_head != str(self.manifest["trace"]["anchor"]):
+        trace = self._manifest_mapping("trace")
+        anchor = trace.get("anchor")
+        if not isinstance(anchor, str) or trace_head != anchor:
             raise ValueError("firmware trace anchor mismatch")
+        sections = {name: dict(self._section_metadata(name)) for name in ("qsol", "metric", "kernel", "trace")}
         return FirmwareVerificationReport(
             image_size=IMAGE_SIZE,
             signed=self.signed,
@@ -565,7 +558,7 @@ class FirmwareImage:
             kernel_entry=kernel["entry"],
             trace_head=trace_head,
             manifest_sha256=manifest_digest.hex(),
-            sections=cast(dict[str, dict[str, object]], self.manifest["sections"]),
+            sections=sections,
         )
 
     def boot(
@@ -581,17 +574,17 @@ class FirmwareImage:
         metric_side, metric = SparseMetricCodec3D().decode(decoded["metric"])
         if metric_side != state_packet.side:
             raise ValueError("firmware metric/state side mismatch")
+        active_budget = max(max_active_cells, len(state))
         config = DrMoagiOSConfig(
             side=state_packet.side,
-            max_active_cells=max(max_active_cells, len(state)),
-            deep_distiller_max_latent_cells=max(1, min(25_000, max(max_active_cells, len(state)))),
+            max_active_cells=active_budget,
+            deep_distiller_max_latent_cells=max(1, min(25_000, active_budget)),
             state_dir=None,
         )
         kernel = DrMoagiOSKernel(config)
         kernel.boot(restore=False)
         kernel.load(state)
-        system = SelfOptimizing3DSystem(kernel)
-        architecture = SelfEvolving3DArchitecture(system)
+        architecture = SelfEvolving3DArchitecture(SelfOptimizing3DSystem(kernel))
         return FirmwareBootSession(
             verification=verification,
             architecture=architecture,
@@ -600,7 +593,7 @@ class FirmwareImage:
             trace_head=bytes.fromhex(verification.trace_head),
         )
 
-    def _read_header_manifest(self) -> tuple[tuple[object, ...], dict[str, object], bytes]:
+    def _read_header_manifest(self) -> tuple[FirmwareHeader, dict[str, object], bytes]:
         if not self.path.exists():
             raise FileNotFoundError(self.path)
         with self.path.open("rb") as handle:
@@ -608,75 +601,103 @@ class FirmwareImage:
             if len(raw_header) != HEADER_SIZE:
                 raise ValueError("truncated firmware header")
             unpacked = _HEADER_STRUCT.unpack_from(raw_header)
-            magic, version, header_size, image_size, manifest_length = unpacked[:5]
-            if magic != _CONTAINER_MAGIC or version != _CONTAINER_VERSION:
+            magic = cast(bytes, unpacked[0])
+            header = FirmwareHeader(
+                version=int(unpacked[1]),
+                header_size=int(unpacked[2]),
+                image_size=int(unpacked[3]),
+                manifest_length=int(unpacked[4]),
+                flags=int(unpacked[5]),
+                manifest_sha256=cast(bytes, unpacked[6]),
+                signature=cast(bytes, unpacked[7]),
+            )
+            if magic != _CONTAINER_MAGIC or header.version != _CONTAINER_VERSION:
                 raise ValueError("unsupported firmware container")
-            if header_size != HEADER_SIZE or image_size != IMAGE_SIZE:
+            if header.header_size != HEADER_SIZE or header.image_size != IMAGE_SIZE:
                 raise ValueError("firmware header size contract mismatch")
-            if manifest_length <= 0 or MANIFEST_OFFSET + manifest_length > MIB:
+            if header.manifest_length <= 0 or MANIFEST_OFFSET + header.manifest_length > MIB:
                 raise ValueError("firmware manifest length is invalid")
             handle.seek(MANIFEST_OFFSET)
-            manifest_bytes = handle.read(manifest_length)
+            manifest_bytes = handle.read(header.manifest_length)
         try:
             parsed = json.loads(manifest_bytes.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ValueError("firmware manifest is not canonical JSON") from exc
+            raise ValueError("firmware manifest is not valid JSON") from exc
         if not isinstance(parsed, dict):
             raise ValueError("firmware manifest must be an object")
-        return cast(tuple[object, ...], unpacked), cast(dict[str, object], parsed), manifest_bytes
+        manifest = cast(dict[str, object], parsed)
+        if _canonical_json(manifest) != manifest_bytes:
+            raise ValueError("firmware manifest is not canonical JSON")
+        return header, manifest, manifest_bytes
+
+    def _manifest_mapping(self, key: str) -> dict[str, object]:
+        value = self.manifest.get(key)
+        if not isinstance(value, dict):
+            raise ValueError(f"firmware manifest field {key!r} must be an object")
+        return cast(dict[str, object], value)
+
+    def _manifest_integer(self, key: str) -> int:
+        value = self.manifest.get(key)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"firmware manifest field {key!r} must be an integer")
+        return value
+
+    def _section_metadata(self, name: str) -> dict[str, object]:
+        sections = self._manifest_mapping("sections")
+        value = sections.get(name)
+        if not isinstance(value, dict):
+            raise ValueError(f"missing firmware section metadata: {name}")
+        return cast(dict[str, object], value)
 
     def _decoded_sections(self, *, encryption_key: bytes | None) -> dict[str, bytes]:
-        result: dict[str, bytes] = {}
-        sections = self.manifest.get("sections")
-        if not isinstance(sections, dict):
-            raise ValueError("firmware manifest sections are invalid")
-        crypto = self.manifest.get("crypto")
-        if not isinstance(crypto, dict):
-            raise ValueError("firmware crypto metadata is invalid")
-        salt_hex = crypto.get("salt", "")
-        if not isinstance(salt_hex, str):
+        crypto = self._manifest_mapping("crypto")
+        salt_raw = crypto.get("salt", "")
+        if not isinstance(salt_raw, str):
             raise ValueError("firmware salt metadata is invalid")
-        salt = bytes.fromhex(salt_hex) if salt_hex else b""
+        try:
+            salt = bytes.fromhex(salt_raw) if salt_raw else b""
+        except ValueError as exc:
+            raise ValueError("firmware salt is not hexadecimal") from exc
+        result: dict[str, bytes] = {}
         with self.path.open("rb") as handle:
             for name in ("qsol", "metric", "kernel", "trace"):
-                raw_meta = sections.get(name)
-                if not isinstance(raw_meta, dict):
-                    raise ValueError(f"missing firmware section metadata: {name}")
+                metadata = self._section_metadata(name)
                 region = _REGION_BY_NAME[name]
-                offset = int(raw_meta.get("offset", -1))
-                capacity = int(raw_meta.get("capacity", -1))
-                used = int(raw_meta.get("used_bytes", -1))
+                offset = _metadata_int(metadata, "offset", name)
+                capacity = _metadata_int(metadata, "capacity", name)
+                used = _metadata_int(metadata, "used_bytes", name)
                 if offset != region.offset or capacity != region.capacity or not 0 <= used <= capacity:
                     raise ValueError(f"firmware section layout mismatch: {name}")
                 handle.seek(offset)
                 stored = handle.read(used)
                 if len(stored) != used:
                     raise ValueError(f"truncated firmware section: {name}")
-                if hashlib.sha256(stored).hexdigest() != raw_meta.get("stored_sha256"):
+                stored_hash = metadata.get("stored_sha256")
+                if not isinstance(stored_hash, str) or hashlib.sha256(stored).hexdigest() != stored_hash:
                     raise ValueError(f"firmware section checksum mismatch: {name}")
                 plaintext = stored
-                if bool(raw_meta.get("encrypted")):
+                encrypted = metadata.get("encrypted")
+                if not isinstance(encrypted, bool):
+                    raise ValueError(f"firmware encrypted flag is invalid: {name}")
+                if encrypted:
                     if encryption_key is None or len(encryption_key) != 32:
                         raise ValueError("firmware encrypted section requires AES key")
-                    nonce_hex = raw_meta.get("nonce")
-                    if not isinstance(nonce_hex, str):
+                    nonce_raw = metadata.get("nonce")
+                    if not isinstance(nonce_raw, str):
                         raise ValueError(f"invalid nonce metadata: {name}")
-                    plaintext = _decrypt_section(
-                        name,
-                        stored,
-                        encryption_key,
-                        salt,
-                        bytes.fromhex(nonce_hex),
-                    )
-                if hashlib.sha256(plaintext).hexdigest() != raw_meta.get("content_sha256"):
+                    try:
+                        nonce = bytes.fromhex(nonce_raw)
+                    except ValueError as exc:
+                        raise ValueError(f"invalid nonce encoding: {name}") from exc
+                    plaintext = _decrypt_section(name, stored, encryption_key, salt, nonce)
+                content_hash = metadata.get("content_sha256")
+                if not isinstance(content_hash, str) or hashlib.sha256(plaintext).hexdigest() != content_hash:
                     raise ValueError(f"firmware plaintext checksum mismatch: {name}")
                 result[name] = plaintext
         return result
 
 
 class FirmwareBootSession:
-    """Verified runtime session created only after firmware verification succeeds."""
-
     def __init__(
         self,
         *,
@@ -703,8 +724,6 @@ class FirmwareBootSession:
         if autonomic.state_reports and all(item.committed for item in autonomic.state_reports):
             try:
                 candidate = relax_metric_field(self.metric, side=self.side, alpha=0.05)
-                for value in candidate.values():
-                    _validate_spd(value)
                 self.metric = candidate
                 metric_committed = True
             except (TypeError, ValueError):
@@ -731,15 +750,17 @@ class FirmwareBootSession:
 
 
 def _encrypt_section(name: str, plaintext: bytes, master: bytes, salt: bytes, nonce: bytes) -> bytes:
-    key = _derive_section_key(master, salt, name)
-    return AESGCM(key).encrypt(nonce, plaintext, _section_aad(name))
+    return AESGCM(_derive_section_key(master, salt, name)).encrypt(
+        nonce, plaintext, _section_aad(name)
+    )
 
 
 def _decrypt_section(name: str, ciphertext: bytes, master: bytes, salt: bytes, nonce: bytes) -> bytes:
-    key = _derive_section_key(master, salt, name)
     try:
-        return AESGCM(key).decrypt(nonce, ciphertext, _section_aad(name))
-    except Exception as exc:  # cryptography deliberately normalizes auth failures
+        return AESGCM(_derive_section_key(master, salt, name)).decrypt(
+            nonce, ciphertext, _section_aad(name)
+        )
+    except InvalidTag as exc:
         raise ValueError(f"firmware section authentication failed: {name}") from exc
 
 
@@ -763,7 +784,8 @@ def _signature_message(manifest_bytes: bytes) -> bytes:
 
 
 def _decode_trace(payload: bytes) -> str:
-    if len(payload) != len(_TRACE_MAGIC) + 32 + 8 or not payload.startswith(_TRACE_MAGIC):
+    expected = len(_TRACE_MAGIC) + 32 + 8
+    if len(payload) != expected or not payload.startswith(_TRACE_MAGIC):
         raise ValueError("invalid firmware trace payload")
     count = struct.unpack_from("<Q", payload, len(_TRACE_MAGIC) + 32)[0]
     if count != 0:
@@ -775,6 +797,13 @@ def _canonical_json(payload: object) -> bytes:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode(
         "utf-8"
     )
+
+
+def _metadata_int(metadata: Mapping[str, object], key: str, section: str) -> int:
+    value = metadata.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"firmware section {section} field {key} must be an integer")
+    return value
 
 
 def _validate_side(side: int) -> None:
@@ -799,10 +828,10 @@ def _validate_coordinate(coordinate: Coordinate, side: int) -> Coordinate:
 def _metric_tuple(raw: Sequence[float]) -> MetricComponents:
     if len(raw) != 6:
         raise ValueError("metric must contain six symmetric 3D components")
-    values = tuple(float(item) for item in raw)
+    values = [float(item) for item in raw]
     if any(not math.isfinite(item) for item in values):
         raise ValueError("metric contains non-finite component")
-    return cast(MetricComponents, values)
+    return (values[0], values[1], values[2], values[3], values[4], values[5])
 
 
 def _validate_spd(metric: MetricComponents) -> None:
