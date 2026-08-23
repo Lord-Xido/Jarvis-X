@@ -207,7 +207,7 @@ def test_kernel_capabilities_describe_bounded_end_to_end_runtime():
     assert capabilities["dense_logical_allocation"] is False
 
 
-def test_os_api_exposes_control_plane_routes():
+def test_os_api_exposes_control_plane_and_meta_routes():
     from jarvisx.dr_moagi_os_api import app
 
     paths = {route.path for route in app.routes}
@@ -223,10 +223,13 @@ def test_os_api_exposes_control_plane_routes():
     assert "/v1/os/bitplane" in paths
     assert "/v1/os/export" in paths
     assert "/v1/os/import" in paths
+    assert "/v1/os/meta/status" in paths
+    assert "/v1/os/meta/lattice" in paths
+    assert "/v1/os/meta/optimize" in paths
     assert "/metrics" in paths
 
 
-def test_os_dashboard_is_live_threejs_control_plane_without_fake_physical_metrics():
+def test_os_dashboard_is_live_threejs_self_loop_control_plane_without_fake_metrics():
     from jarvisx.dr_moagi_os_ui import DR_MOAGI_OS_HTML
 
     assert "three.min.js" in DR_MOAGI_OS_HTML
@@ -235,9 +238,16 @@ def test_os_dashboard_is_live_threejs_control_plane_without_fake_physical_metric
     assert "/v1/os/step" in DR_MOAGI_OS_HTML
     assert "/v1/os/run" in DR_MOAGI_OS_HTML
     assert "/v1/os/snapshot" in DR_MOAGI_OS_HTML
+    assert "/v1/os/meta/lattice" in DR_MOAGI_OS_HTML
+    assert "/v1/os/meta/optimize" in DR_MOAGI_OS_HTML
     assert "Measured Runtime Telemetry" in DR_MOAGI_OS_HTML
-    assert "render-only" in DR_MOAGI_OS_HTML
+    assert "Inward Meta-Optimizer" in DR_MOAGI_OS_HTML
+    assert "SPARSE STATE METRIC g = I + C / tr(C)" in DR_MOAGI_OS_HTML
+    assert "PROVISIONAL ≠ AUTHORITATIVE" in DR_MOAGI_OS_HTML
+    assert "external_sota_verified" in DR_MOAGI_OS_HTML
+    assert "matrixWorld.elements" not in DR_MOAGI_OS_HTML
     assert "Reality Gap γ = 0.0000" not in DR_MOAGI_OS_HTML
+    assert "Fixed Point (ΔΨ): 0.00000" not in DR_MOAGI_OS_HTML
     assert "128.4 / 512 GB" not in DR_MOAGI_OS_HTML
     assert "J/m³" not in DR_MOAGI_OS_HTML
     assert "3,850 tok/s" not in DR_MOAGI_OS_HTML
