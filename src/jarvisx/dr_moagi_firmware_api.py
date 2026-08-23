@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import cast
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -46,7 +47,8 @@ class FirmwareService:
 
     def verify(self) -> dict[str, object]:
         public, encryption = self._keys()
-        return self.image().verify(public_key=public, encryption_key=encryption).as_dict()
+        payload = self.image().verify(public_key=public, encryption_key=encryption).as_dict()
+        return cast(dict[str, object], payload)
 
     def boot(self) -> dict[str, object]:
         public, encryption = self._keys()
@@ -119,7 +121,7 @@ def status() -> dict[str, object]:
 
 @app.get("/v1/firmware/manifest")
 def manifest() -> dict[str, object]:
-    return _get_service().image().manifest
+    return dict(_get_service().image().manifest)
 
 
 @app.post("/v1/firmware/verify")
