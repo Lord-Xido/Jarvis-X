@@ -1,7 +1,9 @@
-"""FastAPI control plane for the Dr Moagi 3D OS kernel."""
+"""FastAPI control plane for the end-to-end Dr Moagi 3D OS kernel."""
 
 from __future__ import annotations
 
+import base64
+import binascii
 import os
 from pathlib import Path
 from typing import NoReturn, cast
@@ -25,6 +27,18 @@ def _int_env(name: str, default: int) -> int:
     return default if raw is None else int(raw)
 
 
+def _bool_env(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean environment value")
+
+
 def _config_from_env() -> DrMoagiOSConfig:
     state_dir_raw = os.getenv("JARVISX_STATE_DIR", "state/dr-moagi-os")
     state_dir = None if state_dir_raw.lower() == "none" else Path(state_dir_raw)
@@ -37,6 +51,14 @@ def _config_from_env() -> DrMoagiOSConfig:
         prune_epsilon=_float_env("JARVISX_OS_PRUNE_EPSILON", 0.0),
         block_size=_int_env("JARVISX_OS_BLOCK_SIZE", 2),
         quantization=_float_env("JARVISX_OS_QUANTIZATION", 0.01),
+        deep_distiller_enabled=_bool_env("JARVISX_OS_DEEP_DISTILLER", True),
+        deep_distiller_passes=_int_env("JARVISX_OS_DEEP_DISTILLER_PASSES", 1),
+        deep_distiller_max_latent_cells=_int_env(
+            "JARVISX_OS_DEEP_DISTILLER_MAX_LATENT", 25_000
+        ),
+        deep_distiller_learning_rate=_float_env(
+            "JARVISX_OS_DEEP_DISTILLER_LR", 0.05
+        ),
         fixed_point_passes=_int_env("JARVISX_OS_FIXED_POINT_PASSES", 1),
         autorun_interval_seconds=_float_env("JARVISX_OS_AUTORUN_INTERVAL", 0.5),
         state_dir=state_dir,
@@ -45,10 +67,11 @@ def _config_from_env() -> DrMoagiOSConfig:
 
 app = FastAPI(
     title="Dr Moagi 3D OS",
-    version="1.0.0",
+    version="2.0.0",
     description=(
-        "Bounded sparse 3D auto-encoding/decoding operating control plane with "
-        "Uint64 bit-plane execution, inward folding, verification and auto-run scheduling."
+        "End-to-end bounded sparse 3D operating control plane with Uint64 bit-plane "
+        "execution, inward folding, Deep Distiller adaptation, fixed-point verification, "
+        "exact Morton transport, checkpoint recovery and auto-run scheduling."
     ),
 )
 
@@ -72,6 +95,11 @@ class RunRequest(BaseModel):
 
 class AutorunRequest(BaseModel):
     interval_seconds: float = Field(default=0.5, ge=0.05, le=60.0)
+
+
+class ImportPacketRequest(BaseModel):
+    packet_base64: str = Field(min_length=1)
+    checksum_sha256: str | None = Field(default=None, min_length=64, max_length=64)
 
 
 def _raise_http(exc: Exception) -> NoReturn:
@@ -119,6 +147,11 @@ def healthz() -> dict[str, object]:
         "loaded": status["loaded"],
         "journal_valid": status["journal_valid"],
     }
+
+
+@app.get("/v1/os/capabilities")
+def capabilities() -> dict[str, object]:
+    return _payload(_kernel.capabilities())
 
 
 @app.post("/v1/os/boot")
@@ -222,11 +255,49 @@ def bitplane(limit: int = Query(default=256, ge=1, le=4_096)) -> dict[str, objec
         _raise_http(exc)
 
 
+@app.get("/v1/os/export")
+def export_packet() -> dict[str, object]:
+    try:
+        packet = _kernel.export_state_packet()
+        return {
+            **packet.as_dict(),
+            "packet_base64": base64.b64encode(packet.payload).decode("ascii"),
+            "state_hash": _kernel.status()["state_hash"],
+        }
+    except (ValueError, RuntimeError) as exc:
+        _raise_http(exc)
+
+
+@app.post("/v1/os/import")
+def import_packet(request: ImportPacketRequest) -> dict[str, object]:
+    try:
+        if _kernel.lifecycle.value == "offline":
+            _kernel.boot(restore=False)
+        try:
+            payload = base64.b64decode(request.packet_base64, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("packet_base64 is not valid base64") from exc
+        return _payload(
+            _kernel.import_state_packet(
+                payload,
+                expected_checksum=request.checksum_sha256,
+            )
+        )
+    except (ValueError, RuntimeError) as exc:
+        _raise_http(exc)
+
+
 @app.get("/metrics", response_class=Response)
 def metrics() -> Response:
     state = _kernel.status()
     plane_raw = state.get("bitplane")
     plane = cast(dict[str, object], plane_raw) if isinstance(plane_raw, dict) else {}
+    distiller_raw = state.get("distiller")
+    distiller = cast(dict[str, object], distiller_raw) if isinstance(distiller_raw, dict) else {}
+    transport_raw = state.get("transport")
+    transport = cast(dict[str, object], transport_raw) if isinstance(transport_raw, dict) else {}
+    last_raw = state.get("last_report")
+    last = cast(dict[str, object], last_raw) if isinstance(last_raw, dict) else {}
     body = "\n".join(
         [
             "# HELP jarvisx_dr_moagi_os_cycles Authoritative committed OS cycles.",
@@ -241,6 +312,15 @@ def metrics() -> Response:
             "# HELP jarvisx_dr_moagi_os_spatial_entropy Binary occupancy entropy.",
             "# TYPE jarvisx_dr_moagi_os_spatial_entropy gauge",
             f"jarvisx_dr_moagi_os_spatial_entropy {_numeric(plane.get('entropy'))}",
+            "# HELP jarvisx_dr_moagi_os_distiller_iteration Committed DM-DD adaptive iterations.",
+            "# TYPE jarvisx_dr_moagi_os_distiller_iteration gauge",
+            f"jarvisx_dr_moagi_os_distiller_iteration {_integer(distiller.get('iteration'))}",
+            "# HELP jarvisx_dr_moagi_os_distiller_residual_rms Latest DM-DD residual RMS.",
+            "# TYPE jarvisx_dr_moagi_os_distiller_residual_rms gauge",
+            f"jarvisx_dr_moagi_os_distiller_residual_rms {_numeric(last.get('distiller_residual_rms'))}",
+            "# HELP jarvisx_dr_moagi_os_transport_bytes Exact sparse transport packet bytes.",
+            "# TYPE jarvisx_dr_moagi_os_transport_bytes gauge",
+            f"jarvisx_dr_moagi_os_transport_bytes {_integer(transport.get('encoded_bytes'))}",
             "",
         ]
     )
