@@ -27,6 +27,10 @@ def _parser() -> argparse.ArgumentParser:
     file_cmd = sub.add_parser("file", help="Run bounded autonomic evolution on a sparse field")
     file_cmd.add_argument("path", type=Path)
     _add_common(file_cmd)
+
+    serve = sub.add_parser("serve", help="Serve the four-scale system control plane")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=10001)
     return parser
 
 
@@ -99,6 +103,11 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
 
 def main() -> int:
     args = _parser().parse_args()
+    if args.command == "serve":
+        import uvicorn
+
+        uvicorn.run("jarvisx.dr_moagi_system_api:app", host=args.host, port=args.port)
+        return 0
     payload = _run(args)
     print(json.dumps(payload, indent=2 if args.pretty else None, sort_keys=True))
     return 0
