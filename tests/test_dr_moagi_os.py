@@ -125,3 +125,20 @@ def test_os_api_exposes_control_plane_routes():
     assert "/v1/os/snapshot" in paths
     assert "/v1/os/bitplane" in paths
     assert "/metrics" in paths
+
+
+def test_os_dashboard_is_live_threejs_control_plane_without_fake_physical_metrics():
+    from jarvisx.dr_moagi_os_ui import DR_MOAGI_OS_HTML
+
+    assert "three.min.js" in DR_MOAGI_OS_HTML
+    assert "OrbitControls" in DR_MOAGI_OS_HTML
+    assert "/v1/os/status" in DR_MOAGI_OS_HTML
+    assert "/v1/os/step" in DR_MOAGI_OS_HTML
+    assert "/v1/os/run" in DR_MOAGI_OS_HTML
+    assert "/v1/os/snapshot" in DR_MOAGI_OS_HTML
+    assert "Measured Runtime Telemetry" in DR_MOAGI_OS_HTML
+    assert "render-only" in DR_MOAGI_OS_HTML
+    assert "Reality Gap γ = 0.0000" not in DR_MOAGI_OS_HTML
+    assert "128.4 / 512 GB" not in DR_MOAGI_OS_HTML
+    assert "J/m³" not in DR_MOAGI_OS_HTML
+    assert "3,850 tok/s" not in DR_MOAGI_OS_HTML
