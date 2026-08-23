@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from .dr_moagi_field_runtime import SparseField
+from .dr_moagi_meta_optimizer import SelfOptimizing3DSystem
 from .dr_moagi_os import DrMoagiOSConfig, DrMoagiOSKernel, demo_field
 from .dr_moagi_os_ui import DR_MOAGI_OS_HTML
 
@@ -67,15 +68,16 @@ def _config_from_env() -> DrMoagiOSConfig:
 
 app = FastAPI(
     title="Dr Moagi 3D OS",
-    version="2.0.0",
+    version="2.1.0",
     description=(
         "End-to-end bounded sparse 3D operating control plane with Uint64 bit-plane "
         "execution, inward folding, Deep Distiller adaptation, fixed-point verification, "
-        "exact Morton transport, checkpoint recovery and auto-run scheduling."
+        "exact Morton transport, checkpoint recovery, bounded 3D meta-optimization "
+        "and auto-run scheduling."
     ),
 )
 
-_kernel = DrMoagiOSKernel(_config_from_env())
+_system = SelfOptimizing3DSystem(DrMoagiOSKernel(_config_from_env()))
 
 
 class FieldCell(BaseModel):
@@ -139,25 +141,37 @@ def dashboard() -> HTMLResponse:
 
 @app.get("/healthz")
 def healthz() -> dict[str, object]:
-    status = _kernel.status()
+    status = _system.status()
     return {
         "status": "ok",
         "system": status["system"],
         "lifecycle": status["lifecycle"],
         "loaded": status["loaded"],
         "journal_valid": status["journal_valid"],
+        "meta_journal_valid": _payload(status["meta_optimizer"])["journal_valid"],
     }
 
 
 @app.get("/v1/os/capabilities")
 def capabilities() -> dict[str, object]:
-    return _payload(_kernel.capabilities())
+    capabilities = dict(_system.kernel.capabilities())
+    capabilities["meta_optimizer"] = {
+        "search_space": "bounded 3D policy lattice",
+        "axes": {
+            "x": "compression geometry",
+            "y": "adaptive dynamics",
+            "z": "spatial/fixed-point dynamics",
+        },
+        "promotion": "deterministic replay + transactional meta gate",
+        "external_sota_verified": False,
+    }
+    return capabilities
 
 
 @app.post("/v1/os/boot")
 def boot() -> dict[str, object]:
     try:
-        return _payload(_kernel.boot(restore=True))
+        return _payload(_system.kernel.boot(restore=True))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -165,22 +179,22 @@ def boot() -> dict[str, object]:
 @app.post("/v1/os/shutdown")
 def shutdown() -> dict[str, object]:
     try:
-        return _payload(_kernel.shutdown())
+        return _payload(_system.kernel.shutdown())
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
 
 @app.get("/v1/os/status")
 def status() -> dict[str, object]:
-    return _payload(_kernel.status())
+    return _payload(_system.status())
 
 
 @app.post("/v1/os/load")
 def load(request: LoadRequest) -> dict[str, object]:
     try:
-        if _kernel.lifecycle.value == "offline":
-            _kernel.boot(restore=False)
-        return _payload(_kernel.load(_field_from_request(request)))
+        if _system.kernel.lifecycle.value == "offline":
+            _system.kernel.boot(restore=False)
+        return _payload(_system.kernel.load(_field_from_request(request)))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -188,9 +202,9 @@ def load(request: LoadRequest) -> dict[str, object]:
 @app.post("/v1/os/demo")
 def load_demo() -> dict[str, object]:
     try:
-        if _kernel.lifecycle.value == "offline":
-            _kernel.boot(restore=False)
-        return _payload(_kernel.load(demo_field(_kernel.config.side)))
+        if _system.kernel.lifecycle.value == "offline":
+            _system.kernel.boot(restore=False)
+        return _payload(_system.kernel.load(demo_field(_system.kernel.config.side)))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -198,7 +212,7 @@ def load_demo() -> dict[str, object]:
 @app.post("/v1/os/step")
 def step() -> dict[str, object]:
     try:
-        return _payload(_kernel.step().as_dict())
+        return _payload(_system.step().as_dict())
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -206,10 +220,10 @@ def step() -> dict[str, object]:
 @app.post("/v1/os/run")
 def run(request: RunRequest) -> dict[str, object]:
     try:
-        reports = _kernel.run(request.cycles)
+        reports = _system.run(request.cycles)
         return {
             "reports": [report.as_dict() for report in reports],
-            "status": _kernel.status(),
+            "status": _system.status(),
         }
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
@@ -218,7 +232,7 @@ def run(request: RunRequest) -> dict[str, object]:
 @app.post("/v1/os/autorun/start")
 def autorun_start(request: AutorunRequest) -> dict[str, object]:
     try:
-        return _payload(_kernel.start_autorun(request.interval_seconds))
+        return _payload(_system.kernel.start_autorun(request.interval_seconds))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -226,7 +240,7 @@ def autorun_start(request: AutorunRequest) -> dict[str, object]:
 @app.post("/v1/os/autorun/stop")
 def autorun_stop() -> dict[str, object]:
     try:
-        return _payload(_kernel.stop_autorun())
+        return _payload(_system.kernel.stop_autorun())
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -234,7 +248,7 @@ def autorun_stop() -> dict[str, object]:
 @app.post("/v1/os/halt/reset")
 def halt_reset() -> dict[str, object]:
     try:
-        return _payload(_kernel.reset_halt())
+        return _payload(_system.kernel.reset_halt())
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -242,7 +256,7 @@ def halt_reset() -> dict[str, object]:
 @app.get("/v1/os/snapshot")
 def snapshot(limit: int = Query(default=2_048, ge=1, le=20_000)) -> dict[str, object]:
     try:
-        return _payload(_kernel.snapshot(limit))
+        return _payload(_system.kernel.snapshot(limit))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -250,7 +264,7 @@ def snapshot(limit: int = Query(default=2_048, ge=1, le=20_000)) -> dict[str, ob
 @app.get("/v1/os/bitplane")
 def bitplane(limit: int = Query(default=256, ge=1, le=4_096)) -> dict[str, object]:
     try:
-        return _payload(_kernel.bitplane(limit))
+        return _payload(_system.kernel.bitplane(limit))
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
 
@@ -258,11 +272,11 @@ def bitplane(limit: int = Query(default=256, ge=1, le=4_096)) -> dict[str, objec
 @app.get("/v1/os/export")
 def export_packet() -> dict[str, object]:
     try:
-        packet = _kernel.export_state_packet()
+        packet = _system.kernel.export_state_packet()
         return {
             **packet.as_dict(),
             "packet_base64": base64.b64encode(packet.payload).decode("ascii"),
-            "state_hash": _kernel.status()["state_hash"],
+            "state_hash": _system.status()["state_hash"],
         }
     except (ValueError, RuntimeError) as exc:
         _raise_http(exc)
@@ -271,14 +285,14 @@ def export_packet() -> dict[str, object]:
 @app.post("/v1/os/import")
 def import_packet(request: ImportPacketRequest) -> dict[str, object]:
     try:
-        if _kernel.lifecycle.value == "offline":
-            _kernel.boot(restore=False)
+        if _system.kernel.lifecycle.value == "offline":
+            _system.kernel.boot(restore=False)
         try:
             payload = base64.b64decode(request.packet_base64, validate=True)
         except (binascii.Error, ValueError) as exc:
             raise ValueError("packet_base64 is not valid base64") from exc
         return _payload(
-            _kernel.import_state_packet(
+            _system.kernel.import_state_packet(
                 payload,
                 expected_checksum=request.checksum_sha256,
             )
@@ -287,9 +301,32 @@ def import_packet(request: ImportPacketRequest) -> dict[str, object]:
         _raise_http(exc)
 
 
+@app.get("/v1/os/meta/status")
+def meta_status() -> dict[str, object]:
+    return _payload(_system.status()["meta_optimizer"])
+
+
+@app.get("/v1/os/meta/lattice")
+def meta_lattice() -> dict[str, object]:
+    return _payload(_system.meta_lattice())
+
+
+@app.post("/v1/os/meta/optimize")
+def meta_optimize() -> dict[str, object]:
+    try:
+        report = _system.turn_inward()
+        return {
+            "report": report.as_dict(),
+            "status": _system.status(),
+            "lattice": _system.meta_lattice(),
+        }
+    except (ValueError, RuntimeError) as exc:
+        _raise_http(exc)
+
+
 @app.get("/metrics", response_class=Response)
 def metrics() -> Response:
-    state = _kernel.status()
+    state = _system.status()
     plane_raw = state.get("bitplane")
     plane = cast(dict[str, object], plane_raw) if isinstance(plane_raw, dict) else {}
     distiller_raw = state.get("distiller")
@@ -298,6 +335,12 @@ def metrics() -> Response:
     transport = cast(dict[str, object], transport_raw) if isinstance(transport_raw, dict) else {}
     last_raw = state.get("last_report")
     last = cast(dict[str, object], last_raw) if isinstance(last_raw, dict) else {}
+    meta_raw = state.get("meta_optimizer")
+    meta = cast(dict[str, object], meta_raw) if isinstance(meta_raw, dict) else {}
+    meta_report_raw = meta.get("last_report")
+    meta_report = (
+        cast(dict[str, object], meta_report_raw) if isinstance(meta_report_raw, dict) else {}
+    )
     body = "\n".join(
         [
             "# HELP jarvisx_dr_moagi_os_cycles Authoritative committed OS cycles.",
@@ -321,6 +364,12 @@ def metrics() -> Response:
             "# HELP jarvisx_dr_moagi_os_transport_bytes Exact sparse transport packet bytes.",
             "# TYPE jarvisx_dr_moagi_os_transport_bytes gauge",
             f"jarvisx_dr_moagi_os_transport_bytes {_integer(transport.get('encoded_bytes'))}",
+            "# HELP jarvisx_dr_moagi_os_meta_epoch Completed inward meta-optimization epochs.",
+            "# TYPE jarvisx_dr_moagi_os_meta_epoch gauge",
+            f"jarvisx_dr_moagi_os_meta_epoch {_integer(meta.get('epoch'))}",
+            "# HELP jarvisx_dr_moagi_os_meta_relative_improvement Latest relative incumbent improvement.",
+            "# TYPE jarvisx_dr_moagi_os_meta_relative_improvement gauge",
+            f"jarvisx_dr_moagi_os_meta_relative_improvement {_numeric(meta_report.get('relative_improvement'))}",
             "",
         ]
     )
