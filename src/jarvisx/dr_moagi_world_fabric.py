@@ -1,22 +1,22 @@
 """Sparse worldwide 3D data/compute fabric for the Dr Moagi research stack.
 
-The module deliberately treats the astronomically large proposed lattice as a
-*virtual, generative namespace*.  Only finite symbolic octree paths that are
-actually used are materialized.
+The astronomically large proposed lattice is treated as a *virtual, generative
+namespace*. Only finite symbolic octree paths that are actually used are
+materialized.
 
-Three identities are kept separate:
+Three identities remain independent:
 
-* logical address: a finite 3-bit-octant path in the virtual 3D namespace;
+* logical address: a finite 3-bit-octant path in a virtual 3D namespace;
 * content identity: a SHA-256 digest over canonical bytes;
-* physical placement: a mutable region chosen by a bounded locality planner.
+* physical placement: a mutable region selected by a bounded locality planner.
 
 Authoritative bytes and learned/derived representations are also separated.
-The exact plane is immutable and self-verifying; the latent plane is a derived
-index that can be replaced without changing source truth.
+The exact plane is immutable and self-verifying; the latent plane is derived
+and replaceable without changing source truth.
 
-This is a reference runtime, not a claim of globally distributed production
-storage.  Network consensus, durable object storage and learned embeddings are
-adapter boundaries rather than simulated capabilities.
+This is a bounded reference runtime, not a claim of globally distributed
+production storage. Network consensus, durable object storage, geographic
+replication and learned embeddings remain explicit adapter boundaries.
 """
 
 from __future__ import annotations
@@ -47,8 +47,8 @@ class ConsistencyClass(str, Enum):
 class SymbolicAddress3D:
     """Finite octree path inside an effectively unbounded virtual 3D space.
 
-    Each path element is one octant selector in ``[0, 7]``.  No gigantic
-    absolute integer coordinate is required.  Arbitrary finite depth is
+    Each path element is one octant selector in ``[0, 7]``. No gigantic
+    absolute integer coordinate is required. Arbitrary finite depth is
     supported by deriving additional octants from SHAKE-256 output.
     """
 
@@ -121,13 +121,21 @@ class SymbolicAddress3D:
 
 @dataclass(frozen=True)
 class ProvenanceRecord:
-    """Minimal immutable provenance attached to an ingested object."""
+    """Immutable observation describing where content was encountered."""
 
     source: str
     observed_at_ns: int
     source_uri: str | None = None
     media_type: str | None = None
     license: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.source:
+            raise ValueError("source must be non-empty")
+        if isinstance(self.observed_at_ns, bool) or not isinstance(self.observed_at_ns, int):
+            raise TypeError("observed_at_ns must be an integer")
+        if self.observed_at_ns < 0:
+            raise ValueError("observed_at_ns must be non-negative")
 
     @classmethod
     def now(
@@ -138,8 +146,6 @@ class ProvenanceRecord:
         media_type: str | None = None,
         license: str | None = None,
     ) -> "ProvenanceRecord":
-        if not source:
-            raise ValueError("source must be non-empty")
         return cls(
             source=source,
             observed_at_ns=time.time_ns(),
@@ -162,6 +168,8 @@ class RegionSpec:
     def __post_init__(self) -> None:
         if not self.region_id:
             raise ValueError("region_id must be non-empty")
+        if isinstance(self.capacity_cells, bool) or not isinstance(self.capacity_cells, int):
+            raise TypeError("capacity_cells must be an integer")
         if self.capacity_cells <= 0:
             raise ValueError("capacity_cells must be positive")
         if not all(math.isfinite(float(value)) for value in (self.x, self.y, self.z)):
@@ -182,11 +190,15 @@ class WorldCell:
     address: SymbolicAddress3D
     cid: str
     latent: tuple[float, ...]
-    provenance: ProvenanceRecord
+    provenance: tuple[ProvenanceRecord, ...]
     consistency: ConsistencyClass
     region_id: str
     byte_length: int
     version: int = 1
+
+    @property
+    def provenance_count(self) -> int:
+        return len(self.provenance)
 
 
 class ExactContentStore:
@@ -198,11 +210,11 @@ class ExactContentStore:
 
     @staticmethod
     def cid_for(data: bytes) -> str:
+        if not isinstance(data, bytes):
+            raise TypeError("exact content must be bytes")
         return "sha256:" + hashlib.sha256(data).hexdigest()
 
     def put(self, data: bytes) -> str:
-        if not isinstance(data, bytes):
-            raise TypeError("exact content must be bytes")
         cid = self.cid_for(data)
         with self._lock:
             existing = self._objects.get(cid)
@@ -238,10 +250,10 @@ class ExactContentStore:
 class ByteSketchEncoder:
     """Dependency-free deterministic content sketch.
 
-    This is intentionally *not* advertised as a learned semantic embedding.  It
-    provides a replaceable latent-plane contract and a deterministic test
-    fixture.  Production deployments should inject a workload-validated
-    multimodal embedding model through ``WorldFabric(encoder=...)``.
+    This is intentionally *not* advertised as a learned semantic embedding. It
+    provides a replaceable latent-plane contract and deterministic test fixture.
+    Production experimentation should inject a workload-validated multimodal
+    embedding model through ``WorldFabric(encoder=...)``.
     """
 
     def __init__(self, dimensions: int = 32) -> None:
@@ -361,6 +373,17 @@ class AdaptivePlacementPlanner:
             self._loads[region.region_id] += 1
             return region.region_id
 
+    def release(self, address: SymbolicAddress3D) -> None:
+        """Release an uncommitted reservation after a failed staged ingest."""
+        with self._lock:
+            region_id = self._placement.pop(address, None)
+            if region_id is None:
+                return
+            self._loads[region_id] -= 1
+            for edge in tuple(self._interactions):
+                if address in edge:
+                    del self._interactions[edge]
+
     def record_interaction(
         self,
         left: SymbolicAddress3D,
@@ -393,7 +416,12 @@ class AdaptivePlacementPlanner:
         normalized_load = self._loads[candidate_id] / candidate.capacity_cells
         return cost + self.load_weight * normalized_load
 
-    def rebalance(self, *, max_moves: int = 16, min_gain: float = 1.0e-9) -> tuple[tuple[str, str, str, float], ...]:
+    def rebalance(
+        self,
+        *,
+        max_moves: int = 16,
+        min_gain: float = 1.0e-9,
+    ) -> tuple[tuple[str, str, str, float], ...]:
         if isinstance(max_moves, bool) or not isinstance(max_moves, int) or max_moves < 0:
             raise ValueError("max_moves must be a non-negative integer")
         if min_gain < 0.0 or not math.isfinite(min_gain):
@@ -430,11 +458,7 @@ class AdaptivePlacementPlanner:
         return tuple(moves)
 
     def _incident_weight(self, address: SymbolicAddress3D) -> float:
-        return sum(
-            weight
-            for edge, weight in self._interactions.items()
-            if address in edge
-        )
+        return sum(weight for edge, weight in self._interactions.items() if address in edge)
 
     def snapshot_loads(self) -> dict[str, int]:
         with self._lock:
@@ -459,7 +483,13 @@ class BoundedScheduler:
         self.submitted = 0
         self.completed = 0
 
-    def submit(self, function: Callable[..., object], /, *args: object, **kwargs: object) -> Future[object]:
+    def submit(
+        self,
+        function: Callable[..., object],
+        /,
+        *args: object,
+        **kwargs: object,
+    ) -> Future[object]:
         with self._lock:
             if self._closed:
                 raise RuntimeError("scheduler is closed")
@@ -517,7 +547,7 @@ class WorldFabric:
         )
         self.address_depth = address_depth
         self.exact = ExactContentStore()
-        self.encoder = encoder or ByteSketchEncoder()
+        self.encoder: VectorEncoder = encoder or ByteSketchEncoder()
         self.ledger = HashChainMetadataLedger()
         self.placement = AdaptivePlacementPlanner(tuple(regions or default_regions))
         self.scheduler = BoundedScheduler(workers=workers, max_in_flight=max_in_flight)
@@ -534,6 +564,36 @@ class WorldFabric:
                 return address
             depth += 1
 
+    def _validated_latent(self, data: bytes) -> tuple[float, ...]:
+        latent = tuple(float(value) for value in self.encoder(data))
+        if not latent or not all(math.isfinite(value) for value in latent):
+            raise ValueError("encoder must return a non-empty finite vector")
+        return latent
+
+    def _attach_provenance(
+        self,
+        cell: WorldCell,
+        provenance: ProvenanceRecord,
+    ) -> WorldCell:
+        if provenance in cell.provenance:
+            return cell
+        updated = replace(
+            cell,
+            provenance=cell.provenance + (provenance,),
+            version=cell.version + 1,
+        )
+        self._cells[cell.address] = updated
+        self.ledger.append(
+            {
+                "type": "provenance-link",
+                "address": cell.address.to_text(),
+                "cid": cell.cid,
+                "provenance": asdict(provenance),
+                "version": updated.version,
+            }
+        )
+        return updated
+
     def ingest(
         self,
         data: bytes,
@@ -541,42 +601,55 @@ class WorldFabric:
         provenance: ProvenanceRecord,
         consistency: ConsistencyClass = ConsistencyClass.IMMUTABLE,
     ) -> WorldCell:
+        if not isinstance(data, bytes):
+            raise TypeError("data must be bytes")
         if not isinstance(provenance, ProvenanceRecord):
             raise TypeError("provenance must be a ProvenanceRecord")
-        cid = self.exact.put(data)
+        if not isinstance(consistency, ConsistencyClass):
+            raise TypeError("consistency must be a ConsistencyClass")
+
+        cid = ExactContentStore.cid_for(data)
         with self._lock:
             existing_address = self._address_by_cid.get(cid)
             if existing_address is not None:
-                return self._cells[existing_address]
+                return self._attach_provenance(self._cells[existing_address], provenance)
 
-            latent = tuple(float(value) for value in self.encoder(data))
-            if not latent or not all(math.isfinite(value) for value in latent):
-                raise ValueError("encoder must return a non-empty finite vector")
+            # Stage all fallible derived work before exact bytes become resident.
+            latent = self._validated_latent(data)
             address = self._unique_address(cid)
             region_id = self.placement.assign(address)
-            cell = WorldCell(
-                address=address,
-                cid=cid,
-                latent=latent,
-                provenance=provenance,
-                consistency=consistency,
-                region_id=region_id,
-                byte_length=len(data),
-            )
-            self._cells[address] = cell
-            self._address_by_cid[cid] = address
-            self.ledger.append(
-                {
-                    "type": "ingest",
-                    "address": address.to_text(),
-                    "cid": cid,
-                    "bytes": len(data),
-                    "consistency": consistency.value,
-                    "region": region_id,
-                    "provenance": asdict(provenance),
-                }
-            )
-            return cell
+            try:
+                stored_cid = self.exact.put(data)
+                if stored_cid != cid:
+                    raise RuntimeError("content identity changed during staged ingest")
+                cell = WorldCell(
+                    address=address,
+                    cid=cid,
+                    latent=latent,
+                    provenance=(provenance,),
+                    consistency=consistency,
+                    region_id=region_id,
+                    byte_length=len(data),
+                )
+                self._cells[address] = cell
+                self._address_by_cid[cid] = address
+                self.ledger.append(
+                    {
+                        "type": "ingest",
+                        "address": address.to_text(),
+                        "cid": cid,
+                        "bytes": len(data),
+                        "consistency": consistency.value,
+                        "region": region_id,
+                        "provenance": asdict(provenance),
+                    }
+                )
+                return cell
+            except BaseException:
+                self.placement.release(address)
+                self._cells.pop(address, None)
+                self._address_by_cid.pop(cid, None)
+                raise
 
     def submit_ingest(
         self,
@@ -600,6 +673,9 @@ class WorldFabric:
         with self._lock:
             return self._cells[self._address_by_cid[cid]]
 
+    def provenance_for_cid(self, cid: str) -> tuple[ProvenanceRecord, ...]:
+        return self.cell_for_cid(cid).provenance
+
     def retrieve(self, address: SymbolicAddress3D) -> bytes:
         cell = self.cell(address)
         return self.exact.get(cell.cid, verify=True)
@@ -615,14 +691,13 @@ class WorldFabric:
         return sum(a * b for a, b in zip(left, right)) / (left_norm * right_norm)
 
     def nearest(self, query: bytes, *, k: int = 5) -> tuple[tuple[WorldCell, float], ...]:
+        if not isinstance(query, bytes):
+            raise TypeError("query must be bytes")
         if isinstance(k, bool) or not isinstance(k, int) or k <= 0:
             raise ValueError("k must be a positive integer")
-        latent = tuple(float(value) for value in self.encoder(query))
+        latent = self._validated_latent(query)
         with self._lock:
-            scored = [
-                (cell, self._cosine(latent, cell.latent))
-                for cell in self._cells.values()
-            ]
+            scored = [(cell, self._cosine(latent, cell.latent)) for cell in self._cells.values()]
         scored.sort(key=lambda item: (-item[1], item[0].address))
         return tuple(scored[:k])
 
@@ -638,7 +713,11 @@ class WorldFabric:
                 raise KeyError("interaction endpoints must be materialized cells")
         self.placement.record_interaction(left, right, weight=weight)
 
-    def fold_placement(self, *, max_moves: int = 16) -> tuple[tuple[str, str, str, float], ...]:
+    def fold_placement(
+        self,
+        *,
+        max_moves: int = 16,
+    ) -> tuple[tuple[str, str, str, float], ...]:
         moves = self.placement.rebalance(max_moves=max_moves)
         if not moves:
             return moves
@@ -646,7 +725,11 @@ class WorldFabric:
             for address_text, previous, current, gain in moves:
                 address = SymbolicAddress3D.from_text(address_text)
                 cell = self._cells[address]
-                self._cells[address] = replace(cell, region_id=current, version=cell.version + 1)
+                self._cells[address] = replace(
+                    cell,
+                    region_id=current,
+                    version=cell.version + 1,
+                )
                 self.ledger.append(
                     {
                         "type": "placement-fold",
@@ -662,15 +745,24 @@ class WorldFabric:
     def verify(self) -> bool:
         with self._lock:
             cells = tuple(self._cells.values())
-        return self.ledger.verify() and all(self.exact.verify(cell.cid) for cell in cells)
+            indexes_match = all(
+                self._address_by_cid.get(cell.cid) == cell.address for cell in cells
+            ) and len(self._address_by_cid) == len(cells)
+        return (
+            indexes_match
+            and self.ledger.verify()
+            and all(self.exact.verify(cell.cid) for cell in cells)
+        )
 
     def stats(self) -> dict[str, object]:
         with self._lock:
             cells = len(self._cells)
+            provenance_observations = sum(cell.provenance_count for cell in self._cells.values())
         return {
             "materialized_cells": cells,
             "exact_objects": self.exact.object_count,
             "resident_bytes": self.exact.resident_bytes,
+            "provenance_observations": provenance_observations,
             "ledger_records": self.ledger.length,
             "ledger_head": self.ledger.head,
             "region_loads": self.placement.snapshot_loads(),
