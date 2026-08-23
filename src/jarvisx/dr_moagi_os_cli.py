@@ -1,4 +1,4 @@
-"""Command-line entry point for the Dr Moagi 3D OS control plane."""
+"""Command-line entry point for the end-to-end Dr Moagi 3D OS control plane."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ import uvicorn
 
 from .dr_moagi_field_runtime import SparseField
 from .dr_moagi_os import DrMoagiOSConfig, DrMoagiOSKernel, demo_field
+from .dr_moagi_os_store import SparseStateCodec3D
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -33,6 +34,22 @@ def _parser() -> argparse.ArgumentParser:
     run_file.add_argument("--cycles", type=int, default=8)
     run_file.add_argument("--state-dir", type=Path)
     run_file.add_argument("--pretty", action="store_true")
+
+    pack = sub.add_parser("pack", help="encode JSON sparse field to exact .dmos packet")
+    pack.add_argument("input", type=Path)
+    pack.add_argument("output", type=Path)
+    pack.add_argument("--side", type=int, default=64)
+    pack.add_argument("--pretty", action="store_true")
+
+    run_packet = sub.add_parser("run-packet", help="run an exact .dmos sparse packet")
+    run_packet.add_argument("input", type=Path)
+    run_packet.add_argument("--cycles", type=int, default=8)
+    run_packet.add_argument("--state-dir", type=Path)
+    run_packet.add_argument("--pretty", action="store_true")
+
+    inspect_packet = sub.add_parser("inspect-packet", help="validate and inspect .dmos packet")
+    inspect_packet.add_argument("input", type=Path)
+    inspect_packet.add_argument("--pretty", action="store_true")
     return parser
 
 
@@ -72,9 +89,15 @@ def _run_local(
     result = {
         "reports": [report.as_dict() for report in reports],
         "status": kernel.status(),
+        "capabilities": kernel.capabilities(),
     }
     print(json.dumps(result, indent=2 if pretty else None, sort_keys=True))
     return 0
+
+
+def _validate_cycles(cycles: int) -> None:
+    if cycles <= 0:
+        raise SystemExit("--cycles must be positive")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -90,10 +113,38 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "pack":
+        if args.side <= 0:
+            raise SystemExit("--side must be positive")
+        codec = SparseStateCodec3D()
+        packet = codec.encode(_load_field(args.input), side=args.side)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_bytes(packet.payload)
+        print(json.dumps(packet.as_dict(), indent=2 if args.pretty else None, sort_keys=True))
+        return 0
+
+    if args.command == "inspect-packet":
+        codec = SparseStateCodec3D()
+        packet, field = codec.decode_payload(args.input.read_bytes())
+        result = {**packet.as_dict(), "decoded_active_cells": len(field)}
+        print(json.dumps(result, indent=2 if args.pretty else None, sort_keys=True))
+        return 0
+
+    if args.command == "run-packet":
+        _validate_cycles(args.cycles)
+        codec = SparseStateCodec3D()
+        packet, field = codec.decode_payload(args.input.read_bytes())
+        return _run_local(
+            side=packet.side,
+            cycles=args.cycles,
+            state_dir=args.state_dir,
+            field=field,
+            pretty=bool(args.pretty),
+        )
+
     if args.side <= 0:
         raise SystemExit("--side must be positive")
-    if args.cycles <= 0:
-        raise SystemExit("--cycles must be positive")
+    _validate_cycles(args.cycles)
 
     if args.command == "demo":
         return _run_local(
