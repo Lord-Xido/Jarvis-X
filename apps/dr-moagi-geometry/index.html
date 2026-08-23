@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dr Moagi 3D Geometry Self-Optimizer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#020617;color:#e2e8f0}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{display:grid;grid-template-rows:56px 1fr 32px;background:radial-gradient(circle at 50% 20%,#111827 0,#020617 58%,#000 100%)}
+    header,footer{display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#020617e8;border-color:#164e63;backdrop-filter:blur(16px);z-index:10}header{border-bottom:1px solid #164e63}footer{border-top:1px solid #164e63;font:9px ui-monospace,monospace;color:#64748b}.brand b{display:block;color:#67e8f9;font-size:12px;letter-spacing:.1em}.brand small{font:9px ui-monospace,monospace;color:#64748b}.pills{display:flex;gap:8px;font:9px ui-monospace,monospace}.pill{padding:5px 8px;border:1px solid #1e3a4a;border-radius:99px;background:#07111dcc}.pill strong{color:#4ade80}
+    main{position:relative;min-height:0}.scene{position:absolute;inset:0}.panel{position:absolute;top:10px;bottom:10px;width:330px;background:#08101ee8;border:1px solid #164e63;border-radius:12px;backdrop-filter:blur(16px);padding:12px;overflow:auto;z-index:5}.left{left:10px}.right{right:10px}.title{font:700 10px ui-monospace,monospace;color:#67e8f9;letter-spacing:.12em;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid #172554}.control{margin:8px 0}.control label{display:flex;justify-content:space-between;font:9px ui-monospace,monospace;color:#94a3b8;margin-bottom:3px}.control input{width:100%;accent-color:#22d3ee}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}button{border:1px solid #155e75;background:#083344;color:#cffafe;border-radius:7px;padding:8px;font:700 9px ui-monospace,monospace;cursor:pointer}button.primary{background:#7c3aed;border-color:#a855f7;color:white}button.warn{background:#3f0a16;border-color:#881337;color:#fecdd3}.metric{display:flex;justify-content:space-between;font:10px ui-monospace,monospace;padding:7px 0;border-bottom:1px solid #172033}.metric b{color:#c4f1ff}.equation{font:9px ui-monospace,monospace;line-height:1.55;color:#a5b4fc;background:#020617cc;border:1px solid #1e293b;border-radius:8px;padding:9px;white-space:pre-wrap}.trace{max-height:180px;overflow:auto;background:#0008;border:1px solid #1e293b;border-radius:8px;padding:7px;font:8px ui-monospace,monospace;line-height:1.5}.ok{color:#4ade80}.bad{color:#fb7185}.candidate{display:grid;grid-template-columns:60px 1fr 58px;gap:6px;font:8px ui-monospace,monospace;padding:4px 0;border-bottom:1px solid #131c2a}.candidate b{color:#c4f1ff}.candidate .win{color:#4ade80}.candidate .loss{color:#fb7185}
+    .legend{position:absolute;left:350px;right:350px;bottom:14px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap;z-index:3;pointer-events:none}.chip{font:8px ui-monospace,monospace;padding:4px 7px;border:1px solid #1e293b;border-radius:99px;background:#020617bb;color:#94a3b8}@media(max-width:1000px){.panel{width:285px}.legend{left:305px;right:305px}}@media(max-width:760px){.right{display:none}.panel.left{width:300px}.legend{left:315px;right:10px}.pills{display:none}}
+  </style>
+</head>
+<body>
+<header><div class="brand"><b>DR MOAGI 3D GEOMETRY SELF-OPTIMIZER</b><small>Topology-preserving kinetic manifold · bounded transactional parameter promotion</small></div><div class="pills"><span class="pill">mode: <strong id="mode">RUNNING</strong></span><span class="pill">epoch: <strong id="epoch">0</strong></span><span class="pill">claim: internal geometry improvement only</span></div></header>
+<main>
+  <div id="scene" class="scene"></div>
+  <section class="panel left">
+    <div class="title">AUTHORITATIVE GEOMETRY θg</div>
+    <div id="controls"></div>
+    <div class="buttons"><button id="optimize" class="primary">AUTO OPTIMIZE</button><button id="pause">PAUSE</button><button id="reset" class="warn">RESET</button><button id="camera">RESET CAMERA</button></div>
+    <div class="title">REFINED EQUATION</div>
+    <div class="equation">R(t)=Rmin+(R-Rmin)e^(-χt)
+q=γv sin(u/2+βt)
+r=R(t)+v cos(u/2+ωt)
+x=r cos(u+αt)-q sin(u+αt)
+y=v sin(u/2+ωt)+δ sin(κu+λt)
+z=r sin(u+αt)+q cos(u+αt)
+
+Seam invariant: P(0,v,t)=P(2π,-v,t)</div>
+  </section>
+  <section class="panel right">
+    <div class="title">MEASURED GEOMETRY METRICS</div>
+    <div class="metric"><span>Objective Jgeom</span><b id="score">—</b></div>
+    <div class="metric"><span>Seam RMS</span><b id="seam">—</b></div>
+    <div class="metric"><span>Minimum area element</span><b id="area">—</b></div>
+    <div class="metric"><span>Area CV</span><b id="areaCv">—</b></div>
+    <div class="metric"><span>Speed RMS</span><b id="speed">—</b></div>
+    <div class="metric"><span>Acceleration RMS</span><b id="accel">—</b></div>
+    <div class="metric"><span>Radial span</span><b id="span">—</b></div>
+    <div class="metric"><span>Inward contraction</span><b id="contract">—</b></div>
+    <div class="title" style="margin-top:12px">27-NODE GEOMETRY LATTICE</div>
+    <div id="candidates"></div>
+    <div class="title" style="margin-top:12px">TRANSACTION TRACE</div>
+    <div id="trace" class="trace"></div>
+  </section>
+  <div class="legend"><span class="chip">cyan = authoritative surface</span><span class="chip">purple = kinetic phase</span><span class="chip">green = promoted candidate</span><span class="chip">PROVISIONAL ≠ AUTHORITATIVE</span></div>
+</main>
+<footer><span>Geometry optimization changes parameters, not source code.</span><span id="footer">θg incumbent</span></footer>
+<script type="module">
+import {DEFAULT_GEOMETRY, GEOMETRY_BOUNDS, TAU, drMoagiPoint, geometryObjective, normalizeGeometry, optimizeGeometry} from './core.mjs';
+const $=id=>document.getElementById(id); let params=normalizeGeometry(DEFAULT_GEOMETRY), initial={...params}, running=true, epoch=0, t=0, last=performance.now();
+const defs=[['R','R outer radius',.05],['Rmin','Rmin inward floor',.05],['chi','χ inward rate',.01],['omega','ω twist rate',.01],['alpha','α orbit rate',.01],['beta','β perturb rate',.01],['gamma','γ perturb amplitude',.01],['delta','δ vertical amplitude',.01],['kappa','κ spatial mode',1],['lambda','λ vertical rate',.01]];
+const controls=$('controls');
+function buildControls(){controls.innerHTML='';for(const [key,label,step] of defs){const [lo,hi]=GEOMETRY_BOUNDS[key],row=document.createElement('div');row.className='control';row.innerHTML=`<label><span>${label}</span><b>${params[key].toFixed(step===1?0:2)}</b></label><input type="range" min="${lo}" max="${hi}" step="${step}" value="${params[key]}">`;const input=row.querySelector('input'),out=row.querySelector('b');input.oninput=()=>{params[key]=Number(input.value);params=normalizeGeometry(params);out.textContent=params[key].toFixed(step===1?0:2);refresh();};controls.append(row)}}
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x020617);scene.fog=new THREE.FogExp2(0x020617,.035);const camera=new THREE.PerspectiveCamera(50,1,.1,100);camera.position.set(9,6,11);camera.lookAt(0,0,0);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));$('scene').appendChild(renderer.domElement);scene.add(new THREE.AmbientLight(0x334155,1.5));const light=new THREE.PointLight(0x22d3ee,3,50);light.position.set(8,10,10);scene.add(light);const grid=new THREE.GridHelper(24,24,0x164e63,0x0f172a);grid.position.y=-3.6;scene.add(grid);
+let mesh=null,geom=null,mat=new THREE.MeshStandardMaterial({color:0x22d3ee,metalness:.35,roughness:.3,side:THREE.DoubleSide,transparent:true,opacity:.88});
+function buildSurface(){if(mesh){scene.remove(mesh);geom.dispose()}const nu=96,nv=24,verts=[],idx=[];for(let i=0;i<=nu;i++){const u=i/nu*TAU;for(let j=0;j<=nv;j++){const v=-2+j/nv*4;const p=drMoagiPoint(u,v,t,params);verts.push(p.x,p.y,p.z)}}for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){const a=i*(nv+1)+j,b=a+nv+1,c=b+1,d=a+1;idx.push(a,b,d,b,c,d)}geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geom.setIndex(idx);geom.computeVertexNormals();mesh=new THREE.Mesh(geom,mat);scene.add(mesh)}
+function refresh(){buildSurface();const r=geometryObjective(params,{uSamples:24,vSamples:7,times:[0,.5,1]});const m=r.metrics;$('score').textContent=r.score.toFixed(5);$('seam').textContent=m.seamRms.toExponential(2);$('area').textContent=m.minArea.toFixed(5);$('areaCv').textContent=m.areaCv.toFixed(4);$('speed').textContent=m.speedRms.toFixed(4);$('accel').textContent=m.accelerationRms.toFixed(4);$('span').textContent=m.radialSpan.toFixed(4);$('contract').textContent=m.contraction.toFixed(4);$('footer').textContent=`R=${params.R.toFixed(2)} χ=${params.chi.toFixed(3)} ω=${params.omega.toFixed(2)} α=${params.alpha.toFixed(2)}`}
+function trace(msg,kind=''){const d=document.createElement('div');d.className=kind;d.textContent=`[${String($('trace').children.length+1).padStart(3,'0')}] ${msg}`;$('trace').append(d);$('trace').scrollTop=$('trace').scrollHeight}
+function showCandidates(report){$('candidates').innerHTML='';const base=report.baseline.score;for(const e of report.evaluations){const d=document.createElement('div');d.className='candidate';const v=e.vector;const cls=e.score<base?'win':e.score>base?'loss':'';d.innerHTML=`<span>${v.shape},${v.kinetics},${v.inward}</span><b>${e.stage}</b><span class="${cls}">${e.score.toFixed(3)}</span>`;$('candidates').append(d)}}
+$('optimize').onclick=()=>{trace('GEOMETRY_EPOCH begin · evaluating bounded 26-neighbour lattice');const report=optimizeGeometry(params,{uSamples:24,vSamples:7,times:[0,.5,1],maxCandidates:26});showCandidates(report);trace(`baseline=${report.baseline.score.toFixed(5)} best=${report.best.score.toFixed(5)} improvement=${(report.relativeImprovement*100).toFixed(2)}%`);if(report.promoted){params={...report.authoritativeParams};epoch++;$('epoch').textContent=epoch;trace(`PI_GEOM ACCEPT · promoted (${report.best.vector.shape},${report.best.vector.kinetics},${report.best.vector.inward})`,'ok')}else trace('PI_GEOM HOLD · incumbent remains authoritative','bad');buildControls();refresh()};
+$('pause').onclick=()=>{running=!running;$('mode').textContent=running?'RUNNING':'PAUSED';$('pause').textContent=running?'PAUSE':'PLAY'};$('reset').onclick=()=>{params={...initial};epoch=0;t=0;$('epoch').textContent='0';$('trace').innerHTML='';$('candidates').innerHTML='';buildControls();refresh();trace('RESET · restored canonical geometry')};$('camera').onclick=()=>{camera.position.set(9,6,11);camera.lookAt(0,0,0)};
+let drag=false,px=0,py=0;$('scene').onmousedown=e=>{drag=true;px=e.clientX;py=e.clientY};window.onmouseup=()=>drag=false;window.onmousemove=e=>{if(!drag)return;const dx=e.clientX-px,dy=e.clientY-py,r=camera.position.length();let th=Math.atan2(camera.position.x,camera.position.z),ph=Math.acos(Math.max(-1,Math.min(1,camera.position.y/r)));th-=dx*.005;ph=Math.max(.1,Math.min(Math.PI-.1,ph-dy*.005));camera.position.set(r*Math.sin(ph)*Math.sin(th),r*Math.cos(ph),r*Math.sin(ph)*Math.cos(th));camera.lookAt(0,0,0);px=e.clientX;py=e.clientY};$('scene').addEventListener('wheel',e=>{camera.position.multiplyScalar(e.deltaY>0?1.08:.92);e.preventDefault()},{passive:false});
+function resize(){const r=$('scene').getBoundingClientRect();camera.aspect=r.width/r.height;camera.updateProjectionMatrix();renderer.setSize(r.width,r.height)}window.onresize=resize;resize();buildControls();refresh();trace('BOOT · topology-preserving Dr Moagi geometry loaded','ok');
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(running){t+=dt;buildSurface()}renderer.render(scene,camera);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+</script>
+</body>
+</html>
