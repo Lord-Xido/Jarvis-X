@@ -70,6 +70,8 @@ def test_optimizer_replays_candidates_and_refuses_unverified_sota_claim():
     report = optimizer.optimize(demo_field(16), config)
 
     assert report.evaluated_candidates == 5
+    assert len(report.evaluations) == report.evaluated_candidates
+    assert report.evaluations[0] == report.baseline
     assert report.baseline.metrics.workloads == 3
     assert report.best.metrics.workloads == 3
     assert report.best.metrics.score >= 0.0
@@ -77,6 +79,28 @@ def test_optimizer_replays_candidates_and_refuses_unverified_sota_claim():
     if report.promoted:
         assert report.promoted_config is not None
         assert report.relative_improvement >= 0.0
+
+
+def test_meta_lattice_exposes_center_plus_all_26_bounded_neighbours():
+    config = DrMoagiOSConfig(side=16, max_active_cells=512, state_dir=None)
+    optimizer = DrMoagi3DMetaOptimizer(_search())
+
+    lattice = optimizer.candidate_lattice(config)
+    vectors = {
+        (
+            int(node["vector"]["compression"]),
+            int(node["vector"]["adaptation"]),
+            int(node["vector"]["dynamics"]),
+        )
+        for node in lattice
+    }
+
+    assert len(lattice) == 27
+    assert len(vectors) == 27
+    assert (0, 0, 0) in vectors
+    assert (-1, -1, -1) in vectors
+    assert (1, 1, 1) in vectors
+    assert lattice[0]["role"] == "incumbent"
 
 
 def test_self_optimizing_wrapper_preserves_authoritative_state_across_meta_epoch(tmp_path):
@@ -98,6 +122,7 @@ def test_self_optimizing_wrapper_preserves_authoritative_state_across_meta_epoch
     system = SelfOptimizing3DSystem(kernel, search=_search())
     report = system.turn_inward()
     after = system.status()
+    lattice = system.meta_lattice()
 
     assert after["state_hash"] == before_hash
     assert after["cycle"] == before_cycle
@@ -105,6 +130,11 @@ def test_self_optimizing_wrapper_preserves_authoritative_state_across_meta_epoch
     assert after["meta_optimizer"]["epoch"] == 1
     assert after["meta_optimizer"]["journal_valid"] is True
     assert after["meta_optimizer"]["external_sota_verified"] is False
+    assert after["meta_optimizer"]["last_report"]["evaluations"]
+    assert lattice["epoch"] == 1
+    assert len(lattice["nodes"]) == 27
+    assert lattice["last_report"]["evaluated_candidates"] == report.evaluated_candidates
+    assert lattice["external_sota_verified"] is False
     assert system.meta_journal.verify()
     if report.promoted:
         assert report.promoted_config is not None
@@ -122,4 +152,5 @@ def test_meta_optimizer_is_bounded_by_evaluation_sample():
     ).optimize(source, config)
 
     assert report.evaluated_candidates == 3
+    assert len(report.evaluations) == 3
     assert report.baseline.metrics.workloads == 3
