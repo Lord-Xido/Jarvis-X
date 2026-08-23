@@ -68,8 +68,9 @@ app = FastAPI(
     ),
 )
 
-_meta = SelfOptimizing3DSystem(DrMoagiOSKernel(_config_from_env()), search=_policy_from_env().meta_search)
-_architecture = SelfEvolving3DArchitecture(_meta, policy=_policy_from_env())
+_policy = _policy_from_env()
+_meta = SelfOptimizing3DSystem(DrMoagiOSKernel(_config_from_env()), search=_policy.meta_search)
+_architecture: SelfEvolving3DArchitecture = SelfEvolving3DArchitecture(_meta, policy=_policy)
 
 
 class FieldCell(BaseModel):
@@ -122,12 +123,12 @@ def healthz() -> dict[str, object]:
 
 @app.get("/v1/system/capabilities")
 def capabilities() -> dict[str, object]:
-    return _architecture.capabilities()
+    return cast(dict[str, object], _architecture.capabilities())
 
 
 @app.get("/v1/system/status")
 def status() -> dict[str, object]:
-    return _architecture.status()
+    return cast(dict[str, object], _architecture.status())
 
 
 @app.post("/v1/system/boot")
@@ -189,7 +190,7 @@ def meta_optimize() -> dict[str, object]:
 
 @app.get("/v1/system/architecture/lattice")
 def architecture_lattice() -> dict[str, object]:
-    return _architecture.architecture_lattice()
+    return cast(dict[str, object], _architecture.architecture_lattice())
 
 
 @app.post("/v1/system/architecture/evolve")
