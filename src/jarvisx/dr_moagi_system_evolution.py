@@ -1,23 +1,8 @@
 """Four-scale bounded auto-evolution for the Dr Moagi 3D operating architecture.
 
-The controller extends the existing nested runtime without permitting arbitrary
-source-code mutation. Four distinct time scales are maintained:
-
-    t: authoritative sparse state X
-    u: adaptive model state (Omega, Theta)
-    n: bounded runtime configuration C
-    k: architecture policy A
-
-The architecture policy governs *how often* the runtime turns inward, *how much*
-meta-search resource is spent, and *how strict* configuration promotion is. The
-required execution topology remains constitutional and cannot be removed:
-
-    sparse state -> bit-plane -> inward fold -> AutoExec -> DM-DD
-    -> fixed point -> Pi_Lambda -> DMOS2 verify -> atomic commit
-
-Architecture candidates are evaluated in isolated kernels over the same bounded
-source state. Promotion changes only orchestration/search policy; authoritative
-state, adaptive memory and learned parameters remain untouched.
+The controller adds an architecture-policy time scale above the existing sparse
+state, adaptive model, and runtime-configuration loops. It never rewrites source
+code or removes constitutional verification stages.
 """
 
 from __future__ import annotations
@@ -25,7 +10,7 @@ from __future__ import annotations
 import math
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, cast
 
 from .dr_moagi_autoexec import HashChainJournal
 from .dr_moagi_field_runtime import Coordinate, SparseField
@@ -108,8 +93,7 @@ class ArchitecturePolicy:
                 raise ValueError(f"{name} must be finite and non-negative")
 
     def as_dict(self) -> dict[str, object]:
-        raw = asdict(self)
-        return raw
+        return cast(dict[str, object], asdict(self))
 
 
 @dataclass(frozen=True)
@@ -127,7 +111,7 @@ class ArchitectureMetrics:
     state_cycles: int
 
     def as_dict(self) -> dict[str, object]:
-        return asdict(self)
+        return cast(dict[str, object], asdict(self))
 
 
 @dataclass(frozen=True)
@@ -194,25 +178,23 @@ class DrMoagiArchitectureOptimizer:
     """Benchmark bounded orchestration policies around the incumbent architecture."""
 
     def candidate_policy(
-        self,
-        base: ArchitecturePolicy,
-        vector: ArchitectureVector3D,
+        self, base: ArchitecturePolicy, vector: ArchitectureVector3D
     ) -> ArchitecturePolicy:
         cadence = base.state_cycles_per_meta
         search = base.meta_search
-
         if vector.cadence < 0:
             cadence = max(1, cadence // 2)
         elif vector.cadence > 0:
             cadence = min(64, cadence * 2)
 
         if vector.search < 0:
+            max_candidates = max(1, search.max_candidates // 2)
             search = replace(
                 search,
-                max_candidates=max(1, search.max_candidates // 2),
+                max_candidates=max_candidates,
                 confirm_cycles=max(1, search.confirm_cycles - 1),
                 max_eval_cells=max(16, search.max_eval_cells // 2),
-                survivors=max(1, min(search.survivors, max(1, search.max_candidates // 2))),
+                survivors=max(1, min(search.survivors, max_candidates)),
             )
         elif vector.search > 0:
             max_candidates = min(26, max(search.max_candidates + 2, search.max_candidates * 2))
@@ -238,7 +220,6 @@ class DrMoagiArchitectureOptimizer:
                 max_metric_regression=max(0.0, search.max_metric_regression * 0.80),
                 rejection_penalty=min(100_000.0, search.rejection_penalty * 1.15),
             )
-
         return replace(base, state_cycles_per_meta=cadence, meta_search=search)
 
     def optimize(
@@ -250,30 +231,23 @@ class DrMoagiArchitectureOptimizer:
         bounded = _bounded_source(source, policy.max_architecture_eval_cells)
         if not bounded:
             raise ValueError("architecture optimizer requires a non-empty sparse state")
-
         baseline = ArchitectureCandidateResult(
-            vector=ArchitectureVector3D(),
-            policy=policy,
-            metrics=self._evaluate(policy, bounded, base_config),
-            stage="baseline",
+            ArchitectureVector3D(), policy, self._evaluate(policy, bounded, base_config), "baseline"
         )
-        candidates: list[ArchitectureCandidateResult] = []
-        for vector in self._vectors()[: policy.max_architecture_candidates]:
-            candidate = self.candidate_policy(policy, vector)
-            candidates.append(
-                ArchitectureCandidateResult(
-                    vector=vector,
-                    policy=candidate,
-                    metrics=self._evaluate(candidate, bounded, base_config),
-                    stage="candidate",
-                )
+        candidates = tuple(
+            ArchitectureCandidateResult(
+                vector,
+                candidate,
+                self._evaluate(candidate, bounded, base_config),
+                "candidate",
             )
-
-        best = min([baseline, *candidates], key=lambda item: (item.metrics.score, item.vector))
+            for vector in self._vectors()[: policy.max_architecture_candidates]
+            for candidate in (self.candidate_policy(policy, vector),)
+        )
+        best = min((baseline, *candidates), key=lambda item: (item.metrics.score, item.vector))
         relative = _relative_improvement(baseline.metrics.score, best.metrics.score)
-        promoted = (
-            best.vector != ArchitectureVector3D()
-            and self._promotion_gate(policy, baseline, best, relative)
+        promoted = best.vector != ArchitectureVector3D() and self._promotion_gate(
+            policy, baseline, best, relative
         )
         evaluations = (baseline, *candidates)
         return ArchitectureEvolutionReport(
@@ -282,25 +256,20 @@ class DrMoagiArchitectureOptimizer:
             promoted=promoted,
             relative_improvement=relative,
             evaluated_candidates=len(evaluations),
-            promoted_policy=(best.policy if promoted else None),
+            promoted_policy=best.policy if promoted else None,
             evaluations=evaluations,
         )
 
     def _evaluate(
-        self,
-        policy: ArchitecturePolicy,
-        source: SparseField,
-        base_config: DrMoagiOSConfig,
+        self, policy: ArchitecturePolicy, source: SparseField, base_config: DrMoagiOSConfig
     ) -> ArchitectureMetrics:
-        config = replace(base_config, state_dir=None, auto_optimize=False)
-        kernel = DrMoagiOSKernel(config)
+        kernel = DrMoagiOSKernel(replace(base_config, state_dir=None, auto_optimize=False))
         kernel.boot(restore=False)
         kernel.load(source)
         system = SelfOptimizing3DSystem(kernel, search=policy.meta_search)
-
         state_cycles = min(policy.state_cycles_per_meta, policy.max_eval_state_cycles)
-        reports = system.run(state_cycles)
-        rejected = any(not report.committed for report in reports)
+        reports = cast(list[OSCycleReport], system.run(state_cycles))
+        rejected = any(not item.committed for item in reports)
         count = max(1, len(reports))
         reconstruction = sum(float(item.reconstruction_mse) for item in reports) / count
         distiller = sum(float(item.distiller_residual_rms or 0.0) for item in reports) / count
@@ -311,14 +280,12 @@ class DrMoagiArchitectureOptimizer:
             (float(item.active_cells_after) + float(item.latent_cells)) / max(1, len(source))
             for item in reports
         ) / count
-
         meta_relative = 0.0
         meta_evaluations = 0
         if not rejected:
             meta = system.turn_inward()
             meta_relative = float(meta.relative_improvement)
             meta_evaluations = int(meta.evaluated_candidates)
-
         score = (
             6.0 * reconstruction
             + 4.0 * distiller * distiller
@@ -332,17 +299,17 @@ class DrMoagiArchitectureOptimizer:
             + (policy.rejection_penalty if rejected else 0.0)
         )
         return ArchitectureMetrics(
-            score=score,
-            reconstruction_mse=reconstruction,
-            distiller_residual_rms=distiller,
-            fixed_point_residual=fixed_point,
-            transport_bytes_per_source_cell=transport,
-            compute_proxy=compute_proxy,
-            mean_phase_velocity=phase,
-            meta_relative_improvement=meta_relative,
-            meta_evaluations=meta_evaluations,
-            rejected=rejected,
-            state_cycles=state_cycles,
+            score,
+            reconstruction,
+            distiller,
+            fixed_point,
+            transport,
+            compute_proxy,
+            phase,
+            meta_relative,
+            meta_evaluations,
+            rejected,
+            state_cycles,
         )
 
     @staticmethod
@@ -364,9 +331,7 @@ class DrMoagiArchitectureOptimizer:
         best: ArchitectureCandidateResult,
         relative: float,
     ) -> bool:
-        if best.metrics.rejected:
-            return False
-        if relative < policy.min_architecture_improvement:
+        if best.metrics.rejected or relative < policy.min_architecture_improvement:
             return False
         regression = 1.0 + policy.max_architecture_metric_regression
         eps = 1.0e-12
@@ -381,10 +346,7 @@ class SelfEvolving3DArchitecture:
     """Autonomic controller for state, model, configuration and architecture loops."""
 
     def __init__(
-        self,
-        system: SelfOptimizing3DSystem,
-        *,
-        policy: ArchitecturePolicy | None = None,
+        self, system: SelfOptimizing3DSystem, *, policy: ArchitecturePolicy | None = None
     ) -> None:
         self.system = system
         self.policy = policy or ArchitecturePolicy(meta_search=system.optimizer.search)
@@ -403,10 +365,10 @@ class SelfEvolving3DArchitecture:
         return self.system.kernel
 
     def step(self) -> OSCycleReport:
-        return self.system.step()
+        return cast(OSCycleReport, self.system.step())
 
     def run(self, cycles: int) -> list[OSCycleReport]:
-        return self.system.run(cycles)
+        return cast(list[OSCycleReport], self.system.run(cycles))
 
     def turn_inward(self) -> MetaOptimizationReport:
         report = self.system.turn_inward()
@@ -424,12 +386,10 @@ class SelfEvolving3DArchitecture:
         report = self.optimizer.optimize(source, self.kernel.config, self.policy)
         if str(self.kernel.status()["state_hash"]) != before_hash:
             raise RuntimeError("authoritative state changed during architecture evaluation")
-
         self.architecture_epoch += 1
         if report.promoted and report.promoted_policy is not None:
             self.policy = report.promoted_policy
             self.system.optimizer.search = self.policy.meta_search
-
         self.last_architecture_report = report
         record = report.as_dict()
         record["architecture_epoch"] = self.architecture_epoch
@@ -444,37 +404,31 @@ class SelfEvolving3DArchitecture:
             raise RuntimeError("stop autorun before autonomic evolution")
         if not self.kernel.loaded:
             raise RuntimeError("load a sparse state before autonomic evolution")
-
         state_reports: list[OSCycleReport] = []
         meta_reports: list[MetaOptimizationReport] = []
         architecture_reports: list[ArchitectureEvolutionReport] = []
         stopped_reason: str | None = None
-
         for _ in range(cycles):
-            report = self.system.step()
+            report = self.step()
             state_reports.append(report)
             if not report.committed:
                 stopped_reason = report.rejection_reason or "state transaction rejected"
                 break
-
             self.state_cycles_since_meta += 1
             if self.state_cycles_since_meta >= self.policy.state_cycles_per_meta:
-                meta = self.turn_inward()
-                meta_reports.append(meta)
+                meta_reports.append(self.turn_inward())
                 if (
                     self.meta_epochs_since_architecture
                     >= self.policy.meta_epochs_per_architecture_review
                 ):
-                    architecture = self.evolve_architecture()
-                    architecture_reports.append(architecture)
+                    architecture_reports.append(self.evolve_architecture())
                     self.meta_epochs_since_architecture = 0
-
         return AutonomicRunReport(
-            requested_cycles=cycles,
-            state_reports=tuple(state_reports),
-            meta_reports=tuple(meta_reports),
-            architecture_reports=tuple(architecture_reports),
-            stopped_reason=stopped_reason,
+            cycles,
+            tuple(state_reports),
+            tuple(meta_reports),
+            tuple(architecture_reports),
+            stopped_reason,
         )
 
     def architecture_lattice(self) -> dict[str, object]:
@@ -484,10 +438,10 @@ class SelfEvolving3DArchitecture:
                 previous = measured.get(item.vector)
                 if previous is None or item.metrics.score < previous.metrics.score:
                     measured[item.vector] = item
-
         nodes: list[dict[str, object]] = []
-        for vector in [ArchitectureVector3D(), *self.optimizer._vectors()]:
-            policy = (
+        vectors = [ArchitectureVector3D(), *self.optimizer._vectors()]
+        for vector in vectors:
+            candidate_policy = (
                 self.policy
                 if vector == ArchitectureVector3D()
                 else self.optimizer.candidate_policy(self.policy, vector)
@@ -496,7 +450,7 @@ class SelfEvolving3DArchitecture:
             nodes.append(
                 {
                     "vector": asdict(vector),
-                    "policy": policy.as_dict(),
+                    "policy": candidate_policy.as_dict(),
                     "measured": evaluation is not None,
                     "metrics": evaluation.metrics.as_dict() if evaluation is not None else None,
                     "stage": evaluation.stage if evaluation is not None else None,
