@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,13 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--max-active-cells", type=int, default=50_000)
     _add_verify_keys(run)
     run.add_argument("--pretty", action="store_true")
+
+    serve = sub.add_parser("serve", help="Serve a verified firmware image through FastAPI")
+    serve.add_argument("image", type=Path)
+    serve.add_argument("--public-key", type=Path)
+    serve.add_argument("--encryption-key", type=Path)
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=10002)
 
     elf = sub.add_parser("reference-elf", help="Write the valid RV64 reference monitor ELF")
     elf.add_argument("output", type=Path)
@@ -155,7 +163,10 @@ def main() -> int:
         payload = build_reference_riscv_elf()
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_bytes(payload)
-        _print({"path": str(args.output), "bytes": len(payload), **inspect_riscv_elf(payload)}, args.pretty)
+        _print(
+            {"path": str(args.output), "bytes": len(payload), **inspect_riscv_elf(payload)},
+            args.pretty,
+        )
         return 0
 
     if args.command in ("build", "build-demo"):
@@ -174,6 +185,17 @@ def main() -> int:
             encryption_key=_read_optional(args.encryption_key),
         )
         _print(report, args.pretty)
+        return 0
+
+    if args.command == "serve":
+        os.environ["JARVISX_FIRMWARE_IMAGE"] = str(args.image)
+        if args.public_key is not None:
+            os.environ["JARVISX_FIRMWARE_PUBLIC_KEY"] = str(args.public_key)
+        if args.encryption_key is not None:
+            os.environ["JARVISX_FIRMWARE_ENCRYPTION_KEY"] = str(args.encryption_key)
+        import uvicorn
+
+        uvicorn.run("jarvisx.dr_moagi_firmware_api:app", host=args.host, port=args.port)
         return 0
 
     image = FirmwareImage(args.image)
