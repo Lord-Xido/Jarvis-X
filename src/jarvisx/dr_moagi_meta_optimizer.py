@@ -423,10 +423,10 @@ class SelfOptimizing3DSystem:
         self.meta_journal.append(record)
         return report
 
-    def step(self):  # type: ignore[no-untyped-def]
+    def step(self):
         return self.kernel.step()
 
-    def run(self, cycles: int):  # type: ignore[no-untyped-def]
+    def run(self, cycles: int):
         return self.kernel.run(cycles)
 
     def status(self) -> dict[str, object]:
