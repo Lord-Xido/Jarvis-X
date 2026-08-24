@@ -2,13 +2,15 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
+COPY pyproject.toml setup.py README.md ./
 COPY src/ ./src/
-COPY setup.py .
-RUN pip install .
+
+RUN pip install --no-cache-dir . && mkdir -p /data/runs
+
+ENV PORT=10000
+ENV JARVISX_RUN_STORE=/data/runs
+VOLUME ["/data"]
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port $PORT"]
+CMD ["sh", "-c", "uvicorn jarvisx.api:app --host 0.0.0.0 --port ${PORT:-10000}"]
