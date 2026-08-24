@@ -9,12 +9,14 @@ on:
       - "apps/dmvx-matrix/**"
       - "apps/permeation-transport/**"
       - "apps/dr-moagi-geometry/**"
+      - "apps/dr-moagi-cognitive/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   pull_request:
     paths:
       - "apps/dmvx-matrix/**"
       - "apps/permeation-transport/**"
       - "apps/dr-moagi-geometry/**"
+      - "apps/dr-moagi-cognitive/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   workflow_dispatch:
 
@@ -44,6 +46,8 @@ jobs:
         run: node --test apps/permeation-transport/test_core.mjs
       - name: Run Dr Moagi geometry optimizer invariants
         run: node --test apps/dr-moagi-geometry/test_core.mjs
+      - name: Run cognitive control-plane invariants
+        run: node --test apps/dr-moagi-cognitive/test_core.mjs
       - name: Smoke-check permeation browser entrypoint
         run: |
           grep -q "DM-vΩΞ⁺ PERMEATION TRANSPORT CORE" apps/permeation-transport/index.html
@@ -53,6 +57,12 @@ jobs:
           grep -q "DR MOAGI 3D GEOMETRY SELF-OPTIMIZER" apps/dr-moagi-geometry/index.html
           grep -q "AUTO OPTIMIZE" apps/dr-moagi-geometry/index.html
           grep -q "PROVISIONAL ≠ AUTHORITATIVE" apps/dr-moagi-geometry/index.html
+      - name: Smoke-check cognitive control-plane entrypoint
+        run: |
+          grep -q "DM-vΩΞ⁺ COGNITIVE CONTROL PLANE" apps/dr-moagi-cognitive/index.html
+          grep -q "PROVISIONAL ≠ AUTHORITATIVE" apps/dr-moagi-cognitive/index.html
+          grep -q "Q16.48 FIXED-POINT REGISTER STACK" apps/dr-moagi-cognitive/index.html
+          grep -q "/v1/firmware/boot" apps/dr-moagi-cognitive/index.html
 
   deploy:
     if: github.event_name != 'pull_request'
@@ -75,10 +85,11 @@ jobs:
       - name: Assemble shared static site
         run: |
           rm -rf dist
-          mkdir -p dist/permeation-transport dist/dr-moagi-geometry
+          mkdir -p dist/permeation-transport dist/dr-moagi-geometry dist/dr-moagi-cognitive
           cp -a apps/dmvx-matrix/. dist/
           cp -a apps/permeation-transport/. dist/permeation-transport/
           cp -a apps/dr-moagi-geometry/. dist/dr-moagi-geometry/
+          cp -a apps/dr-moagi-cognitive/. dist/dr-moagi-cognitive/
       - name: Upload static runtimes
         id: upload
         continue-on-error: true
@@ -117,6 +128,7 @@ jobs:
                 `- root runtime: ${pageUrl}`,
                 `- permeation transport: ${pageUrl.replace(/\/$/, '')}/permeation-transport/`,
                 `- Dr Moagi geometry optimizer: ${pageUrl.replace(/\/$/, '')}/dr-moagi-geometry/`,
+                `- Dr Moagi cognitive control plane: ${pageUrl.replace(/\/$/, '')}/dr-moagi-cognitive/`,
                 `- deployed commit: \`${context.sha}\``,
                 `- invariant test job: ${process.env.TEST_RESULT}`,
                 `- Pages deployment job: ${process.env.DEPLOY_RESULT}`,

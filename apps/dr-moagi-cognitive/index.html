@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dr Moagi Inward Recursive Cognitive Control Plane</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02040a;color:#e5e7eb;font-family:Monaco,Consolas,"Courier New",monospace}*{box-sizing:border-box}button,input,textarea{font:inherit}.hud{background:rgba(8,12,24,.92);backdrop-filter:blur(14px);border:1px solid rgba(6,182,212,.3);box-shadow:0 0 25px rgba(6,182,212,.12),inset 0 0 15px rgba(168,85,247,.08)}.tab-active{border-bottom:2px solid #06b6d4;color:#67e8f9;background:rgba(6,182,212,.09);font-weight:700}.tab-inactive{color:#9ca3af;border-bottom:2px solid transparent}.tab-inactive:hover{color:#e5e7eb;background:rgba(255,255,255,.03)}::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#030712}::-webkit-scrollbar-thumb{background:#06b6d4;border-radius:2px}.mono-card{background:rgba(17,24,39,.78);border:1px solid #1f2937;border-radius:.5rem}.ok{color:#4ade80}.hold{color:#fbbf24}.bad{color:#fb7185}
+  </style>
+</head>
+<body class="flex h-screen w-screen overflow-hidden bg-gray-950">
+  <aside id="ide-container" class="w-full lg:w-[500px] xl:w-[580px] h-full flex flex-col z-20 border-r border-cyan-500/30 bg-gray-950/95 backdrop-blur-md transition-all duration-300">
+    <div class="p-3 border-b border-cyan-500/30 flex justify-between items-center bg-gray-900/90">
+      <div class="flex items-center gap-2"><span id="runtime-dot" class="h-3 w-3 rounded-full bg-cyan-400 animate-pulse"></span><div><h1 class="text-xs font-bold text-cyan-300 tracking-wider">DM-vΩΞ⁺ COGNITIVE CONTROL PLANE</h1><p class="text-[9px] text-gray-500 mt-0.5">Measured state recursion · bounded parameter compilation · optional verified firmware binding</p></div></div>
+      <div class="flex items-center gap-2"><span id="voice-indicator" class="text-[10px] text-gray-500">TTS: IDLE</span><button id="collapse-btn" class="text-gray-400 hover:text-white text-xs px-2 py-1 rounded border border-gray-700">◀ Collapse</button></div>
+    </div>
+    <nav class="flex border-b border-cyan-500/20 bg-gray-900/50 text-xs">
+      <button id="tab-chat-btn" class="flex-1 py-2 text-center tab-active transition">💬 Command</button>
+      <button id="tab-code-btn" class="flex-1 py-2 text-center tab-inactive transition">⚡ Parameter IDE</button>
+      <button id="tab-registers-btn" class="flex-1 py-2 text-center tab-inactive transition">📊 Registers</button>
+    </nav>
+
+    <section id="tab-chat" class="flex-1 flex flex-col p-3 gap-3 overflow-hidden">
+      <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-1 text-xs"></div>
+      <div class="flex items-center justify-between px-2 py-1 mono-card text-[11px]"><label class="flex items-center gap-2 cursor-pointer text-gray-300"><input type="checkbox" id="tts-toggle" class="accent-cyan-400"><span>Browser speech synthesis</span></label><span class="text-[9px] text-gray-500">No client API key is embedded</span></div>
+      <div class="flex gap-2 pt-1 border-t border-gray-800"><input id="chat-input" type="text" autocomplete="off" placeholder="inward · outward · coupling 1.8 · beta 1.1 · /status · /verify · /boot · /run 4" class="flex-1 bg-gray-900 border border-cyan-500/40 rounded px-3 py-2 text-xs text-cyan-200 focus:outline-none focus:border-cyan-400"><button id="send-btn" class="bg-cyan-600 hover:bg-cyan-500 text-black font-bold px-4 py-2 rounded text-xs transition">TRANSMIT</button></div>
+      <div class="flex justify-between text-[9px] text-gray-500"><span>ENTER transmits · state changes pass the local gate first</span><span>Reality gap ΔΨ: <b id="chat-residual" class="text-amber-300">0.000000</b></span></div>
+    </section>
+
+    <section id="tab-code" class="flex-1 flex-col p-3 gap-2 hidden overflow-hidden">
+      <div class="flex justify-between items-center text-xs"><span class="text-gray-400">Bounded patch: <span class="text-cyan-400">control.params</span></span><button id="compile-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded text-[11px]">▶ VALIDATE / COMMIT</button></div>
+      <textarea id="code-editor" class="flex-1 bg-gray-950 border border-purple-500/30 rounded p-3 text-xs text-purple-200 focus:outline-none focus:border-purple-400 resize-none leading-relaxed" spellcheck="false"># Only these assignments are executable by this browser control plane.
+mode = INWARD
+coupling = 1.45
+beta = 1.075
+density = 24.2
+</textarea>
+      <div class="text-[9px] text-gray-500">This is intentionally not arbitrary Python/JavaScript execution. Unsupported identifiers are rejected.</div>
+      <div id="compiler-output" class="h-32 bg-gray-900 border border-gray-800 rounded p-2 text-[10px] text-cyan-400/90 overflow-y-auto"><div>[IDE] Bounded parameter compiler initialized.</div></div>
+    </section>
+
+    <section id="tab-registers" class="flex-1 p-3 space-y-3 hidden overflow-y-auto">
+      <div class="text-xs font-bold text-cyan-300 border-b border-cyan-500/30 pb-1">Q16.48 FIXED-POINT REGISTER STACK</div>
+      <div class="space-y-2 text-[11px]">
+        <div class="mono-card p-2 flex justify-between gap-2"><span class="text-gray-400">REG_PHI [field coupling]</span><span id="reg-phi" class="text-cyan-400">—</span></div>
+        <div class="mono-card p-2 flex justify-between gap-2"><span class="text-gray-400">REG_K1 [beta shift]</span><span id="reg-k1" class="text-purple-400">—</span></div>
+        <div class="mono-card p-2 flex justify-between gap-2"><span class="text-gray-400">REG_D0 [density]</span><span id="reg-density" class="text-amber-400">—</span></div>
+        <div class="mono-card p-2 flex justify-between gap-2"><span class="text-gray-400">FIELD_STATE</span><span id="reg-state" class="text-emerald-400">—</span></div>
+        <div class="mono-card p-2 flex justify-between gap-2"><span class="text-gray-400">PI_LOCAL</span><span id="reg-gate" class="text-emerald-400">ACCEPT</span></div>
+      </div>
+      <div class="text-xs font-bold text-purple-300 border-b border-purple-500/30 pb-1 pt-2">VERIFIED FIRMWARE BINDING</div>
+      <div class="space-y-2"><input id="backend-url" placeholder="Firmware API base URL, e.g. http://localhost:8000" class="w-full bg-gray-900 border border-purple-500/40 rounded px-3 py-2 text-[10px] text-purple-200 focus:outline-none"><div class="flex gap-2"><button id="connect-btn" class="flex-1 bg-purple-700 hover:bg-purple-600 rounded px-2 py-1.5 text-[10px] font-bold">CONNECT</button><button id="disconnect-btn" class="flex-1 bg-gray-800 hover:bg-gray-700 rounded px-2 py-1.5 text-[10px]">DISCONNECT</button></div><div class="mono-card p-2 text-[10px] text-gray-400">Backend: <span id="backend-state" class="text-amber-300">LOCAL ONLY</span></div></div>
+      <div class="text-xs font-bold text-amber-300 border-b border-amber-500/30 pb-1 pt-2">SEMANTIC / NUMERICAL CONSTANTS</div>
+      <div class="text-[10px] text-gray-400 space-y-1"><div>• Fixed-point residual: <span class="text-cyan-400">ΔΨ = ||Ψₜ₊₁−Ψₜ||/(||Ψₜ||+ε)</span></div><div>• Semantic tolerance: <span class="text-cyan-400">ε = 1e-4 (UI target only)</span></div><div>• Invariant: <span class="text-pink-400">PROVISIONAL ≠ AUTHORITATIVE</span></div><div>• Field coupling is <span class="text-emerald-400">dimensionless visualization/control gain</span>, not a measured physical EM field.</div></div>
+    </section>
+  </aside>
+
+  <main class="flex-1 h-full relative min-w-0">
+    <div id="canvas-container" class="w-full h-full"></div>
+    <button id="expand-btn" class="hidden absolute top-4 left-4 z-30 bg-gray-900/90 border border-cyan-500/40 text-cyan-300 p-2 rounded-lg text-xs font-bold shadow-lg hover:bg-gray-800">▶ Open Control Plane</button>
+    <div class="absolute top-4 right-4 z-10 hud p-3.5 rounded-xl w-[270px] space-y-2 text-xs pointer-events-auto">
+      <div class="flex justify-between items-center border-b border-cyan-500/30 pb-1"><span class="font-bold text-cyan-300 tracking-wider">3D STATE HUD</span><span id="fps-counter" class="text-[9px] text-emerald-400">— FPS</span></div>
+      <div class="flex justify-between text-[11px]"><span class="text-gray-400">Mode</span><span id="hud-mode" class="text-cyan-400 font-bold">INWARD</span></div>
+      <div class="flex justify-between text-[11px]"><span class="text-gray-400">Field coupling</span><span id="hud-coupling" class="text-purple-400 font-bold">1.45</span></div>
+      <div class="flex justify-between text-[11px]"><span class="text-gray-400">β shift</span><span id="hud-beta" class="text-amber-400 font-bold">1.075</span></div>
+      <div class="flex justify-between text-[11px]"><span class="text-gray-400">Saturation ratio</span><span id="hud-sat" class="text-emerald-400 font-bold">24.2%</span></div>
+      <div class="flex justify-between text-[11px]"><span class="text-gray-400">Fixed-point ΔΨ</span><span id="hud-residual" class="text-cyan-300 font-bold">0.000000</span></div>
+      <div class="flex justify-between text-[11px]"><span class="text-gray-400">Ω residual memory</span><span id="hud-omega" class="text-pink-300 font-bold">0.000000</span></div>
+      <div class="flex justify-between text-[11px]"><span class="text-gray-400">Promotion gate</span><span id="hud-gate" class="text-emerald-400 font-bold">ACCEPT</span></div>
+      <div class="pt-1 border-t border-gray-800 text-[9px] text-gray-500">Ψ=current particle state · Φ=bounded transform · Λ=validation gate · Ω=EMA residual · Θ=control parameters</div>
+    </div>
+  </main>
+
+<script type="module">
+import {
+  DEFAULT_CONTROL_STATE,
+  compileParameterPatch,
+  describeControlState,
+  fieldPointFromOriginal,
+  formatQ16_48,
+  normalizedResidual,
+  parseFieldCommand,
+  saturationRatio,
+  updateResidualMemory,
+} from './core.mjs';
+
+const $ = id => document.getElementById(id);
+let controlState = {...DEFAULT_CONTROL_STATE};
+let localGate = 'ACCEPT';
+let omegaMemory = 0;
+let fixedResidual = 0;
+let backendBase = localStorage.getItem('dmFirmwareBase') || '';
+let collapsed = false;
+let scene, camera, renderer, controls, toroidalParticles, singularityCore, ringField, jets;
+let originals, positions, jetPositions;
+let previousSample = null;
+let frameCounter = 0;
+let fpsWindowStart = performance.now();
+const PARTICLE_COUNT = matchMedia('(max-width: 800px)').matches ? 12000 : 24000;
+const JET_COUNT = 1400;
+
+function appendMessage(sender, text, cls='text-cyan-300') {
+  const box = document.createElement('div');
+  box.className = 'mono-card p-2.5 space-y-1';
+  const head = document.createElement('div');
+  head.className = `flex justify-between text-[10px] ${cls} font-bold border-b border-gray-800 pb-1`;
+  const who = document.createElement('span'); who.textContent = sender;
+  const when = document.createElement('span'); when.textContent = new Date().toLocaleTimeString();
+  head.append(who, when);
+  const p = document.createElement('p'); p.className = 'text-gray-300 leading-relaxed whitespace-pre-wrap'; p.textContent = text;
+  box.append(head, p); $('chat-messages').append(box); $('chat-messages').scrollTop = $('chat-messages').scrollHeight;
+}
+
+function speak(text) {
+  if (!$('tts-toggle').checked || !('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(String(text).slice(0, 700));
+  utterance.rate = 1.02;
+  utterance.onstart = () => $('voice-indicator').textContent = 'TTS: SPEAKING';
+  utterance.onend = () => $('voice-indicator').textContent = 'TTS: IDLE';
+  utterance.onerror = () => $('voice-indicator').textContent = 'TTS: ERROR';
+  speechSynthesis.speak(utterance);
+}
+
+function applyCandidate(candidate, reason) {
+  try {
+    const before = JSON.stringify(controlState);
+    controlState = {...candidate};
+    localGate = 'ACCEPT';
+    updateHUD();
+    const changed = before !== JSON.stringify(controlState);
+    return changed ? `PI_LOCAL ACCEPT · ${reason}` : `PI_LOCAL HOLD · no state change`;
+  } catch (error) {
+    localGate = 'HOLD';
+    updateHUD();
+    throw error;
+  }
+}
+
+async function firmwareRequest(path, method='GET', body=null) {
+  if (!backendBase) throw new Error('No firmware API is connected. Use /connect URL or the Registers tab.');
+  const options = {method, headers:{'Content-Type':'application/json'}};
+  if (body !== null) options.body = JSON.stringify(body);
+  const response = await fetch(`${backendBase.replace(/\/$/,'')}${path}`, options);
+  let data = null;
+  try { data = await response.json(); } catch { data = {status: response.status}; }
+  if (!response.ok) throw new Error(data?.detail || `firmware API HTTP ${response.status}`);
+  return data;
+}
+
+async function executeCommand(query) {
+  const trimmed = query.trim();
+  if (!trimmed) return '';
+  if (/^\/connect\s+/i.test(trimmed)) {
+    const value = trimmed.replace(/^\/connect\s+/i,'').trim().replace(/\/$/,'');
+    if (!/^https?:\/\//i.test(value)) throw new Error('connection URL must start with http:// or https://');
+    backendBase = value; localStorage.setItem('dmFirmwareBase', value); $('backend-url').value = value;
+    await refreshBackendStatus();
+    return `Firmware endpoint configured: ${value}`;
+  }
+  if (/^\/disconnect$/i.test(trimmed)) { backendBase=''; localStorage.removeItem('dmFirmwareBase'); $('backend-url').value=''; updateBackendLabel('LOCAL ONLY','text-amber-300'); return 'Firmware endpoint disconnected; local bounded control remains active.'; }
+  if (/^\/status$/i.test(trimmed)) {
+    if (!backendBase) return `LOCAL status · mode=${controlState.inversionMode} coupling=${controlState.fieldCoupling.toFixed(3)} beta=${controlState.betaShift.toFixed(3)} ΔΨ=${fixedResidual.toExponential(3)} Ω=${omegaMemory.toExponential(3)}`;
+    return JSON.stringify(await firmwareRequest('/v1/firmware/status'), null, 2);
+  }
+  if (/^\/verify$/i.test(trimmed)) return JSON.stringify(await firmwareRequest('/v1/firmware/verify','POST'), null, 2);
+  if (/^\/boot$/i.test(trimmed)) return JSON.stringify(await firmwareRequest('/v1/firmware/boot','POST'), null, 2);
+  const runMatch = trimmed.match(/^\/run(?:\s+(\d+))?$/i);
+  if (runMatch) return JSON.stringify(await firmwareRequest('/v1/firmware/run','POST',{cycles:Number(runMatch[1] || 1)}), null, 2);
+
+  const parsed = parseFieldCommand(trimmed, controlState);
+  if (!parsed.changed) return 'No bounded state mutation recognized. Try: inward, outward, coupling 1.8, beta 1.1, density 30, /status, /verify, /boot, /run 4.';
+  return applyCandidate(parsed.candidate, parsed.changes.join(', '));
+}
+
+async function sendChat() {
+  const input = $('chat-input'); const query = input.value.trim(); if (!query) return;
+  appendMessage('USER', query, 'text-cyan-300'); input.value=''; $('send-btn').disabled=true; $('send-btn').textContent='PROCESSING…';
+  try { const reply = await executeCommand(query); appendMessage('CONTROL PLANE', reply, 'text-purple-400'); speak(reply); }
+  catch (error) { localGate='HOLD'; updateHUD(); appendMessage('GATE / API ERROR', error.message, 'text-red-400'); }
+  finally { $('send-btn').disabled=false; $('send-btn').textContent='TRANSMIT'; }
+}
+
+function compilePatch() {
+  const output = $('compiler-output');
+  const line = (text, cls='') => { const d=document.createElement('div'); d.className=cls; d.textContent=`[${new Date().toLocaleTimeString()}] ${text}`; output.append(d); output.scrollTop=output.scrollHeight; };
+  line('Validating bounded parameter patch…');
+  try { const report=compileParameterPatch($('code-editor').value, controlState); line(`candidate: ${report.assignments.join(', ')}`); line(applyCandidate(report.candidate,'bounded IDE patch'),'ok'); }
+  catch (error) { localGate='HOLD'; updateHUD(); line(`REJECT: ${error.message}`,'bad'); }
+}
+
+function switchTab(name) {
+  for (const tab of ['chat','code','registers']) { $(`tab-${tab}`).classList.add('hidden'); $(`tab-${tab}`).classList.remove('flex'); $(`tab-${tab}-btn`).className='flex-1 py-2 text-center tab-inactive transition'; }
+  $(`tab-${name}`).classList.remove('hidden'); if (name !== 'registers') $(`tab-${name}`).classList.add('flex'); $(`tab-${name}-btn`).className='flex-1 py-2 text-center tab-active transition';
+}
+
+function updateHUD() {
+  const t = describeControlState(controlState, fixedResidual, omegaMemory);
+  $('hud-mode').textContent=t.mode; $('hud-coupling').textContent=t.fieldCoupling.toFixed(3); $('hud-beta').textContent=t.betaShift.toFixed(3); $('hud-sat').textContent=(t.saturation*100).toFixed(1)+'%'; $('hud-residual').textContent=t.residual.toExponential(3); $('hud-omega').textContent=t.omegaMemory.toExponential(3); $('hud-gate').textContent=localGate; $('hud-gate').className=localGate==='ACCEPT'?'text-emerald-400 font-bold':'text-amber-300 font-bold'; $('chat-residual').textContent=t.residual.toExponential(3);
+  $('reg-phi').textContent=formatQ16_48(controlState.fieldCoupling); $('reg-k1').textContent=formatQ16_48(controlState.betaShift); $('reg-density').textContent=formatQ16_48(controlState.density); $('reg-state').textContent=controlState.inversionMode==='INWARD'?'Ψ → Φ · INWARD':'Ω → Θ · OUTWARD'; $('reg-gate').textContent=localGate;
+}
+
+function updateBackendLabel(text, cls) { $('backend-state').textContent=text; $('backend-state').className=cls; }
+async function refreshBackendStatus() {
+  if (!backendBase) { updateBackendLabel('LOCAL ONLY','text-amber-300'); return; }
+  updateBackendLabel('CHECKING…','text-cyan-300');
+  try { const response=await firmwareRequest('/healthz'); updateBackendLabel(response.booted?'CONNECTED · BOOTED':'CONNECTED · '+String(response.status || 'READY').toUpperCase(),'text-emerald-400'); }
+  catch (error) { updateBackendLabel('UNREACHABLE','text-red-400'); throw error; }
+}
+
+function seededRandomFactory(seed=0x4D4F4147) { let x=seed>>>0; return ()=>{ x ^= x<<13; x ^= x>>>17; x ^= x<<5; return (x>>>0)/4294967296; }; }
+function init3D() {
+  const container=$('canvas-container'); scene=new THREE.Scene(); scene.fog=new THREE.FogExp2(0x02040a,.012); camera=new THREE.PerspectiveCamera(60,1,.1,1000); camera.position.set(30,24,40); renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio||1,2)); renderer.setSize(container.clientWidth,container.clientHeight); renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.25; container.append(renderer.domElement); controls=new THREE.OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.dampingFactor=.04; controls.maxDistance=120; controls.minDistance=4; scene.add(new THREE.AmbientLight(0x1e1b4b,1.8)); const cyan=new THREE.PointLight(0x06b6d4,4,60); scene.add(cyan); const purple=new THREE.PointLight(0xa855f7,3,50); purple.position.set(0,20,0); scene.add(purple);
+  buildField(); addEventListener('resize',resize); resize();
+}
+function buildField() {
+  const rng=seededRandomFactory(); const geo=new THREE.BufferGeometry(); positions=new Float32Array(PARTICLE_COUNT*3); originals=new Float32Array(PARTICLE_COUNT*3); const colors=new Float32Array(PARTICLE_COUNT*3); const cyan=new THREE.Color(0x06b6d4), purple=new THREE.Color(0x9333ea); const R=18,r=8;
+  for(let i=0;i<PARTICLE_COUNT;i++){const u=rng()*Math.PI*2,v=rng()*Math.PI*2,noise=(rng()-.5)*2.5,x=(R+(r+noise)*Math.cos(v))*Math.cos(u),y=(r+noise)*Math.sin(v),z=(R+(r+noise)*Math.cos(v))*Math.sin(u),j=i*3; positions[j]=originals[j]=x;positions[j+1]=originals[j+1]=y;positions[j+2]=originals[j+2]=z;const c=cyan.clone().lerp(purple,Math.min(1,Math.hypot(x,y,z)/28));colors[j]=c.r;colors[j+1]=c.g;colors[j+2]=c.b}
+  geo.setAttribute('position',new THREE.BufferAttribute(positions,3)); geo.setAttribute('color',new THREE.BufferAttribute(colors,3)); toroidalParticles=new THREE.Points(geo,new THREE.PointsMaterial({size:.22,vertexColors:true,transparent:true,opacity:.84,blending:THREE.AdditiveBlending})); scene.add(toroidalParticles);
+  singularityCore=new THREE.Mesh(new THREE.IcosahedronGeometry(2.2,4),new THREE.MeshStandardMaterial({color:0xec4899,wireframe:true,emissive:0x06b6d4,emissiveIntensity:1.1})); scene.add(singularityCore); ringField=new THREE.Mesh(new THREE.TorusGeometry(12,.35,12,96),new THREE.MeshStandardMaterial({color:0xa855f7,wireframe:true,emissive:0xa855f7})); ringField.rotation.x=Math.PI/2; scene.add(ringField);
+  const jetGeo=new THREE.BufferGeometry(); jetPositions=new Float32Array(JET_COUNT*3); const jetColors=new Float32Array(JET_COUNT*3); for(let i=0;i<JET_COUNT;i++){const dir=i%2?1:-1,h=rng()*25*dir,spread=Math.abs(h)/25*6+.2,a=rng()*Math.PI*2,j=i*3;jetPositions[j]=Math.cos(a)*spread;jetPositions[j+1]=h;jetPositions[j+2]=Math.sin(a)*spread;jetColors[j]=.96;jetColors[j+1]=.62;jetColors[j+2]=.07} jetGeo.setAttribute('position',new THREE.BufferAttribute(jetPositions,3));jetGeo.setAttribute('color',new THREE.BufferAttribute(jetColors,3));jets=new THREE.Points(jetGeo,new THREE.PointsMaterial({size:.2,vertexColors:true,transparent:true,opacity:.72,blending:THREE.AdditiveBlending}));scene.add(jets);
+}
+function samplePositions() { const count=256, out=new Float64Array(count*3), stride=Math.max(1,Math.floor(PARTICLE_COUNT/count)); for(let n=0;n<count;n++){const i=Math.min(PARTICLE_COUNT-1,n*stride),j=i*3,k=n*3;out[k]=positions[j];out[k+1]=positions[j+1];out[k+2]=positions[j+2]} return out; }
+function updateField(time) {
+  for(let i=0;i<PARTICLE_COUNT;i++){const j=i*3,p=fieldPointFromOriginal(originals[j],originals[j+1],originals[j+2],time,controlState);positions[j]=p[0];positions[j+1]=p[1];positions[j+2]=p[2]} toroidalParticles.geometry.attributes.position.needsUpdate=true; toroidalParticles.rotation.y=time*.08*controlState.fieldCoupling;
+  const ratio=saturationRatio(controlState); singularityCore.rotation.x=time*.4;singularityCore.rotation.y=time*.6;const scale=1+ratio*1.35;singularityCore.scale.setScalar(scale);ringField.rotation.z=-time*1.1*controlState.fieldCoupling;
+  for(let i=0;i<JET_COUNT;i++){const j=i*3,dir=jetPositions[j+1]>=0?1:-1,speed=.35*controlState.fieldCoupling;if(controlState.inversionMode==='INWARD'){jetPositions[j+1]-=jetPositions[j+1]*.025*speed;if(Math.abs(jetPositions[j+1])<.7)jetPositions[j+1]=(i%2?1:-1)*25}else{jetPositions[j+1]+=(.3+Math.abs(jetPositions[j+1])*.025)*speed*dir;if(Math.abs(jetPositions[j+1])>28)jetPositions[j+1]=(i%2?1:-1)*.6}} jets.geometry.attributes.position.needsUpdate=true;
+  const current=samplePositions(); fixedResidual=previousSample?normalizedResidual(previousSample,current):0; previousSample=current; omegaMemory=updateResidualMemory(omegaMemory,fixedResidual,.92); updateHUD();
+}
+function resize(){const c=$('canvas-container');camera.aspect=c.clientWidth/c.clientHeight;camera.updateProjectionMatrix();renderer.setSize(c.clientWidth,c.clientHeight)}
+function frame(now){const t=now/1000;updateField(t);controls.update();renderer.render(scene,camera);frameCounter++;if(now-fpsWindowStart>=500){$('fps-counter').textContent=(frameCounter*1000/(now-fpsWindowStart)).toFixed(1)+' FPS';frameCounter=0;fpsWindowStart=now}requestAnimationFrame(frame)}
+
+$('tab-chat-btn').onclick=()=>switchTab('chat'); $('tab-code-btn').onclick=()=>switchTab('code'); $('tab-registers-btn').onclick=()=>switchTab('registers'); $('send-btn').onclick=sendChat; $('chat-input').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sendChat()}}; $('compile-btn').onclick=compilePatch; $('code-editor').onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();compilePatch()}};
+$('collapse-btn').onclick=$('expand-btn').onclick=()=>{collapsed=!collapsed;$('ide-container').style.marginLeft=collapsed?`-${$('ide-container').offsetWidth}px`:'0px';$('expand-btn').classList.toggle('hidden',!collapsed);setTimeout(resize,320)};
+$('connect-btn').onclick=async()=>{const value=$('backend-url').value.trim().replace(/\/$/,'');if(!/^https?:\/\//i.test(value)){updateBackendLabel('INVALID URL','text-red-400');return}backendBase=value;localStorage.setItem('dmFirmwareBase',value);try{await refreshBackendStatus();appendMessage('SYSTEM',`Firmware endpoint connected: ${value}`,'text-emerald-400')}catch(error){appendMessage('SYSTEM',error.message,'text-red-400')}};
+$('disconnect-btn').onclick=()=>{backendBase='';localStorage.removeItem('dmFirmwareBase');$('backend-url').value='';updateBackendLabel('LOCAL ONLY','text-amber-300')};
+
+$('backend-url').value=backendBase; init3D(); updateHUD(); appendMessage('CONTROL PLANE','Initialized with measured local state recursion. Commands mutate only bounded parameters. Configure a firmware API to enable /verify, /boot, and /run.','text-emerald-400'); if(backendBase) refreshBackendStatus().catch(()=>{}); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
