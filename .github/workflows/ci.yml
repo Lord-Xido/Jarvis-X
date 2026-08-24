@@ -45,25 +45,35 @@ jobs:
         run: >-
           black --check --diff
           setup.py
+          examples/unified_autoencoding_reference.py
           src/jarvisx/core.py
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
           src/jarvisx/fractional_smoothing_3d.py
+          src/jarvisx/uea_model.py
+          src/jarvisx/uea_dynamics.py
+          src/jarvisx/unified_autoencoding.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
+          tests/test_unified_autoencoding.py
 
       - name: Check canonical import order
         run: >-
           isort --check-only --diff
           setup.py
+          examples/unified_autoencoding_reference.py
           src/jarvisx/core.py
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
           src/jarvisx/fractional_smoothing_3d.py
+          src/jarvisx/uea_model.py
+          src/jarvisx/uea_dynamics.py
+          src/jarvisx/unified_autoencoding.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
+          tests/test_unified_autoencoding.py
 
       - name: Type-check package
         run: mypy src/jarvisx --ignore-missing-imports
