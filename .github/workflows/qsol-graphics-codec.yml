@@ -1,0 +1,32 @@
+name: qsol-graphics-codec
+
+on:
+  push:
+    paths:
+      - 'apps/qsol-graphics-codec/**'
+      - '.github/workflows/qsol-graphics-codec.yml'
+  pull_request:
+    paths:
+      - 'apps/qsol-graphics-codec/**'
+      - '.github/workflows/qsol-graphics-codec.yml'
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build
+        run: dotnet build apps/qsol-graphics-codec/QSol.GraphicsCodec.csproj -c Release
+      - name: Round-trip self-test
+        run: dotnet run --project apps/qsol-graphics-codec/QSol.GraphicsCodec.csproj -c Release --no-build -- --self-test
+      - name: Generate smoke-test frames
+        run: dotnet run --project apps/qsol-graphics-codec/QSol.GraphicsCodec.csproj -c Release --no-build -- --frames 3 --target-error 0.0025 --output artifacts/qsol-graphics-codec
+      - name: Upload smoke-test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qsol-graphics-codec-smoke
+          path: artifacts/qsol-graphics-codec
