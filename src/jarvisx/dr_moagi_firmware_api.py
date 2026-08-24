@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import cast
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .dr_moagi_firmware import FirmwareBootSession, FirmwareImage
@@ -16,6 +17,20 @@ app = FastAPI(
     version="1.0.0",
     description="Verified boot and bounded autonomic execution for 1 GiB firmware containers.",
 )
+
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv("JARVISX_FIRMWARE_CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
 
 
 class RunRequest(BaseModel):
