@@ -90,6 +90,8 @@ internal static class Program
             Console.WriteLine(FormattableString.Invariant($"bits={candidate.Bits} encoded={candidate.EncodedBytes}B raw={candidate.RawBytes}B error={candidate.MaxVertexError:G6} meets={candidate.MeetsTolerance}"));
         }
         Console.WriteLine(FormattableString.Invariant($"selected={result.Encoded.QuantizationBits} bits maxError={result.MaxVertexError:G6}"));
+
+        Dmkb1.DmkbSelfTest.Run();
         return 0;
     }
 
