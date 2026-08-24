@@ -76,9 +76,16 @@ When connected, these commands proxy to the existing firmware service:
 
 No Gemini/OpenAI/API credential is embedded in the static page. Voice output uses the browser `speechSynthesis` API when enabled.
 
-### Cross-origin note
+### Cross-origin firmware binding
 
-A hosted static page can call a firmware API only when that API is reachable over a browser-compatible origin and explicitly allows the page's origin. The control plane does not bypass CORS, TLS, or verified-boot requirements.
+The firmware API remains same-origin by default. To permit a separately hosted cognitive control plane, explicitly configure a comma-separated allowlist before starting the firmware service:
+
+```bash
+export JARVISX_FIRMWARE_CORS_ORIGINS="https://lord-xido.github.io,http://localhost:8080"
+jarvisx-dr-moagi-firmware serve ...
+```
+
+Only `GET` and `POST` with `Content-Type` are allowed by the opt-in CORS middleware, and credentials are not enabled. A hosted static page must still use a browser-compatible HTTPS endpoint where required; the control plane does not bypass CORS, TLS, signatures, encryption keys, or verified-boot requirements.
 
 ## Tests
 
