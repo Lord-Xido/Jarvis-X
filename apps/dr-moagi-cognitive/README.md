@@ -1,54 +1,41 @@
-# Dr Moagi Cognitive Control Plane
+# Dr Moagi DM-vΩΞ⁺ 3D Cognitive Web Application
 
-This browser runtime turns the supplied DM-vΩΞ⁺ HTML concept into a bounded control plane that separates visual metaphor from measured runtime state.
+This app is the production-oriented browser control plane for the Dr Moagi stack. It deliberately separates 3D visualization, measured browser telemetry, local bounded control state, and verified firmware execution.
 
-## Operational mapping
+## Runtime model
 
 ```text
-Ψ = current particle state sampled from the 3D field
-Φ = bounded inward/outward field transform
-Λ = validation / promotion gate
+Ψ = sampled current 3D state
+Φ = deterministic inward/outward transform
+Λ = local validation/promotion gate
 Ω = exponentially weighted fixed-point residual memory
-Θ = control parameters (mode, field coupling, beta shift, density)
+Θ = bounded control parameters
 ```
 
-The local state invariant is:
+The local invariant remains:
 
 ```text
 PROVISIONAL != AUTHORITATIVE
 ```
 
-A chat command or IDE patch is parsed into a candidate configuration, validated against explicit bounds, and only then promoted.
+## What makes this a web application rather than a demo
 
-## Measured telemetry
+- deterministic Three.js state field with point inspection and nested Ψ/Φ/Λ/Ω/Θ visual layers;
+- measured rolling FPS, normalized state residual and Ω residual-memory telemetry;
+- adaptive renderer with LOW/MEDIUM/HIGH profiles and AUTO hysteresis;
+- signed Q16.48 display of authoritative control values;
+- bounded command surface and fail-closed parameter compiler;
+- persistent browser session state and command history;
+- validated session import/export and PNG scene snapshots;
+- browser-local SHA-256 journal for session-level traceability;
+- explicit backend connection state with health polling and request timeouts;
+- firmware `/healthz`, `/status`, `/manifest`, `/verify`, `/boot`, `/run` commands;
+- installable PWA shell with a service worker and offline reuse of previously cached static/vendor assets;
+- responsive desktop/mobile control-plane layout.
 
-The HUD reports:
+The browser-local journal is not a replacement for the externally anchored firmware trace ledger. The browser does not receive signing/encryption keys and cannot bypass verified boot.
 
-- actual browser FPS over a rolling measurement window;
-- normalized state residual `ΔΨ = ||Ψ(t+1)-Ψ(t)|| / (||Ψ(t)|| + ε)` from sampled particle positions;
-- an `Ω`-style exponentially weighted residual memory;
-- explicit Q16.48 register encodings;
-- a dimensionless saturation ratio;
-- local promotion-gate status.
-
-The field-coupling value is a dimensionless visualization/control gain. It is **not** reported in TV/m or any other physical EM unit because the browser is not measuring an electromagnetic field.
-
-## Bounded parameter IDE
-
-The IDE intentionally does not execute arbitrary Python or JavaScript. It accepts only:
-
-```text
-mode = INWARD | OUTWARD
-coupling = 0..4
-beta = 0.5..2
-density = 0..100
-```
-
-Unsupported identifiers and out-of-range values fail closed.
-
-## Command surface
-
-Local commands include:
+## Local command surface
 
 ```text
 inward
@@ -57,40 +44,62 @@ coupling 1.8
 beta 1.1
 density 30
 /status
+/pause
+/resume
+/reset
+/snapshot
+/export
 ```
 
-An optional verified-firmware API can be configured in the Registers tab or with:
+Firmware commands after an explicit connection:
 
 ```text
 /connect https://firmware-api.example
-```
-
-When connected, these commands proxy to the existing firmware service:
-
-```text
+/health
+/manifest
 /verify
 /boot
 /run 4
-/status
+/disconnect
 ```
 
-No Gemini/OpenAI/API credential is embedded in the static page. Voice output uses the browser `speechSynthesis` API when enabled.
+## Bounded parameter IDE
 
-### Cross-origin firmware binding
+Only these assignments are executable:
 
-The firmware API remains same-origin by default. To permit a separately hosted cognitive control plane, explicitly configure a comma-separated allowlist before starting the firmware service:
+```text
+mode = INWARD | OUTWARD
+coupling = 0..4
+beta = 0.5..2
+density = 0..100
+```
+
+Arbitrary JavaScript/Python and unsupported identifiers are rejected.
+
+## Firmware browser access
+
+The firmware service remains closed to cross-origin browser access by default. To authorize a deployed web origin, configure the server-side allowlist:
 
 ```bash
-export JARVISX_FIRMWARE_CORS_ORIGINS="https://lord-xido.github.io,http://localhost:8080"
-jarvisx-dr-moagi-firmware serve ...
+export JARVISX_FIRMWARE_CORS_ORIGINS="https://<owner>.github.io"
 ```
 
-Only `GET` and `POST` with `Content-Type` are allowed by the opt-in CORS middleware, and credentials are not enabled. A hosted static page must still use a browser-compatible HTTPS endpoint where required; the control plane does not bypass CORS, TLS, signatures, encryption keys, or verified-boot requirements.
+Use the exact trusted origin in production. Credentials remain disabled in the CORS middleware and signing/encryption keys stay server-side.
 
-## Tests
+## Test
 
 ```bash
 node --test apps/dr-moagi-cognitive/test_core.mjs
 ```
 
-The tests cover Q16.48 conversion, command parsing, bounded patch compilation, residual measurement, residual memory, deterministic field transforms, and dimensionless saturation semantics.
+The test suite covers fixed-point/Q16.48 math, bounded parsing/compilation, deterministic transforms, residual memory, backend URL validation, adaptive quality decisions, convergence logic, bounded history and versioned session snapshots.
+
+## Static deployment
+
+The shared `Jarvis-X Runtime Pages` workflow publishes this app under:
+
+```text
+/dr-moagi-cognitive/
+```
+
+The Pages gate validates the numerical core and smoke-checks the browser module, PWA manifest and service worker before deployment.

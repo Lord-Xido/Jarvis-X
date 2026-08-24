@@ -1,3 +1,4 @@
+export const APP_SCHEMA_VERSION = 2;
 export const Q16_48_SCALE = 1n << 48n;
 export const Q16_48_MIN = -32768;
 export const Q16_48_MAX = 32768 - 2 ** -48;
@@ -15,6 +16,12 @@ export const CONTROL_BOUNDS = Object.freeze({
   betaShift: [0.5, 2],
   density: [0, 100],
 });
+
+export const QUALITY_PROFILES = Object.freeze([
+  Object.freeze({name: 'LOW', particles: 8000, jets: 400, pixelRatio: 1}),
+  Object.freeze({name: 'MEDIUM', particles: 18000, jets: 900, pixelRatio: 1.5}),
+  Object.freeze({name: 'HIGH', particles: 32000, jets: 1600, pixelRatio: 2}),
+]);
 
 const KEY_ALIASES = Object.freeze({
   mode: 'inversionMode',
@@ -56,13 +63,7 @@ export function normalizeControlState(input = {}) {
   if (coupling < cLo || coupling > cHi) throw new RangeError(`fieldCoupling must be in [${cLo}, ${cHi}]`);
   if (beta < bLo || beta > bHi) throw new RangeError(`betaShift must be in [${bLo}, ${bHi}]`);
   if (density < dLo || density > dHi) throw new RangeError(`density must be in [${dLo}, ${dHi}]`);
-  return {
-    inversionMode: mode,
-    fieldCoupling: coupling,
-    betaShift: beta,
-    density,
-    densityLimit,
-  };
+  return {inversionMode: mode, fieldCoupling: coupling, betaShift: beta, density, densityLimit};
 }
 
 function captureNumber(command, patterns) {
@@ -111,13 +112,7 @@ export function parseFieldCommand(command, incumbent = DEFAULT_CONTROL_STATE) {
     changes.push(`density=${density}`);
   }
 
-  return {
-    command: text,
-    lower,
-    changes,
-    candidate: normalizeControlState(candidate),
-    changed: changes.length > 0,
-  };
+  return {command: text, lower, changes, candidate: normalizeControlState(candidate), changed: changes.length > 0};
 }
 
 export function compileParameterPatch(source, incumbent = DEFAULT_CONTROL_STATE) {
@@ -134,11 +129,8 @@ export function compileParameterPatch(source, incumbent = DEFAULT_CONTROL_STATE)
     const key = KEY_ALIASES[alias];
     if (!key) throw new SyntaxError(`line ${index + 1}: unsupported parameter ${match[1]}`);
     const raw = match[2].replace(/^['"]|['"]$/g, '').trim();
-    if (key === 'inversionMode') {
-      candidate.inversionMode = raw.toUpperCase();
-    } else {
-      candidate[key] = finiteNumber(raw, key);
-    }
+    if (key === 'inversionMode') candidate.inversionMode = raw.toUpperCase();
+    else candidate[key] = finiteNumber(raw, key);
     assignments.push(`${key}=${candidate[key]}`);
   }
 
@@ -193,9 +185,7 @@ export function saturationRatio(state) {
 export function fieldPointFromOriginal(x, y, z, timeSeconds, state) {
   const s = normalizeControlState(state);
   const ratio = saturationRatio(s);
-  const inwardScale = s.inversionMode === 'INWARD'
-    ? Math.max(0.1, 1 - ratio * 0.75)
-    : 1 + ratio * 0.5;
+  const inwardScale = s.inversionMode === 'INWARD' ? Math.max(0.1, 1 - ratio * 0.75) : 1 + ratio * 0.5;
   const radialScale = Math.pow(inwardScale, Math.max(0.1, s.betaShift));
   const baseAngle = Math.atan2(z, x);
   const angle = baseAngle + timeSeconds * s.fieldCoupling * 0.5;
@@ -204,15 +194,77 @@ export function fieldPointFromOriginal(x, y, z, timeSeconds, state) {
   return [Math.cos(angle) * radius, vertical, Math.sin(angle) * radius];
 }
 
-export function describeControlState(state, residual = 0, omegaMemory = 0) {
+export function describeControlState(state, residual = 0, omegaMemory = 0, gate = 'ACCEPT') {
   const s = normalizeControlState(state);
   return {
     mode: s.inversionMode,
     fieldCoupling: s.fieldCoupling,
     betaShift: s.betaShift,
+    density: s.density,
     saturation: saturationRatio(s),
     residual: Math.max(0, Number(residual) || 0),
     omegaMemory: Math.max(0, Number(omegaMemory) || 0),
-    gate: 'ACCEPT',
+    gate: String(gate),
   };
+}
+
+export function normalizeBackendBase(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+  let url;
+  try { url = new URL(text); } catch { throw new TypeError('backend URL must be an absolute http(s) URL'); }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new TypeError('backend URL must use http or https');
+  if (url.username || url.password) throw new TypeError('backend URL must not contain credentials');
+  url.hash = '';
+  url.search = '';
+  return url.toString().replace(/\/$/, '');
+}
+
+export function boundedPush(items, value, limit = 200) {
+  const max = Math.max(1, Math.floor(finiteNumber(limit, 'limit')));
+  const next = Array.isArray(items) ? items.slice() : [];
+  next.push(value);
+  if (next.length > max) next.splice(0, next.length - max);
+  return next;
+}
+
+export function adaptiveQualityDecision({fps, currentIndex = 1, lowThreshold = 42, highThreshold = 58}) {
+  const measured = finiteNumber(fps, 'fps');
+  const index = clamp(Math.floor(finiteNumber(currentIndex, 'currentIndex')), 0, QUALITY_PROFILES.length - 1);
+  if (measured < lowThreshold && index > 0) return index - 1;
+  if (measured > highThreshold && index < QUALITY_PROFILES.length - 1) return index + 1;
+  return index;
+}
+
+export function convergenceState(residual, omegaMemory, epsilon = 1e-4) {
+  const r = Math.max(0, finiteNumber(residual, 'residual'));
+  const o = Math.max(0, finiteNumber(omegaMemory, 'omegaMemory'));
+  const e = Math.max(0, finiteNumber(epsilon, 'epsilon'));
+  return {converged: r <= e && o <= e, residual: r, omegaMemory: o, epsilon: e};
+}
+
+export function makeSessionSnapshot(input = {}) {
+  const controlState = normalizeControlState(input.controlState ?? DEFAULT_CONTROL_STATE);
+  const qualityMode = String(input.qualityMode ?? 'AUTO').toUpperCase();
+  if (!['AUTO', 'LOW', 'MEDIUM', 'HIGH'].includes(qualityMode)) throw new RangeError('unsupported qualityMode');
+  const commandHistory = (Array.isArray(input.commandHistory) ? input.commandHistory : [])
+    .map(value => String(value).slice(0, 500))
+    .slice(-100);
+  return {
+    schemaVersion: APP_SCHEMA_VERSION,
+    createdAt: new Date(Number(input.createdAt) || Date.now()).toISOString(),
+    controlState,
+    backendBase: normalizeBackendBase(input.backendBase ?? ''),
+    qualityMode,
+    ttsEnabled: Boolean(input.ttsEnabled),
+    paused: Boolean(input.paused),
+    commandHistory,
+  };
+}
+
+export function parseSessionSnapshot(value) {
+  const source = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!source || typeof source !== 'object') throw new TypeError('session snapshot must be an object');
+  if (Number(source.schemaVersion) !== APP_SCHEMA_VERSION) throw new RangeError(`unsupported session schema ${source.schemaVersion}`);
+  return makeSessionSnapshot(source);
 }
