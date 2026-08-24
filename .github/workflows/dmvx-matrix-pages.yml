@@ -46,8 +46,13 @@ jobs:
         run: node --test apps/permeation-transport/test_core.mjs
       - name: Run Dr Moagi geometry optimizer invariants
         run: node --test apps/dr-moagi-geometry/test_core.mjs
-      - name: Run cognitive control-plane invariants
+      - name: Run cognitive web-application invariants
         run: node --test apps/dr-moagi-cognitive/test_core.mjs
+      - name: Syntax-check cognitive browser modules
+        run: |
+          node --check apps/dr-moagi-cognitive/core.mjs
+          node --check apps/dr-moagi-cognitive/app.mjs
+          node --check apps/dr-moagi-cognitive/sw.js
       - name: Smoke-check permeation browser entrypoint
         run: |
           grep -q "DM-vΩΞ⁺ PERMEATION TRANSPORT CORE" apps/permeation-transport/index.html
@@ -57,12 +62,16 @@ jobs:
           grep -q "DR MOAGI 3D GEOMETRY SELF-OPTIMIZER" apps/dr-moagi-geometry/index.html
           grep -q "AUTO OPTIMIZE" apps/dr-moagi-geometry/index.html
           grep -q "PROVISIONAL ≠ AUTHORITATIVE" apps/dr-moagi-geometry/index.html
-      - name: Smoke-check cognitive control-plane entrypoint
+      - name: Smoke-check cognitive 3D web application
         run: |
-          grep -q "DM-vΩΞ⁺ COGNITIVE CONTROL PLANE" apps/dr-moagi-cognitive/index.html
-          grep -q "PROVISIONAL ≠ AUTHORITATIVE" apps/dr-moagi-cognitive/index.html
-          grep -q "Q16.48 FIXED-POINT REGISTER STACK" apps/dr-moagi-cognitive/index.html
-          grep -q "/v1/firmware/boot" apps/dr-moagi-cognitive/index.html
+          grep -q "DM-vΩΞ⁺ 3D COGNITIVE WEB APPLICATION" apps/dr-moagi-cognitive/index.html
+          grep -q "Q16.48 AUTHORITATIVE CONTROL REGISTERS" apps/dr-moagi-cognitive/index.html
+          grep -q "app.mjs" apps/dr-moagi-cognitive/index.html
+          grep -q "manifest.webmanifest" apps/dr-moagi-cognitive/index.html
+          grep -q "/v1/firmware/boot" apps/dr-moagi-cognitive/app.mjs
+          grep -q "PROVISIONAL != AUTHORITATIVE" apps/dr-moagi-cognitive/README.md
+          test -s apps/dr-moagi-cognitive/sw.js
+          test -s apps/dr-moagi-cognitive/icon.svg
 
   deploy:
     if: github.event_name != 'pull_request'
@@ -128,7 +137,7 @@ jobs:
                 `- root runtime: ${pageUrl}`,
                 `- permeation transport: ${pageUrl.replace(/\/$/, '')}/permeation-transport/`,
                 `- Dr Moagi geometry optimizer: ${pageUrl.replace(/\/$/, '')}/dr-moagi-geometry/`,
-                `- Dr Moagi cognitive control plane: ${pageUrl.replace(/\/$/, '')}/dr-moagi-cognitive/`,
+                `- Dr Moagi cognitive 3D web app: ${pageUrl.replace(/\/$/, '')}/dr-moagi-cognitive/`,
                 `- deployed commit: \`${context.sha}\``,
                 `- invariant test job: ${process.env.TEST_RESULT}`,
                 `- Pages deployment job: ${process.env.DEPLOY_RESULT}`,

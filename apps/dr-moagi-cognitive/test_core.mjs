@@ -2,12 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  APP_SCHEMA_VERSION,
   DEFAULT_CONTROL_STATE,
+  QUALITY_PROFILES,
+  adaptiveQualityDecision,
+  boundedPush,
   compileParameterPatch,
+  convergenceState,
   fieldPointFromOriginal,
   formatQ16_48,
+  makeSessionSnapshot,
+  normalizeBackendBase,
   normalizedResidual,
   parseFieldCommand,
+  parseSessionSnapshot,
   q16_48Decode,
   q16_48Encode,
   saturationRatio,
@@ -32,10 +40,7 @@ test('chat parser only changes supported bounded control parameters', () => {
 });
 
 test('chat parser rejects out-of-bounds parameter commands', () => {
-  assert.throws(
-    () => parseFieldCommand('set coupling to 99', DEFAULT_CONTROL_STATE),
-    /fieldCoupling must be in/,
-  );
+  assert.throws(() => parseFieldCommand('set coupling to 99', DEFAULT_CONTROL_STATE), /fieldCoupling must be in/);
 });
 
 test('bounded IDE patch compiler accepts only known assignments', () => {
@@ -77,4 +82,45 @@ test('field transform is deterministic and responds to inward/outward mode', () 
 
 test('saturation is an explicit dimensionless ratio rather than a physical EM claim', () => {
   assert.equal(saturationRatio({...DEFAULT_CONTROL_STATE, density: 25, densityLimit: 100}), 0.25);
+});
+
+test('backend normalization rejects embedded credentials and non-http schemes', () => {
+  assert.equal(normalizeBackendBase('https://example.com/'), 'https://example.com');
+  assert.throws(() => normalizeBackendBase('ftp://example.com'), /http or https/);
+  assert.throws(() => normalizeBackendBase('https://user:pass@example.com'), /must not contain credentials/);
+});
+
+test('bounded history retains only the newest records', () => {
+  let items = [];
+  for (let i = 0; i < 8; i += 1) items = boundedPush(items, i, 3);
+  assert.deepEqual(items, [5, 6, 7]);
+});
+
+test('adaptive quality policy has bounded up/down transitions', () => {
+  assert.equal(QUALITY_PROFILES.length, 3);
+  assert.equal(adaptiveQualityDecision({fps: 20, currentIndex: 1}), 0);
+  assert.equal(adaptiveQualityDecision({fps: 70, currentIndex: 1}), 2);
+  assert.equal(adaptiveQualityDecision({fps: 50, currentIndex: 1}), 1);
+  assert.equal(adaptiveQualityDecision({fps: 20, currentIndex: 0}), 0);
+});
+
+test('convergence requires both immediate and residual-memory tolerances', () => {
+  assert.equal(convergenceState(1e-5, 1e-5, 1e-4).converged, true);
+  assert.equal(convergenceState(1e-5, 1e-2, 1e-4).converged, false);
+});
+
+test('session snapshots are versioned, bounded and validated', () => {
+  const snapshot = makeSessionSnapshot({
+    controlState: {...DEFAULT_CONTROL_STATE, fieldCoupling: 1.8},
+    backendBase: 'https://example.com/',
+    qualityMode: 'HIGH',
+    ttsEnabled: true,
+    paused: true,
+    commandHistory: Array.from({length: 150}, (_, index) => `command-${index}`),
+  });
+  assert.equal(snapshot.schemaVersion, APP_SCHEMA_VERSION);
+  assert.equal(snapshot.backendBase, 'https://example.com');
+  assert.equal(snapshot.commandHistory.length, 100);
+  assert.equal(parseSessionSnapshot(JSON.stringify(snapshot)).controlState.fieldCoupling, 1.8);
+  assert.throws(() => parseSessionSnapshot({...snapshot, schemaVersion: 999}), /unsupported session schema/);
 });

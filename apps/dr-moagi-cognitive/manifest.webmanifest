@@ -1,0 +1,18 @@
+{
+  "name": "Dr Moagi DM-vOmegaXi+ 3D Cognitive Web Application",
+  "short_name": "DM-vOmegaXi+",
+  "description": "Bounded 3D cognitive control plane with measured telemetry and verified firmware binding.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#02040a",
+  "theme_color": "#02040a",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
