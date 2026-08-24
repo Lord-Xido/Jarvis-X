@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jarvis-X Auto-Poietic Runtime</title>
+<style>
+:root{color-scheme:dark;--bg:#050812;--panel:#0b1324;--line:#263654;--text:#eaf2ff;--muted:#8ea4ca;--accent:#51d6ff;--accent2:#a86cff;--good:#65efae;--bad:#ff6a86}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
+#app{display:grid;grid-template-rows:auto 1fr auto;height:100%}header,footer{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 12px;background:rgba(8,14,26,.96);border-color:var(--line)}header{border-bottom:1px solid var(--line)}footer{border-top:1px solid var(--line);font:12px ui-monospace,monospace;color:var(--muted)}h1{font-size:15px;margin:0 auto 0 0}button,input{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);padding:7px 9px}button{cursor:pointer}button:hover{border-color:var(--accent)}button.primary{background:#12617a}#stage{position:relative;min-height:0}canvas{display:block;width:100%;height:100%;background:radial-gradient(circle at 50% 45%,#102449,#050812 62%)}#metrics{position:absolute;left:12px;right:12px;top:12px;display:grid;grid-template-columns:repeat(5,minmax(100px,1fr));gap:7px;pointer-events:none}.metric{padding:8px 10px;border:1px solid rgba(81,214,255,.25);border-radius:10px;background:rgba(8,14,26,.75);backdrop-filter:blur(7px)}.metric span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.09em}.metric b{font-size:15px}#status{position:absolute;left:12px;bottom:12px;padding:8px 10px;border:1px solid rgba(81,214,255,.25);border-radius:9px;background:rgba(8,14,26,.8);font:12px ui-monospace,monospace}#journal{margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55vw}.commit{color:var(--good)}.rollback{color:var(--bad)}@media(max-width:760px){#metrics{grid-template-columns:repeat(2,1fr)}h1{width:100%}#journal{max-width:100%;width:100%}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<h1>Jarvis-X 3D Auto-Poietic Research Runtime</h1>
+<button class="primary" id="run">Pause</button><button id="step">Self step</button><button id="reset">Reset</button>
+<label>Speed <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1"></label>
+<label><input id="auto" type="checkbox" checked> auto-evolve</label>
+</header>
+<section id="stage">
+<canvas id="canvas"></canvas>
+<div id="metrics">
+<div class="metric"><span>Generation</span><b id="generation">0</b></div>
+<div class="metric"><span>Prediction error</span><b id="error">0.000</b></div>
+<div class="metric"><span>Ω memory</span><b id="omega">0.000</b></div>
+<div class="metric"><span>Λ coherence</span><b id="coherence">1.000</b></div>
+<div class="metric"><span>State hash</span><b id="hash">00000000</b></div>
+</div>
+<div id="status">OBSERVE → ENCODE → PREDICT → ERROR → Ω → ΠΛ → VERIFY → COMMIT/ROLLBACK</div>
+</section>
+<footer><span>Protocol: jarvisx.autopoietic-web.v1</span><span id="journal">runtime boot-sealed</span></footer>
+</div>
+<script>
+(()=>{"use strict";
+const $=id=>document.getElementById(id),canvas=$("canvas"),ctx=canvas.getContext("2d");
+const bounds={eta:[.004,.08],alpha:[.04,.4],wave:[1.2,6.5],frequency:[.4,3.5],envelope:[.04,.5],mutation:[.002,.08]};
+const initial={eta:.025,alpha:.14,wave:3.4,frequency:1.7,envelope:.15,mutation:.025};
+const state={running:true,time:0,generation:0,params:{...initial},journal:[],error:0,omega:0,coherence:1,lastEvolution:0};
+const N=12,nodes=[];for(let z=0;z<N;z++)for(let y=0;y<N;y++)for(let x=0;x<N;x++)nodes.push({x:(x-(N-1)/2)/5.5,y:(y-(N-1)/2)/5.5,z:(z-(N-1)/2)/5.5,value:0,omega:0});
+let rx=-.42,ry=.64,drag=false,lx=0,ly=0,last=performance.now();
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function field(n,t,p=state.params){const r=Math.hypot(n.x,n.y,n.z)+1e-6;return Math.sin(p.wave*r-p.frequency*t)*Math.exp(-p.envelope*r*r)}
+function hashSnapshot(){const s=JSON.stringify({g:state.generation,p:state.params,e:+state.error.toFixed(6),o:+state.omega.toFixed(6)});let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(16).padStart(8,"0")}
+function snapshot(){return{protocol:"jarvisx.autopoietic-web.v1",running:state.running,time:state.time,generation:state.generation,predictionError:state.error,omega:state.omega,coherence:state.coherence,stateHash:hashSnapshot(),model:{...state.params},journal:state.journal.slice(-25),safetyBoundary:"bounded-parameter-mutation-only"}}
+function emit(reason){window.dispatchEvent(new CustomEvent("jarvisx:autopoietic-state",{detail:{reason,snapshot:snapshot()}}))}
+function update(dt){let e=0,o=0,c=0;for(const n of nodes){const reality=field(n,state.time),prediction=field(n,state.time-dt),err=reality-prediction;n.omega=clamp(n.omega+state.params.eta*err,-1,1);const candidate=clamp(reality+n.omega,-1,1);n.value=(1-state.params.alpha)*n.value+state.params.alpha*candidate;e+=Math.abs(err);o+=Math.abs(n.omega);if(Math.abs(n.value)<.94)c++}state.error=e/nodes.length;state.omega=o/nodes.length;state.coherence=c/nodes.length;refresh()}
+function score(p){let total=0;for(let i=0;i<nodes.length;i+=19){const n=nodes[i],a=field(n,state.time,p),b=field(n,state.time-.035,p);total+=Math.abs(a-b)+Math.abs(n.omega)*.08}return total}
+function transact(reason="AUTO"){state.generation++;const keys=["eta","alpha","wave","frequency","envelope"],key=keys[state.generation%keys.length],candidate={...state.params},direction=Math.sin(state.generation*1.618+state.error*11)>=0?1:-1;candidate[key]=clamp(candidate[key]+direction*state.params.mutation,bounds[key][0],bounds[key][1]);const before=score(state.params),after=score(candidate),valid=Object.entries(bounds).every(([k,[a,b]])=>candidate[k]===undefined||(candidate[k]>=a&&candidate[k]<=b)),accepted=valid&&after<=before*1.012;if(accepted)state.params=candidate;const item={generation:state.generation,reason,key,accepted,before,after};state.journal.push(item);if(state.journal.length>100)state.journal.shift();$("journal").className=accepted?"commit":"rollback";$("journal").textContent=`${accepted?"COMMIT":"ROLLBACK"} g${state.generation} ${key} ${candidate[key].toFixed(3)}`;emit(accepted?"commit":"rollback");refresh();return item}
+function refresh(){$("generation").textContent=state.generation;$("error").textContent=state.error.toFixed(3);$("omega").textContent=state.omega.toFixed(3);$("coherence").textContent=state.coherence.toFixed(3);$("hash").textContent=hashSnapshot();$("run").textContent=state.running?"Pause":"Execute"}
+function resize(){const dpr=Math.min(2,devicePixelRatio||1),w=Math.max(1,Math.floor(canvas.clientWidth*dpr)),h=Math.max(1,Math.floor(canvas.clientHeight*dpr));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}}
+function rotate(n){const cy=Math.cos(ry),sy=Math.sin(ry),cx=Math.cos(rx),sx=Math.sin(rx),x=n.x*cy-n.z*sy,z=n.x*sy+n.z*cy;return{x,y:n.y*cx-z*sx,z:n.y*sx+z*cx}}
+function draw(){resize();const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);const pts=[];for(const n of nodes){const q=rotate(n),pulse=1+.12*Math.sin(state.time*2+Math.hypot(n.x,n.y,n.z)*5+n.value*2),depth=4+q.z*pulse,scale=Math.min(w,h)*.42/depth;pts.push({x:w/2+q.x*pulse*scale,y:h/2+q.y*pulse*scale,z:depth,v:n.value})}pts.sort((a,b)=>b.z-a.z);ctx.globalCompositeOperation="lighter";for(const p of pts){const r=Math.max(1,(1.4+Math.abs(p.v)*5)*(5-p.z)*.75),g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);g.addColorStop(0,p.v>0?"rgba(81,214,255,.95)":"rgba(168,108,255,.95)");g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill()}ctx.globalCompositeOperation="source-over"}
+function reset(){state.running=false;state.time=0;state.generation=0;state.params={...initial};state.journal=[];state.error=0;state.omega=0;state.coherence=1;for(const n of nodes){n.value=0;n.omega=0}$("journal").className="";$("journal").textContent="runtime reset";refresh();emit("reset")}
+function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;if(state.running){const dt=raw*Number($("speed").value);state.time+=dt;ry+=dt*.12;update(dt);if($("auto").checked&&now-state.lastEvolution>2500){state.lastEvolution=now;transact()}}draw();requestAnimationFrame(frame)}
+$("run").addEventListener("click",()=>{state.running=!state.running;refresh();emit(state.running?"run":"pause")});$("step").addEventListener("click",()=>{state.time+=.035;update(.035);transact("STEP")});$("reset").addEventListener("click",reset);canvas.addEventListener("pointerdown",e=>{drag=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener("pointermove",e=>{if(!drag)return;ry+=(e.clientX-lx)*.008;rx+=(e.clientY-ly)*.008;lx=e.clientX;ly=e.clientY});canvas.addEventListener("pointerup",()=>drag=false);
+window.JarvisXAutopoieticRuntime=Object.freeze({protocol:"jarvisx.autopoietic-web.v1",snapshot,run(){state.running=true;refresh();emit("run");return snapshot()},pause(){state.running=false;refresh();emit("pause");return snapshot()},step(){state.time+=.035;update(.035);transact("HOST");return snapshot()},reset(){reset();return snapshot()},setAutoEvolve(enabled){$("auto").checked=Boolean(enabled);emit("set-auto-evolve");return snapshot()},setModel(patch){if(!patch||typeof patch!=="object")throw new TypeError("model patch must be an object");const candidate={...state.params,...patch};for(const[k,[a,b]]of Object.entries(bounds))if(candidate[k]!==undefined&&(candidate[k]<a||candidate[k]>b))throw new RangeError(`${k} outside Λ bounds`);state.params=candidate;refresh();emit("set-model");return snapshot()}});
+refresh();update(.001);emit("ready");requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
