@@ -44,6 +44,12 @@ add_executable(jarvisx-multimedia4d
 jarvisx_include_runtime(jarvisx-multimedia4d)
 jarvisx_harden(jarvisx-multimedia4d)
 
+add_executable(jarvisx-kinetic-loop
+    src/kinetic_system_main.cpp
+)
+jarvisx_include_runtime(jarvisx-kinetic-loop)
+jarvisx_harden(jarvisx-kinetic-loop)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -109,6 +115,15 @@ add_test(
 )
 set_tests_properties(multimedia4d-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME kinetic-runtime-smoke
+    COMMAND jarvisx-kinetic-loop
+        --cycles 4
+        --nodes 16
+        --quiet
+)
+set_tests_properties(kinetic-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -135,3 +150,12 @@ jarvisx_harden(jarvisx-multimedia4d-tests)
 
 add_test(NAME multimedia4d-regressions COMMAND jarvisx-multimedia4d-tests)
 set_tests_properties(multimedia4d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-kinetic-system-tests
+    tests/kinetic_system_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-kinetic-system-tests)
+jarvisx_harden(jarvisx-kinetic-system-tests)
+
+add_test(NAME kinetic-system-regressions COMMAND jarvisx-kinetic-system-tests)
+set_tests_properties(kinetic-system-regressions PROPERTIES TIMEOUT 120)
