@@ -44,6 +44,12 @@ add_executable(jarvisx-multimedia4d
 jarvisx_include_runtime(jarvisx-multimedia4d)
 jarvisx_harden(jarvisx-multimedia4d)
 
+add_executable(jarvisx-riof3d
+    src/riof3d_main.cpp
+)
+jarvisx_include_runtime(jarvisx-riof3d)
+jarvisx_harden(jarvisx-riof3d)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -109,6 +115,16 @@ add_test(
 )
 set_tests_properties(multimedia4d-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME riof3d-runtime-smoke
+    COMMAND jarvisx-riof3d
+        --cycles 4
+        --edge 8
+        --pattern sphere
+        --quiet
+)
+set_tests_properties(riof3d-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -135,3 +151,21 @@ jarvisx_harden(jarvisx-multimedia4d-tests)
 
 add_test(NAME multimedia4d-regressions COMMAND jarvisx-multimedia4d-tests)
 set_tests_properties(multimedia4d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-riof3d-tests
+    tests/riof3d_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-riof3d-tests)
+jarvisx_harden(jarvisx-riof3d-tests)
+
+add_test(NAME riof3d-regressions COMMAND jarvisx-riof3d-tests)
+set_tests_properties(riof3d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-riof-permeation-tests
+    tests/riof_permeation_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-riof-permeation-tests)
+jarvisx_harden(jarvisx-riof-permeation-tests)
+
+add_test(NAME riof-permeation-regressions COMMAND jarvisx-riof-permeation-tests)
+set_tests_properties(riof-permeation-regressions PROPERTIES TIMEOUT 120)
