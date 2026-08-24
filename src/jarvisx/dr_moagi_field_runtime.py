@@ -10,13 +10,17 @@ This module operationalizes the same-space field law
 on a sparse logical 3D lattice. It is intentionally independent of the
 canonical 64-bit VM: candidate field transitions are computed in a research
 layer and become authoritative only after projection and optional validation.
+Every completed candidate decision also emits the same deterministic
+control-plane receipt used by the canonical VM.
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from typing import Any, Callable, Mapping, Protocol, Sequence
+
+from .control_plane import OmegaEvidenceChain, StateEnvelope
 
 Coordinate = tuple[int, int, int]
 SparseField = dict[Coordinate, float]
@@ -162,6 +166,7 @@ class DrMoagiFieldRuntime:
         self._state: SparseField = {}
         self._anchor: SparseField = {}
         self._cycle = 0
+        self.control_plane = OmegaEvidenceChain()
 
     @property
     def cycle(self) -> int:
@@ -190,18 +195,20 @@ class DrMoagiFieldRuntime:
         self._state = projected
         self._anchor = dict(projected)
         self._cycle = 0
+        self.control_plane.reset()
 
     def step(self, validator: Validator | None = None) -> FieldStepMetrics:
         """Attempt one atomic field transition.
 
         All terms are evaluated from one frozen snapshot. Candidate state is
         projected first and becomes authoritative only if the optional
-        validator accepts it.
+        validator accepts it. Commit and rollback decisions are emitted into
+        the shared Omega evidence chain before authoritative state is changed.
         """
 
         snapshot = dict(self._state)
+        before = self._state_envelope(snapshot, authoritative=True)
         support = self._support(snapshot)
-        active_before = len(snapshot)
         cycle = self._cycle + 1
 
         latent = self.codec.encode(snapshot)
@@ -229,10 +236,10 @@ class DrMoagiFieldRuntime:
                 for coordinate in support
             }
         )
+        candidate_envelope = self._state_envelope(candidate, authoritative=False)
 
         if len(candidate) > self.config.max_active_cells:
-            self._cycle = cycle
-            return self._metrics(
+            metrics = self._metrics(
                 cycle,
                 support,
                 snapshot,
@@ -243,6 +250,14 @@ class DrMoagiFieldRuntime:
                 committed=False,
                 rejection_reason="active-cell budget exceeded",
             )
+            self._record_decision(
+                before=before,
+                candidate=candidate_envelope,
+                after=self._state_envelope(snapshot, authoritative=True),
+                metrics=metrics,
+            )
+            self._cycle = cycle
+            return metrics
 
         provisional = self._metrics(
             cycle,
@@ -255,12 +270,17 @@ class DrMoagiFieldRuntime:
             committed=False,
         )
         if validator is not None and not bool(validator(candidate, provisional)):
+            metrics = replace(provisional, rejection_reason="validator rejected candidate")
+            self._record_decision(
+                before=before,
+                candidate=candidate_envelope,
+                after=self._state_envelope(snapshot, authoritative=True),
+                metrics=metrics,
+            )
             self._cycle = cycle
-            return replace(provisional, rejection_reason="validator rejected candidate")
+            return metrics
 
-        self._state = candidate
-        self._cycle = cycle
-        return self._metrics(
+        metrics = self._metrics(
             cycle,
             support,
             snapshot,
@@ -269,6 +289,56 @@ class DrMoagiFieldRuntime:
             residual,
             rhs,
             committed=True,
+        )
+        self._record_decision(
+            before=before,
+            candidate=candidate_envelope,
+            after=self._state_envelope(candidate, authoritative=True),
+            metrics=metrics,
+        )
+        self._state = candidate
+        self._cycle = cycle
+        return metrics
+
+    def _state_payload(self, field: Mapping[Coordinate, float]) -> dict[str, object]:
+        cells = [
+            [coordinate[0], coordinate[1], coordinate[2], float(value)]
+            for coordinate, value in sorted(field.items(), key=lambda item: self._linear_address(item[0]))
+        ]
+        return {
+            "logical_side": self.config.side,
+            "active_cells": len(cells),
+            "cells": cells,
+        }
+
+    def _state_envelope(
+        self, field: Mapping[Coordinate, float], *, authoritative: bool
+    ) -> StateEnvelope:
+        return StateEnvelope.from_payload(
+            state_type="jarvisx.dr-moagi-field",
+            state_version=1,
+            dimensions=(self.config.side, self.config.side, self.config.side),
+            payload=self._state_payload(field),
+            authoritative=authoritative,
+        )
+
+    def _record_decision(
+        self,
+        *,
+        before: StateEnvelope,
+        candidate: StateEnvelope,
+        after: StateEnvelope,
+        metrics: FieldStepMetrics,
+    ) -> None:
+        self.control_plane.append(
+            subsystem="dr-moagi-field-runtime",
+            operation="field-step",
+            decision="commit" if metrics.committed else "rollback",
+            reason=metrics.rejection_reason,
+            before=before,
+            candidate=candidate,
+            after=after,
+            metrics=asdict(metrics),
         )
 
     def _support(self, field: Mapping[Coordinate, float]) -> tuple[Coordinate, ...]:
