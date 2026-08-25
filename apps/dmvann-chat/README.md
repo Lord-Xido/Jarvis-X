@@ -18,7 +18,7 @@ The repository implementation is **not** asserted to be source-equivalent to the
 This directory contains an independently verifiable implementation with two execution modes:
 
 1. **Static / GitHub Pages mode** — renders the DMVANN neural-field interface and executes deterministic local field transforms. No model credentials or generative inference are used.
-2. **Node runtime mode** — serves the same UI, exposes health/runtime endpoints, and can proxy an OpenAI-compatible chat backend using server-side environment variables.
+2. **Node runtime mode** — serves the same UI, exposes health/runtime endpoints, and can proxy an OpenAI-compatible chat backend using server-side environment variables after an explicit operator opt-in.
 
 The interface always distinguishes deterministic local control-plane output from remote model output.
 
@@ -51,7 +51,7 @@ apps/dmvann-chat/
 ├── app.mjs          # browser state, rendering and runtime selection
 ├── core.mjs         # deterministic Ψ–Φ–Λ–Ω–Θ transforms and validation
 ├── server.mjs       # Node static server + server-side chat proxy
-├── test_core.mjs    # invariant tests
+├── test_core.mjs    # invariant + endpoint tests
 ├── package.json     # Node 22 scripts
 ├── Dockerfile       # portable runtime image
 ├── deployment.json  # external/reference deployment metadata
@@ -93,18 +93,19 @@ POST /api/chat
 
 ## Configure generative chat
 
-The Node runtime expects an OpenAI-compatible upstream at `/v1/chat/completions`.
+The Node runtime expects an OpenAI-compatible upstream at `/v1/chat/completions`. Remote inference is disabled unless `DMVANN_ENABLE_REMOTE=1` is explicitly set.
 
 ```bash
 export DMVANN_UPSTREAM_URL="https://your-trusted-model-gateway.example"
 export DMVANN_UPSTREAM_API_KEY="server-side-secret"
 export DMVANN_MODEL="your-model-id"
+export DMVANN_ENABLE_REMOTE="1"
 node server.mjs
 ```
 
-`DMVANN_UPSTREAM_API_KEY` is read only by the Node process and is never emitted by `/healthz`, `/api/runtime`, or browser code.
+`DMVANN_UPSTREAM_API_KEY` is read only by the Node process and is never emitted by `/healthz`, `/api/runtime`, or browser code. Client requests cannot override `DMVANN_MODEL`.
 
-If no upstream is configured, `/api/chat` fails closed with `503 UPSTREAM_NOT_CONFIGURED` and the browser uses a clearly labelled deterministic local fallback.
+If no upstream is configured, `/api/chat` fails closed with `503 UPSTREAM_NOT_CONFIGURED`. If an upstream URL exists but remote inference has not been explicitly enabled, it fails closed with `503 REMOTE_MODEL_DISABLED`. In both cases the browser uses a clearly labelled deterministic local fallback.
 
 ## Container
 
@@ -116,6 +117,7 @@ docker run --rm -p 8787:8787 \
   -e DMVANN_UPSTREAM_URL \
   -e DMVANN_UPSTREAM_API_KEY \
   -e DMVANN_MODEL \
+  -e DMVANN_ENABLE_REMOTE=1 \
   dmvann-chat
 ```
 
@@ -126,10 +128,15 @@ docker run --rm -p 8787:8787 \
 - upstream request timeout enforced;
 - unsupported message roles normalized;
 - API keys remain server-side;
+- upstream model selection is server-controlled;
+- remote inference requires explicit operator enablement;
+- upstream error bodies are not reflected to browser clients;
 - same-origin browser API surface by default;
-- CSP, no-sniff, referrer and permissions headers emitted by the Node server;
+- CSP, frame denial, no-sniff, referrer and permissions headers emitted by the Node server;
 - remote failure degrades to disclosed deterministic local mode instead of fabricating a model response;
 - no claim of byte-for-byte identity with the Manus deployment.
+
+A public Node deployment should still sit behind authentication/rate limiting before attaching a billable or sensitive upstream model service.
 
 ## Verification
 
@@ -140,7 +147,7 @@ node --check apps/dmvann-chat/app.mjs
 node --check apps/dmvann-chat/server.mjs
 ```
 
-The invariant suite covers bounded message normalization, deterministic field evolution, state bounds, fingerprints, chat request validation and disclosure of local fallback behavior.
+The current suite contains seven tests covering bounded message normalization, deterministic field evolution, state bounds, fingerprints, chat request validation, disclosure of local fallback behavior, health endpoint semantics, and fail-closed remote inference behavior.
 
 ## Release criterion
 
@@ -150,4 +157,4 @@ The integration follows the Jarvis-X progression:
 working → robust → portable → elegant → advanced
 ```
 
-The current GitHub implementation reaches **portable**: it is runnable locally, testable, static-hostable, containerizable, and can attach to a server-side model gateway without exposing secrets. Further advancement should benchmark latency, add authenticated multi-user sessions, persistence, streaming inference, model-routing policy, observability and deployment provenance before stronger production claims are made.
+The current GitHub implementation reaches **portable**: it is runnable locally, testable, static-hostable, containerizable, and can attach to a server-side model gateway without exposing provider credentials. Further advancement should benchmark latency, add authenticated multi-user sessions, persistence, streaming inference, model-routing policy, observability and deployment provenance before stronger production claims are made.
