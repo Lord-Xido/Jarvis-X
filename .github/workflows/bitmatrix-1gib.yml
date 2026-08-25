@@ -66,13 +66,13 @@ jobs:
           --chunk-mib 4
           --pattern sparse3d
           --window-ms 100
-          --output-dir .jarvisx-bitmatrix1gib-ci
+          --output-dir bitmatrix1gib-ci
 
       - name: Upload smoke telemetry
         uses: actions/upload-artifact@v6
         with:
           name: bitmatrix-1gib-smoke-telemetry
-          path: .jarvisx-bitmatrix1gib-ci/
+          path: bitmatrix1gib-ci/
 
   full-1gib:
     if: github.event_name == 'workflow_dispatch'
@@ -94,10 +94,10 @@ jobs:
           --chunk-mib ${{ inputs.chunk_mib }}
           --pattern ${{ inputs.pattern }}
           --window-ms ${{ inputs.window_ms }}
-          --output-dir .jarvisx-bitmatrix1gib-full
+          --output-dir bitmatrix1gib-full
 
       - name: Upload full telemetry
         uses: actions/upload-artifact@v6
         with:
           name: bitmatrix-1gib-full-telemetry
-          path: .jarvisx-bitmatrix1gib-full/
+          path: bitmatrix1gib-full/
