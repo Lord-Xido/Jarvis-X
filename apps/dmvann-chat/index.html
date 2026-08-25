@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#02070c">
+  <title>DM–vΩΞ⁺ Neural Interface · DMVANN Chat</title>
+  <style>
+    :root{color-scheme:dark;--bg:#02070c;--panel:#07131d;--line:#153649;--text:#dff9ff;--muted:#7ba0b1;--cyan:#55e8ff;--violet:#b486ff}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#0c2533 0,var(--bg) 42%);color:var(--text);font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;min-height:100vh}
+    .shell{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(360px,1.3fr);gap:16px;max-width:1500px;margin:auto;padding:18px;min-height:100vh}
+    .panel{border:1px solid var(--line);background:linear-gradient(180deg,rgba(7,19,29,.94),rgba(2,9,14,.94));border-radius:18px;box-shadow:0 18px 70px #0009;overflow:hidden}.field{display:grid;grid-template-rows:auto minmax(320px,1fr) auto}.header{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-weight:800;letter-spacing:.12em}.brand span{color:var(--cyan)}.badge{font-size:11px;color:var(--cyan);border:1px solid #1f6070;border-radius:999px;padding:6px 9px}.canvas-wrap{min-height:320px;position:relative}.canvas-wrap:before{content:"";position:absolute;inset:8%;border:1px solid #17405155;border-radius:50%;box-shadow:0 0 80px #2eefff17 inset}canvas{width:100%;height:100%;display:block}.metrics{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line)}.metric{padding:12px;text-align:center;border-right:1px solid var(--line)}.metric:last-child{border-right:0}.metric b{display:block;color:var(--cyan);font-size:16px}.metric small{color:var(--muted)}
+    .chat-panel{display:grid;grid-template-rows:auto 1fr auto;min-height:0}.chat{padding:18px;overflow:auto;min-height:420px;max-height:calc(100vh - 160px)}.message{max-width:88%;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#061019}.message.user{margin-left:auto;border-color:#513e7e;background:#130f21}.message-role{font-size:10px;letter-spacing:.14em;color:var(--violet);margin-bottom:6px}.message.assistant .message-role{color:var(--cyan)}pre{white-space:pre-wrap;margin:0;font:inherit}.composer{display:grid;grid-template-columns:1fr auto;gap:10px;padding:14px;border-top:1px solid var(--line)}textarea{resize:none;min-height:54px;max-height:160px;background:#02080d;border:1px solid #1b4458;border-radius:12px;color:var(--text);padding:12px;font:inherit;outline:none}textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #55e8ff18}button{border:1px solid #2b7992;border-radius:12px;background:#0b2f3b;color:#cfffff;padding:0 18px;font:700 12px inherit;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.footer-note{padding:0 18px 16px;color:var(--muted);font-size:11px}
+    @media(max-width:900px){.shell{grid-template-columns:1fr;min-height:auto}.field{min-height:520px}.chat{max-height:64vh}.metrics{grid-template-columns:repeat(5,minmax(64px,1fr));overflow:auto}.metric{padding:10px 6px}.metric b{font-size:13px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel field">
+      <div class="header"><div class="brand">DM–vΩΞ⁺ <span>NEURAL FIELD</span></div><div class="badge" id="runtime-badge">PROBING RUNTIME</div></div>
+      <div class="canvas-wrap"><canvas id="field-canvas" aria-label="Animated DMVANN latent field"></canvas></div>
+      <div class="metrics" aria-label="Field metrics">
+        <div class="metric"><b id="psi">0.0000</b><small>Ψ state</small></div>
+        <div class="metric"><b id="phi">0.0000</b><small>Φ transform</small></div>
+        <div class="metric"><b id="lambda">1.0000</b><small>Λ gate</small></div>
+        <div class="metric"><b id="omega">0.0000</b><small>Ω memory</small></div>
+        <div class="metric"><b id="theta">0.0000</b><small>Θ control</small></div>
+      </div>
+    </section>
+    <section class="panel chat-panel">
+      <div class="header"><div class="brand">DMVANN <span>CHAT</span></div><div class="badge">PROVISIONAL ≠ AUTHORITATIVE</div></div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div>
+        <form class="composer" id="composer"><textarea id="prompt" maxlength="16384" placeholder="Describe the next operation…" required></textarea><button id="send" type="submit">EXECUTE</button></form>
+        <div class="footer-note">Static mode performs only deterministic local field transforms. Generative responses require the Node runtime with a server-side upstream.</div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>

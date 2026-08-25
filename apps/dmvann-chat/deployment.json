@@ -1,0 +1,30 @@
+{
+  "name": "DMVANN Chat",
+  "interface": "DM-vΩΞ⁺ Neural Interface",
+  "external_reference": {
+    "provider": "Manus",
+    "url": "https://dmvannchat-utfg9t9j.manus.space/",
+    "registered_at": "2026-08-25",
+    "source_equivalence_verified": false,
+    "source_imported": false
+  },
+  "jarvis_x_runtime": {
+    "version": "0.1.0",
+    "path": "apps/dmvann-chat",
+    "static_mode": true,
+    "node_mode": true,
+    "containerized": true,
+    "openai_compatible_upstream": true,
+    "remote_requires_explicit_enable": true,
+    "client_model_override": false,
+    "secrets_server_side": true
+  },
+  "verification": {
+    "local_invariant_and_endpoint_tests": 7,
+    "local_tests_passed_before_hardening": 5,
+    "syntax_checks_passed_before_hardening": true,
+    "runtime_pages_ci_required": true,
+    "external_source_recovered": false
+  },
+  "status": "github_runtime_implemented_external_equivalence_unverified"
+}
