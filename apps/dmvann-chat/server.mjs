@@ -9,6 +9,7 @@ const PORT = Number.parseInt(process.env.PORT || '8787', 10);
 const UPSTREAM_URL = (process.env.DMVANN_UPSTREAM_URL || '').replace(/\/$/, '');
 const UPSTREAM_API_KEY = process.env.DMVANN_UPSTREAM_API_KEY || '';
 const UPSTREAM_MODEL = process.env.DMVANN_MODEL || 'dmvann-default';
+const REMOTE_ENABLED = Boolean(UPSTREAM_URL && process.env.DMVANN_ENABLE_REMOTE === '1');
 const MAX_BODY = 1_048_576;
 
 const MIME = {
@@ -27,6 +28,7 @@ function send(res, status, body, type = 'application/json; charset=utf-8') {
     'content-type': type,
     'cache-control': status >= 400 ? 'no-store' : 'no-cache',
     'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
     'referrer-policy': 'no-referrer',
     'permissions-policy': 'camera=(), microphone=(), geolocation=()',
     'content-security-policy': "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'",
@@ -47,18 +49,20 @@ async function readJson(req) {
 }
 
 async function proxyChat(req, res) {
-  if (!UPSTREAM_URL) {
+  if (!REMOTE_ENABLED) {
     return send(res, 503, JSON.stringify({
       ok: false,
-      error: 'UPSTREAM_NOT_CONFIGURED',
-      message: 'Set DMVANN_UPSTREAM_URL on the server to enable generative chat.',
+      error: UPSTREAM_URL ? 'REMOTE_MODEL_DISABLED' : 'UPSTREAM_NOT_CONFIGURED',
+      message: UPSTREAM_URL
+        ? 'Set DMVANN_ENABLE_REMOTE=1 on the server to opt in to remote inference.'
+        : 'Set DMVANN_UPSTREAM_URL and DMVANN_ENABLE_REMOTE=1 on the server to enable generative chat.',
     }));
   }
 
   try {
     const body = await readJson(req);
     const payload = createChatPayload(body.messages, {
-      model: body.model || UPSTREAM_MODEL,
+      model: UPSTREAM_MODEL,
       temperature: body.temperature,
     });
     const controller = new AbortController();
@@ -77,7 +81,6 @@ async function proxyChat(req, res) {
         ok: false,
         error: 'UPSTREAM_FAILURE',
         upstreamStatus: response.status,
-        detail: text.slice(0, 2048),
       }));
     }
     let parsed;
@@ -125,6 +128,7 @@ export function createServer() {
         service: 'dmvann-chat',
         version: RUNTIME_VERSION,
         upstreamConfigured: Boolean(UPSTREAM_URL),
+        remoteEnabled: REMOTE_ENABLED,
       }));
     }
     if (req.method === 'GET' && url.pathname === '/api/runtime') {
@@ -133,6 +137,7 @@ export function createServer() {
         version: RUNTIME_VERSION,
         model: UPSTREAM_MODEL,
         upstreamConfigured: Boolean(UPSTREAM_URL),
+        remoteEnabled: REMOTE_ENABLED,
       }));
     }
     if (req.method === 'POST' && url.pathname === '/api/chat') return proxyChat(req, res);
