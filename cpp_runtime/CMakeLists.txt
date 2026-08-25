@@ -44,6 +44,12 @@ add_executable(jarvisx-bitmatrix3d
 jarvisx_include_runtime(jarvisx-bitmatrix3d)
 jarvisx_harden(jarvisx-bitmatrix3d)
 
+add_executable(jarvisx-bitmatrix1gib
+    src/bitmatrix1gib_main.cpp
+)
+jarvisx_include_runtime(jarvisx-bitmatrix1gib)
+jarvisx_harden(jarvisx-bitmatrix1gib)
+
 add_executable(jarvisx-multimedia4d
     src/multimedia4d_main.cpp
 )
@@ -117,6 +123,18 @@ add_test(
 set_tests_properties(bitmatrix3d-runtime-smoke PROPERTIES TIMEOUT 120)
 
 add_test(
+    NAME bitmatrix1gib-runtime-smoke
+    COMMAND jarvisx-bitmatrix1gib
+        --bytes 8388608
+        --chunk-mib 1
+        --pattern sparse3d
+        --window-ms 20
+        --output-dir ${CMAKE_CURRENT_BINARY_DIR}/bitmatrix1gib-smoke
+        --quiet
+)
+set_tests_properties(bitmatrix1gib-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_test(
     NAME multimedia4d-runtime-smoke
     COMMAND jarvisx-multimedia4d
         --cycles 2
@@ -154,6 +172,15 @@ jarvisx_harden(jarvisx-bitmatrix3d-tests)
 
 add_test(NAME bitmatrix3d-regressions COMMAND jarvisx-bitmatrix3d-tests)
 set_tests_properties(bitmatrix3d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-bitmatrix1gib-tests
+    tests/bitmatrix1gib_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-bitmatrix1gib-tests)
+jarvisx_harden(jarvisx-bitmatrix1gib-tests)
+
+add_test(NAME bitmatrix1gib-regressions COMMAND jarvisx-bitmatrix1gib-tests)
+set_tests_properties(bitmatrix1gib-regressions PROPERTIES TIMEOUT 120)
 
 add_executable(jarvisx-multimedia4d-tests
     tests/multimedia4d_tests.cpp

@@ -1,0 +1,103 @@
+name: BitMatrix 1GiB Stream
+
+on:
+  workflow_dispatch:
+    inputs:
+      pattern:
+        description: Deterministic stream pattern
+        required: false
+        default: sparse3d
+        type: choice
+        options:
+          - sparse3d
+          - checker3d
+          - zero
+          - random
+      chunk_mib:
+        description: Reusable chunk size in MiB
+        required: false
+        default: "8"
+        type: string
+      window_ms:
+        description: Telemetry burst window in milliseconds
+        required: false
+        default: "100"
+        type: string
+  push:
+    paths:
+      - "cpp_runtime/include/jarvisx/bitmatrix1gib.hpp"
+      - "cpp_runtime/src/bitmatrix1gib_main.cpp"
+      - "cpp_runtime/tests/bitmatrix1gib_tests.cpp"
+      - "docs/DMVX_BITMATRIX_1GIB_STREAM.md"
+      - ".github/workflows/bitmatrix-1gib.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/include/jarvisx/bitmatrix1gib.hpp"
+      - "cpp_runtime/src/bitmatrix1gib_main.cpp"
+      - "cpp_runtime/tests/bitmatrix1gib_tests.cpp"
+      - "docs/DMVX_BITMATRIX_1GIB_STREAM.md"
+      - ".github/workflows/bitmatrix-1gib.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bitmatrix-1gib-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure
+        run: cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release -DJARVISX_BUILD_GL_VISUALIZER=OFF
+
+      - name: Build 1GiB stream target
+        run: cmake --build build/cpp-runtime --config Release --target jarvisx-bitmatrix1gib --parallel 2
+
+      - name: Run 64 MiB measured smoke benchmark
+        run: >-
+          ./build/cpp-runtime/jarvisx-bitmatrix1gib
+          --bytes 67108864
+          --chunk-mib 4
+          --pattern sparse3d
+          --window-ms 100
+          --output-dir bitmatrix1gib-ci
+
+      - name: Upload smoke telemetry
+        uses: actions/upload-artifact@v6
+        with:
+          name: bitmatrix-1gib-smoke-telemetry
+          path: bitmatrix1gib-ci/
+
+  full-1gib:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure
+        run: cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release -DJARVISX_BUILD_GL_VISUALIZER=OFF
+
+      - name: Build 1GiB stream target
+        run: cmake --build build/cpp-runtime --config Release --target jarvisx-bitmatrix1gib --parallel 2
+
+      - name: Run full 1 GiB benchmark
+        run: >-
+          ./build/cpp-runtime/jarvisx-bitmatrix1gib
+          --bytes 1073741824
+          --chunk-mib ${{ inputs.chunk_mib }}
+          --pattern ${{ inputs.pattern }}
+          --window-ms ${{ inputs.window_ms }}
+          --output-dir bitmatrix1gib-full
+
+      - name: Upload full telemetry
+        uses: actions/upload-artifact@v6
+        with:
+          name: bitmatrix-1gib-full-telemetry
+          path: bitmatrix1gib-full/
