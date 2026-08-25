@@ -1,0 +1,21 @@
+# fibonacci_with_deadcode.codex
+# 
+# A simple Fibonacci-like computation with deliberate dead code
+# to demonstrate refactoring optimization.
+#
+# Program computes: A = 10, B = 20, C = A + B = 30
+# Then exits, leaving unused NOP instructions.
+
+SET Ψ 10        # Observed state = 10
+SET Φ 20        # Internal state = 20
+ADD A Ψ Φ       # A = Ψ + Φ = 30
+
+# Intentional dead code below (unreachable after HALT)
+HALT
+
+# These instructions are never executed:
+NOP             # Wasted cycle 1
+NOP             # Wasted cycle 2
+NOP             # Wasted cycle 3
+SET X 999       # Dead assignment
+SUB Y A X       # Dead computation
