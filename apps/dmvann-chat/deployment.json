@@ -15,12 +15,15 @@
     "node_mode": true,
     "containerized": true,
     "openai_compatible_upstream": true,
+    "remote_requires_explicit_enable": true,
+    "client_model_override": false,
     "secrets_server_side": true
   },
   "verification": {
-    "local_invariant_tests": 5,
-    "local_invariant_tests_passed": 5,
-    "syntax_checks_passed": true,
+    "local_invariant_and_endpoint_tests": 7,
+    "local_tests_passed_before_hardening": 5,
+    "syntax_checks_passed_before_hardening": true,
+    "runtime_pages_ci_required": true,
     "external_source_recovered": false
   },
   "status": "github_runtime_implemented_external_equivalence_unverified"
