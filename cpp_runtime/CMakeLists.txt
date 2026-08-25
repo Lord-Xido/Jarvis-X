@@ -38,6 +38,12 @@ add_executable(jarvisx-autoencoder3d
 jarvisx_include_runtime(jarvisx-autoencoder3d)
 jarvisx_harden(jarvisx-autoencoder3d)
 
+add_executable(jarvisx-bitmatrix3d
+    src/bitmatrix3d_main.cpp
+)
+jarvisx_include_runtime(jarvisx-bitmatrix3d)
+jarvisx_harden(jarvisx-bitmatrix3d)
+
 add_executable(jarvisx-multimedia4d
     src/multimedia4d_main.cpp
 )
@@ -98,6 +104,19 @@ add_test(
 set_tests_properties(inward-runtime-smoke PROPERTIES TIMEOUT 120)
 
 add_test(
+    NAME bitmatrix3d-runtime-smoke
+    COMMAND jarvisx-bitmatrix3d
+        --epochs 4
+        --edge 8
+        --channels 3
+        --threshold 0.25
+        --pattern sphere
+        --output-dir ${CMAKE_CURRENT_BINARY_DIR}/bitmatrix3d-smoke
+        --quiet
+)
+set_tests_properties(bitmatrix3d-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_test(
     NAME multimedia4d-runtime-smoke
     COMMAND jarvisx-multimedia4d
         --cycles 2
@@ -126,6 +145,15 @@ jarvisx_harden(jarvisx-autoencoder3d-tests)
 
 add_test(NAME autoencoder3d-regressions COMMAND jarvisx-autoencoder3d-tests)
 set_tests_properties(autoencoder3d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-bitmatrix3d-tests
+    tests/bitmatrix3d_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-bitmatrix3d-tests)
+jarvisx_harden(jarvisx-bitmatrix3d-tests)
+
+add_test(NAME bitmatrix3d-regressions COMMAND jarvisx-bitmatrix3d-tests)
+set_tests_properties(bitmatrix3d-regressions PROPERTIES TIMEOUT 120)
 
 add_executable(jarvisx-multimedia4d-tests
     tests/multimedia4d_tests.cpp
