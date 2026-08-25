@@ -1,6 +1,28 @@
 """Focused tests for the read-only GitHub account control-plane auditor."""
 
-from scripts import github_account_control_plane as control_plane
+import importlib.util
+import sys
+from pathlib import Path
+from types import ModuleType
+
+
+def _load_control_plane() -> ModuleType:
+    module_path = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "github_account_control_plane.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "jarvisx_github_account_control_plane", module_path
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+control_plane = _load_control_plane()
 
 
 def test_draft_pr_needing_sync_is_not_integration_candidate() -> None:
