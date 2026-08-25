@@ -8,6 +8,7 @@ import {
   normalizeMessages,
   stepField,
 } from './core.mjs';
+import { createServer } from './server.mjs';
 
 test('message normalization is bounded and role-safe', () => {
   const result = normalizeMessages([{ role: 'tool', content: 'abc' }, { role: 'assistant', content: '' }]);
@@ -43,4 +44,40 @@ test('local fallback clearly discloses no model was used', () => {
   const text = localControlPlaneResponse('hello world', field);
   assert.match(text, /no remote model response was used/i);
   assert.match(text, /Ψ=/);
+});
+
+async function withServer(callback) {
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    return await callback(`http://127.0.0.1:${address.port}`);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+}
+
+test('health endpoint exposes readiness without secrets', async () => {
+  await withServer(async (base) => {
+    const response = await fetch(`${base}/healthz`);
+    assert.equal(response.status, 200);
+    const health = await response.json();
+    assert.equal(health.ok, true);
+    assert.equal(health.service, 'dmvann-chat');
+    assert.equal(typeof health.remoteEnabled, 'boolean');
+    assert.equal('apiKey' in health, false);
+  });
+});
+
+test('chat endpoint fails closed when remote inference is disabled', async () => {
+  await withServer(async (base) => {
+    const response = await fetch(`${base}/api/chat`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'hello' }] }),
+    });
+    assert.equal(response.status, 503);
+    const payload = await response.json();
+    assert.ok(['UPSTREAM_NOT_CONFIGURED', 'REMOTE_MODEL_DISABLED'].includes(payload.error));
+  });
 });
