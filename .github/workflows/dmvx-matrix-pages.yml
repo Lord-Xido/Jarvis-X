@@ -10,6 +10,7 @@ on:
       - "apps/permeation-transport/**"
       - "apps/dr-moagi-geometry/**"
       - "apps/dr-moagi-cognitive/**"
+      - "apps/dmvann-chat/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   pull_request:
     paths:
@@ -17,6 +18,7 @@ on:
       - "apps/permeation-transport/**"
       - "apps/dr-moagi-geometry/**"
       - "apps/dr-moagi-cognitive/**"
+      - "apps/dmvann-chat/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   workflow_dispatch:
 
@@ -48,11 +50,18 @@ jobs:
         run: node --test apps/dr-moagi-geometry/test_core.mjs
       - name: Run cognitive web-application invariants
         run: node --test apps/dr-moagi-cognitive/test_core.mjs
+      - name: Run DMVANN Chat invariants
+        run: node --test apps/dmvann-chat/test_core.mjs
       - name: Syntax-check cognitive browser modules
         run: |
           node --check apps/dr-moagi-cognitive/core.mjs
           node --check apps/dr-moagi-cognitive/app.mjs
           node --check apps/dr-moagi-cognitive/sw.js
+      - name: Syntax-check DMVANN Chat modules
+        run: |
+          node --check apps/dmvann-chat/core.mjs
+          node --check apps/dmvann-chat/app.mjs
+          node --check apps/dmvann-chat/server.mjs
       - name: Smoke-check permeation browser entrypoint
         run: |
           grep -q "DM-vΩΞ⁺ PERMEATION TRANSPORT CORE" apps/permeation-transport/index.html
@@ -72,6 +81,14 @@ jobs:
           grep -q "PROVISIONAL != AUTHORITATIVE" apps/dr-moagi-cognitive/README.md
           test -s apps/dr-moagi-cognitive/sw.js
           test -s apps/dr-moagi-cognitive/icon.svg
+      - name: Smoke-check DMVANN Chat web application
+        run: |
+          grep -q "DM–vΩΞ⁺ Neural Interface" apps/dmvann-chat/index.html
+          grep -q "PROVISIONAL ≠ AUTHORITATIVE" apps/dmvann-chat/index.html
+          grep -q "app.mjs" apps/dmvann-chat/index.html
+          grep -q "UPSTREAM_NOT_CONFIGURED" apps/dmvann-chat/server.mjs
+          grep -q "no remote model response was used" apps/dmvann-chat/core.mjs
+          test -s apps/dmvann-chat/Dockerfile
 
   deploy:
     if: github.event_name != 'pull_request'
@@ -94,11 +111,12 @@ jobs:
       - name: Assemble shared static site
         run: |
           rm -rf dist
-          mkdir -p dist/permeation-transport dist/dr-moagi-geometry dist/dr-moagi-cognitive
+          mkdir -p dist/permeation-transport dist/dr-moagi-geometry dist/dr-moagi-cognitive dist/dmvann-chat
           cp -a apps/dmvx-matrix/. dist/
           cp -a apps/permeation-transport/. dist/permeation-transport/
           cp -a apps/dr-moagi-geometry/. dist/dr-moagi-geometry/
           cp -a apps/dr-moagi-cognitive/. dist/dr-moagi-cognitive/
+          cp -a apps/dmvann-chat/. dist/dmvann-chat/
       - name: Upload static runtimes
         id: upload
         continue-on-error: true
@@ -138,6 +156,7 @@ jobs:
                 `- permeation transport: ${pageUrl.replace(/\/$/, '')}/permeation-transport/`,
                 `- Dr Moagi geometry optimizer: ${pageUrl.replace(/\/$/, '')}/dr-moagi-geometry/`,
                 `- Dr Moagi cognitive 3D web app: ${pageUrl.replace(/\/$/, '')}/dr-moagi-cognitive/`,
+                `- DMVANN Chat: ${pageUrl.replace(/\/$/, '')}/dmvann-chat/`,
                 `- deployed commit: \`${context.sha}\``,
                 `- invariant test job: ${process.env.TEST_RESULT}`,
                 `- Pages deployment job: ${process.env.DEPLOY_RESULT}`,
