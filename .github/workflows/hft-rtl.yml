@@ -31,7 +31,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y iverilog verilator yosys
 
-      - name: Icarus golden-vector simulation
+      - name: Icarus C++ golden-vector simulation
         run: |
           mkdir -p build/hft-rtl
           iverilog -g2012 \
@@ -41,12 +41,36 @@ jobs:
             rtl/hft_field_q16/tb_hft_field_cell_core.sv
           vvp build/hft-rtl/hft_tb.vvp
 
+      - name: Icarus multiplier-free equivalence stress
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_pow2_equiv \
+            -o build/hft-rtl/hft_pow2_equiv.vvp \
+            rtl/hft_field_q16/hft_field_cell_core.sv \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/tb_hft_field_pow2_equiv.sv
+          vvp build/hft-rtl/hft_pow2_equiv.vvp
+
       - name: Verilator lint
         run: |
           verilator --lint-only --sv -Wall -Wno-fatal \
             rtl/hft_field_q16/hft_field_cell_core.sv
+          verilator --lint-only --sv -Wall -Wno-fatal \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv
 
-      - name: Yosys synthesizability check
+      - name: Yosys reference synthesis
         run: |
-          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_core.sv; hierarchy -check -top hft_field_cell_core; proc; opt; check; synth -top hft_field_cell_core; stat'
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_core.sv; hierarchy -check -top hft_field_cell_core; proc; opt; check; synth -top hft_field_cell_core; stat' \
+            | tee build/hft-rtl/reference-synth.log
 
+      - name: Yosys multiplier-free synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_pow2.sv; hierarchy -check -top hft_field_cell_pow2; proc; opt; check; synth -top hft_field_cell_pow2; stat' \
+            | tee build/hft-rtl/pow2-synth.log
+
+      - name: Report generic gate counts
+        run: |
+          echo "Reference core:"
+          grep -A 20 '^=== hft_field_cell_core ===' build/hft-rtl/reference-synth.log | tail -n 20
+          echo "Multiplier-free core:"
+          grep -A 20 '^=== hft_field_cell_pow2 ===' build/hft-rtl/pow2-synth.log | tail -n 20
