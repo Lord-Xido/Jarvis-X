@@ -54,11 +54,21 @@ module hft_field_stateful_center #(
     logic signed [31:0] store_omega_w;
     logic signed [31:0] store_flow_w;
 
-    // Pipeline retirement has priority over configuration so a committed
-    // market-state transition cannot be overwritten by a simultaneous host
-    // write. The host can observe cfg_write_ready and retry deterministically.
+    logic guarded_in_ready;
+    logic guarded_conflict;
+    logic guarded_in_valid;
+
+    // Configuration and market-event issue are mutually exclusive. A config
+    // write therefore cannot change a center state on the same edge at which
+    // that state is sampled by a new event transaction.
     always_comb begin
-        cfg_write_ready = !out_valid;
+        guarded_in_valid = in_valid && !cfg_write_valid;
+        in_ready = guarded_in_ready && !cfg_write_valid;
+        conflict_o = guarded_conflict || (in_valid && cfg_write_valid);
+
+        // Pipeline retirement has priority over host configuration so a state
+        // transition can never be overwritten by a simultaneous config write.
+        cfg_write_ready = !out_valid && !in_valid;
 
         if (out_valid) begin
             store_write_valid = 1'b1;
@@ -66,12 +76,18 @@ module hft_field_stateful_center #(
             store_psi_w = psi_o;
             store_omega_w = omega_o;
             store_flow_w = flow_o;
-        end else begin
-            store_write_valid = cfg_write_valid;
+        end else if (cfg_write_valid && cfg_write_ready) begin
+            store_write_valid = 1'b1;
             store_write_addr = cfg_write_addr;
             store_psi_w = cfg_psi;
             store_omega_w = cfg_omega;
             store_flow_w = cfg_flow;
+        end else begin
+            store_write_valid = 1'b0;
+            store_write_addr = '0;
+            store_psi_w = '0;
+            store_omega_w = '0;
+            store_flow_w = '0;
         end
     end
 
@@ -97,7 +113,7 @@ module hft_field_stateful_center #(
     ) guarded_pipeline (
         .clk(clk),
         .rst_n(rst_n),
-        .in_valid(in_valid),
+        .in_valid(guarded_in_valid),
         .in_coord(in_coord),
         .psi_i(state_psi),
         .omega_i(state_omega),
@@ -111,8 +127,8 @@ module hft_field_stateful_center #(
         .psi_yp_i(psi_yp_i),
         .psi_zm_i(psi_zm_i),
         .psi_zp_i(psi_zp_i),
-        .in_ready(in_ready),
-        .conflict_o(conflict_o),
+        .in_ready(guarded_in_ready),
+        .conflict_o(guarded_conflict),
         .out_valid(out_valid),
         .out_coord(out_coord),
         .psi_o(psi_o),
