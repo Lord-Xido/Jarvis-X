@@ -51,7 +51,7 @@ jobs:
             rtl/hft_field_q16/tb_hft_field_pow2_equiv.sv
           vvp build/hft-rtl/hft_pow2_equiv.vvp
 
-      - name: Icarus fixed-latency pipeline regression
+      - name: Icarus fixed-latency shell regression
         run: |
           iverilog -g2012 \
             -s tb_hft_field_cell_pipeline \
@@ -60,6 +60,16 @@ jobs:
             rtl/hft_field_q16/hft_field_cell_pipeline.sv \
             rtl/hft_field_q16/tb_hft_field_cell_pipeline.sv
           vvp build/hft-rtl/hft_pipeline.vvp
+
+      - name: Icarus staged arithmetic pipeline regression
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_cell_staged \
+            -o build/hft-rtl/hft_staged.vvp \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/hft_field_cell_staged.sv \
+            rtl/hft_field_q16/tb_hft_field_cell_staged.sv
+          vvp build/hft-rtl/hft_staged.vvp
 
       - name: Icarus coordinate hazard regression
         run: |
@@ -79,6 +89,8 @@ jobs:
           verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_cell_pipeline \
             rtl/hft_field_q16/hft_field_cell_pow2.sv \
             rtl/hft_field_q16/hft_field_cell_pipeline.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_cell_staged \
+            rtl/hft_field_q16/hft_field_cell_staged.sv
           verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_hazard_guard \
             rtl/hft_field_q16/hft_field_hazard_guard.sv
 
@@ -97,6 +109,11 @@ jobs:
           yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_pow2.sv rtl/hft_field_q16/hft_field_cell_pipeline.sv; hierarchy -check -top hft_field_cell_pipeline; proc; opt; check; synth -top hft_field_cell_pipeline; stat' \
             | tee build/hft-rtl/pipeline-synth.log
 
+      - name: Yosys staged-pipeline synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_staged.sv; hierarchy -check -top hft_field_cell_staged; proc; opt; check; synth -top hft_field_cell_staged; stat' \
+            | tee build/hft-rtl/staged-synth.log
+
       - name: Yosys hazard-guard synthesis
         run: |
           yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_hazard_guard.sv; hierarchy -check -top hft_field_hazard_guard; proc; opt; check; synth -top hft_field_hazard_guard; stat' \
@@ -110,5 +127,7 @@ jobs:
           grep -A 20 '^=== hft_field_cell_pow2 ===' build/hft-rtl/pow2-synth.log | tail -n 20
           echo "Registered latency shell:"
           grep -A 20 '^=== hft_field_cell_pipeline ===' build/hft-rtl/pipeline-synth.log | tail -n 20
+          echo "Staged arithmetic pipeline:"
+          grep -A 20 '^=== hft_field_cell_staged ===' build/hft-rtl/staged-synth.log | tail -n 20
           echo "Hazard guard:"
           grep -A 20 '^=== hft_field_hazard_guard ===' build/hft-rtl/hazard-synth.log | tail -n 20
