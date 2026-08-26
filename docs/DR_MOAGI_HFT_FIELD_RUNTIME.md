@@ -2,41 +2,38 @@
 
 ## Status
 
-Experimental specialization of the canonical Dr Moagi Field Runtime v2 for bounded, deterministic, ultra-low-latency streaming decisions. This document is an engineering target, not a claim of measured FPGA latency or trading profitability.
+Experimental specialization of the canonical Dr Moagi Field Runtime v2 for bounded, deterministic, ultra-low-latency streaming decisions. The repository now contains a bit-exact Q16.16 RTL arithmetic pipeline, conservative same-cell hazard protection, and a persistent center-state reference store. This document distinguishes verified functional/synthesis properties from unmeasured FPGA timing targets.
 
 ## 1. Objective
 
 The HFT specialization removes operations that are unsuitable for a nanosecond critical path: full encode/decode passes, iterative minimization, heap allocation, global attention, stochastic sampling, floating-point reductions, and runtime model mutation.
 
-Each market event performs one bounded local state transition:
+Each market event performs one bounded local transition:
 
 ```text
 market event
   -> coordinate map
-  -> local book update
+  -> state load
   -> six-neighbour field gradient
   -> one Q16.16 Euler step
-  -> persistent memory update
+  -> persistent memory/flow update
   -> fixed-weight score
   -> inventory/risk gate
+  -> state commit
   -> order intent
 ```
 
-The intended hardware target is a cut-through FPGA/ASIC pipeline. A CPU implementation exists only as a deterministic functional reference.
+The intended production target is a cut-through FPGA/ASIC pipeline. The C++ implementation remains the functional oracle.
 
-## 2. State
+## 2. State and arithmetic contract
 
-For each lattice cell `c = (price_bin, venue, horizon)` maintain
+For each logical lattice cell `c = (price_bin, venue, horizon)` maintain at least:
 
 ```text
 Psi[c]       instantaneous field state
 Omega[c]     persistent exponentially weighted memory
-Bid[c]       bounded bid-side depth proxy
-Ask[c]       bounded ask-side depth proxy
 Flow[c]      signed event-flow state
 ```
-
-Global risk state contains at least inventory `I_t`.
 
 The event is
 
@@ -44,124 +41,145 @@ The event is
 e_t = (price_tick, venue, side, delta_quantity, sequence)
 ```
 
-All critical-path scalar arithmetic is signed Q16.16 with saturating add/subtract/multiply and truncation-toward-zero after a 64-bit intermediate product.
+All implemented scalar hot-path arithmetic is signed Q16.16. The software and RTL contract preserves:
 
-## 3. Local field equation
+- saturating signed add/subtract;
+- 64-bit intermediate arithmetic where required;
+- truncation toward zero for dyadic division/fixed-point multiplication;
+- fixed left-associative reduction order;
+- fail-closed inventory risk behavior.
 
-For the active cell `c_t`, define the six-neighbour discrete Laplacian
+The default coefficients are dyadic rational values (`1/2`, `1/4`, `1/8`, `1/16`, `1/32`, `7/8`, `15/16`), so the optimized RTL removes general multipliers and uses exact shift/add/subtract lowering while retaining the reference arithmetic semantics.
+
+## 3. Local field transition
+
+For active cell `c_t`, define
 
 ```text
 Delta_6 Psi[c]
-  = sum(Psi[n] for n in face_neighbours(c)) - 6 Psi[c].
+  = (((((Psi[x-] + Psi[x+]) + Psi[y-]) + Psi[y+]) + Psi[z-]) + Psi[z+])
+    - 6 Psi[c]
 ```
 
-Define the memory residual
+where every addition/subtraction uses the same saturating Q16.16 order as the C++ reference.
+
+Memory residual and event impulse are
 
 ```text
-R_t[c] = Psi_t[c] - Omega_t[c].
-```
+R_t[c] = Psi_t[c] - Omega_t[c]
 
-and signed event impulse
-
-```text
 u_t = +delta_quantity  for bid events
-u_t = -delta_quantity  for ask events.
+u_t = -delta_quantity  for ask events
 ```
 
-The hot-path field update is one explicit step
+and the compiled reference update is
 
 ```text
 rhs_t[c]
-  = -alpha R_t[c]
-    + lambda Delta_6 Psi_t[c]
-    + eta u_t
+  = -R_t[c] / 4
+    + Delta_6 Psi_t[c] / 32
+    + u_t / 2
 
 Psi_(t+1)[c]
-  = clamp(Psi_t[c] + dt rhs_t[c], -Psi_max, +Psi_max).
-```
+  = clamp(Psi_t[c] + rhs_t[c] / 8, -Psi_max, +Psi_max)
 
-This is a deliberately compiled surrogate of the more general Field Runtime v2 transition. It preserves bounded local propagation and persistent state while eliminating full codec evaluation from the trading path.
-
-Persistent memory is
-
-```text
 Omega_(t+1)[c]
-  = rho Omega_t[c] + (1-rho) Psi_(t+1)[c].
-```
+  = 15 Omega_t[c] / 16 + Psi_(t+1)[c] / 16
 
-Flow is
-
-```text
 Flow_(t+1)[c]
-  = rho_flow Flow_t[c] + u_t.
+  = 7 Flow_t[c] / 8 + u_t
 ```
 
-Only one center cell is written by the reference transition; seven field values are read (center plus six neighbours). Therefore field work per event is bounded independently of total lattice size.
+Only one center cell is committed per accepted event. The complete stencil requires center plus six neighbouring `Psi` values.
 
 ## 4. Decision and risk
 
-The reference score is intentionally linear so it lowers to a fixed MAC tree:
+The implemented score is evaluated in fixed order:
 
 ```text
 s_t
-  = w_psi Psi_(t+1)[c]
-  + w_omega Omega_(t+1)[c]
-  + w_flow Flow_(t+1)[c]
-  + w_lap Delta_6 Psi_t[c]
-  - w_inventory I_t.
+  = Psi_(t+1)[c]
+  + Omega_(t+1)[c] / 2
+  + Flow_(t+1)[c] / 2
+  + Delta_6 Psi_t[c] / 8
+  - Inventory_t / 4
 ```
 
-Decision:
+Decision threshold is `1/16` in Q16.16 units. Order quantity is bounded at `4`; a zero requested quantity uses the same bounded fallback. Before emission, projected inventory must satisfy
 
 ```text
-if s_t >  threshold: BUY
-if s_t < -threshold: SELL
-otherwise:            NONE
+|Inventory_t + signed_order_quantity| <= 64
 ```
 
-Before an intent is emitted, projected inventory must satisfy
+otherwise the action is rejected and cleared. This score is a mechanics demonstrator, not a validated trading alpha model.
+
+## 5. Verified RTL layers
+
+Current RTL files include:
 
 ```text
-|I_t + signed_order_quantity| <= I_max.
+rtl/hft_field_q16/hft_field_cell_core.sv
+rtl/hft_field_q16/hft_field_cell_pow2.sv
+rtl/hft_field_q16/hft_field_cell_pipeline.sv
+rtl/hft_field_q16/hft_field_cell_staged.sv
+rtl/hft_field_q16/hft_field_hazard_guard.sv
+rtl/hft_field_q16/hft_field_guarded_pipeline.sv
+rtl/hft_field_q16/hft_field_state_store.sv
+rtl/hft_field_q16/hft_field_stateful_center.sv
 ```
 
-The reference kernel fails closed when this bound is violated.
+The CI verification chain currently proves:
 
-This score is a hardware/mechanics demonstrator, not a validated alpha model. A production strategy must be trained and evaluated separately from the latency kernel.
+1. C++-derived golden-vector agreement for the reference RTL;
+2. multiplier-free equivalence across 10,012 deterministic RTL vectors, including signed extrema/saturation cases;
+3. a fixed 17-cycle valid-to-valid shell contract;
+4. a genuinely staged 17-cycle arithmetic pipeline matching the multiplier-free oracle for back-to-back II=1 transactions;
+5. conservative RAW hazard rejection for a coordinate already in flight while independent coordinates remain issuable on consecutive clocks;
+6. exact coordinate/result alignment through the guarded pipeline;
+7. persistent center-state commit/reload across repeated same-cell transactions;
+8. fail-closed serialization of configuration writes against event issue;
+9. Verilator lint and generic Yosys synthesis for the reference, multiplier-free, staged, guarded, and stateful-center RTL layers.
 
-## 5. Complexity
+These are functional and generic synthesis results. They are not FPGA place-and-route timing results.
 
-For one event the field kernel performs a fixed number of operations:
+## 6. Stateful recurrence boundary
+
+The current stateful engine stores and reloads center-cell `Psi`, `Omega`, and `Flow` values. A same-coordinate transaction is blocked until the previous transaction has retired and committed, so the next recurrence observes the newly committed state.
+
+The current reference store uses a combinational center read and synchronous write. It is intentionally small and technology-neutral; generic Yosys acceptance does **not** prove BRAM/URAM inference, banking, routing, or target-device timing.
+
+Six-neighbour `Psi` values are still supplied externally to `hft_field_stateful_center.sv`. A production implementation must therefore add a physically realizable neighbour-address and memory-banking architecture rather than assume an unrealistic seven-read single RAM.
+
+## 7. Latency contracts and targets
+
+### Verified logical arithmetic latency
+
+The staged arithmetic transaction contract is:
 
 ```text
-7 field reads
-1 local depth update
-1 six-neighbour Laplacian
-1 explicit field step
-1 memory update
-1 flow update
-1 fixed-width score reduction
-1 bounded risk check
+accepted input -> result = 17 clock cycles
 ```
 
-For fixed channel/stencil width,
+The pipeline can accept independent transactions at initiation interval `II=1`. Same-coordinate traffic is conservatively stalled until commit; same-cell speculative forwarding is not implemented.
+
+If a future FPGA implementation closes at 500 MHz, the 17-cycle arithmetic latency would correspond to:
 
 ```text
-C_event = O(1)
+17 * 2 ns = 34 ns
 ```
 
-with respect to total historical state and total logical field size. This does not mean all-market global inference is O(1); it means the incremental critical-path update is bounded.
+`34 ns` is therefore a derived architectural target, **not a measured latency**.
 
-## 6. Pipeline budget
+### Broader wire-to-wire budget
 
-Reference design budget at 500 MHz:
+The original system-level budget remains:
 
 | Stage | Cycles |
 |---|---:|
 | ingress / cut-through parse | 8 |
 | local book update | 4 |
 | state load | 4 |
-| field-gradient MACs | 8 |
+| field-gradient arithmetic | 8 |
 | memory update | 4 |
 | score reduction | 6 |
 | risk gate | 4 |
@@ -169,34 +187,28 @@ Reference design budget at 500 MHz:
 | TX launch | 4 |
 | **Total** | **48** |
 
-At 500 MHz:
+At a hypothetical 500 MHz that is `96 ns`, also a synthesis target only. It must not be reported as measured network-to-network latency until the complete design is placed, routed, timed, and physically measured.
 
-```text
-48 cycles * 2 ns/cycle = 96 ns
-```
+## 8. Complexity
 
-`96 ns` is a synthesis target only. It must not be reported as measured latency until an RTL implementation is placed, routed, timed, and measured network-to-network.
+For fixed stencil/channel width, one accepted local event performs a fixed amount of arithmetic and center-state work, so the incremental compute kernel is `O(1)` with respect to total logical lattice size. This does not imply that all-market inference, memory footprint, neighbour addressing, or network processing is `O(1)`.
 
-For context, the audited STAC-T1 ADHOC HFFT-02A result published in October 2024 reported 115.07 ns mean and 140.04 ns 99th percentile SOM-to-SOF at 1x market rate, with 76.40 ns mean EOT-to-SOF. The benchmark version differs from earlier STAC-T1 versions, so cross-version comparisons must be handled carefully.
+## 9. Determinism contract
 
-Reference: https://docs.stacresearch.com/news/ADHC240918
-
-## 7. Determinism contract
-
-A conforming hardware/software implementation must specify and preserve:
+A conforming hardware/software implementation must preserve:
 
 1. Q16.16 representation and scaling;
-2. 64-bit multiply intermediate;
-3. truncation toward zero after fixed-point multiplication;
-4. saturating overflow behavior;
-5. fixed reduction order;
-6. fixed coordinate wrapping/mapping;
-7. no hidden floating-point operations in the hot path;
-8. no dynamic allocation in `process`;
-9. deterministic replay digest for an identical event stream;
-10. fail-closed risk behavior.
+2. saturating overflow behavior;
+3. truncation toward zero;
+4. fixed arithmetic/reduction order;
+5. deterministic coordinate mapping and boundary policy;
+6. no hidden floating-point operations in the hot path;
+7. no dynamic allocation in the event-processing path;
+8. deterministic replay for an identical event stream;
+9. fail-closed risk behavior;
+10. explicit state-hazard semantics.
 
-## 8. Verification ladder
+## 10. Verification ladder
 
 Performance claims advance only through these gates:
 
@@ -204,8 +216,8 @@ Performance claims advance only through these gates:
 G0 mathematical boundedness
 G1 bit-exact C++ replay
 G2 compiler/sanitizer regression
-G3 HLS/RTL equivalence against C++ vectors
-G4 synthesis timing closure
+G3 RTL functional equivalence + generic synthesis
+G4 target FPGA synthesis and timing constraints
 G5 post-route timing + resource utilization
 G6 loopback packet latency
 G7 dual-port network timestamping
@@ -213,36 +225,22 @@ G8 STAC-T1-compatible workload
 G9 independent/audited benchmark
 ```
 
-A failure at any gate blocks promotion of the corresponding performance claim.
+The current RTL has materially advanced through G3 for the arithmetic, hazard, guarded-transaction, and persistent center-state reference layers. G4 and later remain unproven.
 
-## 9. Current implementation
+## 11. Next hardware lowering
 
-Files:
-
-```text
-cpp_runtime/include/jarvisx/hft_field.hpp
-cpp_runtime/src/hft_field_main.cpp
-cpp_runtime/tests/hft_field_tests.cpp
-```
-
-The C++ simulator reports software throughput and the 48-cycle FPGA design target separately. Software timing must never be relabeled as FPGA tick-to-trade latency.
-
-## 10. Next hardware lowering
-
-The first RTL should preserve the C++ state transition exactly:
+The next implementation boundary is:
 
 ```text
-RX stream
- -> event parser
- -> coordinate mapper
- -> BRAM/URAM 7-cell read bank
- -> Laplacian MAC tree
- -> Q16.16 field-step pipeline
- -> Omega/Flow update
- -> score MAC tree
- -> risk comparator
- -> order-intent encoder
- -> TX stream
+3D coordinate
+ -> deterministic center/x-/x+/y-/y+/z-/z+ address generator
+ -> boundary policy
+ -> physically realizable bank/replica selection
+ -> center + six-neighbour Psi fetch
+ -> staged Q16.16 arithmetic
+ -> center-state commit
 ```
 
-The production design should support shadow mode first: receive live/replayed market data, calculate intents, timestamp them, but emit no exchange-bound orders. Order transmission is enabled only after deterministic equivalence, risk, and latency verification.
+After neighbour banking, the design still requires a named FPGA target, synchronous memory timing integration, constraints, place-and-route, packet parser/encoder, Ethernet MAC/PHY integration, and timestamped replay before any hardware latency comparison is defensible.
+
+Production rollout should begin in shadow mode: receive live/replayed market data, calculate and timestamp intents, but emit no exchange-bound orders until deterministic equivalence, risk controls, and physical latency verification are complete.
