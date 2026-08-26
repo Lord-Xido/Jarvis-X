@@ -4,6 +4,8 @@
 
 This document is the operational companion to [Dr Moagi Inward-Turned Self-Optimizing Runtime](DR_MOAGI_INWARD_SELF_OPTIMIZING_RUNTIME.md). It connects the live Inward Optimizer 3D Lab visualization to the executable Jarvis-X components without confusing displayed telemetry with measured runtime evidence.
 
+Its typed 4D theoretical extension is defined in [Dr. Moagi 4D Quantum-Inspired Autoencoding Equation](DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md).
+
 The system is an original composite architecture built from established primitives: autoencoding, gradient descent, finite-difference directional derivatives, vector-Jacobian pullbacks, damped dynamics, spherical inversion, bounded search, deterministic replay, validation gates, atomic promotion, journaling, and rollback.
 
 ## 1. Capability boundary
