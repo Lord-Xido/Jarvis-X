@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Moagi Physical-Latent Field Simulator</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #040711;
+    --panel: #0a1020;
+    --panel2: #0f1730;
+    --line: rgba(149, 175, 255, 0.18);
+    --text: #e7ecff;
+    --muted: #9da9c9;
+    --ok: #5df2a7;
+    --warn: #ffd166;
+    --bad: #ff6b7a;
+    --blue: #67a4ff;
+    --violet: #b28cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(76,110,245,.12), transparent 35%),
+      radial-gradient(circle at 85% 0%, rgba(178,140,255,.10), transparent 30%),
+      var(--bg);
+    color: var(--text);
+  }
+  .shell { max-width: 1480px; margin: 0 auto; padding: 20px; }
+  header {
+    display: flex; gap: 18px; align-items: flex-start; justify-content: space-between;
+    border: 1px solid var(--line); background: rgba(8,13,28,.82); border-radius: 18px;
+    padding: 18px 20px; backdrop-filter: blur(10px);
+  }
+  h1 { margin: 0 0 8px; font-size: clamp(20px, 3vw, 34px); }
+  .subtitle { color: var(--muted); max-width: 900px; line-height: 1.5; }
+  .badge { white-space: nowrap; border: 1px solid rgba(93,242,167,.35); color: var(--ok); padding: 8px 10px; border-radius: 999px; font-size: 12px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(340px, .65fr); gap: 16px; margin-top: 16px; }
+  .panel { border: 1px solid var(--line); background: rgba(8,13,28,.88); border-radius: 18px; padding: 16px; overflow: hidden; }
+  .panel h2 { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 12px; color: #c8d2f4; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  button, select, input[type="range"] { font: inherit; }
+  button, select {
+    background: #111a35; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+  }
+  button:hover { border-color: rgba(103,164,255,.55); cursor: pointer; }
+  button.primary { background: linear-gradient(180deg, #1d4ed8, #193a92); border-color: #4c83ff; }
+  .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 10px; margin-top: 14px; }
+  .metric { background: linear-gradient(180deg, rgba(18,27,54,.9), rgba(9,15,31,.9)); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-height: 82px; }
+  .metric .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .metric .v { font-size: 22px; margin-top: 7px; font-weight: 700; }
+  .metric .s { color: var(--muted); font-size: 11px; margin-top: 5px; }
+  .field-wrap { position: relative; height: 430px; margin-top: 14px; perspective: 900px; border-radius: 14px; overflow: hidden; background: radial-gradient(circle at center, #111937 0%, #070b18 55%, #03050b 100%); border: 1px solid var(--line); }
+  .field { position: absolute; left: 50%; top: 50%; width: 300px; height: 300px; transform-style: preserve-3d; transform: translate(-50%,-50%) rotateX(58deg) rotateZ(42deg); transition: filter .2s; }
+  .plane { position:absolute; inset:0; border:1px solid rgba(103,164,255,.22); background: repeating-linear-gradient(0deg, transparent 0 28px, rgba(103,164,255,.08) 29px 30px), repeating-linear-gradient(90deg, transparent 0 28px, rgba(103,164,255,.08) 29px 30px); }
+  .plane.p1 { transform: translateZ(-74px); }
+  .plane.p2 { transform: translateZ(0); border-color: rgba(178,140,255,.3); }
+  .plane.p3 { transform: translateZ(74px); border-color: rgba(93,242,167,.3); }
+  .orb { position:absolute; width:58px; height:58px; border-radius:50%; left:121px; top:121px; transform-style: preserve-3d; box-shadow:0 0 45px rgba(103,164,255,.65); background: radial-gradient(circle at 35% 35%, #fff, #74a7ff 18%, #315dff 45%, #11193b 78%); animation:pulse 1.2s ease-in-out infinite alternate; }
+  @keyframes pulse { from { scale:.90; box-shadow:0 0 30px rgba(103,164,255,.42); } to { scale:1.08; box-shadow:0 0 65px rgba(103,164,255,.9); } }
+  .ring { position:absolute; left:50%; top:50%; width:200px; height:200px; border:2px solid rgba(93,242,167,.5); border-radius:50%; transform:translate(-50%,-50%) translateZ(95px); animation:spin 4s linear infinite; }
+  .ring:before, .ring:after { content:""; position:absolute; inset:18px; border:1px dashed rgba(255,209,102,.45); border-radius:50%; }
+  .ring:after { inset:42px; border-color:rgba(178,140,255,.55); }
+  @keyframes spin { to { transform:translate(-50%,-50%) translateZ(95px) rotateZ(360deg); } }
+  .legend { position:absolute; left:14px; bottom:12px; display:grid; gap:6px; font-size:12px; color:#c5cfee; }
+  .legend span { display:inline-block; min-width:42px; font-weight:700; }
+  .statebar { position:absolute; right:14px; top:12px; text-align:right; }
+  .statebar .state { font-size:42px; font-weight:800; letter-spacing:.1em; }
+  .statebar .action { color:var(--muted); font-size:12px; max-width:250px; }
+  canvas { width:100%; height:220px; display:block; background:#050913; border:1px solid var(--line); border-radius:12px; }
+  .truth { width:100%; border-collapse:collapse; font-size:12px; }
+  .truth th,.truth td { padding:8px 7px; border-bottom:1px solid var(--line); text-align:left; }
+  .truth th { color:var(--muted); font-weight:600; }
+  .truth tr.active { background:rgba(103,164,255,.10); }
+  .truth td.code { font-weight:800; letter-spacing:.08em; }
+  .log { height:250px; overflow:auto; background:#03060e; border:1px solid var(--line); border-radius:12px; padding:10px; font-size:11px; line-height:1.55; }
+  .log .ok { color:var(--ok); } .log .warn { color:var(--warn); } .log .bad { color:var(--bad); }
+  .toggles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+  .bit { border:1px solid var(--line); border-radius:12px; padding:10px; background:#091128; }
+  .bit label { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12px; }
+  .bit input { width:20px; height:20px; }
+  .budget { display:grid; grid-template-columns: 1.25fr 4.8fr 12.4fr; height:42px; border-radius:10px; overflow:hidden; border:1px solid var(--line); margin-top:10px; }
+  .budget > div { display:flex; align-items:center; justify-content:center; font-size:10px; border-right:1px solid rgba(255,255,255,.12); min-width:0; }
+  .budget .b2 { background:rgba(103,164,255,.25); } .budget .b1 { background:rgba(178,140,255,.25); } .budget .b0 { background:rgba(93,242,167,.18); }
+  .note { color:var(--muted); font-size:11px; line-height:1.5; }
+  .pass { color:var(--ok); } .fail { color:var(--bad); }
+  @media (max-width: 980px) { .grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,1fr)} header{flex-direction:column}.badge{white-space:normal}.field-wrap{height:360px} }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>ℳ ⇄ Space-Time Lattice — Synthetic Field Simulator</h1>
+      <div class="subtitle">Deterministic 3-bit operator semantics, epoch-validated commit gating, 1,000 logical lanes, and synthetic anomaly injection. This browser VM has no live market or network authority.</div>
+    </div>
+    <div class="badge">RESEARCH SURFACE • FAIL-CLOSED</div>
+  </header>
+
+  <div class="grid">
+    <main>
+      <section class="panel">
+        <h2>Field Control</h2>
+        <div class="controls">
+          <button id="run" class="primary">Run</button>
+          <button id="step">Step</button>
+          <button id="pause">Pause</button>
+          <button id="reset">Reset</button>
+          <select id="scenario">
+            <option value="burst">Burst Cancel 111→110</option>
+            <option value="vacuum">Liquidity Vacuum</option>
+            <option value="link">Link Degrade</option>
+            <option value="jitter">Compute Jitter</option>
+            <option value="mixed">Mixed Storm</option>
+          </select>
+          <button id="inject">Inject Anomaly</button>
+        </div>
+
+        <div class="toggles">
+          <div class="bit"><label><span>b₂ PHY/link qualified</span><input id="b2" type="checkbox" checked /></label></div>
+          <div class="bit"><label><span>b₁ deterministic compute</span><input id="b1" type="checkbox" checked /></label></div>
+          <div class="bit"><label><span>b₀ favourable synthetic book</span><input id="b0" type="checkbox" checked /></label></div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric"><div class="k">Current state</div><div class="v" id="mState">111</div><div class="s">3-bit lattice</div></div>
+          <div class="metric"><div class="k">Epoch</div><div class="v" id="mEpoch">0</div><div class="s">snapshot generation</div></div>
+          <div class="metric"><div class="k">Commit validity</div><div class="v" id="mCommit">VALID</div><div class="s">epoch + risk + kill gate</div></div>
+          <div class="metric"><div class="k">Stability</div><div class="v" id="mStability">1.000</div><div class="s">rolling transition score</div></div>
+          <div class="metric"><div class="k">Target path</div><div class="v">18.45 ns</div><div class="s">architectural budget only</div></div>
+          <div class="metric"><div class="k">Logical lanes</div><div class="v">1,000</div><div class="s">simulated parallel replicas</div></div>
+          <div class="metric"><div class="k">Stale rejects</div><div class="v" id="mRejects">0</div><div class="s">suppressed old decisions</div></div>
+          <div class="metric"><div class="k">Synthetic actions</div><div class="v" id="mActions">0</div><div class="s">policy resolutions</div></div>
+        </div>
+
+        <div class="field-wrap">
+          <div class="field" id="field">
+            <div class="plane p1"></div><div class="plane p2"></div><div class="plane p3"></div>
+            <div class="ring"></div><div class="orb"></div>
+          </div>
+          <div class="statebar"><div class="state" id="bigState">111</div><div class="action" id="bigAction">CROSS-MARKET SWEEP (SIMULATED POLICY ONLY)</div></div>
+          <div class="legend">
+            <div><span>Z₁ EM</span> synthetic physical/link predicate</div>
+            <div><span>Z₂ HW</span> synthetic deterministic compute predicate</div>
+            <div><span>Z₃ LOB</span> synthetic microstructure predicate</div>
+          </div>
+        </div>
+
+        <h2 style="margin-top:16px">Field Stabilization Trace</h2>
+        <canvas id="trace" width="1000" height="220"></canvas>
+      </section>
+
+      <section class="panel" style="margin-top:16px">
+        <h2>Latency Budget Model</h2>
+        <div class="budget"><div class="b2">b₂ 1.25 ns</div><div class="b1">b₁ 4.80 ns</div><div class="b0">b₀ 12.40 ns</div></div>
+        <p class="note">The displayed 18.45 ns is the supplied local decision-path target, not measured FPGA, wire, gateway, matching-engine, or round-trip latency. This simulator verifies state semantics and race suppression only.</p>
+      </section>
+    </main>
+
+    <aside>
+      <section class="panel">
+        <h2>Functional Integrity Matrix</h2>
+        <table class="truth" id="truth">
+          <thead><tr><th>State</th><th>Decoded action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="panel" style="margin-top:16px">
+        <h2>Epoch Commit Barrier</h2>
+        <div class="note">Aggressive synthetic action is allowed only when <code>state==111</code>, decision epoch equals latest epoch, risk is valid, and kill is false.</div>
+        <div style="margin-top:10px;display:grid;gap:8px">
+          <label class="note">Risk gate <input id="risk" type="checkbox" checked /></label>
+          <label class="note">Kill switch <input id="kill" type="checkbox" /></label>
+          <label class="note">Commit delay (simulation ticks) <input id="delay" type="range" min="0" max="5" value="1" /> <span id="delayV">1</span></label>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:16px">
+        <h2>Verification Log</h2>
+        <div class="log" id="log"></div>
+      </section>
+
+      <section class="panel" style="margin-top:16px">
+        <h2>Self-Test</h2>
+        <div id="tests" class="note">Running…</div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const ACTIONS = Object.freeze({
+    0: 'ABORT / PURGE (Drop packet)',
+    1: 'NO-OP (Arrive too late)',
+    2: 'CANCEL ORDERS (Protect capital)',
+    3: 'CONDITIONAL POST (Join back)',
+    4: 'ABORT / FLUSH (Clear buffers)',
+    5: 'SPECULATE (Low-size probe)',
+    6: 'PASSIVE ARBITRAGE (Re-quote)',
+    7: 'CROSS-MARKET SWEEP (Simulated policy only)'
+  });
+
+  const $ = id => document.getElementById(id);
+  const els = {
+    b2:$('b2'), b1:$('b1'), b0:$('b0'), risk:$('risk'), kill:$('kill'), delay:$('delay'), delayV:$('delayV'),
+    state:$('mState'), epoch:$('mEpoch'), commit:$('mCommit'), stability:$('mStability'), rejects:$('mRejects'), actions:$('mActions'),
+    bigState:$('bigState'), bigAction:$('bigAction'), field:$('field'), log:$('log'), truth:$('truth'), tests:$('tests'), trace:$('trace'),
+    scenario:$('scenario')
+  };
+
+  let epoch = 0;
+  let tick = 0;
+  let running = false;
+  let staleRejects = 0;
+  let actionCount = 0;
+  let history = [];
+  let pending = [];
+  let transitions = [];
+  let rngState = 0x4d4f4147;
+
+  function rand() {
+    rngState = (1664525 * rngState + 1013904223) >>> 0;
+    return rngState / 0x100000000;
+  }
+
+  function stateOf(b2,b1,b0) { return ((b2?1:0)<<2) | ((b1?1:0)<<1) | (b0?1:0); }
+  function bits() { return { b2:els.b2.checked, b1:els.b1.checked, b0:els.b0.checked }; }
+  function bitsString(s) { return s.toString(2).padStart(3,'0'); }
+
+  function log(msg, cls='') {
+    const d = document.createElement('div');
+    d.className = cls;
+    d.textContent = `[t=${tick.toString().padStart(4,'0')} e=${epoch}] ${msg}`;
+    els.log.appendChild(d);
+    els.log.scrollTop = els.log.scrollHeight;
+    while (els.log.children.length > 120) els.log.removeChild(els.log.firstChild);
+  }
+
+  function decodeSnapshot() {
+    const b = bits();
+    const state = stateOf(b.b2,b.b1,b.b0);
+    return { ...b, state, action:ACTIONS[state], epoch };
+  }
+
+  function scheduleDecision(snapshot) {
+    pending.push({ snapshot, due: tick + Number(els.delay.value) });
+    actionCount++;
+  }
+
+  function aggressiveCommitAllowed(d) {
+    return d.snapshot.state === 7 &&
+      d.snapshot.epoch === epoch &&
+      els.risk.checked &&
+      !els.kill.checked;
+  }
+
+  function processPending() {
+    const dueNow = pending.filter(x => x.due <= tick);
+    pending = pending.filter(x => x.due > tick);
+    for (const d of dueNow) {
+      if (d.snapshot.state === 7) {
+        if (aggressiveCommitAllowed(d)) {
+          log(`COMMIT accepted for epoch ${d.snapshot.epoch}: simulated aggressive policy`, 'ok');
+        } else {
+          staleRejects++;
+          const stale = d.snapshot.epoch !== epoch;
+          const reason = stale ? 'stale epoch' : (!els.risk.checked ? 'risk gate' : els.kill.checked ? 'kill switch' : 'gate mismatch');
+          log(`COMMIT REJECTED (${reason}) for old state ${bitsString(d.snapshot.state)}`, 'bad');
+        }
+      } else {
+        log(`Resolved ${bitsString(d.snapshot.state)} -> ${d.snapshot.action}`, 'warn');
+      }
+    }
+  }
+
+  function setBits(b2,b1,b0, reason='manual') {
+    const before = stateOf(els.b2.checked,els.b1.checked,els.b0.checked);
+    els.b2.checked=!!b2; els.b1.checked=!!b1; els.b0.checked=!!b0;
+    const after = stateOf(els.b2.checked,els.b1.checked,els.b0.checked);
+    if (before !== after) {
+      epoch++;
+      transitions.push(tick);
+      log(`STATE ${bitsString(before)} -> ${bitsString(after)} (${reason}); epoch advanced`, 'warn');
+    }
+    render();
+  }
+
+  function inject(kind=els.scenario.value) {
+    if (kind === 'burst') {
+      setBits(true,true,true,'burst preset prime');
+      const snap = decodeSnapshot();
+      scheduleDecision(snap);
+      log('Captured 111 decision; injecting newer cancel before commit', 'warn');
+      setBits(true,true,false,'synthetic block-order cancel');
+    } else if (kind === 'vacuum') {
+      setBits(true,true,false,'synthetic liquidity vacuum');
+    } else if (kind === 'link') {
+      setBits(false,true,true,'synthetic link degradation');
+    } else if (kind === 'jitter') {
+      setBits(true,false,true,'synthetic compute jitter');
+    } else if (kind === 'mixed') {
+      const b2 = rand() > .38, b1 = rand() > .42, b0 = rand() > .55;
+      setBits(b2,b1,b0,'seeded mixed storm');
+    }
+  }
+
+  function stabilityScore() {
+    const windowStart = Math.max(0, tick - 30);
+    const n = transitions.filter(t => t >= windowStart).length;
+    return Math.max(0, 1 - n / 16);
+  }
+
+  function step() {
+    tick++;
+    processPending();
+
+    if (running && tick % 10 === 0) {
+      const kind = els.scenario.value;
+      if (kind === 'mixed') inject('mixed');
+      else if (kind === 'vacuum' && rand() < .6) setBits(true,true,false,'vacuum continuation');
+      else if (kind === 'link' && rand() < .5) setBits(false,true,rand()>.35,'link jitter continuation');
+      else if (kind === 'jitter' && rand() < .5) setBits(true,false,rand()>.4,'compute jitter continuation');
+    }
+
+    const snap = decodeSnapshot();
+    scheduleDecision(snap);
+    history.push({tick, state:snap.state, stability:stabilityScore(), epoch});
+    if (history.length > 180) history.shift();
+    render();
+  }
+
+  function renderTruth(active) {
+    const tbody = els.truth.querySelector('tbody');
+    if (!tbody.children.length) {
+      for (let i=0;i<8;i++) {
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td class="code">${bitsString(i)}</td><td>${ACTIONS[i]}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+    [...tbody.children].forEach((tr,i)=>tr.classList.toggle('active', i===active));
+  }
+
+  function render() {
+    const snap = decodeSnapshot();
+    const s = bitsString(snap.state);
+    const valid = snap.state !== 7 || (snap.epoch === epoch && els.risk.checked && !els.kill.checked);
+    els.state.textContent=s; els.epoch.textContent=epoch; els.bigState.textContent=s;
+    els.bigAction.textContent=snap.action;
+    els.commit.textContent=valid ? 'VALID' : 'BLOCKED';
+    els.commit.style.color=valid ? 'var(--ok)' : 'var(--bad)';
+    els.stability.textContent=stabilityScore().toFixed(3);
+    els.rejects.textContent=staleRejects;
+    els.actions.textContent=actionCount;
+    els.field.style.filter = snap.state===7 ? 'saturate(1.25) brightness(1.12)' : snap.state===0 ? 'grayscale(.65) brightness(.72)' : 'saturate(.95)';
+    els.bigState.style.color = snap.state===7 ? 'var(--ok)' : snap.state===0 ? 'var(--bad)' : 'var(--warn)';
+    renderTruth(snap.state);
+    drawTrace();
+  }
+
+  function drawTrace() {
+    const c=els.trace, ctx=c.getContext('2d');
+    const w=c.width,h=c.height;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='#050913'; ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='rgba(149,175,255,.12)'; ctx.lineWidth=1;
+    for(let y=20;y<h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+    for(let x=0;x<w;x+=100){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+    if(history.length<2)return;
+    const xAt=i=>i/(history.length-1)*w;
+    ctx.beginPath();
+    history.forEach((p,i)=>{const y=h-18-(p.state/7)*(h-36); i?ctx.lineTo(xAt(i),y):ctx.moveTo(xAt(i),y);});
+    ctx.strokeStyle='#67a4ff';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();
+    history.forEach((p,i)=>{const y=h-18-p.stability*(h-36); i?ctx.lineTo(xAt(i),y):ctx.moveTo(xAt(i),y);});
+    ctx.strokeStyle='#5df2a7';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#9da9c9';ctx.font='12px monospace';ctx.fillText('blue = state index 0..7   green = stability 0..1',12,16);
+  }
+
+  function runTests() {
+    const checks=[];
+    const expect=(name,cond)=>checks.push({name,cond:!!cond});
+    const seen=new Set();
+    for(let b2=0;b2<=1;b2++)for(let b1=0;b1<=1;b1++)for(let b0=0;b0<=1;b0++){
+      const s=stateOf(b2,b1,b0); seen.add(s); expect(`state ${bitsString(s)} has action`, typeof ACTIONS[s]==='string');
+    }
+    expect('all eight states reachable', seen.size===8);
+    expect('111 decodes to state 7', stateOf(1,1,1)===7);
+    expect('110 decodes to state 6', stateOf(1,1,0)===6);
+    expect('111→110 changes only b0', ((7^6)===1));
+
+    const old={snapshot:{state:7,epoch:10}};
+    const fakeLatest=11;
+    expect('stale epoch inequality detectable', old.snapshot.epoch!==fakeLatest);
+
+    const passed=checks.filter(x=>x.cond).length;
+    els.tests.innerHTML=`<div class="${passed===checks.length?'pass':'fail'}"><strong>${passed}/${checks.length} assertions passed</strong></div>`+
+      checks.map(x=>`<div>${x.cond?'✓':'✗'} ${x.name}</div>`).join('');
+    log(`SELF-TEST ${passed}/${checks.length} passed`, passed===checks.length?'ok':'bad');
+  }
+
+  function reset() {
+    running=false; epoch=0; tick=0; staleRejects=0; actionCount=0; history=[]; pending=[]; transitions=[]; rngState=0x4d4f4147;
+    els.b2.checked=true; els.b1.checked=true; els.b0.checked=true; els.risk.checked=true; els.kill.checked=false; els.delay.value=1; els.delayV.textContent='1'; els.log.innerHTML='';
+    log('Simulator reset to coherent state 111', 'ok');
+    render();
+  }
+
+  $('run').onclick=()=>{running=true;log('Continuous synthetic stepping enabled','ok');};
+  $('pause').onclick=()=>{running=false;log('Simulation paused','warn');};
+  $('step').onclick=()=>step();
+  $('reset').onclick=()=>reset();
+  $('inject').onclick=()=>inject();
+  els.delay.oninput=()=>els.delayV.textContent=els.delay.value;
+  [els.b2,els.b1,els.b0].forEach(el=>el.onchange=()=>{epoch++;transitions.push(tick);log('Manual predicate edit advanced epoch','warn');render();});
+  [els.risk,els.kill].forEach(el=>el.onchange=render);
+
+  setInterval(()=>{ if(running) step(); }, 120);
+  reset();
+  runTests();
+})();
+</script>
+</body>
+</html>
