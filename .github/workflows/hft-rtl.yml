@@ -92,6 +92,20 @@ jobs:
             rtl/hft_field_q16/tb_hft_field_guarded_pipeline.sv
           vvp build/hft-rtl/hft_guarded.vvp
 
+      - name: Icarus persistent center-state recurrence
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_stateful_center \
+            -o build/hft-rtl/hft_stateful.vvp \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/hft_field_cell_staged.sv \
+            rtl/hft_field_q16/hft_field_hazard_guard.sv \
+            rtl/hft_field_q16/hft_field_guarded_pipeline.sv \
+            rtl/hft_field_q16/hft_field_state_store.sv \
+            rtl/hft_field_q16/hft_field_stateful_center.sv \
+            rtl/hft_field_q16/tb_hft_field_stateful_center.sv
+          vvp build/hft-rtl/hft_stateful.vvp
+
       - name: Verilator lint
         run: |
           verilator --lint-only --sv -Wall -Wno-fatal \
@@ -109,6 +123,12 @@ jobs:
             rtl/hft_field_q16/hft_field_cell_staged.sv \
             rtl/hft_field_q16/hft_field_hazard_guard.sv \
             rtl/hft_field_q16/hft_field_guarded_pipeline.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_stateful_center \
+            rtl/hft_field_q16/hft_field_cell_staged.sv \
+            rtl/hft_field_q16/hft_field_hazard_guard.sv \
+            rtl/hft_field_q16/hft_field_guarded_pipeline.sv \
+            rtl/hft_field_q16/hft_field_state_store.sv \
+            rtl/hft_field_q16/hft_field_stateful_center.sv
 
       - name: Yosys reference synthesis
         run: |
@@ -140,6 +160,11 @@ jobs:
           yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_staged.sv rtl/hft_field_q16/hft_field_hazard_guard.sv rtl/hft_field_q16/hft_field_guarded_pipeline.sv; hierarchy -check -top hft_field_guarded_pipeline; proc; opt; check; synth -top hft_field_guarded_pipeline; stat' \
             | tee build/hft-rtl/guarded-synth.log
 
+      - name: Yosys stateful-center synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_staged.sv rtl/hft_field_q16/hft_field_hazard_guard.sv rtl/hft_field_q16/hft_field_guarded_pipeline.sv rtl/hft_field_q16/hft_field_state_store.sv rtl/hft_field_q16/hft_field_stateful_center.sv; hierarchy -check -top hft_field_stateful_center; proc; opt; check; synth -top hft_field_stateful_center; stat' \
+            | tee build/hft-rtl/stateful-synth.log
+
       - name: Report generic gate counts
         run: |
           echo "Reference core:"
@@ -154,3 +179,5 @@ jobs:
           grep -A 20 '^=== hft_field_hazard_guard ===' build/hft-rtl/hazard-synth.log | tail -n 20
           echo "Guarded staged pipeline:"
           grep -A 20 '^=== hft_field_guarded_pipeline ===' build/hft-rtl/guarded-synth.log | tail -n 20
+          echo "Stateful center engine:"
+          grep -A 20 '^=== hft_field_stateful_center ===' build/hft-rtl/stateful-synth.log | tail -n 20
