@@ -226,6 +226,8 @@ Every canonical subsystem should provide:
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
+- [Inward 3D kinetic end-to-end specification](docs/INWARD_3D_KINETIC_END_TO_END.md)
+- [Dr. Moagi 4D quantum-inspired autoencoding equation](docs/DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md)
 - [Hierarchical 3D fractional smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md)
 - [Roadmap](ROADMAP.md)
 - [Governance](GOVERNANCE.md)
