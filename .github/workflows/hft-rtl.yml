@@ -1,0 +1,52 @@
+name: HFT Q16 RTL Equivalence
+
+on:
+  push:
+    paths:
+      - "rtl/hft_field_q16/**"
+      - "cpp_runtime/include/jarvisx/hft_field.hpp"
+      - ".github/workflows/hft-rtl.yml"
+  pull_request:
+    paths:
+      - "rtl/hft_field_q16/**"
+      - "cpp_runtime/include/jarvisx/hft_field.hpp"
+      - ".github/workflows/hft-rtl.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hft-rtl-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rtl-equivalence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install RTL tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog verilator yosys
+
+      - name: Icarus golden-vector simulation
+        run: |
+          mkdir -p build/hft-rtl
+          iverilog -g2012 \
+            -s tb_hft_field_cell_core \
+            -o build/hft-rtl/hft_tb.vvp \
+            rtl/hft_field_q16/hft_field_cell_core.sv \
+            rtl/hft_field_q16/tb_hft_field_cell_core.sv
+          vvp build/hft-rtl/hft_tb.vvp
+
+      - name: Verilator lint
+        run: |
+          verilator --lint-only --sv -Wall -Wno-fatal \
+            rtl/hft_field_q16/hft_field_cell_core.sv
+
+      - name: Yosys synthesizability check
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_core.sv; hierarchy -check -top hft_field_cell_core; proc; opt; check; synth -top hft_field_cell_core; stat'
+
