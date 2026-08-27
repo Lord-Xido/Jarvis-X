@@ -334,6 +334,10 @@ V_{determinism}
 \land
 V_{resources}
 \land
+V_{energy}
+\land
+(\neg\operatorname{codec\_enabled}\lor V_{codec})
+\land
 V_{recovery}
 \land
 V_{policy}.
@@ -510,6 +514,8 @@ The trial gate therefore adds:
 \[
 V_{energy}
 =
+V_{meter}
+\land
 (E_t^{cons,trial}\le E_{cons,budget})
 \land
 (E_{t+1}^{sys,trial}\ge E_{reserve,min})
@@ -527,7 +533,7 @@ At energetic equilibrium:
 P^{net}=0.
 \]
 
-This means the inflows and outflows balance; it does not mean that every physical power flow has stopped. The energy verdict is computed before commit and is included in \(V_{opt}\). Accepted cycles integrate measured net power into the authoritative energy ledger. Rolled-back trials retain their metering record but cannot rewrite committed algorithmic state. This phase is placed after the telemetry schema for readability but executes between Phase 8 and Phase 9.
+This means the inflows and outflows balance; it does not mean that every physical power flow has stopped. The energy verdict is computed before commit and is included in \(V_{opt}\). The physical energy ledger advances for every executed trial, including rejected candidates, because rollback cannot undo energy already consumed. Algorithmic model and mechanics state still roll back on rejection. If metering is invalid, stale, simulated, or unavailable, \(V_{meter}=0\), promotion fails closed, and the ledger records the provenance and conservative accounting policy. This phase is placed after the telemetry schema for readability but executes between Phase 8 and Phase 9.
 
 ## 4. Three-bit directive projection
 
@@ -766,7 +772,7 @@ Operationally:
 }
 \]
 
-Repository status: formally specified and proposed for implementation. It is not yet a canonical executable codec module.
+Repository status: formally specified and proposed for implementation. It is not yet a canonical executable codec module. Its 1 GiB authenticated-vault extension is defined in [CODEX-VAULT Ω³](CODEX_VAULT_OMEGA3.md).
 
 ## 5. Runtime-level inward turn
 
@@ -954,8 +960,10 @@ function inward_cycle(committed_state, committed_model, bounds):
     loss_after = mse(x_hat_trial, x)
     power_trial = meter_candidate_power(model_trial, measured_interval)
     energy_trial = integrate_outgoing_power(power_trial, measured_interval)
+    physical_energy_ledger.advance(power_trial, energy_trial)
+    codec_verdict = verify_codec(model_trial) if codec_enabled else disabled_pass()
     verdict = verify(checkpoint, model_trial, loss_before, loss_after,
-                     power_trial, energy_trial, bounds)
+                     power_trial, energy_trial, codec_verdict, bounds)
 
     if verdict.accepted:
         committed_model = atomic_commit(model_trial)
