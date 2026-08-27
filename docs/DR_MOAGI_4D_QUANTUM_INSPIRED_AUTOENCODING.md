@@ -563,7 +563,7 @@ V_{meter}
 (|\varepsilon_t^{meter}|\le\epsilon_{meter}).
 \]
 
-A trial that improves \(\mathcal J_{4D}\) but violates the consumption-energy, stored-reserve, or peak-power contract is inadmissible. Metering and \(V_{energy}\) evaluation occur before the authoritative commit decision. At steady stored energy,
+A trial that improves \(\mathcal J_{4D}\) but violates the consumption-energy, stored-reserve, or peak-power contract is inadmissible. Metering and \(V_{energy}\) evaluation occur before the authoritative commit decision. The physical energy ledger advances for every executed trial, whether its algorithmic candidate is committed or rolled back; rollback cannot reverse physical consumption. At steady stored energy,
 
 \[
 \frac{dE^{sys}}{dt}=0
