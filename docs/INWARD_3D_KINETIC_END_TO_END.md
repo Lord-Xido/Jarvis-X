@@ -83,6 +83,8 @@ P_{t+1}^{trial}
 \rightarrow
 W_{t+1}^{trial}
 \rightarrow
+\operatorname{METER}_{power,energy}
+\rightarrow
 \operatorname{VERIFY}
 \rightarrow
 \operatorname{COMMIT/ROLLBACK}
@@ -438,7 +440,7 @@ Every timing value requires a source label:
 
 A simulated value must never be displayed as measured.
 
-### Phase 14 — close the power–energy–time loop
+### Phase 8A — meter the candidate and close the power–energy–time loop
 
 Power and energy are the same physical account viewed through different time operators:
 
@@ -492,12 +494,25 @@ The dimensional contract is strict:
 
 Loss, entropy, latent magnitude, gradient norm, and \(\Omega_t\) are algorithmic quantities. They are not physical joules or watts unless a calibrated measurement model explicitly maps them to those units.
 
+Before Phase 9 verification, meter the candidate over its complete trial interval. Its consumed energy is:
+
+\[
+E_t^{cons,trial}
+=
+\int_{t_0}^{t_1}
+\left(
+P^{compute}+P^{memory}+P^{network}+P^{cooling}+P^{other}
+\right)d\tau.
+\]
+
 The trial gate therefore adds:
 
 \[
 V_{energy}
 =
-(E_{t+1}^{trial}\le E_{budget})
+(E_t^{cons,trial}\le E_{cons,budget})
+\land
+(E_{t+1}^{sys,trial}\ge E_{reserve,min})
 \land
 (P_{peak}^{trial}\le P_{max})
 \land
@@ -512,7 +527,7 @@ At energetic equilibrium:
 P^{net}=0.
 \]
 
-This means the inflows and outflows balance; it does not mean that every physical power flow has stopped. Accepted cycles integrate measured net power into the authoritative energy ledger. Rolled-back trials retain their metering record but cannot rewrite committed algorithmic state.
+This means the inflows and outflows balance; it does not mean that every physical power flow has stopped. The energy verdict is computed before commit and is included in \(V_{opt}\). Accepted cycles integrate measured net power into the authoritative energy ledger. Rolled-back trials retain their metering record but cannot rewrite committed algorithmic state. This phase is placed after the telemetry schema for readability but executes between Phase 8 and Phase 9.
 
 ## 4. Three-bit directive projection
 
@@ -546,6 +561,212 @@ The hosted demonstration displays changing directive names. Those labels are not
 6. a journal record linking the directive to its measured input state.
 
 Until then, the bit engine is a visual projection of state.
+
+### 4.1 Dr. Moagi discrete geometric codec
+
+Provenance: supplied by Dr. Matladi Maxwell Moagi on 27 August 2026. The supplied equation is preserved here as the conceptual source; the following form removes its circular dependencies and gives every operator an executable order.
+
+Let the parameter field satisfy:
+
+\[
+\mathbf P_t\in\mathbb R^{N\times d_P},
+\qquad
+\mathcal B\subseteq\mathbb R^{N\times d_P},
+\]
+
+and initialize the refined field with:
+
+\[
+\mathbf P_t^{(0)}
+=
+E_\theta(t,\mathbf P_t).
+\]
+
+For \(k=0,\ldots,K-1\), apply the bounded inward residual:
+
+\[
+\boxed{
+\mathbf P_t^{(k+1)}
+=
+\Pi_{\mathcal B}
+\left[
+\mathbf P_t^{(k)}
++
+\gamma R_\phi
+\left(t,\mathbf P_t^{(k)}\right)
+\right].
+}
+\]
+
+The final refined geometry is:
+
+\[
+\mathbf P_t^\star=\mathbf P_t^{(K)}.
+\]
+
+Compress and quantize it only after refinement:
+
+\[
+\mathbf h_t
+=
+C_\xi
+\left(t,\operatorname{vec}(\mathbf P_t^\star)\right),
+\qquad
+\mathbf z_t
+=
+Q_{\mathcal A}(\mathbf h_t)
+\in\mathcal A^L.
+\]
+
+The alphabet must be named accurately:
+
+\[
+\mathcal A
+=
+\begin{cases}
+\{-1,0,+1\}, & \text{ternary three-state symbols},\\
+\{0,1,\ldots,7\}, & \text{true three-bit symbols}.
+\end{cases}
+\]
+
+A ternary threshold quantizer is:
+
+\[
+Q_\tau(h_i)
+=
+\begin{cases}
+-1,&h_i\le-\tau,\\
+0,&|h_i|<\tau,\\
++1,&h_i\ge\tau.
+\end{cases}
+\]
+
+Ternary symbols require at least two storage bits per scalar unless entropy or block coding is applied; one of the four binary code points remains unused. A true three-bit quantizer exposes eight reproducible reconstruction levels and must declare its clipping range, scale, zero-point, tie rule, and byte-packing order.
+
+Decode geometry separately from the derived operational heads:
+
+\[
+\widehat{\mathbf P}_t
+=
+D_\psi(\mathbf z_t),
+\]
+
+\[
+\mathbf V_t=V_\eta(\mathbf z_t),
+\qquad
+\mathbf S_t=S_\zeta(\mathbf z_t),
+\qquad
+\mathbf C_t
+=
+\Gamma
+\left(
+\mathbf P_t^\star,
+\widehat{\mathbf P}_t,
+\mathbf z_t
+\right).
+\]
+
+The notation deliberately distinguishes \(\mathbf P_t^\star\), the refined internal field, from \(\widehat{\mathbf P}_t\), its decoded reconstruction. They are equal only within the fixed-point tolerance.
+
+A minimal consistency vector is:
+
+\[
+\mathbf C_t
+=
+\begin{bmatrix}
+\|\mathbf P_t^\star-\widehat{\mathbf P}_t\|_2\\
+\|\mathbf z_t-Q_{\mathcal A}(C_\xi(t,\operatorname{vec}\widehat{\mathbf P}_t))\|_2\\
+\operatorname{dist}(\widehat{\mathbf P}_t,\mathcal B)\\
+\|\mathbf P_t^{(K)}-\mathbf P_t^{(K-1)}\|_2
+\end{bmatrix}.
+\]
+
+If \(R_\phi\) is a force rather than a direct displacement, use explicit damped kinetics:
+
+\[
+\mathbf U_t^{(k+1)}
+=
+\beta\mathbf U_t^{(k)}
++
+\gamma R_\phi
+\left(t,\mathbf P_t^{(k)}\right),
+\qquad 0\le\beta<1,
+\]
+
+\[
+\mathbf P_t^{(k+1)}
+=
+\Pi_{\mathcal B}
+\left[
+\mathbf P_t^{(k)}
++
+\Delta t\,\mathbf U_t^{(k+1)}
+\right].
+\]
+
+The codec is admissible only when:
+
+\[
+V_{codec}
+=
+V_{finite}
+\land
+V_{alphabet}
+\land
+V_{bounds}
+\land
+V_{reconstruction}
+\land
+V_{cycle}
+\land
+V_{determinism}
+\land
+V_{packing}.
+\]
+
+Its fixed-point identity is:
+
+\[
+\boxed{
+\mathbf P^\star
+=
+D_\psi
+\left[
+Q_{\mathcal A}
+\left(
+C_\xi(t,\operatorname{vec}\mathbf P^\star)
+\right)
+\right]
+}
+\]
+
+within declared reconstruction, cycle-consistency, and geometric tolerances. This establishes discrete codec self-consistency, not consciousness or lossless recovery.
+
+Operationally:
+
+\[
+\boxed{
+\mathbf P_t
+\rightarrow
+\text{embed}
+\rightarrow
+\text{refine inward }K\text{ times}
+\rightarrow
+\text{project to }\mathcal B
+\rightarrow
+\text{compress}
+\rightarrow
+\text{quantize}
+\rightarrow
+\text{decode}
+\rightarrow
+\text{verify}
+\rightarrow
+\text{commit or rollback}.
+}
+\]
+
+Repository status: formally specified and proposed for implementation. It is not yet a canonical executable codec module.
 
 ## 5. Runtime-level inward turn
 
@@ -731,7 +952,10 @@ function inward_cycle(committed_state, committed_model, bounds):
 
     x_hat_trial = model_trial.reconstruct(x)
     loss_after = mse(x_hat_trial, x)
-    verdict = verify(checkpoint, model_trial, loss_before, loss_after, bounds)
+    power_trial = meter_candidate_power(model_trial, measured_interval)
+    energy_trial = integrate_outgoing_power(power_trial, measured_interval)
+    verdict = verify(checkpoint, model_trial, loss_before, loss_after,
+                     power_trial, energy_trial, bounds)
 
     if verdict.accepted:
         committed_model = atomic_commit(model_trial)
@@ -762,6 +986,9 @@ function inward_cycle(committed_state, committed_model, bounds):
 15. A promoted configuration is journaled and recoverable.
 16. A failed candidate leaves both world state and mechanics state unchanged.
 17. The discrete energy update satisfies the metered balance within tolerance and rejects unit or budget violations.
+18. Ternary mode emits only \(-1,0,+1\); true three-bit mode emits exactly one of eight declared codes.
+19. Encode–decode–re-encode cycle consistency remains within tolerance.
+20. Every decoded field lies in \(\mathcal B\), and the same seed and tie rule reproduce identical packed bytes.
 
 ## 11. Operational identity
 
@@ -785,9 +1012,11 @@ The end-to-end mechanism is:
 \rightarrow
 \text{Verify}
 \rightarrow
-\text{Commit or rollback}
-\rightarrow
 \text{Account for power and energy}
+\rightarrow
+\text{Verify energy and codec gates}
+\rightarrow
+\text{Commit or rollback}
 \rightarrow
 \text{Describe}
 \rightarrow
