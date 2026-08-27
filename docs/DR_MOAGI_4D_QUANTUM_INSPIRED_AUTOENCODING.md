@@ -494,6 +494,72 @@ A_{\mathrm{focus}}
 
 averaged across queries, heads, batches, and time.
 
+### 9.1 Power–energy–time accounting
+
+The physical loop is a calculus duality, not an algebraic interchange:
+
+\[
+\boxed{
+P^{net}(t)=\frac{dE^{sys}(t)}{dt},
+\qquad
+E^{sys}(t)=E^{sys}(t_0)+\int_{t_0}^{t}P^{net}(\tau)\,d\tau.
+}
+\]
+
+Thus power integrated over time changes stored system energy, while the time derivative of stored energy is net power. Average power over a finite interval is:
+
+\[
+\overline P
+=
+\frac{E^{sys}(t_1)-E^{sys}(t_0)}{t_1-t_0}.
+\]
+
+For the discrete execution clock:
+
+\[
+E_{t+1}^{sys}
+=
+E_t^{sys}
++
+\Delta t_t
+\left(
+P_t^{in}
+-P_t^{compute}
+-P_t^{memory}
+-P_t^{network}
+-P_t^{cooling}
+-P_t^{other}
+\right)
++
+\varepsilon_t^{meter}.
+\]
+
+Here \(E^{sys}\) is hardware/system energy measured in joules and each \(P\) term is measured in watts. It must not be conflated with the field-energy density \(\mathcal E_{phys}\), reconstruction loss, entropy, attention focus, latent activation, or \(\Omega\) memory unless an explicit calibrated transduction model supplies the conversion and units.
+
+The resource verifier includes:
+
+\[
+V_{energy}
+=
+V_{meter}
+\land
+(E_{trial}^{sys}\le E_{budget})
+\land
+(P_{peak}^{trial}\le P_{max})
+\land
+(|\varepsilon_t^{meter}|\le\epsilon_{meter}).
+\]
+
+A trial that improves \(\mathcal J_{4D}\) but violates the energy or peak-power contract is inadmissible. At steady stored energy,
+
+\[
+\frac{dE^{sys}}{dt}=0
+\Longleftrightarrow
+P^{net}=0,
+\]
+
+which permits nonzero balanced inflow and outflow. The loop therefore closes operationally as measurement \(\rightarrow\) power balance \(\rightarrow\) time integration \(\rightarrow\) energy state \(\rightarrow\) bounded control \(\rightarrow\) remeasurement.
+
 ## 10. Bounded parameter transition
 
 Let all trainable parameters be:
@@ -919,8 +985,10 @@ A conforming implementation must test:
 16. complete rollback after any failed gate;
 17. authoritative state immutability during candidate evaluation;
 18. provenance labels on measured, simulated, and unavailable telemetry;
-19. external benchmark reports tied to commit and environment hashes;
-20. no promotion from an internal composite score alone.
+19. watt–joule–second dimensional consistency and discrete energy-balance closure;
+20. rejection of candidates exceeding energy, peak-power, or metering-residual bounds;
+21. external benchmark reports tied to commit and environment hashes;
+22. no promotion from an internal composite score alone.
 
 ## 18. Development order
 
