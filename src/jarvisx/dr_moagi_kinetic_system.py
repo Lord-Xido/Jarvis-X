@@ -111,7 +111,9 @@ class CanonicalKineticDrMoagiSystem:
                 "relative_improvement": report.relative_improvement,
                 "evaluated_candidates": report.evaluated_candidates,
             },
-            reason=("bounded meta gate accepted candidate" if passed else "retain incumbent mechanics"),
+            reason=(
+                "bounded meta gate accepted candidate" if passed else "retain incumbent mechanics"
+            ),
         )
 
     def _world_state_validator(
