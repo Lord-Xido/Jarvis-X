@@ -36,7 +36,8 @@ At cycle \(t\), define:
 \[
 \Xi_t =
 (X_t,\widehat X_t,Z_t,W_t,G_t,P_t,V_t,
-\Omega_t,\Theta_t,\mathcal M_t,\mathcal T_t,\mathcal J_t).
+\Omega_t,\Theta_t,\mathcal M_t,\mathcal T_t,\mathcal J_t,
+E_t^{sys},P_t^{net}).
 \]
 
 | Symbol | Operational meaning |
@@ -53,6 +54,8 @@ At cycle \(t\), define:
 | \(\mathcal M_t\) | Runtime mechanics configuration |
 | \(\mathcal T_t\) | Measured telemetry |
 | \(\mathcal J_t\) | Append-only optimization journal |
+| \(E_t^{sys}\) | Measured or estimated stored system energy, in joules |
+| \(P_t^{net}\) | Net physical power crossing the declared system boundary, in watts |
 
 The browser may render a projection of this state. The authoritative state belongs to the executable optimizer or runtime, not to the canvas.
 
@@ -415,6 +418,14 @@ directive_id
 measured_duration_ns
 telemetry_source
 state_hash
+energy_system_j
+power_input_w
+power_compute_w
+power_memory_w
+power_network_w
+power_cooling_w
+power_net_w
+energy_source
 ~~~
 
 Every timing value requires a source label:
@@ -426,6 +437,82 @@ Every timing value requires a source label:
 - unavailable.
 
 A simulated value must never be displayed as measured.
+
+### Phase 14 — close the power–energy–time loop
+
+Power and energy are the same physical account viewed through different time operators:
+
+\[
+\boxed{
+P^{net}(t)=\frac{dE^{sys}(t)}{dt},
+\qquad
+E^{sys}(t)=E^{sys}(t_0)+\int_{t_0}^{t}P^{net}(\tau)\,d\tau.
+}
+\]
+
+For a sampled Jarvis-X cycle of measured duration \(\Delta t_t\):
+
+\[
+E_{t+1}^{sys}
+=
+E_t^{sys}
++
+\Delta t_t P_t^{net}
++
+\varepsilon_t^{meter},
+\]
+
+where the balance residual \(\varepsilon_t^{meter}\) must remain within the declared metering tolerance. The net boundary flow is:
+
+\[
+P_t^{net}
+=
+P_t^{in}
+-
+P_t^{compute}
+-
+P_t^{memory}
+-
+P_t^{network}
+-
+P_t^{cooling}
+-
+P_t^{other}.
+\]
+
+The dimensional contract is strict:
+
+\[
+[\,P\,]=\mathrm{W}=\mathrm{J\,s^{-1}},
+\qquad
+[\,E\,]=\mathrm{J},
+\qquad
+[\,\Delta t\,]=\mathrm{s}.
+\]
+
+Loss, entropy, latent magnitude, gradient norm, and \(\Omega_t\) are algorithmic quantities. They are not physical joules or watts unless a calibrated measurement model explicitly maps them to those units.
+
+The trial gate therefore adds:
+
+\[
+V_{energy}
+=
+(E_{t+1}^{trial}\le E_{budget})
+\land
+(P_{peak}^{trial}\le P_{max})
+\land
+(|\varepsilon_t^{meter}|\le\epsilon_{meter}).
+\]
+
+At energetic equilibrium:
+
+\[
+\frac{dE^{sys}}{dt}=0
+\Longleftrightarrow
+P^{net}=0.
+\]
+
+This means the inflows and outflows balance; it does not mean that every physical power flow has stopped. Accepted cycles integrate measured net power into the authoritative energy ledger. Rolled-back trials retain their metering record but cannot rewrite committed algorithmic state.
 
 ## 4. Three-bit directive projection
 
@@ -674,6 +761,7 @@ function inward_cycle(committed_state, committed_model, bounds):
 14. Meta-optimization cannot mutate the authoritative state during candidate evaluation.
 15. A promoted configuration is journaled and recoverable.
 16. A failed candidate leaves both world state and mechanics state unchanged.
+17. The discrete energy update satisfies the metered balance within tolerance and rejects unit or budget violations.
 
 ## 11. Operational identity
 
@@ -698,6 +786,8 @@ The end-to-end mechanism is:
 \text{Verify}
 \rightarrow
 \text{Commit or rollback}
+\rightarrow
+\text{Account for power and energy}
 \rightarrow
 \text{Describe}
 \rightarrow
