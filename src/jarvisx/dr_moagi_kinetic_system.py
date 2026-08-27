@@ -61,8 +61,8 @@ class CanonicalKineticDrMoagiSystem:
         status = self.kernel.status()
         return {
             "state_hash": str(status["state_hash"]),
-            "cycle": int(status["cycle"]),
-            "active_cells": int(status["active_cells"]),
+            "cycle": status["cycle"],
+            "active_cells": status["active_cells"],
         }
 
     def _encode(
