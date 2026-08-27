@@ -98,9 +98,7 @@ def _apply_step_constraints(
         args = match.group("args").split()
         condition = z3.And(pc_now == index, z3.Not(halted_now))
 
-        assignments = {
-            register: _reg(namespace, register, step) for register in registers
-        }
+        assignments = {register: _reg(namespace, register, step) for register in registers}
         next_pc = pc_now + 1
         next_halted = z3.BoolVal(False)
 
@@ -189,8 +187,7 @@ def check_equivalence_bounded(
         _apply_step_constraints(solver, lines_b, registers, step, "b")
 
     differences = [
-        _reg("a", register, bound) != _reg("b", register, bound)
-        for register in registers
+        _reg("a", register, bound) != _reg("b", register, bound) for register in registers
     ]
     solver.add(z3.Or(*differences))
 
