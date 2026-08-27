@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
 from typing import Callable, Generic, Iterable, Mapping, TypeVar
 
@@ -70,10 +70,19 @@ class KineticReceipt:
     receipt_hash: str
 
     def to_dict(self) -> dict[str, object]:
-        payload = asdict(self)
-        payload["validators"] = [item.to_dict() for item in self.validators]
-        payload["telemetry"] = dict(self.telemetry)
-        return payload
+        return {
+            "schema_version": self.schema_version,
+            "transaction_id": self.transaction_id,
+            "parent_state_hash": self.parent_state_hash,
+            "candidate_hash": self.candidate_hash,
+            "resulting_state_hash": self.resulting_state_hash,
+            "decision": self.decision,
+            "stages": list(self.stages),
+            "validators": [item.to_dict() for item in self.validators],
+            "telemetry": dict(self.telemetry),
+            "previous_receipt_hash": self.previous_receipt_hash,
+            "receipt_hash": self.receipt_hash,
+        }
 
 
 @dataclass(frozen=True)
@@ -84,18 +93,12 @@ class KineticResult(Generic[StateT, CandidateT]):
     receipt: KineticReceipt
 
 
-Validator = Callable[[StateT, CandidateT], ValidatorResult]
-
-
 def _canonical_value(value: object) -> object:
-    if hasattr(value, "to_dict") and callable(getattr(value, "to_dict")):
-        return _canonical_value(value.to_dict())
-    if hasattr(value, "as_dict") and callable(getattr(value, "as_dict")):
-        return _canonical_value(value.as_dict())
-    if hasattr(value, "__dataclass_fields__"):
+    if is_dataclass(value) and not isinstance(value, type):
         return _canonical_value(asdict(value))
     if isinstance(value, Mapping):
-        return {str(key): _canonical_value(item) for key, item in sorted(value.items(), key=lambda x: str(x[0]))}
+        items = sorted(value.items(), key=lambda item: str(item[0]))
+        return {str(key): _canonical_value(item) for key, item in items}
     if isinstance(value, (list, tuple)):
         return [_canonical_value(item) for item in value]
     if isinstance(value, Enum):
@@ -133,7 +136,7 @@ class KineticTransactionEngine(Generic[StateT, ObservationT, EncodedT, Candidate
         encode: Callable[[StateT, ObservationT], EncodedT],
         propose: Callable[[StateT, ObservationT, EncodedT], CandidateT],
         shadow: Callable[[StateT, CandidateT], Mapping[str, object]],
-        validators: Iterable[Validator[StateT, CandidateT]],
+        validators: Iterable[Callable[[StateT, CandidateT], ValidatorResult]],
         commit: Callable[[StateT, CandidateT], StateT],
         rollback: Callable[[StateT], StateT],
         state_identity: Callable[[StateT], object] | None = None,
@@ -197,6 +200,7 @@ class KineticTransactionEngine(Generic[StateT, ObservationT, EncodedT, Candidate
         }
         transaction_id = canonical_hash(tx_seed)[:24]
 
+        receipt_stages = (*stages, KineticStage.JOURNAL.value, KineticStage.REENTER.value)
         receipt_body = {
             "schema_version": "jarvisx.kinetic-receipt.v1",
             "transaction_id": transaction_id,
@@ -204,7 +208,7 @@ class KineticTransactionEngine(Generic[StateT, ObservationT, EncodedT, Candidate
             "candidate_hash": candidate_hash,
             "resulting_state_hash": resulting_hash,
             "decision": "commit" if committed else "rollback",
-            "stages": [*stages, KineticStage.JOURNAL.value, KineticStage.REENTER.value],
+            "stages": list(receipt_stages),
             "validators": [item.to_dict() for item in results],
             "telemetry": telemetry,
             "previous_receipt_hash": self._previous_receipt_hash,
@@ -217,11 +221,16 @@ class KineticTransactionEngine(Generic[StateT, ObservationT, EncodedT, Candidate
             candidate_hash=candidate_hash,
             resulting_state_hash=resulting_hash,
             decision="commit" if committed else "rollback",
-            stages=tuple(receipt_body["stages"]),
+            stages=receipt_stages,
             validators=results,
             telemetry=telemetry,
             previous_receipt_hash=self._previous_receipt_hash,
             receipt_hash=receipt_hash,
         )
         self._previous_receipt_hash = receipt_hash
-        return KineticResult(state=state, candidate=candidate, committed=committed, receipt=receipt)
+        return KineticResult(
+            state=state,
+            candidate=candidate,
+            committed=committed,
+            receipt=receipt,
+        )
