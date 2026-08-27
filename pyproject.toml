@@ -47,10 +47,12 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "twine>=6.0",
+    "z3-solver>=4.13.0",
 ]
 test = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    "z3-solver>=4.13.0",
 ]
 
 [project.urls]
