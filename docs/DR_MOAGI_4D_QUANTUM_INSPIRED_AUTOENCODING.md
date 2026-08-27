@@ -536,21 +536,34 @@ P_t^{in}
 
 Here \(E^{sys}\) is hardware/system energy measured in joules and each \(P\) term is measured in watts. It must not be conflated with the field-energy density \(\mathcal E_{phys}\), reconstruction loss, entropy, attention focus, latent activation, or \(\Omega\) memory unless an explicit calibrated transduction model supplies the conversion and units.
 
-The resource verifier includes:
+Define candidate energy consumption separately from remaining stored energy:
+
+\[
+E_t^{cons,trial}
+=
+\int_{t_0}^{t_1}
+\left(
+P^{compute}+P^{memory}+P^{network}+P^{cooling}+P^{other}
+\right)d\tau.
+\]
+
+The resource verifier, evaluated before commit, includes:
 
 \[
 V_{energy}
 =
 V_{meter}
 \land
-(E_{trial}^{sys}\le E_{budget})
+(E_t^{cons,trial}\le E_{cons,budget})
+\land
+(E_{t+1}^{sys,trial}\ge E_{reserve,min})
 \land
 (P_{peak}^{trial}\le P_{max})
 \land
 (|\varepsilon_t^{meter}|\le\epsilon_{meter}).
 \]
 
-A trial that improves \(\mathcal J_{4D}\) but violates the energy or peak-power contract is inadmissible. At steady stored energy,
+A trial that improves \(\mathcal J_{4D}\) but violates the consumption-energy, stored-reserve, or peak-power contract is inadmissible. Metering and \(V_{energy}\) evaluation occur before the authoritative commit decision. The physical energy ledger advances for every executed trial, whether its algorithmic candidate is committed or rolled back; rollback cannot reverse physical consumption. At steady stored energy,
 
 \[
 \frac{dE^{sys}}{dt}=0
