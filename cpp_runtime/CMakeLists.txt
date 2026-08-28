@@ -63,6 +63,13 @@ set_target_properties(jarvisx-intelligence3d PROPERTIES OUTPUT_NAME "JarvisX-3D-
 jarvisx_include_runtime(jarvisx-intelligence3d)
 jarvisx_harden(jarvisx-intelligence3d)
 
+add_executable(jarvisx-intelligence-media
+    src/intelligence_media_processor_main.cpp
+)
+set_target_properties(jarvisx-intelligence-media PROPERTIES OUTPUT_NAME "DrMoagi-Intelligence-Media")
+jarvisx_include_runtime(jarvisx-intelligence-media)
+jarvisx_harden(jarvisx-intelligence-media)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -165,6 +172,17 @@ add_test(
 )
 set_tests_properties(intelligence3d-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME intelligence-media-runtime-smoke
+    COMMAND jarvisx-intelligence-media
+        --demo-bytes 2048
+        --modality visual
+        --passes 2
+        --output ${CMAKE_CURRENT_BINARY_DIR}/dr-moagi-intelligence-media-smoke.bin
+        --quiet
+)
+set_tests_properties(intelligence-media-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -218,3 +236,12 @@ jarvisx_harden(jarvisx-intelligence3d-tests)
 
 add_test(NAME intelligence3d-regressions COMMAND jarvisx-intelligence3d-tests)
 set_tests_properties(intelligence3d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-intelligence-media-tests
+    tests/intelligence_media_processor_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-intelligence-media-tests)
+jarvisx_harden(jarvisx-intelligence-media-tests)
+
+add_test(NAME intelligence-media-regressions COMMAND jarvisx-intelligence-media-tests)
+set_tests_properties(intelligence-media-regressions PROPERTIES TIMEOUT 120)
