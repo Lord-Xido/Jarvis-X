@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(JARVISX_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 option(JARVISX_BUILD_GL_VISUALIZER "Build the OpenGL/GLUT ANN visualizers when dependencies are available" ON)
+option(JARVISX_BUILD_CUDA_TURBO "Build the experimental DM-vOmegaXi+ CUDA infinity turbo runtime" OFF)
 
 function(jarvisx_harden target)
     if(MSVC)
@@ -55,6 +56,29 @@ add_executable(jarvisx-multimedia4d
 )
 jarvisx_include_runtime(jarvisx-multimedia4d)
 jarvisx_harden(jarvisx-multimedia4d)
+
+if(JARVISX_BUILD_CUDA_TURBO)
+    include(CheckLanguage)
+    check_language(CUDA)
+    if(NOT CMAKE_CUDA_COMPILER)
+        message(FATAL_ERROR "JARVISX_BUILD_CUDA_TURBO=ON requires an available CUDA compiler")
+    endif()
+
+    enable_language(CUDA)
+    add_executable(jarvisx-infinity-turbo
+        src/infinity_turbo_v7.cu
+    )
+    set_target_properties(jarvisx-infinity-turbo PROPERTIES
+        CUDA_STANDARD 17
+        CUDA_STANDARD_REQUIRED ON
+        CUDA_EXTENSIONS OFF
+    )
+    if(CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
+        target_compile_options(jarvisx-infinity-turbo PRIVATE
+            $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+        )
+    endif()
+endif()
 
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
@@ -190,3 +214,11 @@ jarvisx_harden(jarvisx-multimedia4d-tests)
 
 add_test(NAME multimedia4d-regressions COMMAND jarvisx-multimedia4d-tests)
 set_tests_properties(multimedia4d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-infinity-turbo-contract-tests
+    tests/infinity_turbo_contract_tests.cpp
+)
+jarvisx_harden(jarvisx-infinity-turbo-contract-tests)
+
+add_test(NAME infinity-turbo-contracts COMMAND jarvisx-infinity-turbo-contract-tests)
+set_tests_properties(infinity-turbo-contracts PROPERTIES TIMEOUT 120)
