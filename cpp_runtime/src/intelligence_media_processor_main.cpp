@@ -1,6 +1,7 @@
 #include "jarvisx/intelligence_media_processor.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
