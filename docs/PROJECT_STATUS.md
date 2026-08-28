@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-08-12  
+**Last reviewed:** 2026-08-23  
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -65,11 +65,12 @@ The `Empirical Validation` GitHub Actions workflow publishes the machine-readabl
 
 ## Active integration and administration work
 
-| Issue | Capability | Current classification | Required before completion |
+| Issue / PR | Capability | Current classification | Required before completion |
 |---|---|---|---|
 | #48 | pull-request backlog consolidation | Governance work | classify overlaps, preserve unique evidence and reduce active drafts below ten |
 | #49 | branch protection and security settings | Repository administration | enable required checks, scanning and private reporting in GitHub settings |
 | #50 | public GitHub profile README | Profile administration | create `Lord-Xido/Lord-Xido`, pin active repositories and review public metadata |
+| PR #146 | sparse worldwide 3D world fabric | Integration candidate | focused evidence workflow, package-wide CI, external-baseline protocol, durable storage/consensus adapter design and capability-boundary review |
 
 Other long-lived draft pull requests are research branches until explicitly classified, rebased and validated.
 
@@ -99,7 +100,8 @@ Jarvis-X does not currently claim:
 - bit-exact cross-platform floating-point results from the C++ research processor;
 - production-scale fractional PDE performance or physical validity from the numerical reference solver;
 - convergence of arbitrary learned Dr Moagi codecs from the reference explicit-step guard alone;
-- empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines.
+- empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines;
+- planetary-scale deployment, geographic consensus or SOTA superiority from the in-process worldwide 3D world-fabric reference alone.
 
 ## Canonical promotion checklist
 

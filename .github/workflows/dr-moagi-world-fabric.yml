@@ -1,0 +1,89 @@
+name: Dr Moagi World Fabric Evidence
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/dr_moagi_world_fabric.py"
+      - "src/jarvisx/dr_moagi_world_cli.py"
+      - "tests/test_dr_moagi_world_fabric.py"
+      - "scripts/benchmark_dr_moagi_world_fabric.py"
+      - "docs/DR_MOAGI_WORLD_FABRIC.md"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-world-fabric.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    name: Invariants and evidence artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install test dependencies
+        run: python -m pip install -e ".[test]"
+
+      - name: Compile world-fabric sources
+        run: >-
+          python -m py_compile
+          src/jarvisx/dr_moagi_world_fabric.py
+          src/jarvisx/dr_moagi_world_cli.py
+          scripts/benchmark_dr_moagi_world_fabric.py
+          tests/test_dr_moagi_world_fabric.py
+
+      - name: Run focused invariants
+        run: >-
+          pytest tests/test_dr_moagi_world_fabric.py
+          --no-cov -q
+
+      - name: Run deterministic CLI demonstration
+        run: jarvisx-dr-moagi-world demo --objects 32 > /tmp/world-fabric-demo.json
+
+      - name: Run bounded reference benchmark
+        run: >-
+          python scripts/benchmark_dr_moagi_world_fabric.py
+          --objects 512
+          --payload-bytes 512
+          --reads 128
+          > /tmp/world-fabric-benchmark.json
+
+      - name: Assert evidence integrity
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          demo = json.loads(Path('/tmp/world-fabric-demo.json').read_text())
+          benchmark = json.loads(Path('/tmp/world-fabric-benchmark.json').read_text())
+          assert demo['integrity_verified'] is True
+          assert benchmark['integrity_verified'] is True
+          assert benchmark['claim_status'] == 'reference-measurement-only'
+          assert benchmark['objects'] == 512
+          print(json.dumps({
+              'demo_integrity': demo['integrity_verified'],
+              'benchmark_integrity': benchmark['integrity_verified'],
+              'claim_status': benchmark['claim_status'],
+              'ingest_objects_per_second': benchmark['ingest_objects_per_second'],
+              'read_latency_us_p95': benchmark['read_latency_us_p95'],
+          }, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: dr-moagi-world-fabric-evidence
+          path: |
+            /tmp/world-fabric-demo.json
+            /tmp/world-fabric-benchmark.json
+          if-no-files-found: error
+          retention-days: 30
