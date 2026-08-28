@@ -1,0 +1,103 @@
+name: Dr Moagi Intelligence Media Windows
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/include/jarvisx/intelligence_media_processor.hpp"
+      - "cpp_runtime/src/intelligence_media_processor_main.cpp"
+      - "cpp_runtime/tests/intelligence_media_processor_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DR_MOAGI_INTELLIGENCE_MEDIA_PROCESSOR.md"
+      - ".github/workflows/intelligence-media-windows.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/include/jarvisx/intelligence_media_processor.hpp"
+      - "cpp_runtime/src/intelligence_media_processor_main.cpp"
+      - "cpp_runtime/tests/intelligence_media_processor_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DR_MOAGI_INTELLIGENCE_MEDIA_PROCESSOR.md"
+      - ".github/workflows/intelligence-media-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: intelligence-media-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    name: Windows x64 / MSVC
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure CMake
+        shell: pwsh
+        run: >-
+          cmake -S cpp_runtime -B build/intelligence-media
+          -A x64
+          -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          -DJARVISX_ENABLE_SANITIZERS=OFF
+
+      - name: Build executable and focused tests
+        shell: pwsh
+        run: |
+          cmake --build build/intelligence-media --config Release --target jarvisx-intelligence-media --parallel 2
+          cmake --build build/intelligence-media --config Release --target jarvisx-intelligence-media-tests --parallel 2
+
+      - name: Run focused regression and smoke tests
+        shell: pwsh
+        run: |
+          ctest --test-dir build/intelligence-media -C Release -R "intelligence-media-(regressions|runtime-smoke)" --output-on-failure
+
+      - name: Execute canonical inward media profile
+        shell: pwsh
+        run: |
+          $exe = "build/intelligence-media/Release/DrMoagi-Intelligence-Media.exe"
+          & $exe --demo-bytes 8192 --modality visual --passes 3 --max-mse 4096 --output build/intelligence-media/demo-visual.bin
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Emit canonical VCL-BVM-8 program
+        shell: pwsh
+        run: |
+          [byte[]]$program = 0x40,0x00,0x00,0x30,0x02,0x00,0x20,0x00,0x07,0x50,0x00,0x08,0x60,0x01,0x80,0x08,0x70,0x00,0x07,0xFF
+          [System.IO.File]::WriteAllBytes("build/intelligence-media/default-media.vcl8", $program)
+
+      - name: Validate custom bytecode path
+        shell: pwsh
+        run: |
+          $exe = "build/intelligence-media/Release/DrMoagi-Intelligence-Media.exe"
+          & $exe --input build/intelligence-media/demo-visual.bin --bytecode build/intelligence-media/default-media.vcl8 --modality generic --passes 1 --output build/intelligence-media/demo-reprocessed.bin --quiet
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Stage package and checksum
+        shell: pwsh
+        run: |
+          $stage = "build/intelligence-media/package"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "build/intelligence-media/Release/DrMoagi-Intelligence-Media.exe" "$stage/DrMoagi-Intelligence-Media.exe"
+          Copy-Item "build/intelligence-media/default-media.vcl8" "$stage/default-media.vcl8"
+          Copy-Item "build/intelligence-media/demo-visual.bin" "$stage/demo-visual.bin"
+          Copy-Item "docs/DR_MOAGI_INTELLIGENCE_MEDIA_PROCESSOR.md" "$stage/README.md"
+          $hash = (Get-FileHash "$stage/DrMoagi-Intelligence-Media.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  DrMoagi-Intelligence-Media.exe" | Set-Content -Encoding ascii "$stage/SHA256SUMS.txt"
+          Compress-Archive -Path "$stage/*" -DestinationPath "build/intelligence-media/DrMoagi-Intelligence-Media-Windows-x64.zip" -Force
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: DrMoagi-Intelligence-Media-Windows-x64
+          path: |
+            build/intelligence-media/package/DrMoagi-Intelligence-Media.exe
+            build/intelligence-media/package/default-media.vcl8
+            build/intelligence-media/package/demo-visual.bin
+            build/intelligence-media/package/README.md
+            build/intelligence-media/package/SHA256SUMS.txt
+            build/intelligence-media/DrMoagi-Intelligence-Media-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
