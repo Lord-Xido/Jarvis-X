@@ -191,7 +191,7 @@ def _contains(node: FractalOctreeNode, x: float, y: float, z: float) -> bool:
     upper_x = node.x + node.size
     upper_y = node.y + node.size
     upper_z = node.z + node.size
-    return (
+    return bool(
         node.x <= x <= upper_x
         and node.y <= y <= upper_y
         and node.z <= z <= upper_z
