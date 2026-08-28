@@ -56,6 +56,13 @@ add_executable(jarvisx-multimedia4d
 jarvisx_include_runtime(jarvisx-multimedia4d)
 jarvisx_harden(jarvisx-multimedia4d)
 
+add_executable(jarvisx-intelligence3d
+    src/intelligence3d_main.cpp
+)
+set_target_properties(jarvisx-intelligence3d PROPERTIES OUTPUT_NAME "JarvisX-3D-10GB")
+jarvisx_include_runtime(jarvisx-intelligence3d)
+jarvisx_harden(jarvisx-intelligence3d)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -146,6 +153,18 @@ add_test(
 )
 set_tests_properties(multimedia4d-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME intelligence3d-runtime-smoke
+    COMMAND jarvisx-intelligence3d
+        --axis-gb 1000
+        --resident-gb 10
+        --page-edge 8
+        --cycles 2
+        --state-dir ${CMAKE_CURRENT_BINARY_DIR}/intelligence3d-smoke
+        --quiet
+)
+set_tests_properties(intelligence3d-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -190,3 +209,12 @@ jarvisx_harden(jarvisx-multimedia4d-tests)
 
 add_test(NAME multimedia4d-regressions COMMAND jarvisx-multimedia4d-tests)
 set_tests_properties(multimedia4d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-intelligence3d-tests
+    tests/intelligence_vm3d_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-intelligence3d-tests)
+jarvisx_harden(jarvisx-intelligence3d-tests)
+
+add_test(NAME intelligence3d-regressions COMMAND jarvisx-intelligence3d-tests)
+set_tests_properties(intelligence3d-regressions PROPERTIES TIMEOUT 120)
