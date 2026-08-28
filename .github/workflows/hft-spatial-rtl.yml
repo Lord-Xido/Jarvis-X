@@ -1,0 +1,73 @@
+name: HFT Spatial RTL Verification
+
+on:
+  push:
+    paths:
+      - "rtl/hft_field_q16/hft_field_neighbor_addr.sv"
+      - "rtl/hft_field_q16/hft_field_stencil_hazard_guard.sv"
+      - "rtl/hft_field_q16/tb_hft_field_neighbor_addr.sv"
+      - "rtl/hft_field_q16/tb_hft_field_stencil_hazard_guard.sv"
+      - ".github/workflows/hft-spatial-rtl.yml"
+  pull_request:
+    paths:
+      - "rtl/hft_field_q16/hft_field_neighbor_addr.sv"
+      - "rtl/hft_field_q16/hft_field_stencil_hazard_guard.sv"
+      - "rtl/hft_field_q16/tb_hft_field_neighbor_addr.sv"
+      - "rtl/hft_field_q16/tb_hft_field_stencil_hazard_guard.sv"
+      - ".github/workflows/hft-spatial-rtl.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hft-spatial-rtl-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  spatial-verification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install RTL tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog verilator yosys
+
+      - name: Exhaustive 3D neighbour-address regression
+        run: |
+          mkdir -p build/hft-spatial-rtl
+          iverilog -g2012 \
+            -s tb_hft_field_neighbor_addr \
+            -o build/hft-spatial-rtl/neighbor_addr.vvp \
+            rtl/hft_field_q16/hft_field_neighbor_addr.sv \
+            rtl/hft_field_q16/tb_hft_field_neighbor_addr.sv
+          vvp build/hft-spatial-rtl/neighbor_addr.vvp
+
+      - name: Stencil RAW-hazard regression
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_stencil_hazard_guard \
+            -o build/hft-spatial-rtl/stencil_hazard.vvp \
+            rtl/hft_field_q16/hft_field_neighbor_addr.sv \
+            rtl/hft_field_q16/hft_field_stencil_hazard_guard.sv \
+            rtl/hft_field_q16/tb_hft_field_stencil_hazard_guard.sv
+          vvp build/hft-spatial-rtl/stencil_hazard.vvp
+
+      - name: Verilator lint
+        run: |
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_neighbor_addr \
+            rtl/hft_field_q16/hft_field_neighbor_addr.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_stencil_hazard_guard \
+            rtl/hft_field_q16/hft_field_stencil_hazard_guard.sv
+
+      - name: Yosys neighbour-address synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_neighbor_addr.sv; hierarchy -check -top hft_field_neighbor_addr; proc; opt; check; synth -top hft_field_neighbor_addr; stat' \
+            | tee build/hft-spatial-rtl/neighbor-addr-synth.log
+
+      - name: Yosys stencil-hazard synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_stencil_hazard_guard.sv; hierarchy -check -top hft_field_stencil_hazard_guard; proc; opt; check; synth -top hft_field_stencil_hazard_guard; stat' \
+            | tee build/hft-spatial-rtl/stencil-hazard-synth.log

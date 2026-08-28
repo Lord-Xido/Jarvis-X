@@ -56,6 +56,12 @@ add_executable(jarvisx-multimedia4d
 jarvisx_include_runtime(jarvisx-multimedia4d)
 jarvisx_harden(jarvisx-multimedia4d)
 
+add_executable(jarvisx-hft-field
+    src/hft_field_main.cpp
+)
+jarvisx_include_runtime(jarvisx-hft-field)
+jarvisx_harden(jarvisx-hft-field)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -190,3 +196,12 @@ jarvisx_harden(jarvisx-multimedia4d-tests)
 
 add_test(NAME multimedia4d-regressions COMMAND jarvisx-multimedia4d-tests)
 set_tests_properties(multimedia4d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-hft-field-tests
+    tests/hft_field_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-hft-field-tests)
+jarvisx_harden(jarvisx-hft-field-tests)
+
+add_test(NAME hft-field-regressions COMMAND jarvisx-hft-field-tests)
+set_tests_properties(hft-field-regressions PROPERTIES TIMEOUT 120)

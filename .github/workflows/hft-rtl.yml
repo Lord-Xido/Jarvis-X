@@ -1,0 +1,201 @@
+name: HFT Q16 RTL Equivalence
+
+on:
+  push:
+    paths:
+      - "rtl/hft_field_q16/**"
+      - "cpp_runtime/include/jarvisx/hft_field.hpp"
+      - ".github/workflows/hft-rtl.yml"
+  pull_request:
+    paths:
+      - "rtl/hft_field_q16/**"
+      - "cpp_runtime/include/jarvisx/hft_field.hpp"
+      - ".github/workflows/hft-rtl.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hft-rtl-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rtl-equivalence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install RTL tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog verilator yosys
+
+      - name: Icarus C++ golden-vector simulation
+        run: |
+          mkdir -p build/hft-rtl
+          iverilog -g2012 \
+            -s tb_hft_field_cell_core \
+            -o build/hft-rtl/hft_tb.vvp \
+            rtl/hft_field_q16/hft_field_cell_core.sv \
+            rtl/hft_field_q16/tb_hft_field_cell_core.sv
+          vvp build/hft-rtl/hft_tb.vvp
+
+      - name: Icarus multiplier-free equivalence stress
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_pow2_equiv \
+            -o build/hft-rtl/hft_pow2_equiv.vvp \
+            rtl/hft_field_q16/hft_field_cell_core.sv \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/tb_hft_field_pow2_equiv.sv
+          vvp build/hft-rtl/hft_pow2_equiv.vvp
+
+      - name: Icarus fixed-latency shell regression
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_cell_pipeline \
+            -o build/hft-rtl/hft_pipeline.vvp \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/hft_field_cell_pipeline.sv \
+            rtl/hft_field_q16/tb_hft_field_cell_pipeline.sv
+          vvp build/hft-rtl/hft_pipeline.vvp
+
+      - name: Icarus staged arithmetic pipeline regression
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_cell_staged \
+            -o build/hft-rtl/hft_staged.vvp \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/hft_field_cell_staged.sv \
+            rtl/hft_field_q16/tb_hft_field_cell_staged.sv
+          vvp build/hft-rtl/hft_staged.vvp
+
+      - name: Icarus coordinate hazard regression
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_hazard_guard \
+            -o build/hft-rtl/hft_hazard.vvp \
+            rtl/hft_field_q16/hft_field_hazard_guard.sv \
+            rtl/hft_field_q16/tb_hft_field_hazard_guard.sv
+          vvp build/hft-rtl/hft_hazard.vvp
+
+      - name: Icarus guarded transaction pipeline regression
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_guarded_pipeline \
+            -o build/hft-rtl/hft_guarded.vvp \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/hft_field_cell_staged.sv \
+            rtl/hft_field_q16/hft_field_hazard_guard.sv \
+            rtl/hft_field_q16/hft_field_guarded_pipeline.sv \
+            rtl/hft_field_q16/tb_hft_field_guarded_pipeline.sv
+          vvp build/hft-rtl/hft_guarded.vvp
+
+      - name: Icarus persistent center-state recurrence
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_stateful_center \
+            -o build/hft-rtl/hft_stateful.vvp \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/hft_field_cell_staged.sv \
+            rtl/hft_field_q16/hft_field_hazard_guard.sv \
+            rtl/hft_field_q16/hft_field_guarded_pipeline.sv \
+            rtl/hft_field_q16/hft_field_state_store.sv \
+            rtl/hft_field_q16/hft_field_stateful_center.sv \
+            rtl/hft_field_q16/tb_hft_field_stateful_center.sv
+          vvp build/hft-rtl/hft_stateful.vvp
+
+      - name: Icarus 3D neighbour-address regression
+        run: |
+          iverilog -g2012 \
+            -s tb_hft_field_neighbor_addr \
+            -o build/hft-rtl/hft_neighbor_addr.vvp \
+            rtl/hft_field_q16/hft_field_neighbor_addr.sv \
+            rtl/hft_field_q16/tb_hft_field_neighbor_addr.sv
+          vvp build/hft-rtl/hft_neighbor_addr.vvp
+
+      - name: Verilator lint
+        run: |
+          verilator --lint-only --sv -Wall -Wno-fatal \
+            rtl/hft_field_q16/hft_field_cell_core.sv
+          verilator --lint-only --sv -Wall -Wno-fatal \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_cell_pipeline \
+            rtl/hft_field_q16/hft_field_cell_pow2.sv \
+            rtl/hft_field_q16/hft_field_cell_pipeline.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_cell_staged \
+            rtl/hft_field_q16/hft_field_cell_staged.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_hazard_guard \
+            rtl/hft_field_q16/hft_field_hazard_guard.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_guarded_pipeline \
+            rtl/hft_field_q16/hft_field_cell_staged.sv \
+            rtl/hft_field_q16/hft_field_hazard_guard.sv \
+            rtl/hft_field_q16/hft_field_guarded_pipeline.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_stateful_center \
+            rtl/hft_field_q16/hft_field_cell_staged.sv \
+            rtl/hft_field_q16/hft_field_hazard_guard.sv \
+            rtl/hft_field_q16/hft_field_guarded_pipeline.sv \
+            rtl/hft_field_q16/hft_field_state_store.sv \
+            rtl/hft_field_q16/hft_field_stateful_center.sv
+          verilator --lint-only --sv -Wall -Wno-fatal --top-module hft_field_neighbor_addr \
+            rtl/hft_field_q16/hft_field_neighbor_addr.sv
+
+      - name: Yosys reference synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_core.sv; hierarchy -check -top hft_field_cell_core; proc; opt; check; synth -top hft_field_cell_core; stat' \
+            | tee build/hft-rtl/reference-synth.log
+
+      - name: Yosys multiplier-free synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_pow2.sv; hierarchy -check -top hft_field_cell_pow2; proc; opt; check; synth -top hft_field_cell_pow2; stat' \
+            | tee build/hft-rtl/pow2-synth.log
+
+      - name: Yosys registered-shell synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_pow2.sv rtl/hft_field_q16/hft_field_cell_pipeline.sv; hierarchy -check -top hft_field_cell_pipeline; proc; opt; check; synth -top hft_field_cell_pipeline; stat' \
+            | tee build/hft-rtl/pipeline-synth.log
+
+      - name: Yosys staged-pipeline synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_staged.sv; hierarchy -check -top hft_field_cell_staged; proc; opt; check; synth -top hft_field_cell_staged; stat' \
+            | tee build/hft-rtl/staged-synth.log
+
+      - name: Yosys hazard-guard synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_hazard_guard.sv; hierarchy -check -top hft_field_hazard_guard; proc; opt; check; synth -top hft_field_hazard_guard; stat' \
+            | tee build/hft-rtl/hazard-synth.log
+
+      - name: Yosys guarded-pipeline synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_staged.sv rtl/hft_field_q16/hft_field_hazard_guard.sv rtl/hft_field_q16/hft_field_guarded_pipeline.sv; hierarchy -check -top hft_field_guarded_pipeline; proc; opt; check; synth -top hft_field_guarded_pipeline; stat' \
+            | tee build/hft-rtl/guarded-synth.log
+
+      - name: Yosys stateful-center synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_cell_staged.sv rtl/hft_field_q16/hft_field_hazard_guard.sv rtl/hft_field_q16/hft_field_guarded_pipeline.sv rtl/hft_field_q16/hft_field_state_store.sv rtl/hft_field_q16/hft_field_stateful_center.sv; hierarchy -check -top hft_field_stateful_center; proc; opt; check; synth -top hft_field_stateful_center; stat' \
+            | tee build/hft-rtl/stateful-synth.log
+
+      - name: Yosys neighbour-address synthesis
+        run: |
+          yosys -p 'read_verilog -sv rtl/hft_field_q16/hft_field_neighbor_addr.sv; hierarchy -check -top hft_field_neighbor_addr; proc; opt; check; synth -top hft_field_neighbor_addr; stat' \
+            | tee build/hft-rtl/neighbor-addr-synth.log
+
+      - name: Report generic gate counts
+        run: |
+          echo "Reference core:"
+          grep -A 20 '^=== hft_field_cell_core ===' build/hft-rtl/reference-synth.log | tail -n 20
+          echo "Multiplier-free core:"
+          grep -A 20 '^=== hft_field_cell_pow2 ===' build/hft-rtl/pow2-synth.log | tail -n 20
+          echo "Registered latency shell:"
+          grep -A 20 '^=== hft_field_cell_pipeline ===' build/hft-rtl/pipeline-synth.log | tail -n 20
+          echo "Staged arithmetic pipeline:"
+          grep -A 20 '^=== hft_field_cell_staged ===' build/hft-rtl/staged-synth.log | tail -n 20
+          echo "Hazard guard:"
+          grep -A 20 '^=== hft_field_hazard_guard ===' build/hft-rtl/hazard-synth.log | tail -n 20
+          echo "Guarded staged pipeline:"
+          grep -A 20 '^=== hft_field_guarded_pipeline ===' build/hft-rtl/guarded-synth.log | tail -n 20
+          echo "Stateful center engine:"
+          grep -A 20 '^=== hft_field_stateful_center ===' build/hft-rtl/stateful-synth.log | tail -n 20
+          echo "Neighbour address generator:"
+          grep -A 20 '^=== hft_field_neighbor_addr ===' build/hft-rtl/neighbor-addr-synth.log | tail -n 20
