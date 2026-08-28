@@ -1,0 +1,88 @@
+name: Jarvis-X 3D Intelligence Windows
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/include/jarvisx/intelligence_vm3d.hpp"
+      - "cpp_runtime/src/intelligence3d_main.cpp"
+      - "cpp_runtime/tests/intelligence_vm3d_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/3D_INTELLIGENCE_VM_1000GB.md"
+      - ".github/workflows/intelligence3d-windows.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/include/jarvisx/intelligence_vm3d.hpp"
+      - "cpp_runtime/src/intelligence3d_main.cpp"
+      - "cpp_runtime/tests/intelligence_vm3d_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/3D_INTELLIGENCE_VM_1000GB.md"
+      - ".github/workflows/intelligence3d-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: intelligence3d-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    name: Windows x64 / MSVC
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure CMake
+        shell: pwsh
+        run: >-
+          cmake -S cpp_runtime -B build/intelligence3d
+          -G "Visual Studio 17 2022" -A x64
+          -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          -DJARVISX_ENABLE_SANITIZERS=OFF
+
+      - name: Build executable and focused tests
+        shell: pwsh
+        run: |
+          cmake --build build/intelligence3d --config Release --target jarvisx-intelligence3d --parallel 2
+          cmake --build build/intelligence3d --config Release --target jarvisx-intelligence3d-tests --parallel 2
+
+      - name: Run focused regression and smoke tests
+        shell: pwsh
+        run: |
+          ctest --test-dir build/intelligence3d -C Release -R "intelligence3d-(regressions|runtime-smoke)" --output-on-failure
+
+      - name: Execute canonical 1000GB x 1000GB x 1000GB profile
+        shell: pwsh
+        run: |
+          $exe = "build/intelligence3d/Release/JarvisX-3D-10GB.exe"
+          & $exe --axis-gb 1000 --resident-gb 10 --page-edge 32 --cycles 4 --state-dir build/intelligence3d/canonical-state --generate-demo build/intelligence3d/demo.jxb3
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Stage package and checksum
+        shell: pwsh
+        run: |
+          $stage = "build/intelligence3d/package"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "build/intelligence3d/Release/JarvisX-3D-10GB.exe" "$stage/JarvisX-3D-10GB.exe"
+          Copy-Item "build/intelligence3d/demo.jxb3" "$stage/demo.jxb3"
+          Copy-Item "docs/3D_INTELLIGENCE_VM_1000GB.md" "$stage/README.md"
+          $hash = (Get-FileHash "$stage/JarvisX-3D-10GB.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  JarvisX-3D-10GB.exe" | Set-Content -Encoding ascii "$stage/SHA256SUMS.txt"
+          Compress-Archive -Path "$stage/*" -DestinationPath "build/intelligence3d/JarvisX-3D-10GB-Windows-x64.zip" -Force
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: JarvisX-3D-10GB-Windows-x64
+          path: |
+            build/intelligence3d/package/JarvisX-3D-10GB.exe
+            build/intelligence3d/package/demo.jxb3
+            build/intelligence3d/package/README.md
+            build/intelligence3d/package/SHA256SUMS.txt
+            build/intelligence3d/JarvisX-3D-10GB-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
