@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-08-12  
+**Last reviewed:** 2026-08-28
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -34,6 +34,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database or proof of long-memory quality |
 | Sparse billion-address field | Stable reference | `dr_moagi_billion_field.py`, transaction/digest/checkpoint tests | virtual `1000³` address space; active sparse coordinates alone are materialized |
 | Dr Moagi Field Runtime v2 | Reference laboratory | `dr_moagi_field_runtime.py`, `test_dr_moagi_field_runtime.py`, ADR-003 | same-space sparse field equation; codec-dependent stability beyond the conservative reference guard remains empirical |
+| 10x10x10 inward 4D graph ANN | Reference laboratory | `inward4d_ann.py`, `test_inward4d_ann.py`, ADR-010 | same-width 1,000-node graph autoencoder; `R^4` is feature geometry; no universal convergence, compression, or performance claim |
 | Moagi-Helmholtz orchestration runtime | Reference laboratory | `moagi_helmholtz.py`, `test_moagi_helmholtz.py`, ADR-004 | deterministic orchestration contract; bundled renderer/archive/inverse components are conformance fixtures, not production neural or MP4 implementations |
 | Orthogonal quantization precision gate | Numerical reference | `orthogonal_quantization.py`, `test_orthogonal_quantization.py`, ADR-005 | proves normalization and nearest-neighbour error bounds for declared orthonormal transforms; not a production DCT/video codec kernel |
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
@@ -59,7 +60,7 @@ The gate currently tests five falsifiable properties:
 4. fractal-octree agreement with exact recursive closed forms;
 5. fractional-smoothing conservation, dissipation and semigroup tolerances.
 
-The Field Runtime v2, Moagi-Helmholtz orchestration runtime and orthogonal quantization precision gate are covered by focused unit tests in the normal CI suite. They are not yet promoted into the consolidated empirical-validation artifact; that remains a follow-up integration target.
+The Field Runtime v2, inward 4D graph ANN, Moagi-Helmholtz orchestration runtime and orthogonal quantization precision gate are covered by focused unit tests in the normal CI suite. They are not yet promoted into the consolidated empirical-validation artifact; that remains a follow-up integration target.
 
 The `Empirical Validation` GitHub Actions workflow publishes the machine-readable report as a retained workflow artifact. See [Empirical Validation](EMPIRICAL_VALIDATION.md) for protocols, thresholds and inference boundaries.
 
@@ -99,6 +100,8 @@ Jarvis-X does not currently claim:
 - bit-exact cross-platform floating-point results from the C++ research processor;
 - production-scale fractional PDE performance or physical validity from the numerical reference solver;
 - convergence of arbitrary learned Dr Moagi codecs from the reference explicit-step guard alone;
+- universal convergence or compression from the same-width inward 4D graph autoencoder;
+- that an `R^4` feature coordinate establishes a physical fourth spatial dimension;
 - empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines.
 
 ## Canonical promotion checklist

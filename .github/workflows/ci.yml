@@ -49,12 +49,14 @@ jobs:
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
           src/jarvisx/fractional_smoothing_3d.py
+          src/jarvisx/inward4d_ann.py
           src/jarvisx/kinetic_runtime.py
           src/jarvisx/dr_moagi_kinetic_system.py
           src/jarvisx/verification.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
+          tests/test_inward4d_ann.py
           tests/test_kinetic_runtime.py
           tests/test_dr_moagi_kinetic_system.py
           tests/test_verification.py
@@ -67,12 +69,14 @@ jobs:
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
           src/jarvisx/fractional_smoothing_3d.py
+          src/jarvisx/inward4d_ann.py
           src/jarvisx/kinetic_runtime.py
           src/jarvisx/dr_moagi_kinetic_system.py
           src/jarvisx/verification.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
+          tests/test_inward4d_ann.py
           tests/test_kinetic_runtime.py
           tests/test_dr_moagi_kinetic_system.py
           tests/test_verification.py
