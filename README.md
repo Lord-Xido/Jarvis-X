@@ -44,6 +44,7 @@ The symbolic vocabulary used in the research documents maps to ordinary engineer
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
+| Inward 4D graph ANN | deterministic 1,000-node folded graph autoencoder with exact gradients, guarded pruning and rollback | Reference laboratory |
 | Model packaging | Hugging Face-compatible configuration, model and safetensors exporter | Reference |
 | Research specifications | reality-grounded observer dynamics, spatial bytecode and bounded optimization documents | Proposed / reference |
 
@@ -120,6 +121,19 @@ assert result.field.variance < field.variance
 ```
 
 The solver uses a dependency-free separable direct DFT for small correctness fixtures. See [Hierarchical 3D Fractional Smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md) for the equations, complexity and production boundary.
+
+### Run the 10x10x10 inward 4D ANN reference
+
+```bash
+python examples/inward4d_ann_demo.py --epochs 25
+```
+
+The reference executes a same-width graph autoencoder over exactly 1,000 nodes
+and 3,000 fully wrapped undirected synapses. It reports the complete
+self-description objective and commits an update only when the candidate does
+not regress. See the
+[end-to-end arithmetic](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md) for the fold,
+forward pass, analytic gradient, pruning, and capability boundary.
 
 ### Build the C++ processor laboratory
 
@@ -227,6 +241,7 @@ Every canonical subsystem should provide:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
 - [Inward 3D kinetic end-to-end specification](docs/INWARD_3D_KINETIC_END_TO_END.md)
+- [10x10x10 inward 4D graph ANN](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md)
 - [Dr. Moagi 4D quantum-inspired autoencoding equation](docs/DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md)
 - [Hierarchical 3D fractional smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md)
 - [Roadmap](ROADMAP.md)

@@ -26,7 +26,12 @@ The project follows semantic versioning where practical during alpha development
 - analytic constant-forcing updates for `du/dt = -D(-Delta)^alpha u + Omega`;
 - `2×2×2` restriction, prolongation and coarse-to-fine fusion;
 - ordered mechanistic traces, mass drift, gradient energy, residual and convergence telemetry;
-- independent direct-DFT, spatial-stencil and semigroup validation tests.
+- independent direct-DFT, spatial-stencil and semigroup validation tests;
+- dependency-free `10 x 10 x 10` inward-4D graph autoencoder reference;
+- exact 2,700-edge open-cube and 3,000-edge fully wrapped topology contracts;
+- analytic tied-edge gradients with central finite-difference verification;
+- transactional non-regressing adaptation and connectivity-preserving pruning;
+- machine-readable arithmetic telemetry and a bounded command-line example.
 
 ### Changed
 
