@@ -306,6 +306,8 @@ struct CubeRunMetrics {
     std::uint64_t encoded_input_bytes{};
     std::uint64_t latent_bytes_committed{};
     std::uint64_t decoded_output_bytes{};
+    std::uint64_t aggregate_command_input_bytes{};
+    std::uint64_t aggregate_command_output_bytes{};
     std::vector<CubeCommandMetrics> commands;
 };
 
@@ -338,9 +340,14 @@ public:
             metrics.accepted_passes += local.accepted_passes;
             metrics.rejected_passes += local.rejected_passes;
             metrics.converged_tiles += local.converged_tiles;
-            metrics.encoded_input_bytes += local.input_bytes;
-            metrics.latent_bytes_committed += local.latent_bytes;
-            metrics.decoded_output_bytes += local.output_bytes;
+            metrics.aggregate_command_input_bytes += local.input_bytes;
+            metrics.aggregate_command_output_bytes += local.output_bytes;
+            if (command.opcode == CubeOpcode::EncodeRefine) {
+                metrics.encoded_input_bytes += local.input_bytes;
+                metrics.latent_bytes_committed += local.latent_bytes;
+            } else if (command.opcode == CubeOpcode::Decode) {
+                metrics.decoded_output_bytes += local.output_bytes;
+            }
             metrics.commands.push_back(local);
         }
         return metrics;
@@ -417,14 +424,15 @@ private:
             const auto shadow_latent = world::vmad_advance_linear(command.shadow_latent, static_cast<std::uint64_t>(tile) * kCubeLatentBytes);
             const auto shadow_output = world::vmad_advance_linear(command.shadow_output, static_cast<std::uint64_t>(tile) * kCubeTileBytes);
             std::uint32_t previous_delta = 256U;
-            std::uint32_t final_delta = 255U;
+            std::uint32_t last_accepted_delta = 255U;
+            bool accepted_any = false;
             bool converged = false;
             for (std::uint32_t pass = 0U; pass < command.max_passes; ++pass) {
                 const std::uint32_t threshold = std::min<std::uint32_t>(255U, previous_delta);
                 engine_.run(candidate_program(source, shadow_latent, shadow_output, threshold), 64ULL);
-                final_delta = engine_.last_delta_mean();
+                const std::uint32_t candidate_delta = engine_.last_delta_mean();
                 const bool lambda_gate = engine_.scalar_register(20U) != 0ULL;
-                const bool improved = pass == 0U || final_delta < previous_delta;
+                const bool improved = pass == 0U || candidate_delta < previous_delta;
                 const bool accept = lambda_gate && improved;
                 ++metrics.passes;
                 if (accept) {
@@ -432,8 +440,10 @@ private:
                     copy_span(shadow_output, output, kCubeTileBytes);
                     engine_.run(commit_program(true), 8ULL);
                     ++metrics.accepted_passes;
-                    previous_delta = final_delta;
-                    if (final_delta <= command.epsilon) {
+                    accepted_any = true;
+                    previous_delta = candidate_delta;
+                    last_accepted_delta = candidate_delta;
+                    if (candidate_delta <= command.epsilon) {
                         converged = true;
                         break;
                     }
@@ -444,7 +454,7 @@ private:
                 }
             }
             if (converged) ++metrics.converged_tiles;
-            delta_sum += static_cast<long double>(final_delta);
+            delta_sum += static_cast<long double>(accepted_any ? last_accepted_delta : 255U);
         }
         metrics.input_bytes = static_cast<std::uint64_t>(command.tile_count) * kCubeTileBytes;
         metrics.latent_bytes = static_cast<std::uint64_t>(command.tile_count) * kCubeLatentBytes;

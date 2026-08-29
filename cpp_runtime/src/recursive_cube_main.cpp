@@ -104,9 +104,11 @@ int main(int argc, char** argv) {
                       << "accepted_passes=" << metrics.accepted_passes
                       << " rejected_passes=" << metrics.rejected_passes
                       << " converged_tiles=" << metrics.converged_tiles << '\n'
-                      << "aggregate_command_input_bytes=" << metrics.encoded_input_bytes
+                      << "encoded_input_bytes=" << metrics.encoded_input_bytes
                       << " latent_bytes_committed=" << metrics.latent_bytes_committed
-                      << " total_world_output_bytes=" << metrics.decoded_output_bytes << '\n'
+                      << " decoded_output_bytes=" << metrics.decoded_output_bytes << '\n'
+                      << "aggregate_command_input_bytes=" << metrics.aggregate_command_input_bytes
+                      << " aggregate_command_output_bytes=" << metrics.aggregate_command_output_bytes << '\n'
                       << "recursive_output_mae=" << mean_absolute_error << '\n'
                       << "world_commits=" << interpreter.engine().stats().commits
                       << " world_rollbacks=" << interpreter.engine().stats().rollbacks << '\n'

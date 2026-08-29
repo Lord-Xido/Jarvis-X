@@ -1,5 +1,6 @@
 #include "jarvisx/recursive_cube_interpreter.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -93,6 +94,7 @@ void test_end_to_end_recursive_execution() {
     });
 
     const auto plan = jarvisx::cube::make_demo_plan(4U, 1U);
+    const auto commands = jarvisx::cube::parse_execution_buffer(plan.execution_buffer, {});
     const std::uint64_t source_bytes = 4ULL * jarvisx::cube::kCubeTileBytes;
     const std::uint64_t latent_bytes = 4ULL * jarvisx::cube::kCubeLatentBytes;
     seed(volume, plan.source, source_bytes);
@@ -107,12 +109,42 @@ void test_end_to_end_recursive_execution() {
             "recursive-cube inward command input byte count mismatch");
     require(metrics.commands[1].input_bytes == latent_bytes,
             "recursive-cube outward command latent input byte count mismatch");
-    require(metrics.encoded_input_bytes == source_bytes + latent_bytes,
-            "recursive-cube aggregate command-input byte count mismatch");
+    require(metrics.encoded_input_bytes == source_bytes,
+            "recursive-cube encoded input should count inward source bytes only");
     require(metrics.latent_bytes_committed == latent_bytes,
             "recursive-cube committed latent byte count mismatch");
+    require(metrics.decoded_output_bytes == source_bytes,
+            "recursive-cube decoded output should count outward output bytes only");
+    require(metrics.aggregate_command_input_bytes == source_bytes + latent_bytes,
+            "recursive-cube aggregate command input byte count mismatch");
+    require(metrics.aggregate_command_output_bytes == source_bytes + source_bytes,
+            "recursive-cube aggregate command output byte count mismatch");
     require(interpreter.engine().stats().commits == metrics.accepted_passes,
             "world-engine commit telemetry diverges from recursive interpreter");
+
+    long double authoritative_delta_sum = 0.0L;
+    const auto& inward = commands.front();
+    for (std::uint32_t tile = 0U; tile < inward.tile_count; ++tile) {
+        const auto source = jarvisx::world::vmad_advance_linear(
+            inward.source, static_cast<std::uint64_t>(tile) * jarvisx::cube::kCubeTileBytes);
+        const auto authoritative = jarvisx::world::vmad_advance_linear(
+            inward.output, static_cast<std::uint64_t>(tile) * jarvisx::cube::kCubeTileBytes);
+        std::uint64_t score = 0ULL;
+        for (std::size_t i = 0U; i < jarvisx::cube::kCubeTileBytes; ++i) {
+            const int left = static_cast<int>(volume.read(
+                jarvisx::world::vmad_advance_linear(source, static_cast<std::uint64_t>(i)).coord()));
+            const int right = static_cast<int>(volume.read(
+                jarvisx::world::vmad_advance_linear(authoritative, static_cast<std::uint64_t>(i)).coord()));
+            const int delta = left - right;
+            score += static_cast<std::uint64_t>(delta < 0 ? -delta : delta);
+        }
+        authoritative_delta_sum += static_cast<long double>(
+            score / static_cast<std::uint64_t>(jarvisx::cube::kCubeTileBytes));
+    }
+    const double authoritative_mean = static_cast<double>(
+        authoritative_delta_sum / static_cast<long double>(inward.tile_count));
+    require(std::abs(metrics.commands[0].mean_final_delta - authoritative_mean) < 1.0e-9,
+            "mean_final_delta does not describe authoritative committed reconstruction");
 
     std::uint64_t nonzero = 0ULL;
     for (std::uint64_t i = 0ULL; i < source_bytes; ++i) {
