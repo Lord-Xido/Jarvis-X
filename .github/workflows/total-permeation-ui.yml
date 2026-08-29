@@ -1,0 +1,114 @@
+name: Total Permeation 3D UI
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/total-permeation-3d/**"
+      - ".github/workflows/total-permeation-ui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: total-permeation-ui-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-smoke:
+    name: Static browser surface smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Validate HTML and telemetry boundaries
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          path = Path("apps/total-permeation-3d/index.html")
+          text = path.read_text(encoding="utf-8")
+          assert text.lstrip().lower().startswith("<!doctype html>")
+          assert "window.setPhase3DTelemetry" in text
+          assert "Fᵣ = A/r² − kr" in text
+          assert "r* = ∛3" in text
+          assert "LOCAL VISUAL MEASUREMENT" in text
+          assert "VISUALIZATION ONLY" in text
+          assert "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" in text
+
+          forbidden = (
+              "1,000,000¹'",
+              "gamma = infinity",
+              "γ = ∞",
+              "0.0000ns",
+              "GEMINI 3 FLASH MATRIX",
+              "Hyper-Dimensional Execution: 1,000,000^1,000,000 ops/sec",
+          )
+          lowered = text.lower()
+          for token in forbidden:
+              assert token.lower() not in lowered, f"forbidden unverified telemetry: {token}"
+
+          assert "\\<html" not in text
+          assert "window\\.innerWidth" not in text
+
+          class Parser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = set()
+                  self.scripts = []
+              def handle_starttag(self, tag, attrs):
+                  data = dict(attrs)
+                  if "id" in data:
+                      assert data["id"] not in self.ids, f"duplicate id: {data['id']}"
+                      self.ids.add(data["id"])
+                  if tag == "script" and "src" in data:
+                      self.scripts.append(data["src"])
+
+          parser = Parser()
+          parser.feed(text)
+          required_ids = {
+              "canvas-container",
+              "throughput-display",
+              "stat-fps",
+              "stat-latency",
+              "term-content",
+              "morph-btn",
+              "wire-btn",
+              "permeate-btn",
+          }
+          assert required_ids <= parser.ids
+          assert parser.scripts == ["https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"]
+          PY
+
+      - name: Serve static app and fetch entry point
+        run: |
+          python -m http.server 8765 --directory apps/total-permeation-3d >/tmp/total-permeation-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          python - <<'PY'
+          import time
+          import urllib.request
+
+          url = "http://127.0.0.1:8765/index.html"
+          for _ in range(20):
+              try:
+                  with urllib.request.urlopen(url, timeout=1) as response:
+                      body = response.read().decode("utf-8")
+                      assert response.status == 200
+                      assert "DM–vΩΞ⁺ TOTAL PERMEATION 3D" in body
+                      assert "setPhase3DTelemetry" in body
+                      break
+              except OSError:
+                  time.sleep(0.1)
+          else:
+              raise RuntimeError("static server did not become ready")
+          PY
