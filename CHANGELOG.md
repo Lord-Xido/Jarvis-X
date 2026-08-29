@@ -31,7 +31,9 @@ The project follows semantic versioning where practical during alpha development
 - exact 2,700-edge open-cube and 3,000-edge fully wrapped topology contracts;
 - analytic tied-edge gradients with central finite-difference verification;
 - transactional non-regressing adaptation and connectivity-preserving pruning;
-- machine-readable arithmetic telemetry and a bounded command-line example.
+- machine-readable arithmetic telemetry and a bounded command-line example;
+- self-referential PyTorch/Inductor 3D implicit-field example with normalized execution telemetry;
+- bounded measurement-driven runtime autotuning kept separate from differentiable geometry learning.
 
 ### Changed
 
