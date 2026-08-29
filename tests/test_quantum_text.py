@@ -20,6 +20,17 @@ def test_ascii_g_has_expected_bits() -> None:
     assert encoding.decode() == "G"
 
 
+def test_direct_basis_encoding_requires_matching_bits() -> None:
+    with pytest.raises(ValueError, match="bits do not match"):
+        BasisEncoding("A", (0, 0, 0, 0, 0, 0, 0, 0), 0)
+
+
+def test_direct_basis_encoding_requires_matching_index() -> None:
+    bits = utf8_to_bits("A")
+    with pytest.raises(ValueError, match="basis_index does not match"):
+        BasisEncoding("A", bits, 0)
+
+
 def test_utf8_round_trip_preserves_multibyte_text() -> None:
     text = "Λ Logos — Ἐν ἀρχῇ"
     bits = utf8_to_bits(text)
