@@ -1,6 +1,7 @@
 #include "jarvisx/recursive_cube_interpreter.hpp"
 
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -105,7 +106,7 @@ int main(int argc, char** argv) {
                       << " converged_tiles=" << metrics.converged_tiles << '\n'
                       << "encoded_input_bytes=" << metrics.encoded_input_bytes
                       << " latent_bytes_committed=" << metrics.latent_bytes_committed
-                      << " decoded_output_bytes=" << metrics.decoded_output_bytes << '\n'
+                      << " total_world_output_bytes=" << metrics.decoded_output_bytes << '\n'
                       << "recursive_output_mae=" << mean_absolute_error << '\n'
                       << "world_commits=" << interpreter.engine().stats().commits
                       << " world_rollbacks=" << interpreter.engine().stats().rollbacks << '\n'
