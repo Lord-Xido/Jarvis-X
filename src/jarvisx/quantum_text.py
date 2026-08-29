@@ -125,9 +125,7 @@ def _canonicalize(
     amplitudes: dict[int, complex], tolerance: float = 1.0e-15
 ) -> tuple[AmplitudeEntry, ...]:
     entries = [
-        (index, amplitude)
-        for index, amplitude in amplitudes.items()
-        if abs(amplitude) > tolerance
+        (index, amplitude) for index, amplitude in amplitudes.items() if abs(amplitude) > tolerance
     ]
     entries.sort(key=lambda item: item[0])
     return tuple(entries)
@@ -230,8 +228,7 @@ class SparseQuantumState:
             raise ValueError("states must have the same qubit width")
         right = dict(other.amplitudes)
         return sum(
-            amplitude.conjugate() * right.get(index, 0.0j)
-            for index, amplitude in self.amplitudes
+            amplitude.conjugate() * right.get(index, 0.0j) for index, amplitude in self.amplitudes
         )
 
 
