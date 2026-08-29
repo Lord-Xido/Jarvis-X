@@ -145,7 +145,11 @@ class SparseQuantumState:
     amplitudes: tuple[AmplitudeEntry, ...]
 
     def __post_init__(self) -> None:
-        if isinstance(self.qubits, bool) or not isinstance(self.qubits, int) or self.qubits < 1:
+        if (
+            isinstance(self.qubits, bool)
+            or not isinstance(self.qubits, int)
+            or self.qubits < 1
+        ):
             raise ValueError("qubits must be a positive integer")
         if not self.amplitudes:
             raise ValueError("at least one non-zero amplitude is required")
@@ -191,7 +195,11 @@ class SparseQuantumState:
     def hadamard(self, qubit: int) -> "SparseQuantumState":
         """Apply a Hadamard gate to one qubit without allocating a dense state."""
 
-        if isinstance(qubit, bool) or not isinstance(qubit, int) or not 0 <= qubit < self.qubits:
+        if (
+            isinstance(qubit, bool)
+            or not isinstance(qubit, int)
+            or not 0 <= qubit < self.qubits
+        ):
             raise ValueError("qubit is outside the state")
 
         mask = 1 << qubit
