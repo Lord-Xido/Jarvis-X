@@ -1,0 +1,41 @@
+name: Dr Moagi Java Platform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/dr-moagi-platform-java/**'
+      - '.github/workflows/dr-moagi-platform-java.yml'
+  pull_request:
+    paths:
+      - 'apps/dr-moagi-platform-java/**'
+      - '.github/workflows/dr-moagi-platform-java.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  java17:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile
+        working-directory: apps/dr-moagi-platform-java
+        run: |
+          mkdir -p build
+          javac --release 17 -Xlint:all -Werror -d build src/DrMoagiPlatform.java test/DrMoagiPlatformTest.java
+      - name: Regression tests
+        working-directory: apps/dr-moagi-platform-java
+        run: java -ea -cp build DrMoagiPlatformTest
+      - name: CLI smoke test
+        working-directory: apps/dr-moagi-platform-java
+        run: |
+          printf '/compute sqrt(81) + 5 * 2\n/data 1,2,3,4\n/status\n/exit\n' | java -cp build DrMoagiPlatform | tee smoke.log
+          grep -F '[COMPUTE]' smoke.log
+          grep -F '[DATA]' smoke.log
+          grep -F 'DR MOAGI PLATFORM STATUS' smoke.log
