@@ -33,6 +33,20 @@ add_executable(jarvisx-self-editor3d
 target_link_libraries(jarvisx-self-editor3d PRIVATE jarvisx-self-editor3d-core)
 jarvisx_selfedit_harden(jarvisx-self-editor3d)
 
+add_library(jarvisx-symmetry-loop3d-core STATIC
+    src/symmetry_loop3d.cpp
+)
+target_include_directories(jarvisx-symmetry-loop3d-core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+jarvisx_selfedit_harden(jarvisx-symmetry-loop3d-core)
+
+add_executable(jarvisx-symmetry-loop3d
+    src/symmetry_loop3d_main.cpp
+)
+target_link_libraries(jarvisx-symmetry-loop3d PRIVATE jarvisx-symmetry-loop3d-core)
+jarvisx_selfedit_harden(jarvisx-symmetry-loop3d)
+
 enable_testing()
 
 add_executable(jarvisx-self-editor3d-tests
@@ -43,3 +57,12 @@ jarvisx_selfedit_harden(jarvisx-self-editor3d-tests)
 
 add_test(NAME self-editor3d-regressions COMMAND jarvisx-self-editor3d-tests)
 set_tests_properties(self-editor3d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-symmetry-loop3d-tests
+    tests/symmetry_loop3d_tests.cpp
+)
+target_link_libraries(jarvisx-symmetry-loop3d-tests PRIVATE jarvisx-symmetry-loop3d-core)
+jarvisx_selfedit_harden(jarvisx-symmetry-loop3d-tests)
+
+add_test(NAME symmetry-loop3d-regressions COMMAND jarvisx-symmetry-loop3d-tests)
+set_tests_properties(symmetry-loop3d-regressions PROPERTIES TIMEOUT 120)
