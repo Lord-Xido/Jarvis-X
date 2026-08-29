@@ -1,5 +1,7 @@
 # Dr Moagi Intelligence Media Processor
 
+> **Normative 8KB container contract:** the bounded recursive state, arithmetic, fixed-point, transactional microcode, semantic-gap, toroidal-topology, and hardware-claim semantics for this processor family are defined in [`DM_VOMEGAXI_8KB_CANONICAL_SPEC.md`](DM_VOMEGAXI_8KB_CANONICAL_SPEC.md). This document describes the currently implemented DM-IMP/VCL-BVM-8 reference layer; the canonical specification distinguishes implemented behavior from required conformance and future hardware targets.
+
 ## Operational contract
 
 The Dr Moagi Intelligence Media Processor (DM-IMP) is a bounded 8-bit spatial media execution layer for Jarvis-X. It does not replace the global sparse JX3DVM1 address space. Instead, arbitrary input bytes are divided into `8 x 8 x 8 = 512` byte tiles and processed locally through VCL-BVM-8.
