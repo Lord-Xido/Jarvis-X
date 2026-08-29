@@ -31,7 +31,12 @@ The project follows semantic versioning where practical during alpha development
 - exact 2,700-edge open-cube and 3,000-edge fully wrapped topology contracts;
 - analytic tied-edge gradients with central finite-difference verification;
 - transactional non-regressing adaptation and connectivity-preserving pruning;
-- machine-readable arithmetic telemetry and a bounded command-line example.
+- machine-readable arithmetic telemetry and a bounded command-line example;
+- self-referential PyTorch/Inductor 3D implicit-field example with normalized execution telemetry;
+- bounded measurement-driven runtime autotuning kept separate from differentiable geometry learning;
+- vectorized `N x 3` Phase3D runtime with true two-parameter torus initialization and relativistic momentum integration;
+- dimensionally explicit central potential, shell/energy telemetry, and measured node-update throughput;
+- end-to-end Phase3D-to-implicit-field runtime with semantic, memory-budget, and minimum-throughput-improvement promotion gates.
 
 ### Changed
 

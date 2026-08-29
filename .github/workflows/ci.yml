@@ -38,6 +38,9 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q src tests
 
+      - name: Compile optional self-referential runtime
+        run: python -m py_compile examples/self_referential_triton_engine.py
+
       - name: Reject syntax errors and undefined names
         run: flake8 src/jarvisx tests --select=E9,F63,F7,F82 --show-source --statistics
 
