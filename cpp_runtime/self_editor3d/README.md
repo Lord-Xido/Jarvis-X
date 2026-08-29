@@ -81,7 +81,7 @@ Safety invariants:
 
 ## Closed 3D symmetry autoencoding loop
 
-The same subsystem now includes an executable mathematical closure of the three-plane pixel autoencoder. For an `n×n` frame `X`, the fixed encoder is
+The same subsystem includes an executable mathematical closure of the three-plane pixel autoencoder. For an `n×n` frame `X`, the fixed encoder is
 
 ```text
 E(X) = [ X, H(X), V(X) ]
@@ -120,6 +120,39 @@ Run the reference fixture:
 
 The regression suite proves the exact baseline invariant `D(E(X)) = X`, `P^3 = I`, the supplied fixture's decoded period-two orbit under exact cyclic transport, row-stochastic learnable transport, material objective reduction from the cyclic initialization, and convergence of the optimized feedback loop back to the invariant frame.
 
+## Performance envelope
+
+The runtime now includes `jarvisx-symmetry-benchmark3d`, a deterministic benchmark harness for fidelity, robustness, convergence and runtime telemetry.
+
+Full default sweep:
+
+```bash
+./build/self-editor3d/jarvisx-symmetry-benchmark3d \
+  --sizes 8,16,32,64,128,256 \
+  --noise 0,0.05,0.10,0.20,0.30,0.40 \
+  --repeats 5 \
+  --output symmetry3d-benchmark.csv
+```
+
+Quick CI-sized sweep:
+
+```bash
+./build/self-editor3d/jarvisx-symmetry-benchmark3d \
+  --quick \
+  --output symmetry3d-benchmark.csv
+```
+
+The benchmark records reconstruction MSE, binary accuracy, theoretical bit error where defined, feedback steps, fixed-point residual, optimization objective reduction, optimization/inference latency, throughput, estimated working-set bytes and latent expansion ratio.
+
+Two noise domains are kept separate:
+
+- `input-common`: corruption occurs before encoding, so all three symmetry copies inherit the same error and majority voting cannot remove it;
+- `latent-independent`: the clean three-plane code is formed first, then layers fail independently. Exact majority decoding has theoretical BER `3p² - 2p³`.
+
+The three-plane representation reports a latent expansion ratio of `3.0`; it is a redundancy mechanism, not a compression result. Dense-AE and CNN-AE labels are intentionally absent until real matched implementations exist. See [`docs/CPP_3D_SYMMETRY_PERFORMANCE.md`](../../docs/CPP_3D_SYMMETRY_PERFORMANCE.md) for the benchmark protocol and interpretation rules.
+
 ## Regression coverage
 
-The CTest suite verifies workspace containment, ambiguous-anchor rejection, no-op rejection, recursive folding to a `1³` core, objective reduction, source canonicalization, fixed-point convergence, exact symmetry reconstruction, latent cyclic order, stochastic transport normalization, and closed-loop parameter/state convergence. GitHub Actions builds and tests the subsystem on GCC, Clang with sanitizers, and MSVC.
+The CTest suite verifies workspace containment, ambiguous-anchor rejection, no-op rejection, recursive folding to a `1³` core, objective reduction, source canonicalization, fixed-point convergence, exact symmetry reconstruction, latent cyclic order, stochastic transport normalization, closed-loop parameter/state convergence, deterministic corruption replay, the analytical three-copy majority BER, independent-latent robustness gain, benchmark matrix integrity and CSV emission.
+
+GitHub Actions builds and tests the subsystem on GCC, Clang with ASan/UBSan and MSVC. The GCC Release leg additionally emits a quick benchmark CSV artifact; sanitizer timing is not used as performance telemetry.
