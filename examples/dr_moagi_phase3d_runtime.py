@@ -9,13 +9,13 @@ physical phase evolution, neural learning, and runtime optimization:
       -> differentiable geometry update
       -> measured execution benchmark
       -> bounded runtime candidate search
-      -> semantic/resource promotion gate
+      -> canonical kinetic transaction gate
+      -> commit/rollback receipt
       -> next cycle
 
 The phase state is authoritative. Neural error never directly changes the phase
 integrator. Wall-clock measurements never enter autograd. Runtime candidates are
-promoted only when they preserve eager semantics, respect the memory budget, and
-beat the incumbent by the configured margin.
+promoted only through Jarvis-X's canonical candidate-first transaction law.
 
 Install and run:
 
@@ -36,6 +36,7 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
+from jarvisx.kinetic_runtime import KineticReceipt, KineticTransactionEngine, ValidatorResult
 from self_referential_triton_engine import (
     BenchmarkResult,
     ExecutionMetrics,
@@ -48,6 +49,10 @@ from self_referential_triton_engine import (
 
 
 C_LIGHT = 299_792_458.0
+
+
+def _finite_or_none(value: float) -> float | None:
+    return float(value) if math.isfinite(float(value)) else None
 
 
 @dataclass(frozen=True)
@@ -104,6 +109,13 @@ class PhaseTelemetry:
 
 
 @dataclass(frozen=True)
+class RuntimeSearchCandidate:
+    incumbent: BenchmarkResult
+    best: BenchmarkResult
+    evaluated_candidates: int
+
+
+@dataclass(frozen=True)
 class CycleReport:
     cycle: int
     phase: PhaseTelemetry
@@ -111,6 +123,8 @@ class CycleReport:
     geometry_rmse: float
     runtime: BenchmarkResult
     runtime_promoted: bool
+    runtime_decision: str
+    runtime_receipt_hash: str
 
 
 class RelativisticPhaseField3D:
@@ -241,7 +255,7 @@ class RelativisticPhaseField3D:
 
 
 class Phase3DSelfOptimizingRuntime:
-    """Close phase dynamics, neural learning, profiling, and runtime promotion."""
+    """Close phase dynamics, neural learning, profiling, and canonical promotion."""
 
     def __init__(
         self,
@@ -283,6 +297,35 @@ class Phase3DSelfOptimizingRuntime:
             repeats=3,
         )
 
+        self._transaction_coords: torch.Tensor | None = None
+        self._transaction_metrics: torch.Tensor | None = None
+        self._transaction_reference: torch.Tensor | None = None
+        self.last_runtime_receipt: KineticReceipt | None = None
+        self.runtime_transaction = KineticTransactionEngine[
+            RuntimeConfig,
+            BenchmarkResult,
+            tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+            RuntimeSearchCandidate,
+        ](
+            snapshot=lambda config: RuntimeConfig(config.chunk_size, config.compile_mode),
+            observe=self._runtime_observe,
+            encode=self._runtime_encode,
+            propose=self._runtime_propose,
+            shadow=self._runtime_shadow,
+            validators=(
+                self._runtime_semantic_validator,
+                self._runtime_memory_validator,
+                self._runtime_performance_validator,
+            ),
+            commit=lambda _config, candidate: candidate.best.config,
+            rollback=lambda config: config,
+            state_identity=lambda config: {
+                "chunk_size": config.chunk_size,
+                "compile_mode": config.compile_mode,
+            },
+            candidate_identity=self._runtime_candidate_identity,
+        )
+
     def _target_sdf(self, coords: torch.Tensor) -> torch.Tensor:
         radius = self.phase.config.equilibrium_radius_m
         return torch.linalg.vector_norm(coords, dim=-1, keepdim=True) - radius
@@ -316,6 +359,16 @@ class Phase3DSelfOptimizingRuntime:
         return float(torch.sqrt(torch.mean((prediction - target).square())).item())
 
     @torch.inference_mode()
+    def _benchmark(
+        self,
+        config: RuntimeConfig,
+        coords: torch.Tensor,
+        metrics: torch.Tensor,
+        reference: torch.Tensor,
+    ) -> BenchmarkResult:
+        return self.autotuner.benchmark(config, coords, metrics, reference)
+
+    @torch.inference_mode()
     def _benchmark_incumbent(self, coords: torch.Tensor) -> BenchmarkResult:
         normalized = self.exec_state.normalized(
             self.target_qps,
@@ -328,16 +381,170 @@ class Phase3DSelfOptimizingRuntime:
             normalized,
             self.runtime_config.chunk_size,
         )
-        return self.autotuner.benchmark(
-            self.runtime_config,
-            coords,
-            normalized,
-            reference,
+        return self._benchmark(self.runtime_config, coords, normalized, reference)
+
+    def _transaction_payload(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        if (
+            self._transaction_coords is None
+            or self._transaction_metrics is None
+            or self._transaction_reference is None
+        ):
+            raise RuntimeError("runtime transaction payload is not initialized")
+        return (
+            self._transaction_coords,
+            self._transaction_metrics,
+            self._transaction_reference,
         )
 
     @torch.inference_mode()
-    def _tune_runtime(self, coords: torch.Tensor) -> tuple[BenchmarkResult, bool]:
-        """Search bounded candidates under one telemetry snapshot and resource gate."""
+    def _runtime_observe(self, config: RuntimeConfig) -> BenchmarkResult:
+        coords, metrics, reference = self._transaction_payload()
+        return self._benchmark(config, coords, metrics, reference)
+
+    def _runtime_encode(
+        self,
+        config: RuntimeConfig,
+        observation: BenchmarkResult,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        del config, observation
+        return self._transaction_payload()
+
+    @torch.inference_mode()
+    def _runtime_propose(
+        self,
+        config: RuntimeConfig,
+        observation: BenchmarkResult,
+        encoded: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    ) -> RuntimeSearchCandidate:
+        coords, metrics, reference = encoded
+        results = [
+            self._benchmark(candidate, coords, metrics, reference)
+            for candidate in self.autotuner.candidates(config)
+        ]
+        admissible = [result for result in results if result.accepted]
+        best = (
+            max(admissible, key=lambda item: item.metrics.throughput_qps)
+            if admissible
+            else observation
+        )
+        return RuntimeSearchCandidate(
+            incumbent=observation,
+            best=best,
+            evaluated_candidates=len(results),
+        )
+
+    def _runtime_shadow(
+        self,
+        config: RuntimeConfig,
+        candidate: RuntimeSearchCandidate,
+    ) -> dict[str, object]:
+        del config
+        return {
+            "evaluated_candidates": candidate.evaluated_candidates,
+            "incumbent_qps": _finite_or_none(candidate.incumbent.metrics.throughput_qps),
+            "candidate_qps": _finite_or_none(candidate.best.metrics.throughput_qps),
+            "candidate_latency_ms": _finite_or_none(candidate.best.metrics.latency_ms),
+            "candidate_peak_memory_mb": _finite_or_none(
+                candidate.best.metrics.peak_memory_mb
+            ),
+            "candidate_semantic_error": _finite_or_none(candidate.best.max_abs_error),
+            "candidate_compile_mode": candidate.best.config.compile_mode,
+            "candidate_effective_mode": candidate.best.effective_mode,
+            "candidate_chunk_size": candidate.best.config.chunk_size,
+        }
+
+    def _runtime_semantic_validator(
+        self,
+        config: RuntimeConfig,
+        candidate: RuntimeSearchCandidate,
+    ) -> ValidatorResult:
+        del config
+        passed = candidate.best.accepted and math.isfinite(candidate.best.max_abs_error)
+        return ValidatorResult(
+            name="phase3d_semantic_equivalence",
+            passed=passed,
+            metrics={"max_abs_error": _finite_or_none(candidate.best.max_abs_error)},
+            reason="semantic tolerance satisfied" if passed else "candidate semantic check failed",
+        )
+
+    def _runtime_memory_validator(
+        self,
+        config: RuntimeConfig,
+        candidate: RuntimeSearchCandidate,
+    ) -> ValidatorResult:
+        del config
+        peak = candidate.best.metrics.peak_memory_mb
+        passed = math.isfinite(peak) and peak <= self.peak_memory_budget_mb
+        return ValidatorResult(
+            name="phase3d_memory_budget",
+            passed=passed,
+            metrics={
+                "peak_memory_mb": _finite_or_none(peak),
+                "budget_mb": _finite_or_none(self.peak_memory_budget_mb),
+            },
+            reason="within memory budget" if passed else "memory budget exceeded",
+        )
+
+    def _runtime_performance_validator(
+        self,
+        config: RuntimeConfig,
+        candidate: RuntimeSearchCandidate,
+    ) -> ValidatorResult:
+        incumbent = candidate.incumbent
+        best = candidate.best
+        incumbent_qps = incumbent.metrics.throughput_qps
+        best_qps = best.metrics.throughput_qps
+
+        if not incumbent.accepted or not math.isfinite(incumbent_qps):
+            passed = best.accepted and best.config != config and math.isfinite(best_qps)
+            required = None
+            reason = "recover unavailable incumbent" if passed else "no valid replacement"
+        else:
+            required_value = incumbent_qps * (1.0 + self.min_runtime_improvement)
+            required = required_value
+            passed = (
+                best.config != config
+                and math.isfinite(best_qps)
+                and best_qps >= required_value
+            )
+            reason = "minimum throughput improvement satisfied" if passed else "retain incumbent"
+
+        return ValidatorResult(
+            name="phase3d_runtime_improvement",
+            passed=passed,
+            metrics={
+                "incumbent_qps": _finite_or_none(incumbent_qps),
+                "candidate_qps": _finite_or_none(best_qps),
+                "required_qps": _finite_or_none(required) if required is not None else None,
+                "min_relative_improvement": self.min_runtime_improvement,
+            },
+            reason=reason,
+        )
+
+    def _runtime_candidate_identity(self, candidate: RuntimeSearchCandidate) -> dict[str, object]:
+        return {
+            "evaluated_candidates": candidate.evaluated_candidates,
+            "incumbent": {
+                "chunk_size": candidate.incumbent.config.chunk_size,
+                "compile_mode": candidate.incumbent.config.compile_mode,
+                "accepted": candidate.incumbent.accepted,
+                "qps": _finite_or_none(candidate.incumbent.metrics.throughput_qps),
+            },
+            "best": {
+                "chunk_size": candidate.best.config.chunk_size,
+                "compile_mode": candidate.best.config.compile_mode,
+                "effective_mode": candidate.best.effective_mode,
+                "accepted": candidate.best.accepted,
+                "qps": _finite_or_none(candidate.best.metrics.throughput_qps),
+                "latency_ms": _finite_or_none(candidate.best.metrics.latency_ms),
+                "peak_memory_mb": _finite_or_none(candidate.best.metrics.peak_memory_mb),
+                "max_abs_error": _finite_or_none(candidate.best.max_abs_error),
+            },
+        }
+
+    @torch.inference_mode()
+    def _tune_runtime(self, coords: torch.Tensor) -> tuple[BenchmarkResult, bool, KineticReceipt]:
+        """Run runtime selection through the canonical Jarvis-X transaction law."""
 
         normalized = self.exec_state.normalized(
             self.target_qps,
@@ -350,37 +557,15 @@ class Phase3DSelfOptimizingRuntime:
             normalized,
             self.runtime_config.chunk_size,
         )
+        self._transaction_coords = coords
+        self._transaction_metrics = normalized
+        self._transaction_reference = reference
 
-        results = [
-            self.autotuner.benchmark(candidate, coords, normalized, reference)
-            for candidate in self.autotuner.candidates(self.runtime_config)
-        ]
-        admissible = [
-            result
-            for result in results
-            if result.accepted
-            and result.metrics.peak_memory_mb <= self.peak_memory_budget_mb
-        ]
-        if not admissible:
-            return self._benchmark_incumbent(coords), False
-
-        incumbent = next(
-            (result for result in admissible if result.config == self.runtime_config),
-            None,
-        )
-        if incumbent is None:
-            incumbent = self._benchmark_incumbent(coords)
-        best = max(admissible, key=lambda item: item.metrics.throughput_qps)
-
-        required = incumbent.metrics.throughput_qps * (1.0 + self.min_runtime_improvement)
-        promoted = (
-            best.config != self.runtime_config
-            and best.metrics.throughput_qps >= required
-        )
-        if promoted:
-            self.runtime_config = best.config
-            return best, True
-        return incumbent, False
+        result = self.runtime_transaction.step(self.runtime_config)
+        self.runtime_config = result.state
+        self.last_runtime_receipt = result.receipt
+        reported = result.candidate.best if result.committed else result.candidate.incumbent
+        return reported, result.committed, result.receipt
 
     def cycle(self, cycle_index: int, *, train_steps: int, tune: bool) -> CycleReport:
         phase_report = self.phase.step()
@@ -392,8 +577,12 @@ class Phase3DSelfOptimizingRuntime:
             self.exec_state = measured.metrics
 
         promoted = False
+        decision = "not_scheduled"
+        receipt_hash = self.runtime_transaction.previous_receipt_hash
         if tune:
-            measured, promoted = self._tune_runtime(coords)
+            measured, promoted, receipt = self._tune_runtime(coords)
+            decision = receipt.decision
+            receipt_hash = receipt.receipt_hash
             if measured.accepted:
                 self.exec_state = measured.metrics
 
@@ -405,6 +594,8 @@ class Phase3DSelfOptimizingRuntime:
             geometry_rmse=rmse,
             runtime=measured,
             runtime_promoted=promoted,
+            runtime_decision=decision,
+            runtime_receipt_hash=receipt_hash,
         )
 
     def run(self, cycles: int, *, train_steps: int = 1, tune_every: int = 2) -> None:
@@ -416,7 +607,7 @@ class Phase3DSelfOptimizingRuntime:
         )
         print(
             "measurement contract: node_updates/s and q/s are measured; "
-            "no symbolic throughput multiplier is reported"
+            "runtime changes require canonical kinetic receipts"
         )
 
         for cycle_index in range(1, cycles + 1):
@@ -441,7 +632,8 @@ class Phase3DSelfOptimizingRuntime:
                 f"mem={runtime.metrics.peak_memory_mb:.1f} MiB "
                 f"mode={runtime.effective_mode} "
                 f"chunk={self.runtime_config.chunk_size} "
-                f"promoted={report.runtime_promoted}"
+                f"decision={report.runtime_decision} "
+                f"receipt={report.runtime_receipt_hash[:12]}"
             )
 
 
