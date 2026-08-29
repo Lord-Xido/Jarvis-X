@@ -1,0 +1,58 @@
+name: Dr Moagi ANN IDE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/dr_moagi_ide.py"
+      - "src/jarvisx/dr_moagi_ide_api.py"
+      - "apps/dr-moagi-ide/**"
+      - "tests/test_dr_moagi_ide.py"
+      - ".github/workflows/dr-moagi-ide.yml"
+  pull_request:
+    paths:
+      - "src/jarvisx/dr_moagi_ide.py"
+      - "src/jarvisx/dr_moagi_ide_api.py"
+      - "apps/dr-moagi-ide/**"
+      - "tests/test_dr_moagi_ide.py"
+      - ".github/workflows/dr-moagi-ide.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[test]"
+      - run: pytest -q tests/test_dr_moagi_ide.py
+      - name: Import API
+        env:
+          JARVISX_IDE_DB: ${{ runner.temp }}/ide.sqlite3
+          JARVISX_STATE_DIR: ${{ runner.temp }}/dr-moagi-os
+        run: python -c "from jarvisx.dr_moagi_ide_api import app; assert app.title == 'Dr Moagi ANN IDE'"
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -f apps/dr-moagi-ide/Dockerfile -t dr-moagi-ann-ide:ci .
+      - name: Smoke test container
+        run: |
+          docker run -d --name dr-moagi-ide -p 8000:8000 dr-moagi-ann-ide:ci
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/healthz >/tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs dr-moagi-ide
+          exit 1
