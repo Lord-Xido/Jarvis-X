@@ -94,15 +94,22 @@ void test_end_to_end_recursive_execution() {
 
     const auto plan = jarvisx::cube::make_demo_plan(4U, 1U);
     const std::uint64_t source_bytes = 4ULL * jarvisx::cube::kCubeTileBytes;
+    const std::uint64_t latent_bytes = 4ULL * jarvisx::cube::kCubeLatentBytes;
     seed(volume, plan.source, source_bytes);
 
     jarvisx::cube::RecursiveCubeInterpreter interpreter(volume);
     const auto metrics = interpreter.run(plan.execution_buffer);
     require(metrics.execution_buffer_validated, "recursive-cube execution buffer did not validate");
     require(metrics.commands_executed == 2ULL, "single-level plan should execute one inward and one outward command");
+    require(metrics.commands.size() == 2U, "recursive-cube command telemetry count mismatch");
     require(metrics.accepted_passes >= 4ULL, "each first tile candidate should pass the byte-range Lambda gate");
-    require(metrics.encoded_input_bytes == source_bytes, "recursive-cube encoded byte count mismatch");
-    require(metrics.latent_bytes_committed == 4ULL * jarvisx::cube::kCubeLatentBytes,
+    require(metrics.commands[0].input_bytes == source_bytes,
+            "recursive-cube inward command input byte count mismatch");
+    require(metrics.commands[1].input_bytes == latent_bytes,
+            "recursive-cube outward command latent input byte count mismatch");
+    require(metrics.encoded_input_bytes == source_bytes + latent_bytes,
+            "recursive-cube aggregate command-input byte count mismatch");
+    require(metrics.latent_bytes_committed == latent_bytes,
             "recursive-cube committed latent byte count mismatch");
     require(interpreter.engine().stats().commits == metrics.accepted_passes,
             "world-engine commit telemetry diverges from recursive interpreter");
