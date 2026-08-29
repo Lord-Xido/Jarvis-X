@@ -42,6 +42,35 @@ jobs:
           examples/self_referential_triton_engine.py
           examples/dr_moagi_phase3d_runtime.py
 
+      - name: Verify Phase3D invariants
+        env:
+          PYTHONPATH: examples
+        run: |
+          python - <<'PY'
+          import math
+          import torch
+          from dr_moagi_phase3d_runtime import (
+              C_LIGHT,
+              PhaseFieldConfig,
+              RelativisticPhaseField3D,
+          )
+
+          config = PhaseFieldConfig(node_count=256)
+          assert math.isclose(config.equilibrium_radius_m, 3.0 ** (1.0 / 3.0), rel_tol=1e-12)
+
+          phase = RelativisticPhaseField3D(config, torch.device("cpu"))
+          assert phase.position.shape == (256, 3)
+          assert phase.momentum.shape == (256, 3)
+          before = phase.position.clone()
+          report = phase.step()
+          assert torch.isfinite(phase.position).all()
+          assert torch.isfinite(phase.momentum).all()
+          assert not torch.equal(before, phase.position)
+          assert report.max_velocity_m_s < C_LIGHT
+          assert math.isfinite(report.mechanical_energy_j)
+          assert math.isfinite(report.relative_energy_drift)
+          PY
+
       - name: Execute end-to-end CPU cycle
         run: >-
           python examples/dr_moagi_phase3d_runtime.py
