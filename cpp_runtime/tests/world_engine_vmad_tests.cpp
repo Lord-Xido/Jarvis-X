@@ -81,7 +81,8 @@ void test_sparse_ingest_and_pipeline() {
     require(stats.stage_issues[4] >= 1ULL, "feedback stage was not exercised");
     require(stats.estimated_pipeline_latency_cycles == stats.logical_issue_cycles + 4ULL,
             "pipeline latency accounting is inconsistent");
-    require(volume.read(output.coord()) <= 255U, "reconstructed output byte is invalid");
+    require(volume.read(output.coord()) == engine.vector_register(64U)[0],
+            "decoded vector and sparse output volume diverged");
     std::filesystem::remove_all(dir);
 }
 
