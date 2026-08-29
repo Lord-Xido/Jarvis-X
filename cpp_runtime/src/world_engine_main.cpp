@@ -1,6 +1,7 @@
 #include "jarvisx/world_engine_vmad.hpp"
 
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
