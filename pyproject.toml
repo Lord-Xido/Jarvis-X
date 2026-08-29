@@ -54,6 +54,9 @@ test = [
     "pytest-cov>=5.0",
     "z3-solver>=4.13.0",
 ]
+torch = [
+    "torch>=2.4",
+]
 
 [project.urls]
 Homepage = "https://github.com/Lord-Xido/Jarvis-X"
