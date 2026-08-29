@@ -14,7 +14,7 @@ import uuid
 from collections import deque
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .assembler import Assembler, REG_MAP
 from .code_editor_automata import (
@@ -161,7 +161,7 @@ def refactor_program(
         allow_unsafe=False,
         allow_heuristic=False,
     )
-    return automata.refactor(normalized, params).to_dict()
+    return cast(dict[str, Any], automata.refactor(normalized, params).to_dict())
 
 
 class ProjectStore:
