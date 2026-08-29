@@ -1,0 +1,85 @@
+name: Dr Moagi Runtime Fabric
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/dr-moagi-platform-java/**'
+      - 'apps/dmvann-chat/**'
+      - 'apps/dr-moagi-cognitive/**'
+      - 'apps/dr-moagi-geometry/**'
+      - 'apps/qsol-graphics-codec/**'
+      - 'apps/moagi-field-sim/**'
+      - 'cpp_runtime/self_editor3d/**'
+      - 'tools/verify-dr-moagi-runtime-fabric.mjs'
+      - 'docs/DR_MOAGI_RUNTIME_FABRIC.md'
+      - '.github/workflows/dr-moagi-runtime-fabric.yml'
+  pull_request:
+    paths:
+      - 'apps/dr-moagi-platform-java/**'
+      - 'apps/dmvann-chat/**'
+      - 'apps/dr-moagi-cognitive/**'
+      - 'apps/dr-moagi-geometry/**'
+      - 'apps/qsol-graphics-codec/**'
+      - 'apps/moagi-field-sim/**'
+      - 'cpp_runtime/self_editor3d/**'
+      - 'tools/verify-dr-moagi-runtime-fabric.mjs'
+      - 'docs/DR_MOAGI_RUNTIME_FABRIC.md'
+      - '.github/workflows/dr-moagi-runtime-fabric.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-and-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate runtime fabric contract
+        run: node tools/verify-dr-moagi-runtime-fabric.mjs
+      - name: DMVANN deterministic tests
+        run: node --test apps/dmvann-chat/test_core.mjs
+      - name: Cognitive control-plane tests
+        run: node --test apps/dr-moagi-cognitive/test_core.mjs
+      - name: Geometry optimizer tests
+        run: node --test apps/dr-moagi-geometry/test_core.mjs
+
+  java-kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile and test Java platform
+        working-directory: apps/dr-moagi-platform-java
+        run: |
+          mkdir -p build
+          javac --release 17 -Xlint:all -Werror -d build src/DrMoagiPlatform.java test/DrMoagiPlatformTest.java
+          java -ea -cp build DrMoagiPlatformTest
+
+  graphics-codec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: QSOL codec self-test
+        run: dotnet run --project apps/qsol-graphics-codec/QSol.GraphicsCodec.csproj -c Release -- --self-test
+
+  native-3d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S cpp_runtime/self_editor3d -B build/self-editor3d -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/self-editor3d --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build/self-editor3d -C Release --output-on-failure
