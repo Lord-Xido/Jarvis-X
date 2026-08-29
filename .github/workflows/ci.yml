@@ -55,6 +55,7 @@ jobs:
           src/jarvisx/inward4d_ann.py
           src/jarvisx/kinetic_runtime.py
           src/jarvisx/dr_moagi_kinetic_system.py
+          src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           tests/test_vm.py
           tests/test_ledger.py
@@ -62,6 +63,7 @@ jobs:
           tests/test_inward4d_ann.py
           tests/test_kinetic_runtime.py
           tests/test_dr_moagi_kinetic_system.py
+          tests/test_quantum_text.py
           tests/test_verification.py
 
       - name: Check canonical import order
@@ -75,6 +77,7 @@ jobs:
           src/jarvisx/inward4d_ann.py
           src/jarvisx/kinetic_runtime.py
           src/jarvisx/dr_moagi_kinetic_system.py
+          src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           tests/test_vm.py
           tests/test_ledger.py
@@ -82,6 +85,7 @@ jobs:
           tests/test_inward4d_ann.py
           tests/test_kinetic_runtime.py
           tests/test_dr_moagi_kinetic_system.py
+          tests/test_quantum_text.py
           tests/test_verification.py
 
       - name: Type-check package
