@@ -72,17 +72,20 @@ jobs:
           assert math.isfinite(report.relative_energy_drift)
           PY
 
-      - name: Verify canonical runtime receipt
+      - name: Verify canonical runtime receipts
         env:
           PYTHONPATH: examples
         run: |
           python - <<'PY'
           from dr_moagi_phase3d_runtime import (
+              BenchmarkResult,
+              ExecutionMetrics,
               Phase3DSelfOptimizingRuntime,
               PhaseFieldConfig,
               RuntimeConfig,
           )
 
+          # Rollback path: only the incumbent is available, so no promotion is legal.
           runtime = Phase3DSelfOptimizingRuntime(
               PhaseFieldConfig(node_count=128),
               device="cpu",
@@ -105,6 +108,37 @@ jobs:
               "phase3d_memory_budget",
               "phase3d_runtime_improvement",
           }
+
+          # Commit path: deterministic benchmark evidence makes the 2048 chunk
+          # candidate 2x faster while preserving semantics and memory budget.
+          committed = Phase3DSelfOptimizingRuntime(
+              PhaseFieldConfig(node_count=64),
+              device="cpu",
+              runtime_config=RuntimeConfig(chunk_size=1024, compile_mode="eager"),
+          )
+          committed.phase.step()
+          coords = committed.phase.neural_coordinates()
+          fast = RuntimeConfig(chunk_size=2048, compile_mode="eager")
+          committed.autotuner.candidates = lambda incumbent: (incumbent, fast)
+
+          def deterministic_benchmark(config, _coords, _metrics, _reference):
+              qps = 2_000_000.0 if config == fast else 1_000_000.0
+              return BenchmarkResult(
+                  config=config,
+                  metrics=ExecutionMetrics(qps, 1.0, 16.0),
+                  max_abs_error=0.0,
+                  accepted=True,
+                  effective_mode="eager",
+              )
+
+          committed.autotuner.benchmark = deterministic_benchmark
+          reported, promoted, receipt = committed._tune_runtime(coords)
+          assert promoted
+          assert receipt.decision == "commit"
+          assert committed.runtime_config == fast
+          assert reported.config == fast
+          assert receipt.receipt_hash != "0" * 64
+          assert receipt.previous_receipt_hash == "0" * 64
           PY
 
       - name: Execute end-to-end CPU cycle
