@@ -306,7 +306,7 @@ class ANNRegistry:
         identifier = uuid.uuid4().hex
         with self._lock:
             if len(self._sessions) >= self.max_sessions:
-                oldest = min(self._created, key=self._created.get)
+                oldest = min(self._created, key=self._created.__getitem__)
                 self._sessions.pop(oldest, None)
                 self._created.pop(oldest, None)
             self._sessions[identifier] = model
