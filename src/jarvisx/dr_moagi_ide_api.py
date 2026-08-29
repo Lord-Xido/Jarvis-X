@@ -5,7 +5,7 @@ import asyncio
 import os
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, Response
@@ -60,6 +60,10 @@ def fail(exc: Exception) -> HTTPException:
     if isinstance(exc, (TypeError, ValueError)): return HTTPException(422, str(exc))
     return HTTPException(409, str(exc))
 
+def response_dict(value: Any) -> dict[str, Any]:
+    """Narrow dynamically produced service payloads at the HTTP boundary."""
+    return cast(dict[str, Any], value)
+
 @app.get("/", response_class=HTMLResponse)
 def index() -> Response:
     page = STATIC_DIR / "index.html"
@@ -77,14 +81,14 @@ def capabilities() -> dict[str, Any]:
 def vm_run(req: VMRunRequest) -> dict[str, Any]:
     try:
         start=time.perf_counter(); out=execute_program(req.source,max_cycles=req.max_cycles,enable_reflex=req.enable_reflex); out["elapsed_ms"]=(time.perf_counter()-start)*1000
-        events.emit("vm.run",{"cycles":out["cycles"],"elapsed_ms":out["elapsed_ms"],"bytecode_words":len(out["bytecode"])}); return out
+        events.emit("vm.run",{"cycles":out["cycles"],"elapsed_ms":out["elapsed_ms"],"bytecode_words":len(out["bytecode"])}); return response_dict(out)
     except Exception as exc:
         events.emit("vm.error",{"error":str(exc)}); raise fail(exc) from exc
 
 @app.post("/v1/refactor")
 def refactor(req: RefactorRequest) -> dict[str, Any]:
     try:
-        out=refactor_program(req.source,seed=req.seed,max_cycles=req.max_cycles,max_mutations=req.max_mutations); events.emit("refactor.complete",{"proposed":out["mutations_proposed"],"applied":out["mutations_applied"],"rejected":out["mutations_rejected"]}); return out
+        out=refactor_program(req.source,seed=req.seed,max_cycles=req.max_cycles,max_mutations=req.max_mutations); events.emit("refactor.complete",{"proposed":out["mutations_proposed"],"applied":out["mutations_applied"],"rejected":out["mutations_rejected"]}); return response_dict(out)
     except Exception as exc:
         events.emit("refactor.error",{"error":str(exc)}); raise fail(exc) from exc
 
@@ -93,13 +97,13 @@ def project_list(limit:int=Query(100,ge=1,le=500))->dict[str,Any]: return {"proj
 
 @app.get("/v1/projects/{project_id}")
 def project_get(project_id:str)->dict[str,Any]:
-    try: return projects.get(project_id)
+    try: return response_dict(projects.get(project_id))
     except Exception as exc: raise fail(exc) from exc
 
 @app.put("/v1/projects")
 def project_save(req:ProjectSaveRequest)->dict[str,Any]:
     try:
-        out=projects.save(project_id=req.project_id,name=req.name,source=req.source); events.emit("project.saved",{"project_id":out["id"],"name":out["name"]}); return out
+        out=projects.save(project_id=req.project_id,name=req.name,source=req.source); events.emit("project.saved",{"project_id":out["id"],"name":out["name"]}); return response_dict(out)
     except Exception as exc: raise fail(exc) from exc
 
 @app.delete("/v1/projects/{project_id}")
@@ -110,18 +114,18 @@ def project_delete(project_id:str)->dict[str,Any]:
 @app.post("/v1/ann/sessions")
 def ann_create(req:ANNCreateRequest)->dict[str,Any]:
     try:
-        out=ann.create(side=req.side,fold_factor=req.fold_factor,learning_rate=req.learning_rate,prune_threshold=req.prune_threshold,seed=req.seed); events.emit("ann.created",out); return out
+        out=ann.create(side=req.side,fold_factor=req.fold_factor,learning_rate=req.learning_rate,prune_threshold=req.prune_threshold,seed=req.seed); events.emit("ann.created",out); return response_dict(out)
     except Exception as exc: raise fail(exc) from exc
 
 @app.get("/v1/ann/sessions/{session_id}")
 def ann_status(session_id:str)->dict[str,Any]:
-    try: return ann.status(session_id)
+    try: return response_dict(ann.status(session_id))
     except Exception as exc: raise fail(exc) from exc
 
 @app.post("/v1/ann/sessions/{session_id}/evaluate")
 def ann_evaluate(session_id:str,req:ANNValuesRequest)->dict[str,Any]:
     try:
-        out=ann.evaluate(session_id,req.values); events.emit("ann.evaluate",{"session_id":session_id,"epoch":out["epoch"],"loss":out["metrics"]["loss"]["total"]}); return out
+        out=ann.evaluate(session_id,req.values); events.emit("ann.evaluate",{"session_id":session_id,"epoch":out["epoch"],"loss":out["metrics"]["loss"]["total"]}); return response_dict(out)
     except Exception as exc:
         events.emit("ann.error",{"session_id":session_id,"error":str(exc)}); raise fail(exc) from exc
 
@@ -129,7 +133,7 @@ def ann_evaluate(session_id:str,req:ANNValuesRequest)->dict[str,Any]:
 def ann_optimize(session_id:str,req:ANNOptimizeRequest)->dict[str,Any]:
     try:
         start=time.perf_counter(); out=ann.optimize(session_id,req.values,max_epochs=req.max_epochs,tolerance=req.tolerance); out["elapsed_ms"]=(time.perf_counter()-start)*1000; report=out["report"]
-        events.emit("ann.optimize",{"session_id":session_id,"epoch":out["epoch"],"committed_epochs":report["committed_epochs"],"loss_final":report["final"]["loss"]["total"],"elapsed_ms":out["elapsed_ms"]}); return out
+        events.emit("ann.optimize",{"session_id":session_id,"epoch":out["epoch"],"committed_epochs":report["committed_epochs"],"loss_final":report["final"]["loss"]["total"],"elapsed_ms":out["elapsed_ms"]}); return response_dict(out)
     except Exception as exc:
         events.emit("ann.error",{"session_id":session_id,"error":str(exc)}); raise fail(exc) from exc
 
