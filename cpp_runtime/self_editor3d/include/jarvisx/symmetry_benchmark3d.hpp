@@ -39,6 +39,9 @@ struct BenchmarkRow {
     double initial_objective{};
     double final_objective{};
     double objective_reduction_fraction{};
+    std::size_t optimization_sweeps{};
+    std::size_t accepted_moves{};
+    double optimization_latency_us{};
     double latency_us{};
     double throughput_mpix_s{};
     std::size_t estimated_working_set_bytes{};
