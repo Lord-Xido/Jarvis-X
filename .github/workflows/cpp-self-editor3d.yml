@@ -1,0 +1,60 @@
+name: C++ Inward 3D Self Editor
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/self_editor3d/**"
+      - ".github/workflows/cpp-self-editor3d.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/self_editor3d/**"
+      - ".github/workflows/cpp-self-editor3d.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpp-self-editor3d-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+            sanitizers: "OFF"
+          - os: ubuntu-latest
+            compiler: clang
+            sanitizers: "ON"
+          - os: windows-latest
+            compiler: msvc
+            sanitizers: "OFF"
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / ${{ matrix.compiler }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Select GCC
+        if: matrix.compiler == 'gcc'
+        run: echo "CXX=g++" >> "$GITHUB_ENV"
+
+      - name: Select Clang
+        if: matrix.compiler == 'clang'
+        run: echo "CXX=clang++" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: >-
+          cmake -S cpp_runtime/self_editor3d -B build/self-editor3d
+          -DCMAKE_BUILD_TYPE=Release
+          -DJARVISX_SELFEDIT_ENABLE_SANITIZERS=${{ matrix.sanitizers }}
+
+      - name: Build
+        run: cmake --build build/self-editor3d --config Release --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build/self-editor3d -C Release --output-on-failure
