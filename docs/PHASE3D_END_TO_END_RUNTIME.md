@@ -2,7 +2,7 @@
 
 ## Status
 
-This specification operationalizes the latest DM-vOmegaXi+ iteration as one measurable 3D execution loop:
+This specification operationalizes the current DM-vOmegaXi+ iteration as one measurable 3D execution loop:
 
 ```text
 3D phase-space state
@@ -11,7 +11,10 @@ This specification operationalizes the latest DM-vOmegaXi+ iteration as one meas
 -> differentiable geometry learning
 -> measured runtime benchmark
 -> bounded device/runtime search
--> semantic + resource promotion gate
+-> canonical kinetic transaction
+-> semantic/resource/performance validation
+-> commit or rollback
+-> hash-chained receipt
 -> next cycle
 ```
 
@@ -21,7 +24,7 @@ The executable reference is:
 examples/dr_moagi_phase3d_runtime.py
 ```
 
-It extends, rather than replaces, the self-referential PyTorch/Inductor runtime defined in `SELF_REFERENTIAL_TRITON_RUNTIME.md`.
+It extends, rather than replaces, the self-referential PyTorch/Inductor runtime defined in `SELF_REFERENTIAL_TRITON_RUNTIME.md` and reuses the backend-neutral transaction protocol in `src/jarvisx/kinetic_runtime.py`.
 
 ## 1. Separation of authorities
 
@@ -57,7 +60,7 @@ The execution configuration is
 C_t=(\text{chunk size},\text{compile mode},\ldots).
 \]
 
-It is updated only from measured benchmark evidence after semantic and resource checks.
+It is updated only from measured benchmark evidence and only after a canonical Jarvis-X transaction commits the candidate.
 
 Therefore
 
@@ -87,8 +90,7 @@ and samples
 
 \[
 x=\rho\cos\theta,
-\qquad
-y=\rho\sin\theta,
+\qquad y=\rho\sin\theta,
 \qquad z=a\sin\phi.
 \]
 
@@ -237,13 +239,12 @@ The field receives normalized execution telemetry as context, but its weights ar
 \[
 \Theta_{t+1}
 =
-\Theta_t-\eta\nabla_\Theta
-L_{geometry}.
+\Theta_t-\eta\nabla_\Theta L_{geometry}.
 \]
 
 Measured wall-clock latency and throughput remain outside autograd.
 
-## 7. Runtime autotuning and promotion
+## 7. Measured runtime candidate search
 
 For the current phase coordinates and one frozen telemetry snapshot, the runtime evaluates a bounded neighborhood of execution configurations.
 
@@ -253,42 +254,108 @@ Each candidate is:
 2. warmed up outside the timed interval;
 3. measured using synchronized execution;
 4. compared against the eager semantic reference;
-5. rejected if semantic error exceeds tolerance;
-6. rejected if peak allocated memory exceeds the configured budget;
-7. promoted only when throughput exceeds the incumbent by the configured minimum relative improvement.
+5. returned as benchmark evidence without changing the authoritative runtime configuration.
 
-Thus the device-side promotion rule is approximately
+Search and authority are separate. A fast candidate is not yet a committed candidate.
+
+## 8. Canonical kinetic transaction gate
+
+Every scheduled runtime tuning attempt is passed to `KineticTransactionEngine` using the repository's canonical sequence:
+
+```text
+snapshot
+-> observe
+-> encode
+-> propose
+-> shadow
+-> verify
+-> commit | rollback
+-> journal
+-> reenter
+```
+
+The authoritative state supplied to the transaction is the current `RuntimeConfig`.
+
+The proposal contains the measured incumbent, the best bounded candidate, and the number of evaluated configurations.
+
+Three validators are mandatory:
+
+### Semantic validator
 
 \[
-C_{t+1}=C^{best}
+V_{semantic}
+=
+(E_{semantic}\le\epsilon_s).
 \]
 
-only if
+### Memory validator
 
 \[
-E_{semantic}\le\epsilon_s,
+V_{memory}
+=
+(M_{peak}\le M_{budget}).
 \]
+
+### Performance validator
+
+For a valid incumbent,
 
 \[
-M_{peak}\le M_{budget},
+V_{performance}
+=
+q(C^{best})
+\ge
+(1+\rho)q(C_t),
 \]
 
-and
+and the best configuration must differ from the incumbent.
+
+If the incumbent itself is unavailable, a valid replacement may be committed as a recovery transition.
+
+The transaction commits only when
 
 \[
-q(C^{best})\ge
-(1+\rho)q(C_t).
+\boxed{
+V_{semantic}\land V_{memory}\land V_{performance}
+}
 \]
 
-Otherwise
+is true.
+
+Otherwise the original runtime snapshot is restored.
+
+## 9. Hash-chained runtime receipts
+
+Every tuning attempt emits a `KineticReceipt` containing:
+
+```text
+transaction_id
+parent_state_hash
+candidate_hash
+resulting_state_hash
+decision
+stages
+validator results
+shadow telemetry
+previous_receipt_hash
+receipt_hash
+```
+
+Thus runtime self-optimization is auditable as a state-transition chain:
 
 \[
-C_{t+1}=C_t.
+R_{t-1}
+\rightarrow
+R_t
+\rightarrow
+R_{t+1}.
 \]
 
-## 8. Measurement contract
+A rejected candidate still receives a receipt; it simply records a rollback rather than a commit.
 
-The runtime reports two independent measured throughput classes:
+## 10. Measurement contract
+
+The runtime reports two independent measured throughput classes.
 
 ### Phase throughput
 
@@ -312,11 +379,10 @@ in implicit-field queries per second.
 
 No artificial `10^12` or other symbolic multiplier is applied to either measurement.
 
-The console also reports:
+The console reports:
 
 ```text
 phase node updates/s
-phase latency
 mean radius
 shell RMSE
 maximum velocity
@@ -326,12 +392,13 @@ geometry RMSE
 implicit-field queries/s
 implicit-field latency
 peak allocated memory
-compiler/runtime mode
+effective compiler/runtime mode
 chunk size
-runtime promotion decision
+transaction decision
+receipt hash prefix
 ```
 
-## 9. Full recurrence
+## 11. Full recurrence
 
 One complete cycle is
 
@@ -346,7 +413,7 @@ Z_t &= E_{\Theta_t}(X_{t+1},\mathcal T_t),\\
 \Theta_{t+1} &= \Theta_t-\eta\nabla_\Theta L_t,\\
 \mathcal T_{t+1} &= \operatorname{PROFILE}(\Theta_{t+1},C_t),\\
 C^{trial}_{t+1} &= \operatorname{SEARCH}(C_t,\mathcal T_{t+1}),\\
-C_{t+1} &= \operatorname{VERIFY/PROMOTE}(C_t,C^{trial}_{t+1}).
+(C_{t+1},R_{t+1}) &= \operatorname{KINETIC\_TRANSACTION}(C_t,C^{trial}_{t+1}).
 \end{aligned}
 }
 \]
@@ -354,7 +421,7 @@ C_{t+1} &= \operatorname{VERIFY/PROMOTE}(C_t,C^{trial}_{t+1}).
 The combined runtime state is
 
 \[
-\mathcal S_t=(K_t,\Theta_t,C_t,\mathcal T_t)
+\mathcal S_t=(K_t,\Theta_t,C_t,\mathcal T_t,R_t)
 \]
 
 with recurrence
@@ -363,7 +430,24 @@ with recurrence
 \boxed{\mathcal S_{t+1}=\mathcal M(\mathcal S_t)}.
 \]
 
-## 10. Execution
+## 12. Validation workflow
+
+`.github/workflows/phase3d-runtime.yml` installs the optional PyTorch dependency and validates:
+
+1. source compilation;
+2. equilibrium-radius arithmetic;
+3. `N x 3` phase tensor shapes;
+4. finite position and momentum evolution;
+5. subluminal velocity;
+6. finite energy telemetry;
+7. canonical rollback receipt when no improvement exists;
+8. canonical commit receipt for deterministic valid speedup evidence;
+9. conservative end-to-end CPU execution;
+10. damped end-to-end CPU execution.
+
+This is a runtime smoke/contract suite. It is not a GPU performance benchmark.
+
+## 13. Execution
 
 Install optional PyTorch support:
 
@@ -402,7 +486,7 @@ python examples/dr_moagi_phase3d_runtime.py \
   --damping 50
 ```
 
-## 11. Claim boundary
+## 14. Claim boundary
 
 This runtime is an executable research architecture, not evidence of new physical law, quantum mechanics, or state-of-the-art hardware performance.
 
