@@ -273,3 +273,5 @@ jarvisx_harden(jarvisx-pixels-to-bits-tests)
 
 add_test(NAME pixels-to-bits-regressions COMMAND jarvisx-pixels-to-bits-tests)
 set_tests_properties(pixels-to-bits-regressions PROPERTIES TIMEOUT 120)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/world_engine.cmake)
