@@ -25,7 +25,7 @@ from __future__ import annotations
 import argparse
 import math
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Callable
 
 import torch
@@ -42,7 +42,12 @@ class ExecutionMetrics:
     latency_ms: float
     peak_memory_mb: float = 0.0
 
-    def normalized(self, target_qps: float, device: torch.device, batch_size: int) -> torch.Tensor:
+    def normalized(
+        self,
+        target_qps: float,
+        device: torch.device,
+        batch_size: int,
+    ) -> torch.Tensor:
         """Return numerically bounded execution-state features for the meta encoder."""
 
         target = max(float(target_qps), 1.0)
@@ -73,6 +78,14 @@ class BenchmarkResult:
     metrics: ExecutionMetrics
     max_abs_error: float
     accepted: bool
+    effective_mode: str
+
+
+@dataclass(frozen=True)
+class CompiledRunner:
+    run: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+    effective_mode: str
+    available: bool = True
 
 
 class SelfReferentialTritonEngine(nn.Module):
@@ -120,14 +133,17 @@ def _sync(device: torch.device) -> None:
         torch.cuda.synchronize(device)
 
 
-def _compile(engine: nn.Module, config: RuntimeConfig) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
-    if config.compile_mode == "eager" or not hasattr(torch, "compile"):
-        return engine
+def _compile(engine: nn.Module, config: RuntimeConfig) -> CompiledRunner:
+    if config.compile_mode == "eager":
+        return CompiledRunner(engine, "eager")
+    if not hasattr(torch, "compile"):
+        return CompiledRunner(engine, "eager", available=False)
     try:
-        return torch.compile(engine, mode=config.compile_mode)
+        compiled = torch.compile(engine, mode=config.compile_mode)
     except Exception as exc:  # pragma: no cover - backend availability is platform specific
-        print(f"[compile] {config.compile_mode!r} unavailable ({exc}); falling back to eager")
-        return engine
+        print(f"[compile] {config.compile_mode!r} unavailable ({exc})")
+        return CompiledRunner(engine, "eager", available=False)
+    return CompiledRunner(compiled, config.compile_mode)
 
 
 def _run_chunked(
@@ -160,9 +176,9 @@ class RuntimeAutotuner:
         self.semantic_tolerance = semantic_tolerance
         self.warmup = warmup
         self.repeats = repeats
-        self._cache: dict[RuntimeConfig, Callable[[torch.Tensor, torch.Tensor], torch.Tensor]] = {}
+        self._cache: dict[RuntimeConfig, CompiledRunner] = {}
 
-    def runner(self, config: RuntimeConfig):
+    def runner(self, config: RuntimeConfig) -> CompiledRunner:
         if config not in self._cache:
             self._cache[config] = _compile(self.engine, config)
         return self._cache[config]
@@ -175,7 +191,7 @@ class RuntimeAutotuner:
                 min(262_144, incumbent.chunk_size * 2),
             }
         )
-        modes = (incumbent.compile_mode, "default", "reduce-overhead", "max-autotune")
+        modes = (incumbent.compile_mode, "eager", "default", "reduce-overhead")
         unique: dict[RuntimeConfig, None] = {}
         for chunk in chunks:
             for mode in modes:
@@ -190,23 +206,51 @@ class RuntimeAutotuner:
         metrics: torch.Tensor,
         reference: torch.Tensor,
     ) -> BenchmarkResult:
-        runner = self.runner(config)
+        variant = self.runner(config)
+        if not variant.available:
+            return BenchmarkResult(
+                config=config,
+                metrics=ExecutionMetrics(0.0, math.inf, 0.0),
+                max_abs_error=math.inf,
+                accepted=False,
+                effective_mode=variant.effective_mode,
+            )
 
-        for _ in range(self.warmup):
-            _run_chunked(runner, coords, metrics, config.chunk_size)
-            _sync(self.device)
+        try:
+            for _ in range(self.warmup):
+                _run_chunked(variant.run, coords, metrics, config.chunk_size)
+                _sync(self.device)
+        except Exception as exc:  # pragma: no cover - backend failures are platform specific
+            print(f"[benchmark] {config} failed during warm-up ({exc})")
+            return BenchmarkResult(
+                config=config,
+                metrics=ExecutionMetrics(0.0, math.inf, 0.0),
+                max_abs_error=math.inf,
+                accepted=False,
+                effective_mode=variant.effective_mode,
+            )
 
         if self.device.type == "cuda":
             torch.cuda.reset_peak_memory_stats(self.device)
 
         durations: list[float] = []
         output = reference
-        for _ in range(self.repeats):
-            _sync(self.device)
-            started = time.perf_counter()
-            output = _run_chunked(runner, coords, metrics, config.chunk_size)
-            _sync(self.device)
-            durations.append(time.perf_counter() - started)
+        try:
+            for _ in range(self.repeats):
+                _sync(self.device)
+                started = time.perf_counter()
+                output = _run_chunked(variant.run, coords, metrics, config.chunk_size)
+                _sync(self.device)
+                durations.append(time.perf_counter() - started)
+        except Exception as exc:  # pragma: no cover - backend failures are platform specific
+            print(f"[benchmark] {config} failed during measurement ({exc})")
+            return BenchmarkResult(
+                config=config,
+                metrics=ExecutionMetrics(0.0, math.inf, 0.0),
+                max_abs_error=math.inf,
+                accepted=False,
+                effective_mode=variant.effective_mode,
+            )
 
         duration = min(durations)
         queries = coords.shape[0] * coords.shape[1]
@@ -226,6 +270,7 @@ class RuntimeAutotuner:
             ),
             max_abs_error=max_abs_error,
             accepted=accepted,
+            effective_mode=variant.effective_mode,
         )
 
     @torch.inference_mode()
@@ -235,6 +280,8 @@ class RuntimeAutotuner:
         coords: torch.Tensor,
         metrics: torch.Tensor,
     ) -> BenchmarkResult:
+        """Benchmark incumbent and candidates under one identical telemetry snapshot."""
+
         reference = _run_chunked(self.engine, coords, metrics, incumbent.chunk_size)
         results = [
             self.benchmark(candidate, coords, metrics, reference)
@@ -242,8 +289,24 @@ class RuntimeAutotuner:
         ]
         admissible = [result for result in results if result.accepted]
         if not admissible:
-            return self.benchmark(incumbent, coords, metrics, reference)
-        return max(admissible, key=lambda item: item.metrics.throughput_qps)
+            return BenchmarkResult(
+                config=incumbent,
+                metrics=ExecutionMetrics(0.0, math.inf, 0.0),
+                max_abs_error=math.inf,
+                accepted=False,
+                effective_mode="unavailable",
+            )
+
+        incumbent_result = next(
+            (result for result in admissible if result.config == incumbent),
+            None,
+        )
+        best = max(admissible, key=lambda item: item.metrics.throughput_qps)
+        if incumbent_result is not None and (
+            best.metrics.throughput_qps <= incumbent_result.metrics.throughput_qps
+        ):
+            return incumbent_result
+        return best
 
 
 class SelfRefiningOptimizer:
@@ -259,11 +322,18 @@ class SelfRefiningOptimizer:
     ) -> None:
         self.device = torch.device(device if device == "cpu" or torch.cuda.is_available() else "cpu")
         self.engine = engine.to(self.device)
-        self.optimizer = torch.optim.AdamW(self.engine.parameters(), lr=1.0e-3, weight_decay=1.0e-5)
+        self.optimizer = torch.optim.AdamW(
+            self.engine.parameters(),
+            lr=1.0e-3,
+            weight_decay=1.0e-5,
+        )
         self.target_qps = float(target_qps)
         self.runtime_config = runtime_config or RuntimeConfig()
         self.autotuner = RuntimeAutotuner(self.engine, self.device)
-        self.exec_state = ExecutionMetrics(throughput_qps=0.5 * self.target_qps, latency_ms=2.0)
+        self.exec_state = ExecutionMetrics(
+            throughput_qps=0.5 * self.target_qps,
+            latency_ms=2.0,
+        )
 
     def _train_step(self, coords: torch.Tensor) -> float:
         normalized = self.exec_state.normalized(self.target_qps, self.device, coords.shape[0])
@@ -308,7 +378,8 @@ class SelfRefiningOptimizer:
             geometry_loss = self._train_step(train_coords)
 
             measured = self._measure_incumbent(benchmark_coords)
-            self.exec_state = measured.metrics
+            if measured.accepted:
+                self.exec_state = measured.metrics
 
             if tune_every > 0 and cycle % tune_every == 0:
                 normalized = self.exec_state.normalized(
@@ -316,8 +387,12 @@ class SelfRefiningOptimizer:
                     self.device,
                     benchmark_coords.shape[0],
                 )
-                tuned = self.autotuner.tune(self.runtime_config, benchmark_coords, normalized)
-                if tuned.accepted and tuned.metrics.throughput_qps > measured.metrics.throughput_qps:
+                tuned = self.autotuner.tune(
+                    self.runtime_config,
+                    benchmark_coords,
+                    normalized,
+                )
+                if tuned.accepted:
                     self.runtime_config = tuned.config
                     self.exec_state = tuned.metrics
                     measured = tuned
@@ -329,7 +404,8 @@ class SelfRefiningOptimizer:
                 f"latency={measured.metrics.latency_ms:.3f} ms "
                 f"peak_mem={measured.metrics.peak_memory_mb:.1f} MiB "
                 f"chunk={self.runtime_config.chunk_size} "
-                f"mode={self.runtime_config.compile_mode} "
+                f"requested={self.runtime_config.compile_mode} "
+                f"effective={measured.effective_mode} "
                 f"semantic_error={measured.max_abs_error:.2e}"
             )
 
@@ -339,7 +415,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cycles", type=int, default=5)
     parser.add_argument("--target-qps", type=float, default=1_000_000.0)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
-    parser.add_argument("--compile-mode", default="default", choices=("eager", "default", "reduce-overhead", "max-autotune"))
+    parser.add_argument(
+        "--compile-mode",
+        default="default",
+        choices=("eager", "default", "reduce-overhead", "max-autotune"),
+    )
     parser.add_argument("--chunk-size", type=int, default=65_536)
     return parser.parse_args()
 
