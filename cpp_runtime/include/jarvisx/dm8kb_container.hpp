@@ -4,7 +4,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -79,7 +78,7 @@ struct CommitReceipt {
 };
 
 inline std::uint64_t fnv1a64(const std::uint8_t* data, std::size_t size) noexcept {
-    std::uint64_t hash = 1469598103934665603ULL;
+    std::uint64_t hash = 14695981039346656037ULL;
     for (std::size_t i = 0U; i < size; ++i) {
         hash ^= static_cast<std::uint64_t>(data[i]);
         hash *= 1099511628211ULL;
@@ -92,7 +91,7 @@ public:
     Container() { reset(); }
 
     void reset() noexcept {
-        bytes_.fill(0U);
+        bytes_.fill(std::uint8_t{0U});
         constexpr std::array<std::uint8_t, 8U> magic{{
             'D', 'M', '8', 'K', 'B', '1', 0U, 0U,
         }};
@@ -125,7 +124,8 @@ public:
         }
         const std::size_t offset = region_offset(region);
         std::fill(bytes_.begin() + static_cast<std::ptrdiff_t>(offset),
-                  bytes_.begin() + static_cast<std::ptrdiff_t>(offset + region_size(region)), 0U);
+                  bytes_.begin() + static_cast<std::ptrdiff_t>(offset + region_size(region)),
+                  std::uint8_t{0U});
         if (size != 0U) {
             std::copy_n(data, static_cast<std::ptrdiff_t>(size),
                         bytes_.begin() + static_cast<std::ptrdiff_t>(offset));
@@ -190,7 +190,7 @@ public:
 
     void write_receipt(const CommitReceipt& receipt) noexcept {
         const std::size_t base = region_offset(Region::Integrity);
-        std::fill(bytes_.begin() + static_cast<std::ptrdiff_t>(base), bytes_.end(), 0U);
+        std::fill(bytes_.begin() + static_cast<std::ptrdiff_t>(base), bytes_.end(), std::uint8_t{0U});
         write_u64_unchecked(base + 0U, receipt.prior_digest);
         write_u64_unchecked(base + 8U, receipt.candidate_digest);
         write_u64_unchecked(base + 16U, receipt.result_digest);
@@ -246,17 +246,15 @@ public:
     }
 
     static std::size_t torus_index(int x, int y, int z) noexcept {
-        constexpr int edge = 8;
         const auto wrap = [](int value) noexcept {
-            constexpr int local_edge = 8;
-            int result = value % local_edge;
-            if (result < 0) result += local_edge;
+            constexpr int edge = 8;
+            int result = value % edge;
+            if (result < 0) result += edge;
             return static_cast<std::size_t>(result);
         };
         const std::size_t wx = wrap(x);
         const std::size_t wy = wrap(y);
         const std::size_t wz = wrap(z);
-        (void)edge;
         return (wz * 8U + wy) * 8U + wx;
     }
 
