@@ -47,6 +47,21 @@ add_executable(jarvisx-symmetry-loop3d
 target_link_libraries(jarvisx-symmetry-loop3d PRIVATE jarvisx-symmetry-loop3d-core)
 jarvisx_selfedit_harden(jarvisx-symmetry-loop3d)
 
+add_library(jarvisx-symmetry-benchmark3d-core STATIC
+    src/symmetry_benchmark3d.cpp
+)
+target_include_directories(jarvisx-symmetry-benchmark3d-core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(jarvisx-symmetry-benchmark3d-core PUBLIC jarvisx-symmetry-loop3d-core)
+jarvisx_selfedit_harden(jarvisx-symmetry-benchmark3d-core)
+
+add_executable(jarvisx-symmetry-benchmark3d
+    src/symmetry_benchmark3d_main.cpp
+)
+target_link_libraries(jarvisx-symmetry-benchmark3d PRIVATE jarvisx-symmetry-benchmark3d-core)
+jarvisx_selfedit_harden(jarvisx-symmetry-benchmark3d)
+
 enable_testing()
 
 add_executable(jarvisx-self-editor3d-tests
@@ -66,3 +81,12 @@ jarvisx_selfedit_harden(jarvisx-symmetry-loop3d-tests)
 
 add_test(NAME symmetry-loop3d-regressions COMMAND jarvisx-symmetry-loop3d-tests)
 set_tests_properties(symmetry-loop3d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-symmetry-benchmark3d-tests
+    tests/symmetry_benchmark3d_tests.cpp
+)
+target_link_libraries(jarvisx-symmetry-benchmark3d-tests PRIVATE jarvisx-symmetry-benchmark3d-core)
+jarvisx_selfedit_harden(jarvisx-symmetry-benchmark3d-tests)
+
+add_test(NAME symmetry-benchmark3d-regressions COMMAND jarvisx-symmetry-benchmark3d-tests)
+set_tests_properties(symmetry-benchmark3d-regressions PROPERTIES TIMEOUT 120)

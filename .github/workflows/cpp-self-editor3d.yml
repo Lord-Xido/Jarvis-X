@@ -58,3 +58,18 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build/self-editor3d -C Release --output-on-failure
+
+      - name: Quick performance envelope
+        if: matrix.compiler == 'gcc'
+        run: >-
+          ./build/self-editor3d/jarvisx-symmetry-benchmark3d
+          --quick
+          --output build/self-editor3d/symmetry3d-benchmark-gcc.csv
+
+      - name: Upload performance envelope
+        if: matrix.compiler == 'gcc'
+        uses: actions/upload-artifact@v4
+        with:
+          name: symmetry3d-performance-envelope-gcc
+          path: build/self-editor3d/symmetry3d-benchmark-gcc.csv
+          if-no-files-found: error
