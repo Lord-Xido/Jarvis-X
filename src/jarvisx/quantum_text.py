@@ -89,6 +89,21 @@ class BasisEncoding:
     bits: tuple[int, ...]
     basis_index: int
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.text, str):
+            raise TypeError("text must be a string")
+        if not isinstance(self.bits, tuple):
+            raise TypeError("bits must be a tuple")
+        validated_bits = _validate_bits(self.bits)
+        expected_bits = utf8_to_bits(self.text)
+        if validated_bits != expected_bits:
+            raise ValueError("bits do not match the UTF-8 encoding of text")
+        if isinstance(self.basis_index, bool) or not isinstance(self.basis_index, int):
+            raise TypeError("basis_index must be an integer")
+        expected_index = bits_to_index(validated_bits)
+        if self.basis_index != expected_index:
+            raise ValueError("basis_index does not match bits")
+
     @classmethod
     def from_text(cls, text: str) -> "BasisEncoding":
         bits = utf8_to_bits(text)
@@ -106,7 +121,9 @@ class BasisEncoding:
         return bits_to_utf8(self.bits)
 
 
-def _canonicalize(amplitudes: dict[int, complex], tolerance: float = 1.0e-15) -> tuple[AmplitudeEntry, ...]:
+def _canonicalize(
+    amplitudes: dict[int, complex], tolerance: float = 1.0e-15
+) -> tuple[AmplitudeEntry, ...]:
     entries = [
         (index, amplitude)
         for index, amplitude in amplitudes.items()
@@ -212,7 +229,10 @@ class SparseQuantumState:
         if self.qubits != other.qubits:
             raise ValueError("states must have the same qubit width")
         right = dict(other.amplitudes)
-        return sum(amplitude.conjugate() * right.get(index, 0.0j) for index, amplitude in self.amplitudes)
+        return sum(
+            amplitude.conjugate() * right.get(index, 0.0j)
+            for index, amplitude in self.amplitudes
+        )
 
 
 def text_basis_state(text: str) -> tuple[BasisEncoding, SparseQuantumState]:
