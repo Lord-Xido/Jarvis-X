@@ -16,8 +16,8 @@ from .dr_moagi_ide import ANNRegistry, EventJournal, ProjectStore, execute_progr
 from .dr_moagi_os_api import app as os_control_plane
 
 ROOT = Path(__file__).resolve().parents[2]
-STATIC_DIR = Path(os.getenv("JARVISX_IDE_STATIC_DIR", ROOT / "apps/dr-moagi-ide/static"))
-DB_PATH = Path(os.getenv("JARVISX_IDE_DB", ROOT / "state/dr-moagi-ide/ide.sqlite3"))
+STATIC_DIR = Path(os.getenv("JARVISX_IDE_STATIC_DIR", str(ROOT / "apps/dr-moagi-ide/static")))
+DB_PATH = Path(os.getenv("JARVISX_IDE_DB", str(ROOT / "state/dr-moagi-ide/ide.sqlite3")))
 
 app = FastAPI(title="Dr Moagi ANN IDE", version="1.0.0", description="Bounded Jarvis-X VM, ANN and 3D OS engineering surface.")
 projects, events, ann = ProjectStore(DB_PATH), EventJournal(500), ANNRegistry(16)
