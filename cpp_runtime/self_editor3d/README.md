@@ -79,6 +79,47 @@ Safety invariants:
 - objective-regressing autonomous mutations are rolled back;
 - the refinement loop terminates when no admissible mutations remain or the pass budget is exhausted.
 
+## Closed 3D symmetry autoencoding loop
+
+The same subsystem now includes an executable mathematical closure of the three-plane pixel autoencoder. For an `n×n` frame `X`, the fixed encoder is
+
+```text
+E(X) = [ X, H(X), V(X) ]
+```
+
+with exact binary reconstruction under the aligned majority decoder. The operational inward permutation follows the supplied example convention
+
+```text
+[L0, L1, L2] -> [L2, L0, L1]
+```
+
+and satisfies `P^3 = I` in latent space. A learnable `3×3` row-stochastic transport `P_theta` is parameterized by row-wise softmax logits. The continuous decoder aligns the three transported planes, averages them, and exposes a hard threshold only after optimization.
+
+The bounded objective is
+
+```text
+J(theta) = L_reconstruction
+         + 0.25 L_latent-cycle
+         + 0.25 L_fixed-point
+         + 0.002 H(P_theta)
+```
+
+where the original binary frame remains immutable during parameter search. Deterministic coordinate descent accepts only objective-reducing logit moves. Once `P_theta` converges, the optimized operator is fed back recurrently:
+
+```text
+X_(t+1) = D_soft(P_theta E(X_t))
+```
+
+until the fixed-point residual falls below tolerance.
+
+Run the reference fixture:
+
+```bash
+./build/self-editor3d/jarvisx-symmetry-loop3d
+```
+
+The regression suite proves the exact baseline invariant `D(E(X)) = X`, `P^3 = I`, the supplied fixture's decoded period-two orbit under exact cyclic transport, row-stochastic learnable transport, material objective reduction from the cyclic initialization, and convergence of the optimized feedback loop back to the invariant frame.
+
 ## Regression coverage
 
-The CTest suite verifies workspace containment, ambiguous-anchor rejection, no-op rejection, recursive folding to a `1³` core, objective reduction, source canonicalization, and fixed-point convergence. GitHub Actions builds and tests the subsystem on GCC, Clang with sanitizers, and MSVC.
+The CTest suite verifies workspace containment, ambiguous-anchor rejection, no-op rejection, recursive folding to a `1³` core, objective reduction, source canonicalization, fixed-point convergence, exact symmetry reconstruction, latent cyclic order, stochastic transport normalization, and closed-loop parameter/state convergence. GitHub Actions builds and tests the subsystem on GCC, Clang with sanitizers, and MSVC.
