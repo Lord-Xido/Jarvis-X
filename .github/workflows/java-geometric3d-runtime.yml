@@ -1,0 +1,41 @@
+name: Java Geometric 3D Runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "java_runtime/**"
+      - ".github/workflows/java-geometric3d-runtime.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "java_runtime/**"
+      - ".github/workflows/java-geometric3d-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Compile runtime and tests
+        run: |
+          mkdir -p java_runtime/out
+          javac --release 17 -d java_runtime/out \
+            $(find java_runtime/src/main/java java_runtime/src/test/java -name '*.java')
+      - name: Run deterministic self-test
+        run: |
+          java -cp java_runtime/out \
+            com.engine.virtual.llm.operational.OperationalInvertedLLMEngineTest
+      - name: Prove geometric fixed-point execution
+        run: |
+          java -cp java_runtime/out \
+            com.engine.virtual.llm.operational.OperationalInvertedLLMEngine 12 8 \
+            | tee /tmp/geometric3d-runtime.log
+          grep -q "FIXED_POINT_CONVERGED" /tmp/geometric3d-runtime.log
