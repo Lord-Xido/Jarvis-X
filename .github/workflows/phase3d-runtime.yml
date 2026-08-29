@@ -1,0 +1,66 @@
+name: Phase3D End-to-End Runtime
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "examples/dr_moagi_phase3d_runtime.py"
+      - "examples/self_referential_triton_engine.py"
+      - "docs/PHASE3D_END_TO_END_RUNTIME.md"
+      - "pyproject.toml"
+      - ".github/workflows/phase3d-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase3d-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu-smoke:
+    name: PyTorch CPU smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install optional PyTorch runtime
+        run: python -m pip install -e ".[torch]"
+
+      - name: Compile Phase3D sources
+        run: >-
+          python -m py_compile
+          examples/self_referential_triton_engine.py
+          examples/dr_moagi_phase3d_runtime.py
+
+      - name: Execute end-to-end CPU cycle
+        run: >-
+          python examples/dr_moagi_phase3d_runtime.py
+          --device cpu
+          --compile-mode eager
+          --cycles 2
+          --nodes 512
+          --train-steps 1
+          --tune-every 0
+          --chunk-size 1024
+
+      - name: Execute damped phase cycle
+        run: >-
+          python examples/dr_moagi_phase3d_runtime.py
+          --device cpu
+          --compile-mode eager
+          --cycles 2
+          --nodes 256
+          --train-steps 1
+          --tune-every 0
+          --damping 50
+          --chunk-size 1024
