@@ -7,6 +7,7 @@ on:
       - "examples/dr_moagi_phase3d_runtime.py"
       - "examples/self_referential_triton_engine.py"
       - "docs/PHASE3D_END_TO_END_RUNTIME.md"
+      - "src/jarvisx/kinetic_runtime.py"
       - "pyproject.toml"
       - ".github/workflows/phase3d-runtime.yml"
   workflow_dispatch:
@@ -69,6 +70,41 @@ jobs:
           assert report.max_velocity_m_s < C_LIGHT
           assert math.isfinite(report.mechanical_energy_j)
           assert math.isfinite(report.relative_energy_drift)
+          PY
+
+      - name: Verify canonical runtime receipt
+        env:
+          PYTHONPATH: examples
+        run: |
+          python - <<'PY'
+          from dr_moagi_phase3d_runtime import (
+              Phase3DSelfOptimizingRuntime,
+              PhaseFieldConfig,
+              RuntimeConfig,
+          )
+
+          runtime = Phase3DSelfOptimizingRuntime(
+              PhaseFieldConfig(node_count=128),
+              device="cpu",
+              runtime_config=RuntimeConfig(chunk_size=1024, compile_mode="eager"),
+          )
+          runtime.autotuner.candidates = lambda incumbent: (incumbent,)
+          runtime.phase.step()
+          coords = runtime.phase.neural_coordinates()
+          runtime.train_geometry(coords, 1)
+          measured = runtime._benchmark_incumbent(coords)
+          assert measured.accepted
+          runtime.exec_state = measured.metrics
+          _reported, promoted, receipt = runtime._tune_runtime(coords)
+          assert not promoted
+          assert receipt.decision == "rollback"
+          assert receipt.receipt_hash != "0" * 64
+          assert receipt.stages[-2:] == ("journal", "reenter")
+          assert {item.name for item in receipt.validators} == {
+              "phase3d_semantic_equivalence",
+              "phase3d_memory_budget",
+              "phase3d_runtime_improvement",
+          }
           PY
 
       - name: Execute end-to-end CPU cycle
