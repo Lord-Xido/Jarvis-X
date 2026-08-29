@@ -1,0 +1,88 @@
+name: Dr Moagi VMAD128 World Engine Windows
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/include/jarvisx/world_engine_vmad.hpp"
+      - "cpp_runtime/src/world_engine_main.cpp"
+      - "cpp_runtime/tests/world_engine_vmad_tests.cpp"
+      - "cpp_runtime/world_engine.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/VMAD128_WORLD_ENGINE.md"
+      - ".github/workflows/world-engine-windows.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/include/jarvisx/world_engine_vmad.hpp"
+      - "cpp_runtime/src/world_engine_main.cpp"
+      - "cpp_runtime/tests/world_engine_vmad_tests.cpp"
+      - "cpp_runtime/world_engine.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/VMAD128_WORLD_ENGINE.md"
+      - ".github/workflows/world-engine-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: world-engine-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    name: Windows x64 / MSVC
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure CMake
+        shell: pwsh
+        run: >-
+          cmake -S cpp_runtime -B build/world-engine
+          -A x64
+          -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          -DJARVISX_ENABLE_SANITIZERS=OFF
+
+      - name: Build world-engine and regressions
+        shell: pwsh
+        run: |
+          cmake --build build/world-engine --config Release --target jarvisx-world-engine --parallel 2
+          cmake --build build/world-engine --config Release --target jarvisx-world-engine-tests --parallel 2
+
+      - name: Run focused tests
+        shell: pwsh
+        run: |
+          ctest --test-dir build/world-engine -C Release -R "world-engine-(runtime-smoke|regressions)" --output-on-failure
+
+      - name: Execute kinetic reference profile
+        shell: pwsh
+        run: |
+          $exe = "build/world-engine/Release/DrMoagi-World-Engine.exe"
+          & $exe --state-dir build/world-engine/reference-state
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Stage package and checksum
+        shell: pwsh
+        run: |
+          $stage = "build/world-engine/package"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "build/world-engine/Release/DrMoagi-World-Engine.exe" "$stage/DrMoagi-World-Engine.exe"
+          Copy-Item "docs/VMAD128_WORLD_ENGINE.md" "$stage/README.md"
+          $hash = (Get-FileHash "$stage/DrMoagi-World-Engine.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  DrMoagi-World-Engine.exe" | Set-Content -Encoding ascii "$stage/SHA256SUMS.txt"
+          Compress-Archive -Path "$stage/*" -DestinationPath "build/world-engine/DrMoagi-World-Engine-Windows-x64.zip" -Force
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: DrMoagi-World-Engine-Windows-x64
+          path: |
+            build/world-engine/package/DrMoagi-World-Engine.exe
+            build/world-engine/package/README.md
+            build/world-engine/package/SHA256SUMS.txt
+            build/world-engine/DrMoagi-World-Engine-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
