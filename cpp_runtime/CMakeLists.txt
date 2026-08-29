@@ -70,6 +70,13 @@ set_target_properties(jarvisx-intelligence-media PROPERTIES OUTPUT_NAME "DrMoagi
 jarvisx_include_runtime(jarvisx-intelligence-media)
 jarvisx_harden(jarvisx-intelligence-media)
 
+add_executable(jarvisx-pixels-to-bits
+    src/pixels_to_bits_main.cpp
+)
+set_target_properties(jarvisx-pixels-to-bits PROPERTIES OUTPUT_NAME "DrMoagi-Pixels-to-Bits")
+jarvisx_include_runtime(jarvisx-pixels-to-bits)
+jarvisx_harden(jarvisx-pixels-to-bits)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -183,6 +190,18 @@ add_test(
 )
 set_tests_properties(intelligence-media-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME pixels-to-bits-runtime-smoke
+    COMMAND jarvisx-pixels-to-bits
+        --width 16
+        --height 16
+        --lossless
+        --encoded ${CMAKE_CURRENT_BINARY_DIR}/pixels-to-bits-smoke.dmpb
+        --decoded ${CMAKE_CURRENT_BINARY_DIR}/pixels-to-bits-smoke.ppm
+        --quiet
+)
+set_tests_properties(pixels-to-bits-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -245,3 +264,12 @@ jarvisx_harden(jarvisx-intelligence-media-tests)
 
 add_test(NAME intelligence-media-regressions COMMAND jarvisx-intelligence-media-tests)
 set_tests_properties(intelligence-media-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-pixels-to-bits-tests
+    tests/pixels_to_bits_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-pixels-to-bits-tests)
+jarvisx_harden(jarvisx-pixels-to-bits-tests)
+
+add_test(NAME pixels-to-bits-regressions COMMAND jarvisx-pixels-to-bits-tests)
+set_tests_properties(pixels-to-bits-regressions PROPERTIES TIMEOUT 120)
