@@ -1,0 +1,103 @@
+name: Dr Moagi Pixels-to-Bits Windows
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/include/jarvisx/dm8kb_container.hpp"
+      - "cpp_runtime/include/jarvisx/pixels_to_bits_codec.hpp"
+      - "cpp_runtime/src/pixels_to_bits_main.cpp"
+      - "cpp_runtime/tests/pixels_to_bits_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/PIXELS_TO_BITS_8K120_REFERENCE.md"
+      - ".github/workflows/pixels-to-bits-windows.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/include/jarvisx/dm8kb_container.hpp"
+      - "cpp_runtime/include/jarvisx/pixels_to_bits_codec.hpp"
+      - "cpp_runtime/src/pixels_to_bits_main.cpp"
+      - "cpp_runtime/tests/pixels_to_bits_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/PIXELS_TO_BITS_8K120_REFERENCE.md"
+      - ".github/workflows/pixels-to-bits-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pixels-to-bits-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    name: Windows x64 / MSVC
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure CMake
+        shell: pwsh
+        run: >-
+          cmake -S cpp_runtime -B build/pixels-to-bits
+          -A x64
+          -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          -DJARVISX_ENABLE_SANITIZERS=OFF
+
+      - name: Build executable and focused tests
+        shell: pwsh
+        run: |
+          cmake --build build/pixels-to-bits --config Release --target jarvisx-pixels-to-bits --parallel 2
+          cmake --build build/pixels-to-bits --config Release --target jarvisx-pixels-to-bits-tests --parallel 2
+
+      - name: Run focused regression and smoke tests
+        shell: pwsh
+        run: |
+          ctest --test-dir build/pixels-to-bits -C Release -R "pixels-to-bits-(regressions|runtime-smoke)" --output-on-failure
+
+      - name: Execute near-lossless reference profile
+        shell: pwsh
+        run: |
+          $exe = "build/pixels-to-bits/Release/DrMoagi-Pixels-to-Bits.exe"
+          & $exe --width 64 --height 64 --fps 120 --max-shift 4 --max-mse 100 --min-psnr 40 --encoded build/pixels-to-bits/near-lossless.dmpb --decoded build/pixels-to-bits/near-lossless.ppm
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Execute exact lossless profile
+        shell: pwsh
+        run: |
+          $exe = "build/pixels-to-bits/Release/DrMoagi-Pixels-to-Bits.exe"
+          & $exe --width 16 --height 16 --fps 120 --lossless --encoded build/pixels-to-bits/lossless.dmpb --decoded build/pixels-to-bits/lossless.ppm
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Stage package and checksum
+        shell: pwsh
+        run: |
+          $stage = "build/pixels-to-bits/package"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "build/pixels-to-bits/Release/DrMoagi-Pixels-to-Bits.exe" "$stage/DrMoagi-Pixels-to-Bits.exe"
+          Copy-Item "build/pixels-to-bits/near-lossless.dmpb" "$stage/near-lossless.dmpb"
+          Copy-Item "build/pixels-to-bits/near-lossless.ppm" "$stage/near-lossless.ppm"
+          Copy-Item "build/pixels-to-bits/lossless.dmpb" "$stage/lossless.dmpb"
+          Copy-Item "build/pixels-to-bits/lossless.ppm" "$stage/lossless.ppm"
+          Copy-Item "docs/PIXELS_TO_BITS_8K120_REFERENCE.md" "$stage/README.md"
+          $hash = (Get-FileHash "$stage/DrMoagi-Pixels-to-Bits.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  DrMoagi-Pixels-to-Bits.exe" | Set-Content -Encoding ascii "$stage/SHA256SUMS.txt"
+          Compress-Archive -Path "$stage/*" -DestinationPath "build/pixels-to-bits/DrMoagi-Pixels-to-Bits-Windows-x64.zip" -Force
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: DrMoagi-Pixels-to-Bits-Windows-x64
+          path: |
+            build/pixels-to-bits/package/DrMoagi-Pixels-to-Bits.exe
+            build/pixels-to-bits/package/near-lossless.dmpb
+            build/pixels-to-bits/package/near-lossless.ppm
+            build/pixels-to-bits/package/lossless.dmpb
+            build/pixels-to-bits/package/lossless.ppm
+            build/pixels-to-bits/package/README.md
+            build/pixels-to-bits/package/SHA256SUMS.txt
+            build/pixels-to-bits/DrMoagi-Pixels-to-Bits-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
