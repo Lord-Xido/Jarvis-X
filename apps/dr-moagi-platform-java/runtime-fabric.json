@@ -1,0 +1,72 @@
+{
+  "schema": "jarvisx.dr-moagi-runtime-fabric/v1",
+  "platform": {
+    "id": "dr-moagi-platform-java",
+    "path": "apps/dr-moagi-platform-java",
+    "role": "recurrent-multimodal-kernel",
+    "surfaces": ["chat", "image", "audio", "video", "code", "data", "compute"]
+  },
+  "policy": {
+    "routing": "explicit-capability",
+    "defaultAuthority": "specialist-runtime",
+    "networkAuthority": "opt-in-by-environment",
+    "hostExecutionAuthority": "none-from-fabric",
+    "provisionalIsAuthoritative": false
+  },
+  "runtimes": [
+    {
+      "id": "dmvann-chat",
+      "path": "apps/dmvann-chat",
+      "role": "chat-and-model-proxy",
+      "capabilities": ["chat", "control-field", "model-proxy", "http"],
+      "transport": {"kind": "http-optional", "endpointEnv": "MOAGI_DMVANN_ENDPOINT", "healthPath": "/healthz", "routePath": "/api/chat"},
+      "requiredFiles": ["README.md", "core.mjs", "server.mjs", "test_core.mjs"],
+      "authorityBoundary": "Remote model inference remains server-side, opt-in and credential-isolated."
+    },
+    {
+      "id": "dr-moagi-cognitive",
+      "path": "apps/dr-moagi-cognitive",
+      "role": "browser-control-plane",
+      "capabilities": ["control", "visualization", "session", "firmware-client"],
+      "transport": {"kind": "browser"},
+      "requiredFiles": ["README.md", "core.mjs", "index.html", "test_core.mjs"],
+      "authorityBoundary": "Browser state cannot bypass firmware verification or receive signing keys."
+    },
+    {
+      "id": "dr-moagi-geometry",
+      "path": "apps/dr-moagi-geometry",
+      "role": "bounded-3d-geometry-optimizer",
+      "capabilities": ["geometry", "3d", "optimization", "visualization"],
+      "transport": {"kind": "browser"},
+      "requiredFiles": ["README.md", "core.mjs", "index.html", "test_core.mjs"],
+      "authorityBoundary": "Only measured parameter candidates may be promoted; topology gates remain authoritative."
+    },
+    {
+      "id": "qsol-graphics-codec",
+      "path": "apps/qsol-graphics-codec",
+      "role": "3d-scene-codec",
+      "capabilities": ["graphics-state", "3d", "codec", "animation", "binary"],
+      "transport": {"kind": "dotnet-cli"},
+      "requiredFiles": ["README.md", "QSol.GraphicsCodec.csproj"],
+      "authorityBoundary": "Codec fidelity is bounded by measured reconstruction error; it is not a renderer."
+    },
+    {
+      "id": "moagi-field-sim",
+      "path": "apps/moagi-field-sim",
+      "role": "physical-latent-policy-simulator",
+      "capabilities": ["simulation", "field", "policy", "visualization"],
+      "transport": {"kind": "browser"},
+      "requiredFiles": ["README.md", "index.html"],
+      "authorityBoundary": "Synthetic policy output has no broker, exchange or production transmission authority."
+    },
+    {
+      "id": "cpp-self-editor3d",
+      "path": "cpp_runtime/self_editor3d",
+      "role": "bounded-native-self-refinement",
+      "capabilities": ["code-refinement", "3d", "autoencoding", "benchmark", "native"],
+      "transport": {"kind": "native-cli"},
+      "requiredFiles": ["README.md", "CMakeLists.txt", "src/symmetry_loop3d.cpp", "tests/symmetry_loop3d_tests.cpp"],
+      "authorityBoundary": "Edits remain workspace-confined, transactional and validator-gated with rollback."
+    }
+  ]
+}
