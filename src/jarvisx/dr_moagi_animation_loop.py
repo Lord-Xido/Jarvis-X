@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass, field
 from hashlib import sha256
 
 from .dr_moagi_pdf_bytecode import (
+    Opcode,
     ProgramLimits,
     VmMetrics,
     Volume3D,
@@ -262,10 +263,16 @@ def execute_auto_loop(
     loop_limits = loop_limits or AutoLoopLimits()
     vm_limits = vm_limits or ProgramLimits()
     program = parse_auto_loop_program(payload, loop_limits=loop_limits, vm_limits=vm_limits)
+    inner_instructions = parse_program(program.inner_program, vm_limits)
+    error_memory = next(
+        (instruction for instruction in inner_instructions if instruction.opcode is Opcode.ERROR_MEMORY),
+        None,
+    )
     current = initial_volume.copy()
     cumulative = VmMetrics()
     frames: list[VolumeFrame] = []
     telemetry: list[CycleTelemetry] = []
+    omega_state = 0.0
     stopped = False
 
     for cycle in range(program.cycles):
@@ -297,13 +304,28 @@ def execute_auto_loop(
                 if len(frames) > loop_limits.max_frames:
                     raise RuntimeError("DM3D auto-loop frame budget exceeded")
 
+        reconstruction_mse = result.scalars.get(10)
+        cycle_mse = result.scalars.get(11)
+        omega_value = result.scalars.get(12)
+        if error_memory is not None:
+            error_x = result.scalars.get(error_memory.src)
+            error_z = result.scalars.get(error_memory.aux)
+            if error_x is not None and error_z is not None:
+                rho = error_memory.arg0 / 1_000_000.0
+                lambda_x = error_memory.arg1 / 1_000_000.0
+                lambda_z = error_memory.arg2 / 1_000_000.0
+                omega_state = rho * omega_state + (1.0 - rho) * (
+                    lambda_x * error_x + lambda_z * error_z
+                )
+                omega_value = omega_state
+
         fixed = result.scalars.get(program.convergence_scalar_register, 0.0) >= 1.0
         telemetry.append(
             CycleTelemetry(
                 cycle=cycle,
-                reconstruction_mse=result.scalars.get(10),
-                cycle_mse=result.scalars.get(11),
-                omega=result.scalars.get(12),
+                reconstruction_mse=reconstruction_mse,
+                cycle_mse=cycle_mse,
+                omega=omega_value,
                 fixed_point_pass=fixed,
                 physical_steps=result.metrics.physical_steps,
             )
