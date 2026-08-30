@@ -6,8 +6,10 @@ on:
       - "src/jarvisx/dr_moagi_pdf_bytecode.py"
       - "src/jarvisx/dr_moagi_pdf_bytecode_cli.py"
       - "src/jarvisx/dr_moagi_animation_loop.py"
+      - "src/jarvisx/dr_moagi_animation_pdf.py"
       - "tests/test_dr_moagi_pdf_bytecode.py"
       - "tests/test_dr_moagi_animation_loop.py"
+      - "tests/test_dr_moagi_animation_pdf.py"
       - "examples/dr_moagi_pdf_bytecode_runtime.py"
       - "examples/dr_moagi_animation_loop.py"
       - "docs/DR_MOAGI_PDF_BYTECODE_RUNTIME.md"
@@ -19,8 +21,10 @@ on:
       - "src/jarvisx/dr_moagi_pdf_bytecode.py"
       - "src/jarvisx/dr_moagi_pdf_bytecode_cli.py"
       - "src/jarvisx/dr_moagi_animation_loop.py"
+      - "src/jarvisx/dr_moagi_animation_pdf.py"
       - "tests/test_dr_moagi_pdf_bytecode.py"
       - "tests/test_dr_moagi_animation_loop.py"
+      - "tests/test_dr_moagi_animation_pdf.py"
       - "examples/dr_moagi_pdf_bytecode_runtime.py"
       - "examples/dr_moagi_animation_loop.py"
       - "docs/DR_MOAGI_PDF_BYTECODE_RUNTIME.md"
@@ -48,6 +52,7 @@ jobs:
           src/jarvisx/dr_moagi_pdf_bytecode.py
           src/jarvisx/dr_moagi_pdf_bytecode_cli.py
           src/jarvisx/dr_moagi_animation_loop.py
+          src/jarvisx/dr_moagi_animation_pdf.py
           examples/dr_moagi_pdf_bytecode_runtime.py
           examples/dr_moagi_animation_loop.py
       - name: Format check
@@ -56,8 +61,10 @@ jobs:
           src/jarvisx/dr_moagi_pdf_bytecode.py
           src/jarvisx/dr_moagi_pdf_bytecode_cli.py
           src/jarvisx/dr_moagi_animation_loop.py
+          src/jarvisx/dr_moagi_animation_pdf.py
           tests/test_dr_moagi_pdf_bytecode.py
           tests/test_dr_moagi_animation_loop.py
+          tests/test_dr_moagi_animation_pdf.py
           examples/dr_moagi_pdf_bytecode_runtime.py
           examples/dr_moagi_animation_loop.py
       - name: Import-order check
@@ -66,8 +73,10 @@ jobs:
           src/jarvisx/dr_moagi_pdf_bytecode.py
           src/jarvisx/dr_moagi_pdf_bytecode_cli.py
           src/jarvisx/dr_moagi_animation_loop.py
+          src/jarvisx/dr_moagi_animation_pdf.py
           tests/test_dr_moagi_pdf_bytecode.py
           tests/test_dr_moagi_animation_loop.py
+          tests/test_dr_moagi_animation_pdf.py
           examples/dr_moagi_pdf_bytecode_runtime.py
           examples/dr_moagi_animation_loop.py
       - name: Focused runtime tests
@@ -75,6 +84,7 @@ jobs:
           pytest -q -o addopts=''
           tests/test_dr_moagi_pdf_bytecode.py
           tests/test_dr_moagi_animation_loop.py
+          tests/test_dr_moagi_animation_pdf.py
       - name: PDF package smoke test
         run: python examples/dr_moagi_pdf_bytecode_runtime.py
       - name: Animation auto-loop smoke test
