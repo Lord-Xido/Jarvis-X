@@ -67,7 +67,9 @@ class AutoLoopProgram:
 
     @property
     def frame_registers(self) -> tuple[int, ...]:
-        return tuple(register for register in range(32) if self.frame_register_mask & (1 << register))
+        return tuple(
+            register for register in range(32) if self.frame_register_mask & (1 << register)
+        )
 
 
 @dataclass(frozen=True)
