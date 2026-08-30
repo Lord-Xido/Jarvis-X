@@ -58,6 +58,7 @@ jobs:
           src/jarvisx/dr_moagi_pdf_bytecode.py
           src/jarvisx/dr_moagi_pdf_bytecode_cli.py
           src/jarvisx/dr_moagi_animation_loop.py
+          src/jarvisx/dr_moagi_animation_pdf.py
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           tests/test_vm.py
@@ -68,6 +69,7 @@ jobs:
           tests/test_dr_moagi_kinetic_system.py
           tests/test_dr_moagi_pdf_bytecode.py
           tests/test_dr_moagi_animation_loop.py
+          tests/test_dr_moagi_animation_pdf.py
           tests/test_quantum_text.py
           tests/test_verification.py
 
@@ -85,6 +87,7 @@ jobs:
           src/jarvisx/dr_moagi_pdf_bytecode.py
           src/jarvisx/dr_moagi_pdf_bytecode_cli.py
           src/jarvisx/dr_moagi_animation_loop.py
+          src/jarvisx/dr_moagi_animation_pdf.py
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           tests/test_vm.py
@@ -95,6 +98,7 @@ jobs:
           tests/test_dr_moagi_kinetic_system.py
           tests/test_dr_moagi_pdf_bytecode.py
           tests/test_dr_moagi_animation_loop.py
+          tests/test_dr_moagi_animation_pdf.py
           tests/test_quantum_text.py
           tests/test_verification.py
 
