@@ -57,6 +57,9 @@ test = [
 torch = [
     "torch>=2.4",
 ]
+pdf = [
+    "pymupdf>=1.24",
+]
 
 [project.urls]
 Homepage = "https://github.com/Lord-Xido/Jarvis-X"
@@ -75,6 +78,7 @@ jarvisx-dr-moagi-firmware = "jarvisx.dr_moagi_firmware_cli:main"
 jarvisx-dr-moagi-frontier = "jarvisx.dr_moagi_frontier_cli:main"
 jarvisx-bitmatrix3d = "jarvisx.bitmatrix3d_cli:main"
 jarvisx-deep-distiller = "jarvisx.dr_moagi_deep_distiller_cli:main"
+jarvisx-dr-moagi-pdfvm = "jarvisx.dr_moagi_pdf_bytecode_cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
