@@ -25,6 +25,16 @@ def test_canonical_animation_loop_closes_and_captures_frames() -> None:
     assert all(item.fixed_point_pass for item in result.cycles)
     assert all(item.cycle_mse == pytest.approx(0.0, abs=1e-24) for item in result.cycles)
 
+    first, second = result.cycles[:2]
+    assert first.omega is not None
+    assert second.omega is not None
+    assert second.reconstruction_mse is not None
+    assert second.cycle_mse is not None
+    expected_omega = 0.9 * first.omega + 0.1 * (
+        0.7 * second.reconstruction_mse + 0.3 * second.cycle_mse
+    )
+    assert second.omega == pytest.approx(expected_omega)
+
 
 def test_auto_loop_stops_on_fixed_point_when_requested() -> None:
     payload = canonical_animation_loop_program(
