@@ -265,7 +265,11 @@ def execute_auto_loop(
     program = parse_auto_loop_program(payload, loop_limits=loop_limits, vm_limits=vm_limits)
     inner_instructions = parse_program(program.inner_program, vm_limits)
     error_memory = next(
-        (instruction for instruction in inner_instructions if instruction.opcode is Opcode.ERROR_MEMORY),
+        (
+            instruction
+            for instruction in inner_instructions
+            if instruction.opcode is Opcode.ERROR_MEMORY
+        ),
         None,
     )
     current = initial_volume.copy()
