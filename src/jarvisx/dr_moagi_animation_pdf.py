@@ -118,9 +118,7 @@ def load_animation_pdf_package(path: str | Path) -> tuple[AnimationPdfManifest, 
         names = set(document.embfile_names())
         if ANIMATION_MANIFEST_NAME not in names or ANIMATION_PAYLOAD_NAME not in names:
             raise ValueError("animation PDF package is missing required attachments")
-        manifest = AnimationPdfManifest.from_bytes(
-            document.embfile_get(ANIMATION_MANIFEST_NAME)
-        )
+        manifest = AnimationPdfManifest.from_bytes(document.embfile_get(ANIMATION_MANIFEST_NAME))
         payload = bytes(document.embfile_get(ANIMATION_PAYLOAD_NAME))
     finally:
         document.close()
