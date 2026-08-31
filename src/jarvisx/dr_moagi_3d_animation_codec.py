@@ -1,8 +1,8 @@
 """Jarvis-X bridge for the 1,000-line Dr Moagi 3D animation codec reference.
 
-The canonical reference source is intentionally stored as five ordered fragments so
-its exact 1,000-line form is easy to audit in Git. This module verifies, assembles,
-and executes that source without changing its contents.
+The canonical reference source is stored as five ordered fragments so its exact
+1,000-line form remains auditable. The same byte-identical blobs are packaged with
+Jarvis-X so installed wheels can verify, assemble, and execute the runtime.
 """
 
 from __future__ import annotations
@@ -15,21 +15,26 @@ from typing import Sequence
 
 EXPECTED_LINES = 1000
 EXPECTED_SHA256 = "c3d05a11e3fbb91591f538c75bddc15a72dd398e62ae4624a7b1a0828efa620e"
-_FRAGMENT_DIR = Path("reference/dr-moagi-3d-animation-autoencoder/fragments")
+_REPOSITORY_FRAGMENT_DIR = Path("reference/dr-moagi-3d-animation-autoencoder/fragments")
+_PACKAGED_FRAGMENT_DIR = Path("_reference/dr_moagi_3d_animation_autoencoder")
 _RUNTIME_MODULE = "jarvisx._dr_moagi_3d_animation_autoencoder_reference"
 
 
 def repository_root() -> Path:
-    """Return the Jarvis-X source-tree root for a checkout installation."""
+    """Return the Jarvis-X source-tree root when running from a checkout."""
 
     return Path(__file__).resolve().parents[2]
 
 
 def fragment_directory(root: Path | None = None) -> Path:
-    """Resolve the canonical reference fragment directory."""
+    """Resolve packaged fragments, or an explicitly requested repository copy."""
 
-    base = repository_root() if root is None else Path(root)
-    return base / _FRAGMENT_DIR
+    if root is not None:
+        return Path(root) / _REPOSITORY_FRAGMENT_DIR
+    packaged = Path(__file__).resolve().parent / _PACKAGED_FRAGMENT_DIR
+    if packaged.is_dir():
+        return packaged
+    return repository_root() / _REPOSITORY_FRAGMENT_DIR
 
 
 def reference_fragments(root: Path | None = None) -> list[Path]:
