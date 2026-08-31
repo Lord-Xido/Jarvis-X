@@ -197,3 +197,4 @@ class LatentDeltaCodec:
 
 class AnimationAutoCodec:
     """Orchestrates normalization, neural autoencoding, temporal coding and decode."""
+
