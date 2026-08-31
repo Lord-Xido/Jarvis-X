@@ -1,13 +1,16 @@
 #include "jarvisx/multimodal_generator3d.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
