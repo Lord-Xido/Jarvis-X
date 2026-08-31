@@ -57,6 +57,9 @@ test = [
 torch = [
     "torch>=2.4",
 ]
+graphics = [
+    "numpy>=1.24",
+]
 
 [project.urls]
 Homepage = "https://github.com/Lord-Xido/Jarvis-X"
@@ -75,6 +78,7 @@ jarvisx-dr-moagi-firmware = "jarvisx.dr_moagi_firmware_cli:main"
 jarvisx-dr-moagi-frontier = "jarvisx.dr_moagi_frontier_cli:main"
 jarvisx-bitmatrix3d = "jarvisx.bitmatrix3d_cli:main"
 jarvisx-deep-distiller = "jarvisx.dr_moagi_deep_distiller_cli:main"
+jarvisx-dr-moagi-3d-animation = "jarvisx.dr_moagi_3d_animation_codec:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -109,13 +113,13 @@ exclude_also = [
 [tool.black]
 line-length = 100
 target-version = ["py310"]
-include = '\\.pyi?$'
+include = '\.pyi?$'
 extend-exclude = '''
 /(
-    \\.git
-  | \\.mypy_cache
-  | \\.pytest_cache
-  | \\.venv
+    \.git
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.venv
   | build
   | dist
   | htmlcov
