@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#03050a">
+    <title>3D Auto Encoding & Decoding Swarm Engine (3D-RADE)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #03050a;
+            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            color: #d1f7ff;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+        }
+
+        .hud-panel {
+            position: absolute;
+            z-index: 10;
+            background: rgba(4, 12, 24, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.15), inset 0 0 15px rgba(0, 240, 255, 0.05);
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #b0e8ff;
+        }
+
+        .header-panel {
+            top: 20px;
+            left: 20px;
+            max-width: 470px;
+        }
+
+        .header-panel h1 {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #00f0ff;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-panel h1::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 18px;
+            background: #00f0ff;
+            box-shadow: 0 0 8px #00f0ff;
+        }
+
+        .equation-badge {
+            background: rgba(0, 240, 255, 0.1);
+            border-left: 3px solid #00f0ff;
+            padding: 8px 12px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            color: #7df9ff;
+            border-radius: 0 4px 4px 0;
+            overflow-wrap: anywhere;
+        }
+
+        .equation-badge .flow-law {
+            display: block;
+            margin-top: 5px;
+            color: #bffbff;
+            font-size: 11px;
+        }
+
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .status-locked {
+            background: rgba(0, 255, 128, 0.2);
+            color: #00ff80;
+            border: 1px solid #00ff80;
+        }
+
+        .status-encrypted {
+            background: rgba(255, 0, 128, 0.2);
+            color: #ff74ba;
+            border: 1px solid #ff0080;
+        }
+
+        .boundary-note {
+            margin-top: 8px;
+            color: #6fa9bd;
+            font-size: 10px;
+            letter-spacing: 0.45px;
+            text-transform: uppercase;
+        }
+
+        .controls-panel {
+            top: 20px;
+            right: 20px;
+            width: 320px;
+        }
+
+        .control-group {
+            margin-bottom: 14px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #8be5ff;
+        }
+
+        .control-group label span.val {
+            color: #00f0ff;
+            font-family: monospace;
+            white-space: nowrap;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 5px;
+            background: rgba(0, 240, 255, 0.2);
+            outline: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #00f0ff;
+            box-shadow: 0 0 10px #00f0ff;
+            cursor: pointer;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            color: #00f0ff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: rgba(0, 240, 255, 0.25);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+            color: #fff;
+        }
+
+        .btn.active {
+            background: #00f0ff;
+            color: #040c18;
+            box-shadow: 0 0 15px #00f0ff;
+        }
+
+        .telemetry-panel {
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            padding: 12px 20px;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+            min-width: 120px;
+        }
+
+        .metric-item .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #5ea8c7;
+            letter-spacing: 1px;
+        }
+
+        .metric-item .value {
+            font-size: 15px;
+            font-family: "Courier New", monospace;
+            font-weight: 700;
+            color: #00f0ff;
+        }
+
+        .stack-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .pill {
+            padding: 4px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 3px;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            background: rgba(0, 240, 255, 0.05);
+            color: #7df9ff;
+            cursor: pointer;
+        }
+
+        .pill.active {
+            border-color: #00f0ff;
+            background: rgba(0, 240, 255, 0.3);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .controls-panel {
+                top: auto;
+                bottom: 130px;
+                right: 10px;
+                left: 10px;
+                width: auto;
+            }
+
+            .header-panel {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+
+            .telemetry-panel {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                flex-wrap: wrap;
+                gap: 8px 14px;
+            }
+
+            .metric-item {
+                min-width: 30%;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="hud-panel header-panel">
+        <h1>3D-RADE Swarm Core</h1>
+        <p>Dr Moagi’s Hyper-Dimensional Autonomous Encoding &amp; Decoding Engine</p>
+
+        <div class="equation-badge">
+            Ξ_Swarm ≡ ⨂ Σ_DM-vΩΞ⁺[Ψ, Φ, Λ, Ω, Θ] ↺ Ξ_Swarm
+            <span class="flow-law">X[t+1] = Dψ(Eφ(X[t]) + ∫ fθ(Z(τ),τ)dτ)</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:6px;">
+            <span>Axiom: <strong>I AM = I DESCRIBE</strong></span>
+            <span id="ip-lock-tag" class="status-tag status-locked">IP LOCKED</span>
+        </div>
+
+        <div class="stack-pills">
+            <button class="pill active" id="pill-psi" type="button" onclick="toggleStack('psi')">Ψ Cognition</button>
+            <button class="pill active" id="pill-phi" type="button" onclick="toggleStack('phi')">Φ Operator</button>
+            <button class="pill active" id="pill-lambda" type="button" onclick="toggleStack('lambda')">Λ Entropy</button>
+            <button class="pill active" id="pill-omega" type="button" onclick="toggleStack('omega')">Ω Memory</button>
+            <button class="pill active" id="pill-theta" type="button" onclick="toggleStack('theta')">Θ Geometry</button>
+        </div>
+
+        <div id="telemetry-origin" class="boundary-note">LOCAL VISUAL MEASUREMENT · VISUALIZATION ONLY</div>
+    </div>
+
+    <div class="hud-panel controls-panel">
+        <div class="control-group">
+            <label>Inward Folding (Ω_3D ↺ Ω_3D) <span class="val" id="fold-val">1.00x</span></label>
+            <input type="range" id="fold-slider" min="0" max="2" step="0.01" value="1.0">
+        </div>
+
+        <div class="control-group">
+            <label>Recursion Depth (Depth Steps) <span class="val" id="depth-val">5</span></label>
+            <input type="range" id="depth-slider" min="1" max="10" step="1" value="5">
+        </div>
+
+        <div class="control-group">
+            <label>Latent Density Grid <span class="val" id="density-val">4000 Nodes</span></label>
+            <input type="range" id="density-slider" min="1000" max="8000" step="500" value="4000">
+        </div>
+
+        <div class="control-group">
+            <label>Self-Refinement Pulse Speed <span class="val" id="speed-val">1.2x</span></label>
+            <input type="range" id="speed-slider" min="0.1" max="3.0" step="0.1" value="1.2">
+        </div>
+
+        <div class="btn-grid">
+            <button class="btn active" id="btn-mode-auto" type="button" onclick="setEngineMode()">Auto Loop: ON</button>
+            <button class="btn" id="btn-mode-encrypt" type="button" onclick="toggleEncryption()">Visual Cipher Warp</button>
+            <button class="btn" id="btn-reset-cam" type="button" onclick="resetCamera()">Reset View</button>
+            <button class="btn" id="btn-pulse" type="button" onclick="triggerGradients()">Pulse Gradient</button>
+        </div>
+
+        <div class="boundary-note">Visual cipher warp is deterministic scene deformation, not cryptographic encryption.</div>
+    </div>
+
+    <div class="hud-panel telemetry-panel">
+        <div class="metric-item">
+            <span class="label">Fixed Point Attractor</span>
+            <span class="value" id="metric-attractor">Ψ∞ → latent core</span>
+        </div>
+        <div class="metric-item">
+            <span class="label">Reality Gap (normalized RMS)</span>
+            <span class="value" id="metric-gap">0.000000</span>
+        </div>
+        <div class="metric-item">
+            <span class="label">Normalized Surface Energy</span>
+            <span class="value" id="metric-energy">0.000000</span>
+        </div>
+        <div class="metric-item">
+            <span class="label">Visual Fold Compression</span>
+            <span class="value" id="metric-compression">0.00%</span>
+        </div>
+        <div class="metric-item">
+            <span class="label">Render Engine FPS</span>
+            <span class="value" id="metric-fps">0 FPS</span>
+        </div>
+    </div>
+
+    <script>
+        "use strict";
+
+        let scene;
+        let camera;
+        let renderer;
+        let swarmParticleSystem;
+        let manifoldMesh;
+        let coreEnergyOrb;
+        let laserRingGroup;
+        let ambientLight;
+        let coreLight;
+        let purpleLight;
+        let particlePositions;
+        let particleOriginals;
+        let particleColors;
+        let particleVelocities;
+        let numParticles = 4000;
+
+        const engineState = {
+            foldAmount: 1.0,
+            recursionDepth: 5,
+            density: 4000,
+            pulseSpeed: 1.2,
+            autoLoop: true,
+            visualCipher: false,
+            manualPulse: 0,
+            stackMask: { psi: true, phi: true, lambda: true, omega: true, theta: true },
+        };
+
+        const clock = new THREE.Clock();
+        let frameCount = 0;
+        let fpsWindowStarted = performance.now();
+        let lastTelemetryUpdate = 0;
+        let externalTelemetryUntil = 0;
+
+        let isMouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+
+        window.addEventListener("load", () => {
+            init3DEngine();
+            setupEventListeners();
+            animate();
+        });
+
+        function mulberry32(seed) {
+            let value = seed >>> 0;
+            return function nextRandom() {
+                value += 0x6D2B79F5;
+                let t = value;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        function init3DEngine() {
+            const container = document.getElementById("canvas-container");
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x03050a, 0.008);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 80);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(scene.fog.color);
+            container.appendChild(renderer.domElement);
+
+            ambientLight = new THREE.AmbientLight(0x00f0ff, 0.4);
+            scene.add(ambientLight);
+
+            coreLight = new THREE.PointLight(0x00f0ff, 2, 100);
+            coreLight.position.set(0, 0, 0);
+            scene.add(coreLight);
+
+            purpleLight = new THREE.PointLight(0xff00aa, 2, 80);
+            purpleLight.position.set(30, 20, 30);
+            scene.add(purpleLight);
+
+            buildSwarmParticles(engineState.density);
+            build3DManifoldVolume();
+            buildCoreEnergyOrb();
+            buildLaserRings();
+            applyStackVisibility();
+        }
+
+        function buildSwarmParticles(count) {
+            if (swarmParticleSystem) {
+                scene.remove(swarmParticleSystem);
+                swarmParticleSystem.geometry.dispose();
+                swarmParticleSystem.material.map.dispose();
+                swarmParticleSystem.material.dispose();
+            }
+
+            numParticles = count;
+            const geometry = new THREE.BufferGeometry();
+            particlePositions = new Float32Array(count * 3);
+            particleOriginals = new Float32Array(count * 3);
+            particleColors = new Float32Array(count * 3);
+            particleVelocities = new Float32Array(count * 3);
+
+            const colorCyan = new THREE.Color(0x00f0ff);
+            const colorMagenta = new THREE.Color(0xff00aa);
+            const colorGold = new THREE.Color(0xffaa00);
+            const random = mulberry32(0x3D524144 ^ count);
+            const radius = 35;
+
+            for (let i = 0; i < count; i++) {
+                const u = random() * Math.PI * 2;
+                const v = random() * Math.PI * 2;
+                const r = radius * (0.4 + 0.6 * random());
+
+                const x = r * Math.cos(u) * Math.sin(v);
+                const y = r * 0.6 * Math.sin(u) * Math.sin(v);
+                const z = r * Math.cos(v);
+                const offset = i * 3;
+
+                particlePositions[offset] = x;
+                particlePositions[offset + 1] = y;
+                particlePositions[offset + 2] = z;
+                particleOriginals[offset] = x;
+                particleOriginals[offset + 1] = y;
+                particleOriginals[offset + 2] = z;
+
+                particleVelocities[offset] = (random() - 0.5) * 0.05;
+                particleVelocities[offset + 1] = (random() - 0.5) * 0.05;
+                particleVelocities[offset + 2] = (random() - 0.5) * 0.05;
+
+                const selector = random();
+                let color = colorCyan;
+                if (selector > 0.85) {
+                    color = colorGold;
+                } else if (selector > 0.60) {
+                    color = colorMagenta;
+                }
+
+                particleColors[offset] = color.r;
+                particleColors[offset + 1] = color.g;
+                particleColors[offset + 2] = color.b;
+            }
+
+            geometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+            geometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 1.8,
+                vertexColors: true,
+                map: createGlowTexture(),
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+            });
+
+            swarmParticleSystem = new THREE.Points(geometry, material);
+            scene.add(swarmParticleSystem);
+            applyStackVisibility();
+        }
+
+        function createGlowTexture() {
+            const canvas = document.createElement("canvas");
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext("2d");
+            const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, "rgba(255,255,255,1)");
+            gradient.addColorStop(0.3, "rgba(0,240,255,0.8)");
+            gradient.addColorStop(0.8, "rgba(0,100,255,0.2)");
+            gradient.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 32, 32);
+            const texture = new THREE.Texture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        function build3DManifoldVolume() {
+            const geometry = new THREE.IcosahedronGeometry(22, 3);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x00f0ff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15,
+                blending: THREE.AdditiveBlending,
+            });
+            manifoldMesh = new THREE.Mesh(geometry, material);
+            scene.add(manifoldMesh);
+        }
+
+        function buildCoreEnergyOrb() {
+            const geometry = new THREE.SphereGeometry(6, 32, 32);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.8,
+            });
+            coreEnergyOrb = new THREE.Mesh(geometry, material);
+            scene.add(coreEnergyOrb);
+        }
+
+        function buildLaserRings() {
+            laserRingGroup = new THREE.Group();
+            const colors = [0x00f0ff, 0xff00aa, 0x00ff80];
+
+            for (let i = 0; i < 3; i++) {
+                const ringGeometry = new THREE.RingGeometry(18 + i * 6, 18.3 + i * 6, 64);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: colors[i],
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.4,
+                    blending: THREE.AdditiveBlending,
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI * 0.2 * (i + 1);
+                ring.rotation.y = Math.PI * 0.25 * i;
+                laserRingGroup.add(ring);
+            }
+            scene.add(laserRingGroup);
+        }
+
+        function setupEventListeners() {
+            window.addEventListener("resize", onWindowResize);
+
+            const dom = renderer.domElement;
+            dom.addEventListener("pointerdown", (event) => {
+                isMouseDown = true;
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+                dom.setPointerCapture?.(event.pointerId);
+            });
+
+            dom.addEventListener("pointermove", (event) => {
+                if (!isMouseDown) return;
+                targetRotationY += (event.clientX - mouseX) * 0.005;
+                targetRotationX += (event.clientY - mouseY) * 0.005;
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+            });
+
+            window.addEventListener("pointerup", () => {
+                isMouseDown = false;
+            });
+
+            document.getElementById("fold-slider").addEventListener("input", (event) => {
+                engineState.foldAmount = Number.parseFloat(event.target.value);
+                document.getElementById("fold-val").textContent = `${engineState.foldAmount.toFixed(2)}x`;
+            });
+
+            document.getElementById("depth-slider").addEventListener("input", (event) => {
+                engineState.recursionDepth = Number.parseInt(event.target.value, 10);
+                document.getElementById("depth-val").textContent = engineState.recursionDepth;
+            });
+
+            document.getElementById("density-slider").addEventListener("change", (event) => {
+                const count = Number.parseInt(event.target.value, 10);
+                engineState.density = count;
+                document.getElementById("density-val").textContent = `${count} Nodes`;
+                buildSwarmParticles(count);
+            });
+
+            document.getElementById("speed-slider").addEventListener("input", (event) => {
+                engineState.pulseSpeed = Number.parseFloat(event.target.value);
+                document.getElementById("speed-val").textContent = `${engineState.pulseSpeed.toFixed(1)}x`;
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function setEngineMode() {
+            engineState.autoLoop = !engineState.autoLoop;
+            const button = document.getElementById("btn-mode-auto");
+            button.classList.toggle("active", engineState.autoLoop);
+            button.textContent = engineState.autoLoop ? "Auto Loop: ON" : "Auto Loop: OFF";
+        }
+
+        function toggleEncryption() {
+            engineState.visualCipher = !engineState.visualCipher;
+            const tag = document.getElementById("ip-lock-tag");
+            const button = document.getElementById("btn-mode-encrypt");
+
+            if (engineState.visualCipher) {
+                tag.className = "status-tag status-encrypted";
+                tag.textContent = "VISUAL CIPHER ACTIVE";
+                button.classList.add("active");
+            } else {
+                tag.className = "status-tag status-locked";
+                tag.textContent = "IP LOCKED";
+                button.classList.remove("active");
+            }
+        }
+
+        function toggleStack(layer) {
+            engineState.stackMask[layer] = !engineState.stackMask[layer];
+            document.getElementById(`pill-${layer}`).classList.toggle("active", engineState.stackMask[layer]);
+            applyStackVisibility();
+        }
+
+        function applyStackVisibility() {
+            if (swarmParticleSystem) swarmParticleSystem.visible = engineState.stackMask.psi;
+            if (manifoldMesh) manifoldMesh.visible = engineState.stackMask.phi;
+            if (coreEnergyOrb) coreEnergyOrb.visible = engineState.stackMask.omega;
+            if (laserRingGroup && laserRingGroup.children.length === 3) {
+                laserRingGroup.children[0].visible = engineState.stackMask.lambda;
+                laserRingGroup.children[1].visible = engineState.stackMask.omega;
+                laserRingGroup.children[2].visible = engineState.stackMask.theta;
+            }
+            if (ambientLight) ambientLight.visible = engineState.stackMask.theta;
+            if (purpleLight) purpleLight.visible = engineState.stackMask.theta;
+            if (coreLight) coreLight.visible = engineState.stackMask.omega;
+        }
+
+        function resetCamera() {
+            targetRotationX = 0;
+            targetRotationY = 0;
+            scene.rotation.set(0, 0, 0);
+            camera.position.set(0, 15, 80);
+            camera.lookAt(0, 0, 0);
+        }
+
+        function triggerGradients() {
+            engineState.manualPulse = 1.0;
+        }
+
+        function calculateLocalMetrics(pos) {
+            let residualSquared = 0;
+            let originalRadius = 0;
+            let currentRadius = 0;
+            let surfaceEnergy = 0;
+            const stride = Math.max(1, Math.floor(numParticles / 1024));
+            let samples = 0;
+
+            for (let i = 0; i < numParticles; i += stride) {
+                const offset = i * 3;
+                const x = pos[offset];
+                const y = pos[offset + 1];
+                const z = pos[offset + 2];
+                const ox = particleOriginals[offset];
+                const oy = particleOriginals[offset + 1];
+                const oz = particleOriginals[offset + 2];
+                const dx = x - ox;
+                const dy = y - oy;
+                const dz = z - oz;
+
+                residualSquared += dx * dx + dy * dy + dz * dz;
+                originalRadius += Math.sqrt(ox * ox + oy * oy + oz * oz);
+                currentRadius += Math.sqrt(x * x + y * y + z * z);
+                surfaceEnergy += dx * dx + dy * dy + dz * dz;
+                samples++;
+            }
+
+            const normalization = Math.max(1, samples * 35 * 35);
+            const gap = Math.sqrt(residualSquared / Math.max(1, samples)) / 35;
+            const energy = surfaceEnergy / normalization;
+            const radiusRatio = currentRadius / Math.max(originalRadius, 1e-9);
+            const compression = Math.max(-100, Math.min(100, (1 - radiusRatio) * 100));
+            return { gap, energy, compression };
+        }
+
+        window.setRADETelemetry = function setRADETelemetry(payload) {
+            if (!payload || typeof payload !== "object") return false;
+
+            const setNumericMetric = (id, value, formatter) => {
+                if (typeof value !== "number" || !Number.isFinite(value)) return;
+                document.getElementById(id).textContent = formatter(value);
+            };
+
+            setNumericMetric("metric-gap", payload.realityGap, (value) => value.toFixed(6));
+            setNumericMetric("metric-energy", payload.surfaceEnergy, (value) => value.toFixed(6));
+            setNumericMetric("metric-compression", payload.compressionPercent, (value) => `${value.toFixed(2)}%`);
+
+            if (typeof payload.attractor === "string" && payload.attractor.trim()) {
+                document.getElementById("metric-attractor").textContent = payload.attractor.trim();
+            }
+
+            externalTelemetryUntil = performance.now() + 2000;
+            document.getElementById("telemetry-origin").textContent = "EXTERNAL TELEMETRY · EXPIRES TO LOCAL MEASUREMENT";
+            return true;
+        };
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const rawElapsed = clock.getElapsedTime();
+            const elapsedTime = rawElapsed * engineState.pulseSpeed;
+            const now = performance.now();
+
+            scene.rotation.y += (targetRotationY - scene.rotation.y) * 0.05;
+            scene.rotation.x += (targetRotationX - scene.rotation.x) * 0.05;
+            if (engineState.autoLoop) scene.rotation.y += 0.003;
+
+            let dynamicFold = engineState.foldAmount;
+            if (engineState.autoLoop) {
+                const autoEnvelope = 0.72 + 0.28 * Math.sin(elapsedTime * 1.5);
+                dynamicFold = engineState.foldAmount * autoEnvelope;
+            }
+
+            engineState.manualPulse *= 0.93;
+            const pulseGain = 1 + engineState.manualPulse * 0.45;
+            const pos = swarmParticleSystem.geometry.attributes.position.array;
+
+            for (let i = 0; i < numParticles; i++) {
+                const offset = i * 3;
+                const ox = particleOriginals[offset];
+                const oy = particleOriginals[offset + 1];
+                const oz = particleOriginals[offset + 2];
+                const dist = Math.sqrt(ox * ox + oy * oy + oz * oz);
+                const recursionPhase = Math.sin(
+                    elapsedTime * (0.65 + engineState.recursionDepth * 0.08) +
+                    dist * 0.018 * engineState.recursionDepth
+                );
+
+                let warpFactor = dynamicFold * (1 + recursionPhase * 0.025 * engineState.recursionDepth);
+                if (engineState.visualCipher) {
+                    const spatialKey = Math.sin(ox * 0.071 + oy * 0.113 + oz * 0.173);
+                    warpFactor *= 0.78 + 0.22 * Math.sin(dist * 0.2 + elapsedTime * 2 + spatialKey * Math.PI);
+                }
+                warpFactor *= pulseGain;
+
+                const driftX = particleVelocities[offset] * Math.sin(elapsedTime * 0.7) * 8;
+                const driftY = particleVelocities[offset + 1] * Math.cos(elapsedTime * 0.8) * 8;
+                const driftZ = particleVelocities[offset + 2] * Math.sin(elapsedTime * 0.9) * 8;
+
+                const targetX = ox * warpFactor + Math.sin(elapsedTime + oy * 0.1) * 1.2 + driftX;
+                const targetY = oy * warpFactor + Math.cos(elapsedTime + oz * 0.1) * 1.2 + driftY;
+                const targetZ = oz * warpFactor + Math.sin(elapsedTime + ox * 0.1) * 1.2 + driftZ;
+
+                pos[offset] += (targetX - pos[offset]) * 0.08;
+                pos[offset + 1] += (targetY - pos[offset + 1]) * 0.08;
+                pos[offset + 2] += (targetZ - pos[offset + 2]) * 0.08;
+            }
+            swarmParticleSystem.geometry.attributes.position.needsUpdate = true;
+
+            if (manifoldMesh) {
+                manifoldMesh.rotation.y = -elapsedTime * 0.2;
+                manifoldMesh.rotation.z = elapsedTime * 0.1;
+                const scale = 0.8 + 0.3 * Math.sin(elapsedTime * 2.0) * dynamicFold;
+                manifoldMesh.scale.setScalar(scale);
+                manifoldMesh.material.opacity = 0.1 + 0.08 * (1 + Math.sin(elapsedTime * 3.0));
+            }
+
+            if (coreEnergyOrb) {
+                coreEnergyOrb.rotation.x = elapsedTime * 0.8;
+                coreEnergyOrb.rotation.y = elapsedTime * 1.2;
+                const orbScale = 0.6 + 0.2 * Math.sin(elapsedTime * 4.0);
+                coreEnergyOrb.scale.setScalar(orbScale);
+            }
+
+            if (laserRingGroup) {
+                laserRingGroup.children[0].rotation.z = elapsedTime * 0.4;
+                laserRingGroup.children[1].rotation.z = -elapsedTime * 0.6;
+                laserRingGroup.children[2].rotation.z = elapsedTime * 0.2;
+            }
+
+            frameCount++;
+            if (now - fpsWindowStarted >= 500) {
+                const fps = Math.round((frameCount * 1000) / (now - fpsWindowStarted));
+                document.getElementById("metric-fps").textContent = `${fps} FPS`;
+                frameCount = 0;
+                fpsWindowStarted = now;
+            }
+
+            if (now - lastTelemetryUpdate >= 250 && now >= externalTelemetryUntil) {
+                const metrics = calculateLocalMetrics(pos);
+                document.getElementById("metric-gap").textContent = metrics.gap.toFixed(6);
+                document.getElementById("metric-energy").textContent = metrics.energy.toFixed(6);
+                document.getElementById("metric-compression").textContent = `${metrics.compression.toFixed(2)}%`;
+                document.getElementById("telemetry-origin").textContent = "LOCAL VISUAL MEASUREMENT · VISUALIZATION ONLY";
+                lastTelemetryUpdate = now;
+            }
+
+            document.getElementById("fold-val").textContent = `${dynamicFold.toFixed(2)}x`;
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

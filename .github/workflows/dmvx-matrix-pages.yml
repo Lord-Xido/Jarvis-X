@@ -11,6 +11,7 @@ on:
       - "apps/dr-moagi-geometry/**"
       - "apps/dr-moagi-cognitive/**"
       - "apps/dmvann-chat/**"
+      - "apps/3d-rade-swarm/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - "apps/dr-moagi-geometry/**"
       - "apps/dr-moagi-cognitive/**"
       - "apps/dmvann-chat/**"
+      - "apps/3d-rade-swarm/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   workflow_dispatch:
 
@@ -89,6 +91,13 @@ jobs:
           grep -q "UPSTREAM_NOT_CONFIGURED" apps/dmvann-chat/server.mjs
           grep -q "no remote model response was used" apps/dmvann-chat/core.mjs
           test -s apps/dmvann-chat/Dockerfile
+      - name: Smoke-check 3D-RADE swarm runtime
+        run: |
+          grep -q "3D-RADE Swarm Core" apps/3d-rade-swarm/index.html
+          grep -q "window.setRADETelemetry" apps/3d-rade-swarm/index.html
+          grep -q "LOCAL VISUAL MEASUREMENT" apps/3d-rade-swarm/index.html
+          grep -q "not cryptographic encryption" apps/3d-rade-swarm/index.html
+          if grep -q "Math.random()" apps/3d-rade-swarm/index.html; then exit 1; fi
 
   deploy:
     if: github.event_name != 'pull_request'
@@ -111,12 +120,13 @@ jobs:
       - name: Assemble shared static site
         run: |
           rm -rf dist
-          mkdir -p dist/permeation-transport dist/dr-moagi-geometry dist/dr-moagi-cognitive dist/dmvann-chat
+          mkdir -p dist/permeation-transport dist/dr-moagi-geometry dist/dr-moagi-cognitive dist/dmvann-chat dist/3d-rade-swarm
           cp -a apps/dmvx-matrix/. dist/
           cp -a apps/permeation-transport/. dist/permeation-transport/
           cp -a apps/dr-moagi-geometry/. dist/dr-moagi-geometry/
           cp -a apps/dr-moagi-cognitive/. dist/dr-moagi-cognitive/
           cp -a apps/dmvann-chat/. dist/dmvann-chat/
+          cp -a apps/3d-rade-swarm/. dist/3d-rade-swarm/
       - name: Upload static runtimes
         id: upload
         continue-on-error: true
@@ -157,6 +167,7 @@ jobs:
                 `- Dr Moagi geometry optimizer: ${pageUrl.replace(/\/$/, '')}/dr-moagi-geometry/`,
                 `- Dr Moagi cognitive 3D web app: ${pageUrl.replace(/\/$/, '')}/dr-moagi-cognitive/`,
                 `- DMVANN Chat: ${pageUrl.replace(/\/$/, '')}/dmvann-chat/`,
+                `- 3D-RADE swarm engine: ${pageUrl.replace(/\/$/, '')}/3d-rade-swarm/`,
                 `- deployed commit: \`${context.sha}\``,
                 `- invariant test job: ${process.env.TEST_RESULT}`,
                 `- Pages deployment job: ${process.env.DEPLOY_RESULT}`,

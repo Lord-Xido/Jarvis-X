@@ -1,0 +1,122 @@
+name: 3D-RADE Swarm UI
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/3d-rade-swarm/**"
+      - ".github/workflows/3d-rade-swarm-ui.yml"
+      - ".github/workflows/dmvx-matrix-pages.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/3d-rade-swarm/**"
+      - ".github/workflows/3d-rade-swarm-ui.yml"
+      - ".github/workflows/dmvx-matrix-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 3d-rade-swarm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-smoke:
+    name: Validate deterministic 3D browser surface
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Validate HTML structure and telemetry boundaries
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          path = Path("apps/3d-rade-swarm/index.html")
+          text = path.read_text(encoding="utf-8")
+          assert text.lstrip().lower().startswith("<!doctype html>")
+          assert "3D-RADE Swarm Core" in text
+          assert "DM-vΩΞ⁺" in text
+          assert "window.setRADETelemetry" in text
+          assert "mulberry32" in text
+          assert "calculateLocalMetrics" in text
+          assert "LOCAL VISUAL MEASUREMENT" in text
+          assert "VISUALIZATION ONLY" in text
+          assert "not cryptographic encryption" in text
+          assert "Math.random()" not in text
+          assert " e-6 J" not in text
+          assert "99.87%" not in text
+          assert "0.00000000" not in text
+          assert "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" in text
+
+          class Parser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = set()
+                  self.scripts = []
+
+              def handle_starttag(self, tag, attrs):
+                  data = dict(attrs)
+                  if "id" in data:
+                      assert data["id"] not in self.ids, f"duplicate id: {data['id']}"
+                      self.ids.add(data["id"])
+                  if tag == "script" and "src" in data:
+                      self.scripts.append(data["src"])
+
+          parser = Parser()
+          parser.feed(text)
+          required_ids = {
+              "canvas-container",
+              "fold-slider",
+              "depth-slider",
+              "density-slider",
+              "speed-slider",
+              "pill-psi",
+              "pill-phi",
+              "pill-lambda",
+              "pill-omega",
+              "pill-theta",
+              "metric-gap",
+              "metric-energy",
+              "metric-compression",
+              "metric-fps",
+              "telemetry-origin",
+          }
+          assert required_ids <= parser.ids
+          assert parser.scripts == ["https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"]
+          PY
+
+      - name: Serve app and fetch entry point
+        run: |
+          python -m http.server 8766 --directory apps/3d-rade-swarm >/tmp/3d-rade-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          python - <<'PY'
+          import time
+          import urllib.request
+
+          url = "http://127.0.0.1:8766/index.html"
+          for _ in range(20):
+              try:
+                  with urllib.request.urlopen(url, timeout=1) as response:
+                      body = response.read().decode("utf-8")
+                      assert response.status == 200
+                      assert "3D-RADE Swarm Core" in body
+                      assert "setRADETelemetry" in body
+                      assert "VISUALIZATION ONLY" in body
+                      break
+              except OSError:
+                  time.sleep(0.1)
+          else:
+              raise RuntimeError("3D-RADE static server did not become ready")
+          PY
