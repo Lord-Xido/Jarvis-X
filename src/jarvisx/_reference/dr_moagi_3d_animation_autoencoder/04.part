@@ -1,0 +1,200 @@
+    y0: int,
+    x1: int,
+    y1: int,
+    value: int = 230,
+) -> None:
+    dx = abs(x1 - x0)
+    sx = 1 if x0 < x1 else -1
+    dy = -abs(y1 - y0)
+    sy = 1 if y0 < y1 else -1
+    err = dx + dy
+    height, width = image.shape
+    while True:
+        if 0 <= x0 < width and 0 <= y0 < height:
+            image[y0, x0] = max(int(image[y0, x0]), int(value))
+        if x0 == x1 and y0 == y1:
+            break
+        e2 = 2 * err
+        if e2 >= dy:
+            err += dy
+            x0 += sx
+        if e2 <= dx:
+            err += dx
+            y0 += sy
+def draw_disc(image: np.ndarray, cx: int, cy: int, radius: int, value: int = 255) -> None:
+    height, width = image.shape
+    radius2 = radius * radius
+    for y in range(max(0, cy - radius), min(height, cy + radius + 1)):
+        for x in range(max(0, cx - radius), min(width, cx + radius + 1)):
+            if (x - cx) ** 2 + (y - cy) ** 2 <= radius2:
+                image[y, x] = max(int(image[y, x]), int(value))
+def render_wireframe(
+    frame: MeshFrame,
+    width: int = 512,
+    height: int = 512,
+    camera_rotation: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    vertices = frame.vertices
+    if camera_rotation is not None:
+        vertices = vertices @ camera_rotation.T
+    points, depth = camera_project(vertices, width, height)
+    image = np.zeros((height, width), dtype=np.uint8)
+    edges = unique_edges(frame.faces)
+    edge_depth = (depth[edges[:, 0]] + depth[edges[:, 1]]) * 0.5
+    order = np.argsort(edge_depth)[::-1]
+    for edge_index in order:
+        a, b = edges[edge_index]
+        x0, y0 = points[a]
+        x1, y1 = points[b]
+        shade = int(np.clip(260.0 - edge_depth[edge_index] * 12.0, 70.0, 245.0))
+        draw_line(image, int(x0), int(y0), int(x1), int(y1), shade)
+    for index, (x, y) in enumerate(points):
+        shade = int(np.clip(290.0 - depth[index] * 10.0, 100.0, 255.0))
+        draw_disc(image, int(x), int(y), 2, shade)
+    return image
+def save_pgm(image: np.ndarray, path: Path) -> None:
+    image = np.asarray(image, dtype=np.uint8)
+    height, width = image.shape
+    with open(path, "wb") as handle:
+        handle.write(f"P5\n{width} {height}\n255\n".encode("ascii"))
+        handle.write(image.tobytes())
+def export_obj(frame: MeshFrame, path: Path) -> None:
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("# Reconstructed 3D frame\n")
+        for x, y, z in frame.vertices:
+            handle.write(f"v {x:.7f} {y:.7f} {z:.7f}\n")
+        for a, b, c in frame.faces:
+            handle.write(f"f {a + 1} {b + 1} {c + 1}\n")
+def export_animation_objs(clip: AnimationClip, directory: Path, every: int = 1) -> None:
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    for index in range(0, clip.frame_count, max(every, 1)):
+        export_obj(clip.frames[index], directory / f"frame_{index:05d}.obj")
+def render_animation_previews(
+    clip: AnimationClip,
+    directory: Path,
+    every: int = 6,
+    width: int = 512,
+    height: int = 512,
+) -> None:
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    camera = compose_rotation(math.radians(-18.0), math.radians(25.0), 0.0)
+    for index in range(0, clip.frame_count, max(every, 1)):
+        image = render_wireframe(clip.frames[index], width, height, camera)
+        save_pgm(image, directory / f"preview_{index:05d}.pgm")
+def human_bytes(value: int) -> str:
+    units = ["B", "KiB", "MiB", "GiB"]
+    amount = float(value)
+    for unit in units:
+        if amount < 1024.0 or unit == units[-1]:
+            return f"{amount:.2f} {unit}"
+        amount /= 1024.0
+    return f"{amount:.2f} GiB"
+def summarize_packet(packet: EncodedPacket) -> dict[str, object]:
+    return {
+        "version": packet.version,
+        "fps": packet.fps,
+        "frame_count": packet.frame_count,
+        "vertex_count": packet.vertex_count,
+        "latent_dim": packet.latent_dim,
+        "quant_bits": packet.quant_bits,
+        "keyframe_interval": packet.keyframe_interval,
+        "packet_raw_bytes": packet_raw_bytes(packet),
+    }
+def write_json(data: dict[str, object], path: Path) -> None:
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2, sort_keys=True)
+def build_demo_clip(kind: str, frames: int, fps: float) -> AnimationClip:
+    if kind == "cube":
+        return generate_cube_animation(frames, fps)
+    if kind == "wave":
+        return generate_wave_animation(frames, fps)
+    raise ValueError(f"unknown demo kind: {kind}")
+def train_encode_decode(
+    clip: AnimationClip,
+    config: CodecConfig,
+    output_dir: Path,
+    verbose: bool = True,
+) -> tuple[EncodedPacket, AnimationClip, dict[str, float]]:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    codec = AnimationAutoCodec(config)
+    print(f"clip={clip.name} frames={clip.frame_count} vertices={clip.vertex_count}")
+    train_metrics = codec.fit(clip, verbose=verbose)
+    packet = codec.encode(clip)
+    decoded = codec.decode(packet)
+    reference = clip.vertex_tensor()
+    reconstruction = decoded.vertex_tensor()
+    metrics = evaluate_reconstruction(reference, reconstruction)
+    metrics.update({f"fit_{k}": v for k, v in train_metrics.items()})
+    original_bytes = original_raw_bytes(clip)
+    encoded_bytes = packet_raw_bytes(packet)
+    metrics["original_raw_bytes"] = float(original_bytes)
+    metrics["packet_raw_bytes"] = float(encoded_bytes)
+    metrics["raw_compression_ratio"] = float(original_bytes / max(encoded_bytes, 1))
+    save_packet(packet, output_dir / "animation_packet.npz")
+    write_json(summarize_packet(packet), output_dir / "packet_summary.json")
+    write_json(metrics, output_dir / "reconstruction_metrics.json")
+    export_obj(decoded.frames[0], output_dir / "reconstructed_frame_00000.obj")
+    render_animation_previews(decoded, output_dir / "previews", every=max(clip.frame_count // 12, 1))
+    print(f"original raw: {human_bytes(original_bytes)}")
+    print(f"packet raw:   {human_bytes(encoded_bytes)}")
+    print(f"ratio:        {metrics['raw_compression_ratio']:.3f}x")
+    print(f"RMSE:         {metrics['rmse']:.8f}")
+    print(f"PSNR:         {metrics['psnr_db']:.3f} dB")
+    return packet, decoded, metrics
+def decode_existing_packet(packet_path: Path, output_dir: Path) -> AnimationClip:
+    packet = load_packet(packet_path)
+    clip = AnimationAutoCodec.decode(packet)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    export_animation_objs(clip, output_dir / "obj_frames", every=1)
+    render_animation_previews(clip, output_dir / "previews", every=max(clip.frame_count // 12, 1))
+    write_json(summarize_packet(packet), output_dir / "packet_summary.json")
+    return clip
+def parse_arguments(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Train and run a NumPy 3D animation autoencoder/decoder codec."
+    )
+    parser.add_argument("--mode", choices=["demo", "decode"], default="demo")
+    parser.add_argument("--demo", choices=["cube", "wave"], default="cube")
+    parser.add_argument("--frames", type=int, default=90)
+    parser.add_argument("--fps", type=float, default=30.0)
+    parser.add_argument("--latent", type=int, default=12)
+    parser.add_argument("--hidden", type=int, default=48)
+    parser.add_argument("--epochs", type=int, default=400)
+    parser.add_argument("--batch", type=int, default=16)
+    parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--quant-bits", type=int, default=12)
+    parser.add_argument("--keyframe", type=int, default=12)
+    parser.add_argument("--velocity-weight", type=float, default=0.25)
+    parser.add_argument("--output", type=Path, default=Path("dr_moagi_codec_output"))
+    parser.add_argument("--packet", type=Path, default=None)
+    parser.add_argument("--quiet", action="store_true")
+    return parser.parse_args(argv)
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = parse_arguments(argv)
+    if args.mode == "decode":
+        if args.packet is None:
+            raise SystemExit("--packet is required in decode mode")
+        clip = decode_existing_packet(args.packet, args.output)
+        print(f"decoded {clip.frame_count} frames into {args.output}")
+        return 0
+    if args.frames < 2:
+        raise SystemExit("--frames must be at least 2")
+    config = CodecConfig(
+        latent_dim=args.latent,
+        hidden_dim=args.hidden,
+        epochs=args.epochs,
+        batch_size=args.batch,
+        learning_rate=args.lr,
+        velocity_weight=args.velocity_weight,
+        quant_bits=args.quant_bits,
+        keyframe_interval=args.keyframe,
+    )
+    clip = build_demo_clip(args.demo, args.frames, args.fps)
+    train_encode_decode(clip, config, args.output, verbose=not args.quiet)
+    return 0
+if __name__ == "__main__":
+    raise SystemExit(main())
