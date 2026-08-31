@@ -1,0 +1,61 @@
+name: Dr Moagi Million-LPS Codegen
+
+on:
+  push:
+    paths:
+      - 'src/jarvisx/dr_moagi_codegen_engine.py'
+      - 'tests/test_dr_moagi_codegen_engine.py'
+      - 'docs/DR_MOAGI_MILLION_LPS_CODEGEN.md'
+      - 'pyproject.toml'
+      - '.github/workflows/dr-moagi-million-lps-codegen.yml'
+  pull_request:
+    paths:
+      - 'src/jarvisx/dr_moagi_codegen_engine.py'
+      - 'tests/test_dr_moagi_codegen_engine.py'
+      - 'docs/DR_MOAGI_MILLION_LPS_CODEGEN.md'
+      - 'pyproject.toml'
+      - '.github/workflows/dr-moagi-million-lps-codegen.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-throughput-and-correctness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime and test dependencies
+        run: python -m pip install -e '.[test]'
+      - name: Run focused codegen tests
+        run: pytest tests/test_dr_moagi_codegen_engine.py -q --no-cov
+      - name: Require one million logical lines per second in repeat-mode emission
+        run: |
+          jarvisx-dr-moagi-codegen benchmark \
+            --lines 1000000 \
+            --target-lps 1000000 \
+            --chunk-lines 65536 \
+            --template 'pass  # DM-vOmegaXi throughput gate' \
+            --require-target
+      - name: Smoke-test physical file generation
+        run: |
+          jarvisx-dr-moagi-codegen generate \
+            --lines 100000 \
+            --chunk-lines 16384 \
+            --template 'pass  # DM-vOmegaXi file emission' \
+            --output /tmp/dr-moagi-generated.py
+          test "$(wc -l < /tmp/dr-moagi-generated.py)" -eq 100000
+          python -m py_compile /tmp/dr-moagi-generated.py
+      - name: Smoke-test globally indexed parallel shards
+        run: |
+          jarvisx-dr-moagi-codegen shard \
+            --lines 10000 \
+            --workers 4 \
+            --chunk-lines 1024 \
+            --template 'dm_generated_{index} = {index}' \
+            --directory /tmp/dr-moagi-shards
+          test -f /tmp/dr-moagi-shards/manifest.json
+          test "$(cat /tmp/dr-moagi-shards/shard-*.py | wc -l)" -eq 10000
