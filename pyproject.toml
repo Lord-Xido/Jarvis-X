@@ -81,6 +81,7 @@ jarvisx-dr-moagi-frontier = "jarvisx.dr_moagi_frontier_cli:main"
 jarvisx-bitmatrix3d = "jarvisx.bitmatrix3d_cli:main"
 jarvisx-deep-distiller = "jarvisx.dr_moagi_deep_distiller_cli:main"
 jarvisx-dr-moagi-3d-animation = "jarvisx.dr_moagi_3d_animation_codec:main"
+jarvisx-dr-moagi-codegen = "jarvisx.dr_moagi_codegen_engine:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
