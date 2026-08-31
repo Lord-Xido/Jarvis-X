@@ -113,13 +113,13 @@ exclude_also = [
 [tool.black]
 line-length = 100
 target-version = ["py310"]
-include = '\.pyi?$'
+include = '\\.pyi?$'
 extend-exclude = '''
 /(
-    \.git
-  | \.mypy_cache
-  | \.pytest_cache
-  | \.venv
+    \\.git
+  | \\.mypy_cache
+  | \\.pytest_cache
+  | \\.venv
   | build
   | dist
   | htmlcov
