@@ -1,0 +1,52 @@
+name: Dr Moagi 3D Animation Codec
+
+on:
+  push:
+    paths:
+      - 'reference/dr-moagi-3d-animation-autoencoder/**'
+      - 'src/jarvisx/dr_moagi_3d_animation_codec.py'
+      - 'tests/test_dr_moagi_3d_animation_codec.py'
+      - 'pyproject.toml'
+      - '.github/workflows/dr-moagi-3d-animation-codec.yml'
+  pull_request:
+    paths:
+      - 'reference/dr-moagi-3d-animation-autoencoder/**'
+      - 'src/jarvisx/dr_moagi_3d_animation_codec.py'
+      - 'tests/test_dr_moagi_3d_animation_codec.py'
+      - 'pyproject.toml'
+      - '.github/workflows/dr-moagi-3d-animation-codec.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime and test dependencies
+        run: python -m pip install -e '.[graphics,test]'
+      - name: Verify canonical 1000-line source
+        run: jarvisx-dr-moagi-3d-animation --verify-reference
+      - name: Run focused codec tests
+        run: pytest tests/test_dr_moagi_3d_animation_codec.py -q --no-cov
+      - name: Run CLI smoke encode/decode
+        run: |
+          jarvisx-dr-moagi-3d-animation \
+            --demo cube \
+            --frames 6 \
+            --latent 4 \
+            --hidden 12 \
+            --epochs 6 \
+            --batch 3 \
+            --quant-bits 8 \
+            --keyframe 2 \
+            --quiet \
+            --output /tmp/dr-moagi-3d-codec
+          test -f /tmp/dr-moagi-3d-codec/animation_packet.npz
+          test -f /tmp/dr-moagi-3d-codec/reconstruction_metrics.json
+          test -f /tmp/dr-moagi-3d-codec/reconstructed_frame_00000.obj

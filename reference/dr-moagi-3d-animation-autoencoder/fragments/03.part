@@ -1,0 +1,200 @@
+    def __init__(self, config: CodecConfig) -> None:
+        config.validate()
+        self.config = config
+        self.normalization: Optional[NormalizationState] = None
+        self.standardizer = FeatureStandardizer()
+        self.autoencoder: Optional[DenseAutoencoder] = None
+
+    def fit(self, clip: AnimationClip, verbose: bool = True) -> dict[str, float]:
+        clip.validate()
+        tensor = clip.vertex_tensor()
+        self.normalization = compute_normalization(tensor)
+        normalized = self.normalization.normalize(tensor).astype(np.float32)
+        features = build_features(normalized, self.config.velocity_weight)
+        standardized = self.standardizer.fit(features).transform(features)
+        self.autoencoder = DenseAutoencoder(standardized.shape[1], self.config)
+        with Timer("autoencoder training"):
+            self.autoencoder.fit(standardized, verbose=verbose)
+        reconstructed_std = self.autoencoder.reconstruct(standardized)
+        reconstructed_features = self.standardizer.inverse_transform(reconstructed_std)
+        reconstructed_norm = features_to_positions(reconstructed_features, clip.vertex_count)
+        reconstructed = self.normalization.denormalize(reconstructed_norm)
+        metrics = evaluate_reconstruction(tensor, reconstructed)
+        metrics["training_final_loss"] = float(self.autoencoder.history[-1])
+        return metrics
+
+    def encode(self, clip: AnimationClip) -> EncodedPacket:
+        if self.normalization is None or self.autoencoder is None:
+            raise RuntimeError("codec must be fitted before encoding")
+        if self.standardizer.mean is None or self.standardizer.std is None:
+            raise RuntimeError("standardizer state is missing")
+        tensor = clip.vertex_tensor()
+        normalized = self.normalization.normalize(tensor).astype(np.float32)
+        features = build_features(normalized, self.config.velocity_weight)
+        standardized = self.standardizer.transform(features)
+        latent = self.autoencoder.encode(standardized)
+        latent_codec = LatentDeltaCodec(self.config.quant_bits, self.config.keyframe_interval)
+        codes, qstate, mask = latent_codec.quantize(latent)
+        decoder_b2 = self.autoencoder.dec_b2.copy()
+        decoder_b2 = np.stack(
+            [decoder_b2, self.standardizer.mean, self.standardizer.std],
+            axis=0,
+        )
+        return EncodedPacket(
+            version=FORMAT_VERSION,
+            fps=clip.fps,
+            frame_count=clip.frame_count,
+            vertex_count=clip.vertex_count,
+            faces=clip.frames[0].faces.copy(),
+            center=self.normalization.center.copy(),
+            scale=float(self.normalization.scale),
+            feature_dim=features.shape[1],
+            latent_dim=self.config.latent_dim,
+            keyframe_interval=self.config.keyframe_interval,
+            quant_bits=self.config.quant_bits,
+            latent_scales=qstate.scales,
+            latent_codes=codes,
+            keyframe_mask=mask,
+            decoder_w1=self.autoencoder.dec_w1.copy(),
+            decoder_b1=self.autoencoder.dec_b1.copy(),
+            decoder_w2=self.autoencoder.dec_w2.copy(),
+            decoder_b2=decoder_b2,
+        )
+
+    @staticmethod
+    def decode(packet: EncodedPacket) -> AnimationClip:
+        if packet.version != FORMAT_VERSION:
+            raise ValueError(f"unsupported packet version: {packet.version}")
+        qstate = QuantizationState(packet.latent_scales, packet.quant_bits)
+        latent_codec = LatentDeltaCodec(packet.quant_bits, packet.keyframe_interval)
+        latent = latent_codec.dequantize(packet.latent_codes, qstate, packet.keyframe_mask)
+        h2 = stable_tanh(latent @ packet.decoder_w1 + packet.decoder_b1)
+        decoded_standard = h2 @ packet.decoder_w2 + packet.decoder_b2[0]
+        feature_mean = packet.decoder_b2[1]
+        feature_std = packet.decoder_b2[2]
+        decoded_features = decoded_standard * feature_std + feature_mean
+        normalized = features_to_positions(decoded_features, packet.vertex_count)
+        vertices = normalized * packet.scale + packet.center
+        frames = []
+        for index in range(packet.frame_count):
+            frames.append(
+                MeshFrame(
+                    vertices=vertices[index].astype(np.float32),
+                    faces=packet.faces.copy(),
+                    timestamp=index / packet.fps,
+                )
+            )
+        clip = AnimationClip(frames=frames, fps=packet.fps, name="decoded")
+        clip.validate()
+        return clip
+
+
+def packet_raw_bytes(packet: EncodedPacket) -> int:
+    arrays = [
+        packet.faces,
+        packet.center,
+        packet.latent_scales,
+        packet.latent_codes,
+        packet.keyframe_mask,
+        packet.decoder_w1,
+        packet.decoder_b1,
+        packet.decoder_w2,
+        packet.decoder_b2,
+    ]
+    return int(sum(array.nbytes for array in arrays))
+
+
+def original_raw_bytes(clip: AnimationClip) -> int:
+    return int(clip.vertex_tensor().nbytes + clip.frames[0].faces.nbytes)
+
+
+def evaluate_reconstruction(reference: np.ndarray, reconstructed: np.ndarray) -> dict[str, float]:
+    return {
+        "mse": mse(reference, reconstructed),
+        "rmse": rmse(reference, reconstructed),
+        "max_abs_error": max_abs_error(reference, reconstructed),
+        "psnr_db": psnr(reference, reconstructed, peak=2.0),
+    }
+
+
+def save_packet(packet: EncodedPacket, path: Path) -> None:
+    path = Path(path)
+    metadata = {
+        "version": packet.version,
+        "fps": packet.fps,
+        "frame_count": packet.frame_count,
+        "vertex_count": packet.vertex_count,
+        "scale": packet.scale,
+        "feature_dim": packet.feature_dim,
+        "latent_dim": packet.latent_dim,
+        "keyframe_interval": packet.keyframe_interval,
+        "quant_bits": packet.quant_bits,
+    }
+    np.savez_compressed(
+        path,
+        metadata=json.dumps(metadata),
+        faces=packet.faces,
+        center=packet.center,
+        latent_scales=packet.latent_scales,
+        latent_codes=packet.latent_codes,
+        keyframe_mask=packet.keyframe_mask,
+        decoder_w1=packet.decoder_w1,
+        decoder_b1=packet.decoder_b1,
+        decoder_w2=packet.decoder_w2,
+        decoder_b2=packet.decoder_b2,
+    )
+
+
+def load_packet(path: Path) -> EncodedPacket:
+    with np.load(Path(path), allow_pickle=False) as data:
+        metadata = json.loads(str(data["metadata"]))
+        return EncodedPacket(
+            version=int(metadata["version"]),
+            fps=float(metadata["fps"]),
+            frame_count=int(metadata["frame_count"]),
+            vertex_count=int(metadata["vertex_count"]),
+            faces=data["faces"].copy(),
+            center=data["center"].copy(),
+            scale=float(metadata["scale"]),
+            feature_dim=int(metadata["feature_dim"]),
+            latent_dim=int(metadata["latent_dim"]),
+            keyframe_interval=int(metadata["keyframe_interval"]),
+            quant_bits=int(metadata["quant_bits"]),
+            latent_scales=data["latent_scales"].copy(),
+            latent_codes=data["latent_codes"].copy(),
+            keyframe_mask=data["keyframe_mask"].copy(),
+            decoder_w1=data["decoder_w1"].copy(),
+            decoder_b1=data["decoder_b1"].copy(),
+            decoder_w2=data["decoder_w2"].copy(),
+            decoder_b2=data["decoder_b2"].copy(),
+        )
+
+
+def unique_edges(faces: np.ndarray) -> np.ndarray:
+    edges: set[tuple[int, int]] = set()
+    for a, b, c in faces.tolist():
+        for u, v in ((a, b), (b, c), (c, a)):
+            if u > v:
+                u, v = v, u
+            edges.add((u, v))
+    return np.asarray(sorted(edges), dtype=np.int32)
+
+
+def camera_project(
+    vertices: np.ndarray,
+    width: int,
+    height: int,
+    camera_z: float = 6.0,
+    focal_length: float = 2.2,
+) -> tuple[np.ndarray, np.ndarray]:
+    points = np.asarray(vertices, dtype=np.float32).copy()
+    depth = camera_z - points[:, 2]
+    safe_depth = np.where(depth < 0.1, 0.1, depth)
+    x = focal_length * points[:, 0] / safe_depth
+    y = focal_length * points[:, 1] / safe_depth
+    px = (width * 0.5 + x * width * 0.42).astype(np.int32)
+    py = (height * 0.5 - y * height * 0.42).astype(np.int32)
+    return np.stack([px, py], axis=1), safe_depth
+def draw_line(
+    image: np.ndarray,
+    x0: int,

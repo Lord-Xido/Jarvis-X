@@ -1,0 +1,200 @@
+#!/usr/bin/env python3
+"""
+Dr Moagi 3D Graphics Animation Autoencoder / Decoder Reference Engine.
+
+Purpose
+-------
+This single-file Python program demonstrates an end-to-end 3D animation
+processing pipeline:
+
+1. Generate or ingest a mesh animation as vertex frames.
+2. Normalize spatial coordinates into a codec-friendly representation.
+3. Build per-frame position/velocity features.
+4. Train a compact NumPy autoencoder using mini-batch gradient descent.
+5. Encode animation frames into a latent representation.
+6. Delta-code and quantize the latent timeline for compact storage.
+7. Decode, dequantize, and reconstruct the 3D animation.
+8. Measure reconstruction error and compression characteristics.
+9. Render preview frames with a tiny dependency-free software renderer.
+10. Export reconstructed geometry to OBJ and packet data to NPZ/JSON.
+
+The design is educational and operational rather than a replacement for
+production GPU codecs. It makes all transformations explicit and inspectable.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+import struct
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Iterable, Iterator, Optional, Sequence
+
+import numpy as np
+
+
+EPS = 1.0e-8
+FORMAT_VERSION = 1
+
+
+@dataclass
+class MeshFrame:
+    """One animation frame containing vertex positions and triangle faces."""
+
+    vertices: np.ndarray
+    faces: np.ndarray
+    timestamp: float = 0.0
+
+    def validate(self) -> None:
+        vertices = np.asarray(self.vertices)
+        faces = np.asarray(self.faces)
+        if vertices.ndim != 2 or vertices.shape[1] != 3:
+            raise ValueError("vertices must have shape [vertex_count, 3]")
+        if faces.ndim != 2 or faces.shape[1] != 3:
+            raise ValueError("faces must have shape [triangle_count, 3]")
+        if vertices.dtype.kind not in "fc":
+            raise TypeError("vertices must be floating point")
+        if faces.dtype.kind not in "iu":
+            raise TypeError("faces must be integer indices")
+        if faces.size and (faces.min() < 0 or faces.max() >= len(vertices)):
+            raise ValueError("face index is outside the vertex array")
+
+    def copy(self) -> "MeshFrame":
+        return MeshFrame(
+            vertices=self.vertices.copy(),
+            faces=self.faces.copy(),
+            timestamp=float(self.timestamp),
+        )
+
+
+@dataclass
+class AnimationClip:
+    """Ordered sequence of mesh frames with constant topology."""
+
+    frames: list[MeshFrame]
+    fps: float = 30.0
+    name: str = "clip"
+
+    def validate(self) -> None:
+        if not self.frames:
+            raise ValueError("animation must contain at least one frame")
+        if self.fps <= 0.0:
+            raise ValueError("fps must be positive")
+        vertex_count = len(self.frames[0].vertices)
+        faces = self.frames[0].faces
+        for frame in self.frames:
+            frame.validate()
+            if len(frame.vertices) != vertex_count:
+                raise ValueError("all frames must have the same vertex count")
+            if frame.faces.shape != faces.shape or not np.array_equal(frame.faces, faces):
+                raise ValueError("all frames must share the same topology")
+
+    @property
+    def frame_count(self) -> int:
+        return len(self.frames)
+
+    @property
+    def vertex_count(self) -> int:
+        return len(self.frames[0].vertices)
+
+    @property
+    def duration(self) -> float:
+        return self.frame_count / self.fps
+
+    def vertex_tensor(self, dtype=np.float32) -> np.ndarray:
+        return np.stack([f.vertices for f in self.frames], axis=0).astype(dtype)
+
+
+@dataclass
+class CodecConfig:
+    """Hyperparameters for the autoencoder and latent stream codec."""
+
+    latent_dim: int = 12
+    hidden_dim: int = 48
+    epochs: int = 400
+    batch_size: int = 16
+    learning_rate: float = 0.01
+    l2_weight: float = 1.0e-5
+    velocity_weight: float = 0.25
+    quant_bits: int = 12
+    keyframe_interval: int = 12
+    seed: int = 1337
+
+    def validate(self) -> None:
+        if self.latent_dim <= 0:
+            raise ValueError("latent_dim must be positive")
+        if self.hidden_dim <= 0:
+            raise ValueError("hidden_dim must be positive")
+        if self.epochs <= 0:
+            raise ValueError("epochs must be positive")
+        if self.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+        if self.learning_rate <= 0.0:
+            raise ValueError("learning_rate must be positive")
+        if not 2 <= self.quant_bits <= 16:
+            raise ValueError("quant_bits must be in [2, 16]")
+        if self.keyframe_interval <= 0:
+            raise ValueError("keyframe_interval must be positive")
+
+
+@dataclass
+class NormalizationState:
+    """Affine normalization parameters shared by an entire clip."""
+
+    center: np.ndarray
+    scale: float
+
+    def normalize(self, vertices: np.ndarray) -> np.ndarray:
+        return (vertices - self.center) / max(self.scale, EPS)
+
+    def denormalize(self, vertices: np.ndarray) -> np.ndarray:
+        return vertices * self.scale + self.center
+
+
+@dataclass
+class QuantizationState:
+    """Per-latent-channel symmetric quantization scale."""
+
+    scales: np.ndarray
+    bits: int
+
+
+@dataclass
+class EncodedPacket:
+    """Serializable output of the animation codec."""
+
+    version: int
+    fps: float
+    frame_count: int
+    vertex_count: int
+    faces: np.ndarray
+    center: np.ndarray
+    scale: float
+    feature_dim: int
+    latent_dim: int
+    keyframe_interval: int
+    quant_bits: int
+    latent_scales: np.ndarray
+    latent_codes: np.ndarray
+    keyframe_mask: np.ndarray
+    decoder_w1: np.ndarray
+    decoder_b1: np.ndarray
+    decoder_w2: np.ndarray
+    decoder_b2: np.ndarray
+
+
+class RunningStats:
+    """Numerically stable scalar telemetry helper."""
+
+    def __init__(self) -> None:
+        self.count = 0
+        self.mean = 0.0
+        self.m2 = 0.0
+
+    def update(self, value: float) -> None:
+        self.count += 1
+        delta = value - self.mean
