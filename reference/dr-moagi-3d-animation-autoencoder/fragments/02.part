@@ -1,0 +1,199 @@
+    return positions.reshape(len(features), vertex_count, 3).astype(np.float32)
+
+
+def mse(a: np.ndarray, b: np.ndarray) -> float:
+    diff = np.asarray(a, dtype=np.float64) - np.asarray(b, dtype=np.float64)
+    return float(np.mean(diff * diff))
+
+
+def rmse(a: np.ndarray, b: np.ndarray) -> float:
+    return math.sqrt(max(mse(a, b), 0.0))
+
+
+def max_abs_error(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.max(np.abs(np.asarray(a) - np.asarray(b))))
+
+
+def psnr(a: np.ndarray, b: np.ndarray, peak: float = 2.0) -> float:
+    error = mse(a, b)
+    if error <= EPS:
+        return float("inf")
+    return 20.0 * math.log10(peak) - 10.0 * math.log10(error)
+
+
+def stable_tanh(x: np.ndarray) -> np.ndarray:
+    return np.tanh(np.clip(x, -15.0, 15.0))
+
+
+def tanh_derivative_from_output(y: np.ndarray) -> np.ndarray:
+    return 1.0 - y * y
+
+
+def xavier(rng: np.random.Generator, fan_in: int, fan_out: int) -> np.ndarray:
+    limit = math.sqrt(6.0 / max(fan_in + fan_out, 1))
+    return rng.uniform(-limit, limit, size=(fan_in, fan_out)).astype(np.float32)
+
+
+class DenseAutoencoder:
+    """Small two-layer encoder and two-layer decoder implemented in NumPy."""
+
+    def __init__(self, input_dim: int, config: CodecConfig) -> None:
+        self.input_dim = int(input_dim)
+        self.config = config
+        self.rng = np.random.default_rng(config.seed)
+        h = config.hidden_dim
+        z = config.latent_dim
+        self.enc_w1 = xavier(self.rng, input_dim, h)
+        self.enc_b1 = np.zeros(h, dtype=np.float32)
+        self.enc_w2 = xavier(self.rng, h, z)
+        self.enc_b2 = np.zeros(z, dtype=np.float32)
+        self.dec_w1 = xavier(self.rng, z, h)
+        self.dec_b1 = np.zeros(h, dtype=np.float32)
+        self.dec_w2 = xavier(self.rng, h, input_dim)
+        self.dec_b2 = np.zeros(input_dim, dtype=np.float32)
+        self.history: list[float] = []
+
+    def encode(self, x: np.ndarray) -> np.ndarray:
+        h1 = stable_tanh(x @ self.enc_w1 + self.enc_b1)
+        z = stable_tanh(h1 @ self.enc_w2 + self.enc_b2)
+        return z.astype(np.float32)
+
+    def decode(self, z: np.ndarray) -> np.ndarray:
+        h2 = stable_tanh(z @ self.dec_w1 + self.dec_b1)
+        y = h2 @ self.dec_w2 + self.dec_b2
+        return y.astype(np.float32)
+
+    def reconstruct(self, x: np.ndarray) -> np.ndarray:
+        return self.decode(self.encode(x))
+
+    def _forward(self, x: np.ndarray) -> tuple[np.ndarray, ...]:
+        h1 = stable_tanh(x @ self.enc_w1 + self.enc_b1)
+        z = stable_tanh(h1 @ self.enc_w2 + self.enc_b2)
+        h2 = stable_tanh(z @ self.dec_w1 + self.dec_b1)
+        y = h2 @ self.dec_w2 + self.dec_b2
+        return h1, z, h2, y
+
+    def _train_batch(self, x: np.ndarray, learning_rate: float) -> float:
+        h1, z, h2, y = self._forward(x)
+        batch = max(len(x), 1)
+        error = y - x
+        loss = float(np.mean(error * error))
+        dy = (2.0 / (batch * self.input_dim)) * error
+        grad_dec_w2 = h2.T @ dy + self.config.l2_weight * self.dec_w2
+        grad_dec_b2 = dy.sum(axis=0)
+        dh2 = (dy @ self.dec_w2.T) * tanh_derivative_from_output(h2)
+        grad_dec_w1 = z.T @ dh2 + self.config.l2_weight * self.dec_w1
+        grad_dec_b1 = dh2.sum(axis=0)
+        dz = (dh2 @ self.dec_w1.T) * tanh_derivative_from_output(z)
+        grad_enc_w2 = h1.T @ dz + self.config.l2_weight * self.enc_w2
+        grad_enc_b2 = dz.sum(axis=0)
+        dh1 = (dz @ self.enc_w2.T) * tanh_derivative_from_output(h1)
+        grad_enc_w1 = x.T @ dh1 + self.config.l2_weight * self.enc_w1
+        grad_enc_b1 = dh1.sum(axis=0)
+        self.dec_w2 -= learning_rate * grad_dec_w2.astype(np.float32)
+        self.dec_b2 -= learning_rate * grad_dec_b2.astype(np.float32)
+        self.dec_w1 -= learning_rate * grad_dec_w1.astype(np.float32)
+        self.dec_b1 -= learning_rate * grad_dec_b1.astype(np.float32)
+        self.enc_w2 -= learning_rate * grad_enc_w2.astype(np.float32)
+        self.enc_b2 -= learning_rate * grad_enc_b2.astype(np.float32)
+        self.enc_w1 -= learning_rate * grad_enc_w1.astype(np.float32)
+        self.enc_b1 -= learning_rate * grad_enc_b1.astype(np.float32)
+        return loss
+
+    def fit(self, x: np.ndarray, verbose: bool = True) -> list[float]:
+        if x.ndim != 2 or x.shape[1] != self.input_dim:
+            raise ValueError("training matrix has the wrong shape")
+        n = len(x)
+        batch_size = min(self.config.batch_size, n)
+        for epoch in range(self.config.epochs):
+            order = self.rng.permutation(n)
+            epoch_stats = RunningStats()
+            progress = epoch / max(self.config.epochs - 1, 1)
+            lr = self.config.learning_rate * (0.25 + 0.75 * (1.0 - progress))
+            for start in range(0, n, batch_size):
+                indices = order[start:start + batch_size]
+                loss = self._train_batch(x[indices], lr)
+                epoch_stats.update(loss)
+            self.history.append(epoch_stats.mean)
+            report_every = max(self.config.epochs // 10, 1)
+            if verbose and (epoch == 0 or (epoch + 1) % report_every == 0):
+                print(
+                    f"epoch {epoch + 1:4d}/{self.config.epochs} "
+                    f"loss={epoch_stats.mean:.8f} lr={lr:.6f}"
+                )
+        return self.history
+
+
+class FeatureStandardizer:
+    """Per-feature standardization for stable autoencoder optimization."""
+
+    def __init__(self) -> None:
+        self.mean: Optional[np.ndarray] = None
+        self.std: Optional[np.ndarray] = None
+
+    def fit(self, x: np.ndarray) -> "FeatureStandardizer":
+        self.mean = x.mean(axis=0).astype(np.float32)
+        std = x.std(axis=0).astype(np.float32)
+        self.std = np.where(std < 1.0e-5, 1.0, std).astype(np.float32)
+        return self
+
+    def transform(self, x: np.ndarray) -> np.ndarray:
+        if self.mean is None or self.std is None:
+            raise RuntimeError("standardizer has not been fitted")
+        return ((x - self.mean) / self.std).astype(np.float32)
+
+    def inverse_transform(self, x: np.ndarray) -> np.ndarray:
+        if self.mean is None or self.std is None:
+            raise RuntimeError("standardizer has not been fitted")
+        return (x * self.std + self.mean).astype(np.float32)
+
+
+class LatentDeltaCodec:
+    """Keyframe-aware temporal delta coding with symmetric integer quantization."""
+
+    def __init__(self, bits: int = 12, keyframe_interval: int = 12) -> None:
+        self.bits = int(bits)
+        self.keyframe_interval = int(keyframe_interval)
+        self.qmax = (1 << (bits - 1)) - 1
+
+    def _make_delta_stream(self, latent: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        delta = np.zeros_like(latent, dtype=np.float32)
+        mask = np.zeros(len(latent), dtype=np.uint8)
+        for index in range(len(latent)):
+            is_key = index == 0 or index % self.keyframe_interval == 0
+            if is_key:
+                delta[index] = latent[index]
+                mask[index] = 1
+            else:
+                delta[index] = latent[index] - latent[index - 1]
+        return delta, mask
+
+    def _restore_delta_stream(self, delta: np.ndarray, mask: np.ndarray) -> np.ndarray:
+        latent = np.zeros_like(delta, dtype=np.float32)
+        for index in range(len(delta)):
+            if index == 0 or mask[index]:
+                latent[index] = delta[index]
+            else:
+                latent[index] = latent[index - 1] + delta[index]
+        return latent
+
+    def quantize(self, latent: np.ndarray) -> tuple[np.ndarray, QuantizationState, np.ndarray]:
+        delta, mask = self._make_delta_stream(latent)
+        peak = np.max(np.abs(delta), axis=0)
+        scales = np.where(peak < EPS, 1.0, peak / self.qmax).astype(np.float32)
+        quantized = np.rint(delta / scales).clip(-self.qmax, self.qmax)
+        dtype = np.int8 if self.bits <= 8 else np.int16
+        return quantized.astype(dtype), QuantizationState(scales, self.bits), mask
+
+    def dequantize(
+        self,
+        codes: np.ndarray,
+        state: QuantizationState,
+        mask: np.ndarray,
+    ) -> np.ndarray:
+        delta = codes.astype(np.float32) * state.scales.astype(np.float32)
+        return self._restore_delta_stream(delta, mask)
+
+
+class AnimationAutoCodec:
+    """Orchestrates normalization, neural autoencoding, temporal coding and decode."""
