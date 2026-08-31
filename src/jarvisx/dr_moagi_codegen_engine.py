@@ -17,7 +17,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import BinaryIO, Sequence
+from typing import BinaryIO, Sequence, cast
 
 from jarvisx.dr_moagi_3d_animation_codec import EXPECTED_SHA256
 
@@ -307,7 +307,7 @@ def generate_sharded(
     with ThreadPoolExecutor(max_workers=worker_count) as pool:
         shards = list(pool.map(emit, plan))
     elapsed = max(time.perf_counter() - started, 1.0e-12)
-    bytes_emitted = sum(int(item["bytes"]) for item in shards)
+    bytes_emitted = sum(cast(int, item["bytes"]) for item in shards)
     lps = config.lines / elapsed
     manifest: dict[str, object] = {
         "schema": "jarvisx.dr-moagi-codegen.v1",
