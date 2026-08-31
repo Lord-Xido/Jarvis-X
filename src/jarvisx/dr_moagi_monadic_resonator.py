@@ -138,7 +138,9 @@ class MonadicResonator:
             max_abs_value=self.config.max_abs_value,
         )
 
-    def integrate(self, latent_start: Sequence[float], t_start: float) -> tuple[Vector, Vector, int]:
+    def integrate(
+        self, latent_start: Sequence[float], t_start: float
+    ) -> tuple[Vector, Vector, int]:
         """Integrate f_theta over one configured interval.
 
         Returns ``(latent_end, accumulated_integral, derivative_evaluations)``.
@@ -165,12 +167,15 @@ class MonadicResonator:
                 evaluations += 1
             else:
                 k1 = self._dynamics(current, tau)
-                k2 = self._dynamics(_add(current, _scale(k1, 0.5 * step_size)), tau + 0.5 * step_size)
-                k3 = self._dynamics(_add(current, _scale(k2, 0.5 * step_size)), tau + 0.5 * step_size)
+                k2 = self._dynamics(
+                    _add(current, _scale(k1, 0.5 * step_size)), tau + 0.5 * step_size
+                )
+                k3 = self._dynamics(
+                    _add(current, _scale(k2, 0.5 * step_size)), tau + 0.5 * step_size
+                )
                 k4 = self._dynamics(_add(current, _scale(k3, step_size)), tau + step_size)
                 weighted = tuple(
-                    (a + 2.0 * b + 2.0 * c + d) / 6.0
-                    for a, b, c, d in zip(k1, k2, k3, k4)
+                    (a + 2.0 * b + 2.0 * c + d) / 6.0 for a, b, c, d in zip(k1, k2, k3, k4)
                 )
                 current = _add(current, _scale(weighted, step_size))
                 evaluations += 4
@@ -284,7 +289,9 @@ def _parse_state(raw: str) -> Vector:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run the DM-vOmegaXi+ monadic latent-flow recurrence")
+    parser = argparse.ArgumentParser(
+        description="Run the DM-vOmegaXi+ monadic latent-flow recurrence"
+    )
     parser.add_argument("--state", type=_parse_state, default=(1.0, 0.5, -0.25))
     parser.add_argument("--steps", type=int, default=1)
     parser.add_argument("--substeps", type=int, default=16)
