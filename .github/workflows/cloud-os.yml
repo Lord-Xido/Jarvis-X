@@ -1,0 +1,105 @@
+name: Dr Moagi Cloud OS
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/jarvisx/cloud_os.py"
+      - "src/jarvisx/cloud_service.py"
+      - "src/jarvisx/bytecode3d.py"
+      - "src/jarvisx/qvector3d.py"
+      - "src/jarvisx/qvector_cloud.py"
+      - "src/jarvisx/qvector_bytecode3d.py"
+      - "src/jarvisx/qvector_v2.py"
+      - "src/jarvisx/qvector_field_bytecode.py"
+      - "tests/test_cloud_os.py"
+      - "tests/test_cloud_service.py"
+      - "tests/test_cloud_service_v2.py"
+      - "tests/test_bytecode3d.py"
+      - "tests/test_qvector3d.py"
+      - "tests/test_qvector_v2.py"
+      - "tests/test_qvector_field_bytecode.py"
+      - "tests/test_qvector_optimizer_v2.py"
+      - "docs/DR_MOAGI_CLOUD_OS.md"
+      - "docs/DR_MOAGI_BYTECODE3D.md"
+      - "docs/DR_MOAGI_QVECTOR3D.md"
+      - "docs/DR_MOAGI_QVECTOR3D_V2.md"
+      - "examples/bytecode3d_demo.py"
+      - "examples/qvector3d_demo.py"
+      - "examples/qvector_field_v2_demo.py"
+      - "Dockerfile.cloud"
+      - "docker-compose.cloud.yml"
+      - ".github/workflows/cloud-os.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cloud-os:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: python -m pip install -e ".[test]"
+
+      - name: Compile
+        run: >-
+          python -m compileall -q
+          src/jarvisx/cloud_os.py
+          src/jarvisx/cloud_service.py
+          src/jarvisx/bytecode3d.py
+          src/jarvisx/qvector3d.py
+          src/jarvisx/qvector_cloud.py
+          src/jarvisx/qvector_bytecode3d.py
+          src/jarvisx/qvector_v2.py
+          src/jarvisx/qvector_field_bytecode.py
+          tests/test_cloud_os.py
+          tests/test_cloud_service.py
+          tests/test_cloud_service_v2.py
+          tests/test_bytecode3d.py
+          tests/test_qvector3d.py
+          tests/test_qvector_v2.py
+          tests/test_qvector_field_bytecode.py
+          tests/test_qvector_optimizer_v2.py
+          examples/bytecode3d_demo.py
+          examples/qvector3d_demo.py
+          examples/qvector_field_v2_demo.py
+
+      - name: Test cloud OS, scalar bytecode, and Q16.16x3 engines
+        run: >-
+          pytest -q
+          tests/test_cloud_os.py
+          tests/test_cloud_service.py
+          tests/test_cloud_service_v2.py
+          tests/test_bytecode3d.py
+          tests/test_qvector3d.py
+          tests/test_qvector_v2.py
+          tests/test_qvector_field_bytecode.py
+          tests/test_qvector_optimizer_v2.py
+          --no-cov
+
+      - name: Run scalar bytecode smoke demo
+        env:
+          JARVISX_CLOUD_LEDGER: /tmp/jarvisx-cloud-os-demo-ledger.jsonl
+        run: python examples/bytecode3d_demo.py
+
+      - name: Run Q16.16x3 bytecode smoke demo
+        run: python examples/qvector3d_demo.py
+
+      - name: Run Q16.16x3 field-engine v2 smoke demo
+        run: python examples/qvector_field_v2_demo.py
+
+      - name: Import API
+        env:
+          JARVISX_CLOUD_LEDGER: /tmp/jarvisx-cloud-os-ledger.jsonl
+        run: >-
+          python -c "from jarvisx.cloud_service import app; assert app.title; assert app.version == '2.0.0'"
+
+      - name: Build container
+        run: docker build -f Dockerfile.cloud -t jarvisx-cloud-os:pr .

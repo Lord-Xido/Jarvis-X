@@ -1,0 +1,14 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    JARVISX_CLOUD_LEDGER=/app/state/cloud-os-ledger.jsonl
+
+WORKDIR /app
+COPY . /app
+RUN python -m pip install --no-cache-dir .
+
+RUN mkdir -p /app/state
+EXPOSE 8080
+
+CMD ["python", "-m", "uvicorn", "jarvisx.cloud_service:app", "--host", "0.0.0.0", "--port", "8080"]
