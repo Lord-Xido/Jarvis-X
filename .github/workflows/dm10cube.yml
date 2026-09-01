@@ -1,0 +1,55 @@
+name: DM10Cube Sparse Self-Codec
+
+on:
+  push:
+    paths:
+      - "reference/dm10cube/**"
+      - ".github/workflows/dm10cube.yml"
+  pull_request:
+    paths:
+      - "reference/dm10cube/**"
+      - ".github/workflows/dm10cube.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate exact 10 MiB source
+        run: |
+          mkdir -p build/dm10cube
+          python3 reference/dm10cube/generate_dm10cube.py \
+            --output build/dm10cube/dm10cube_10MiB.cpp \
+            --print-sha256 | tee build/dm10cube/generation.txt
+          test "$(stat -c %s build/dm10cube/dm10cube_10MiB.cpp)" = "10485760"
+      - name: Compile strict C++17 runtime
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic \
+            build/dm10cube/dm10cube_10MiB.cpp \
+            -o build/dm10cube/dm10cube-linux-x64
+      - name: Execute complete transactional self-cycle
+        run: |
+          build/dm10cube/dm10cube-linux-x64 \
+            --source build/dm10cube/dm10cube_10MiB.cpp \
+            --rom build/dm10cube/dm10cube.rom \
+            --reconstructed build/dm10cube/reconstructed.cpp \
+            --ply build/dm10cube/active_field.ply \
+            --steps 4 --inward-every 1 --self-test \
+            | tee build/dm10cube/runtime.txt
+          cmp build/dm10cube/dm10cube_10MiB.cpp build/dm10cube/reconstructed.cpp
+          sha256sum build/dm10cube/* > build/dm10cube/SHA256SUMS.txt
+      - name: Upload generated runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dm10cube-runtime-${{ github.sha }}
+          path: build/dm10cube/
+          if-no-files-found: error
+          retention-days: 30
