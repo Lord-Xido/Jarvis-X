@@ -41,6 +41,7 @@ The symbolic vocabulary used in the research documents maps to ordinary engineer
 | Bytecode VM | parser, assembler, decoder, registers and minimal 64-bit instruction execution | Alpha |
 | Core ISA | `SET`, `ADD`, `SUB`, `HALT` | Alpha |
 | Runtime controls | policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
+| Universal bitcode IR | typed lossless container for text, documents, images, audio, video, 3D, code, models and arbitrary binary data | Stable reference |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
@@ -98,6 +99,20 @@ Adaptive reflex correction is also explicit and disabled by default:
 ```python
 vm = CodexVM(enable_reflex=True)
 ```
+
+### Compile any digital artifact into universal bitcode
+
+```bash
+jarvisx-universal-bitcode cycle scene.glb scene.jxbi
+jarvisx-universal-bitcode inspect scene.jxbi
+jarvisx-universal-bitcode decode scene.jxbi scene.restored.glb
+```
+
+The `.jxbi` envelope keeps the original bytes and their representation contract
+separate: format/media hints provide interpretation while per-chunk SHA-256,
+bounded decompression and a Merkle root protect exact reconstruction. `cycle`
+also proves that encode → decode → re-encode reaches the same canonical container.
+See [Universal Bitcode Permeation Runtime](docs/UNIVERSAL_BITCODE_PERMEATION_RUNTIME.md).
 
 ### Run fractional 3D smoothing
 
@@ -244,6 +259,7 @@ Every canonical subsystem should provide:
 - [10x10x10 inward 4D graph ANN](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md)
 - [Dr. Moagi 4D quantum-inspired autoencoding equation](docs/DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md)
 - [Hierarchical 3D fractional smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md)
+- [Universal bitcode permeation runtime](docs/UNIVERSAL_BITCODE_PERMEATION_RUNTIME.md)
 - [Roadmap](ROADMAP.md)
 - [Governance](GOVERNANCE.md)
 - [Security policy](SECURITY.md)

@@ -38,6 +38,7 @@ The project follows semantic versioning where practical during alpha development
 - dimensionally explicit central potential, shell/energy telemetry, and measured node-update throughput;
 - end-to-end Phase3D-to-implicit-field runtime with semantic, memory-budget, and minimum-throughput-improvement promotion gates;
 - interactive DM-vΩΞ⁺ Total Permeation 3D browser HUD with measured local render telemetry and an explicit external Phase3D telemetry bridge.
+- deterministic universal `.jxbi` bitcode envelopes with typed media contracts, bounded per-chunk codecs, SHA-256/Merkle verification, exact fixed-point cycling and an atomic CLI.
 
 ### Changed
 
