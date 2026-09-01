@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jarvis-X MMVM Full-Stack Operating Runtime</title>
+  <style>
+    :root { color-scheme:dark; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --bg:#030508; --panel:#070b12; --panel2:#0a111d; --border:#1d2a3d; --text:#dce8f8; --muted:#6f829e; --green:#56ff9a; --cyan:#51dfff; --hot:#ff4f88; }
+    *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);overflow:hidden}
+    .shell{display:grid;grid-template-columns:370px 1fr;height:100%} aside{background:linear-gradient(180deg,#080d16,#05070d);border-right:1px solid var(--border);padding:18px;overflow-y:auto} main{position:relative;min-width:0}
+    h1{font-size:16px;margin:0 0 6px;letter-spacing:.08em}.sub{color:var(--muted);font-size:11px;line-height:1.5;margin-bottom:14px} label{display:block;color:#93a8c5;font-size:10px;text-transform:uppercase;margin:10px 0 5px;letter-spacing:.08em}
+    textarea,select,input,button{width:100%;border:1px solid var(--border);border-radius:5px;background:var(--panel2);color:var(--text);font:inherit} textarea{min-height:100px;resize:vertical;padding:10px}select,input{padding:9px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    button{padding:10px;cursor:pointer;text-transform:uppercase;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--green);border-color:#1f7548;background:rgba(26,120,70,.12)}button:hover{background:rgba(61,255,145,.2);box-shadow:0 0 18px rgba(81,255,154,.12)}button.hot{color:var(--hot);border-color:#74304a;background:rgba(255,79,136,.08)}
+    .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}.metric{padding:9px;border:1px solid var(--border);border-radius:5px;background:rgba(4,8,14,.72)}.metric b{display:block;color:var(--cyan);font-size:13px;margin-top:3px;word-break:break-all}.metric span{color:var(--muted);font-size:9px;text-transform:uppercase}
+    pre{background:#010306;border:1px solid var(--border);border-radius:5px;padding:10px;color:#7e94b3;font-size:10px;white-space:pre-wrap;word-break:break-word}#log{height:170px;overflow-y:auto}#glScene{width:100%;height:100%;display:block;background:#000}
+    .hud{position:absolute;inset:14px 14px auto 14px;display:flex;justify-content:space-between;pointer-events:none;gap:10px}.hud-card{background:rgba(4,8,15,.72);border:1px solid rgba(80,130,180,.25);border-radius:6px;padding:9px 11px;backdrop-filter:blur(7px);font-size:10px;color:#8ea7c7}.hud-card strong{color:#dfffea}
+    .artifact{position:absolute;right:14px;bottom:14px;width:min(430px,42vw);background:rgba(4,8,15,.86);border:1px solid var(--border);border-radius:7px;padding:10px;backdrop-filter:blur(8px)}.artifact a{color:var(--green);text-decoration:none}.artifact img{max-width:100%;max-height:230px;display:block;margin-top:8px;border-radius:4px}
+    @media(max-width:900px){.shell{grid-template-columns:1fr;grid-template-rows:48vh 52vh;overflow:auto}html,body{overflow:auto}aside{border-right:0;border-bottom:1px solid var(--border)}.artifact{width:calc(100% - 28px)}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <h1>JARVIS-X · MMVM MICROKERNEL</h1>
+    <div class="sub">1,000,000 GB sparse 3D virtual memory · lossless auto-encoding/decoding · Λ projection · Ω persistence · multimodal generation · GPU telemetry bloom</div>
+    <label for="prompt">Input payload</label>
+    <textarea id="prompt">Auto encode and decode the active multimodal system state through the sparse 3D MMVM fabric.</textarea>
+    <div class="row"><div><label for="modality">Input modality</label><select id="modality"><option>text</option><option>image</option><option>audio</option><option>video</option><option>3d</option><option>binary</option></select></div><div><label for="target">Generate</label><select id="target"><option value="">none</option><option>text</option><option>image</option><option>audio</option><option>video</option><option>3d</option></select></div></div>
+    <label for="file">Optional binary input</label><input id="file" type="file" />
+    <div class="row" style="margin-top:10px"><button id="submit">Submit task</button><button id="cycle" class="hot">Execute cycle</button></div>
+    <div class="metric-grid">
+      <div class="metric"><span>Cycle</span><b id="mCycle">0</b></div><div class="metric"><span>Queue</span><b id="mQueue">0</b></div>
+      <div class="metric"><span>|Ξ̇|</span><b id="mActivity">0.000000</b></div><div class="metric"><span>Λ Gate</span><b id="mLambda">READY</b></div>
+      <div class="metric"><span>Ω Activation</span><b id="mOmega">0.000000</b></div><div class="metric"><span>Resident Objects</span><b id="mResident">0</b></div>
+      <div class="metric"><span>Virtual Cells</span><b>10¹⁵</b></div><div class="metric"><span>Virtual Side</span><b>100000³</b></div>
+    </div>
+    <label>Kernel log</label><pre id="log">[BOOT] connecting to MMVM kernel...</pre>
+  </aside>
+  <main>
+    <canvas id="glScene"></canvas>
+    <div class="hud"><div class="hud-card"><strong>Observe → Encode → Ξ → ΠΛ → Decode → Ω → Commit</strong></div><div class="hud-card" id="gpuMode">WebGL2: initializing</div></div>
+    <div class="artifact"><div style="color:#7387a3;font-size:10px">LATEST ARTIFACT</div><div id="artifactContent" style="margin-top:6px;color:#c8d8ed;font-size:11px">No artifact generated yet.</div></div>
+  </main>
+</div>
+<script>
+(() => {
+  const $=id=>document.getElementById(id), logBox=$('log');
+  function log(message){const stamp=new Date().toLocaleTimeString();logBox.textContent+=`\n[${stamp}] ${message}`;logBox.scrollTop=logBox.scrollHeight}
+  let telemetry={cycle:0,queue_depth:0,omega:{activation:0},memory:{resident_objects:0},last_metrics:null};
+
+  async function fileToBase64(file){const buffer=await file.arrayBuffer(),bytes=new Uint8Array(buffer);let binary='';const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(bytes.length,i+chunk)));return btoa(binary)}
+  async function submitTask(){const file=$('file').files[0],body={modality:$('modality').value,generate:$('target').value||null};if(file)body.payload_base64=await fileToBase64(file);else body.text=$('prompt').value;const response=await fetch('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),data=await response.json();if(!response.ok)throw new Error(data.detail||JSON.stringify(data));log(`task ${data.task_id.slice(0,12)} queued (${data.modality} → ${data.target||'memory'})`);watchTask(data.task_id)}
+  async function watchTask(taskId){for(let i=0;i<120;i++){await new Promise(r=>setTimeout(r,125));const response=await fetch(`/api/tasks/${taskId}`);if(!response.ok)continue;const task=await response.json();if(['committed','rejected','failed'].includes(task.state)){log(`task ${taskId.slice(0,12)} → ${task.state}`);if(task.artifact_id)showArtifact(task.artifact_id,task.target);return}}log(`task ${taskId.slice(0,12)} status polling timed out`)}
+  function showArtifact(id,target){const url=`/api/artifacts/${id}`,panel=$('artifactContent');panel.innerHTML=`<a href="${url}" target="_blank" rel="noopener">open ${target} artifact · ${id}</a>`;if(target==='image')panel.innerHTML+=`<img src="${url}" alt="MMVM generated artifact" />`;if(target==='audio')panel.innerHTML+=`<audio controls style="width:100%;margin-top:8px" src="${url}"></audio>`;if(target==='video')panel.innerHTML+=`<video controls style="width:100%;margin-top:8px" src="${url}"></video>`}
+  $('submit').addEventListener('click',()=>submitTask().catch(err=>log(`ERROR ${err.message}`)));
+  $('cycle').addEventListener('click',async()=>{try{const response=await fetch('/api/cycle',{method:'POST'}),data=await response.json();log(data.metrics?`manual cycle ${data.metrics.cycle} → ${data.metrics.state}`:'manual cycle: queue empty')}catch(err){log(`ERROR ${err.message}`)}});
+
+  function applyTelemetry(data){telemetry=data;$('mCycle').textContent=data.cycle??0;$('mQueue').textContent=data.queue_depth??0;$('mOmega').textContent=Number(data.omega?.activation||0).toFixed(6);$('mResident').textContent=data.memory?.resident_objects??0;const m=data.last_metrics;$('mActivity').textContent=Number(m?.xi_dot||0).toFixed(6);$('mLambda').textContent=m?(m.lambda_accepted?'ACCEPT':'REJECT'):'READY';$('mLambda').style.color=m&&!m.lambda_accepted?'#ff4f88':'#56ff9a'}
+  function connectTelemetry(){const protocol=location.protocol==='https:'?'wss':'ws',socket=new WebSocket(`${protocol}://${location.host}/ws/telemetry`);socket.onopen=()=>log('telemetry websocket anchored');socket.onmessage=e=>applyTelemetry(JSON.parse(e.data));socket.onclose=()=>{log('telemetry disconnected; retrying');setTimeout(connectTelemetry,1200)};socket.onerror=()=>socket.close()}connectTelemetry();
+
+  const canvas=$('glScene'),gl=canvas.getContext('webgl2',{antialias:false,alpha:false});if(!gl){$('gpuMode').textContent='WebGL2 unavailable';log('WebGL2 unavailable; control plane remains operational');return}const floatExt=gl.getExtension('EXT_color_buffer_float');$('gpuMode').textContent=floatExt?'WebGL2 · RGBA16F bloom':'WebGL2 · RGBA8 bloom fallback';
+  const vertex=`#version 300 es\nprecision highp float;layout(location=0) in vec2 a_position;out vec2 v_uv;void main(){v_uv=a_position*.5+.5;gl_Position=vec4(a_position,0.,1.);}`;
+  const sceneFrag=`#version 300 es
+precision highp float;in vec2 v_uv;out vec4 outColor;uniform vec2 u_resolution;uniform float u_time,u_activity,u_error,u_omega,u_lambda,u_cycle;
+float hash(vec3 p){p=fract(p*.1031);p+=dot(p,p.yzx+33.33);return fract((p.x+p.y)*p.z);}void main(){vec2 uv=(gl_FragCoord.xy-u_resolution*.5)/u_resolution.y;vec3 ro=vec3(0.,0.,-4.2+.25*sin(u_time*.18));vec3 rd=normalize(vec3(uv,1.15));float t=0.,density=0.;vec3 emission=vec3(0.);float activity=clamp(u_activity*18.,0.,3.5);for(int i=0;i<72;i++){vec3 p=ro+rd*t;float shell=abs(length(p)-1.25-.14*sin(p.x*5.+u_time*.7+u_cycle*.01));vec3 cell=floor((p+vec3(sin(u_time*.1)*.2))*7.);float h=hash(cell+floor(u_cycle*.05));float voxel=smoothstep(.955,.995,h)*(1.-smoothstep(.02,.11,shell));float core=exp(-7.5*dot(p,p));vec3 tone=mix(vec3(.08,1.15,.48),vec3(2.,.15,.62),clamp(u_error*4.+activity*.18,0.,1.));float e=(voxel*(.7+activity)+core*(1.+2.4*activity))*(.65+.35*u_lambda);emission+=tone*e/(1.+t*t*.09);density+=e*.035;t+=.075;if(t>7.2||density>1.2)break;}vec3 base=vec3(.006,.012,.025)+vec3(.015,.025,.04)*(1.-length(uv));base+=vec3(.03,.12,.08)*u_omega;outColor=vec4(base+emission*.13,1.);}`;
+  const brightFrag=`#version 300 es\nprecision highp float;in vec2 v_uv;out vec4 outColor;uniform sampler2D u_scene;uniform float u_threshold,u_softKnee;void main(){vec3 c=texture(u_scene,v_uv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));float m=smoothstep(u_threshold,u_threshold+u_softKnee,l);outColor=vec4(c*m,1.);}`;
+  const blurFrag=`#version 300 es\nprecision highp float;in vec2 v_uv;out vec4 outColor;uniform sampler2D u_image;uniform vec2 u_texel,u_direction;void main(){vec3 s=texture(u_image,v_uv).rgb*.227027;s+=texture(u_image,v_uv+u_direction*u_texel*1.384615).rgb*.316216;s+=texture(u_image,v_uv-u_direction*u_texel*1.384615).rgb*.316216;s+=texture(u_image,v_uv+u_direction*u_texel*3.230769).rgb*.070270;s+=texture(u_image,v_uv-u_direction*u_texel*3.230769).rgb*.070270;outColor=vec4(s,1.);}`;
+  const compositeFrag=`#version 300 es\nprecision highp float;in vec2 v_uv;out vec4 outColor;uniform sampler2D u_scene,u_bloom;uniform float u_intensity;void main(){vec3 c=texture(u_scene,v_uv).rgb+texture(u_bloom,v_uv).rgb*u_intensity;c=c/(vec3(1.)+c);c=pow(c,vec3(1./2.2));outColor=vec4(c,1.);}`;
+  function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s}function program(fs){const p=gl.createProgram();gl.attachShader(p,shader(gl.VERTEX_SHADER,vertex));gl.attachShader(p,shader(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));return p}
+  const sceneProgram=program(sceneFrag),brightProgram=program(brightFrag),blurProgram=program(blurFrag),compositeProgram=program(compositeFrag),quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);const vao=gl.createVertexArray();gl.bindVertexArray(vao);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  let targets=null;function makeTexture(w,h){const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);if(floatExt)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,w,h,0,gl.RGBA,gl.HALF_FLOAT,null);else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);return texture}function makeTarget(w,h){const texture=makeTexture(w,h),fbo=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('framebuffer incomplete');return{fbo,texture}}
+  function resize(){const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(2,Math.floor(canvas.clientWidth*dpr)),h=Math.max(2,Math.floor(canvas.clientHeight*dpr));if(canvas.width===w&&canvas.height===h&&targets)return;canvas.width=w;canvas.height=h;targets={scene:makeTarget(w,h),bright:makeTarget(w,h),ping:makeTarget(w,h),pong:makeTarget(w,h)}}window.addEventListener('resize',resize);resize();
+  function bindTarget(target){gl.bindFramebuffer(gl.FRAMEBUFFER,target?target.fbo:null);gl.viewport(0,0,canvas.width,canvas.height)}function bindTexture(unit,texture,uniform,p){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(gl.getUniformLocation(p,uniform),unit)}function draw(){gl.bindVertexArray(vao);gl.drawArrays(gl.TRIANGLES,0,6)}
+  function frame(ms){resize();const t=ms*.001,m=telemetry.last_metrics||{},activity=Number(m.xi_dot||0),error=Number(m.reconstruction_error||0),omega=Number(telemetry.omega?.activation||0),lambda=m.lambda_accepted===false?0:1,cycle=Number(telemetry.cycle||0);
+    bindTarget(targets.scene);gl.useProgram(sceneProgram);gl.uniform2f(gl.getUniformLocation(sceneProgram,'u_resolution'),canvas.width,canvas.height);gl.uniform1f(gl.getUniformLocation(sceneProgram,'u_time'),t);gl.uniform1f(gl.getUniformLocation(sceneProgram,'u_activity'),activity);gl.uniform1f(gl.getUniformLocation(sceneProgram,'u_error'),error);gl.uniform1f(gl.getUniformLocation(sceneProgram,'u_omega'),omega);gl.uniform1f(gl.getUniformLocation(sceneProgram,'u_lambda'),lambda);gl.uniform1f(gl.getUniformLocation(sceneProgram,'u_cycle'),cycle);draw();
+    bindTarget(targets.bright);gl.useProgram(brightProgram);bindTexture(0,targets.scene.texture,'u_scene',brightProgram);gl.uniform1f(gl.getUniformLocation(brightProgram,'u_threshold'),floatExt?.62:.48);gl.uniform1f(gl.getUniformLocation(brightProgram,'u_softKnee'),.35);draw();
+    let input=targets.bright.texture;for(let i=0;i<4;i++){const target=i%2===0?targets.ping:targets.pong;bindTarget(target);gl.useProgram(blurProgram);bindTexture(0,input,'u_image',blurProgram);gl.uniform2f(gl.getUniformLocation(blurProgram,'u_texel'),1/canvas.width,1/canvas.height);gl.uniform2f(gl.getUniformLocation(blurProgram,'u_direction'),i%2===0?1:0,i%2===0?0:1);draw();input=target.texture}
+    bindTarget(null);gl.useProgram(compositeProgram);bindTexture(0,targets.scene.texture,'u_scene',compositeProgram);bindTexture(1,input,'u_bloom',compositeProgram);const bloom=.55+Math.min(3.2,activity*22)+omega*.45+(1-lambda)*.85;gl.uniform1f(gl.getUniformLocation(compositeProgram,'u_intensity'),bloom);draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);log(`GPU render path active (${floatExt?'RGBA16F':'RGBA8'} scene → bright-pass → ping-pong blur → composite)`);
+})();
+</script>
+</body>
+</html>
