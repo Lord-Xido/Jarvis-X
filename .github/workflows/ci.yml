@@ -55,6 +55,7 @@ jobs:
           src/jarvisx/inward4d_ann.py
           src/jarvisx/kinetic_runtime.py
           src/jarvisx/dr_moagi_kinetic_system.py
+          src/jarvisx/dm_vomegaxi_mixed_signal.py
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           tests/test_vm.py
@@ -63,6 +64,7 @@ jobs:
           tests/test_inward4d_ann.py
           tests/test_kinetic_runtime.py
           tests/test_dr_moagi_kinetic_system.py
+          tests/test_dm_vomegaxi_mixed_signal.py
           tests/test_quantum_text.py
           tests/test_verification.py
 
@@ -77,6 +79,7 @@ jobs:
           src/jarvisx/inward4d_ann.py
           src/jarvisx/kinetic_runtime.py
           src/jarvisx/dr_moagi_kinetic_system.py
+          src/jarvisx/dm_vomegaxi_mixed_signal.py
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           tests/test_vm.py
@@ -85,6 +88,7 @@ jobs:
           tests/test_inward4d_ann.py
           tests/test_kinetic_runtime.py
           tests/test_dr_moagi_kinetic_system.py
+          tests/test_dm_vomegaxi_mixed_signal.py
           tests/test_quantum_text.py
           tests/test_verification.py
 

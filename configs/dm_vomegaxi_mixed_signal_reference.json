@@ -1,0 +1,42 @@
+{
+  "schema": "jarvisx.dm-vomegaxi-mixed-signal-reference/v1",
+  "law_id": "DM-vOmegaXi+",
+  "mode": "bit-serial-mixed-signal-reference",
+  "operator_stack": [
+    "Psi",
+    "Phi",
+    "Lambda",
+    "Omega",
+    "Theta",
+    "hardware-interlock",
+    "PDM"
+  ],
+  "digital_defaults": {
+    "sensor_channels": 1,
+    "oversample": 16,
+    "sensor_range": [-1.0, 1.0],
+    "score_bound": 16,
+    "memory_words": 4,
+    "omega_rotate_bits": 1,
+    "omega_persistence_mask": 0,
+    "pdm_period": 32,
+    "max_duty_cycle": 0.9,
+    "max_outputs": 64,
+    "fixed_point_tolerance": 0.0
+  },
+  "hardware_limits": {
+    "required": true,
+    "defaults_provided": false,
+    "fields": [
+      "max_abs_current_a",
+      "max_abs_voltage_v",
+      "max_temperature_c",
+      "watchdog_timeout_ticks",
+      "min_dead_time_ticks"
+    ]
+  },
+  "hardware_io": false,
+  "gate_frames_are_logic_intent_only": true,
+  "zero_latency_claim": false,
+  "fixed_point_scope": "finite internal controller state only"
+}
