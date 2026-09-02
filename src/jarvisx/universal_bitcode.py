@@ -99,14 +99,17 @@ def _canonical_json(value: object) -> bytes:
             sort_keys=True,
             separators=(",", ":"),
         )
-    except (TypeError, ValueError) as exc:
+    except (RecursionError, TypeError, ValueError) as exc:
         raise BitcodeFormatError("value is not canonical JSON data") from exc
     return text.encode("utf-8")
 
 
 def _normalized_mapping(value: Mapping[str, Any]) -> dict[str, Any]:
     raw = _canonical_json(dict(value))
-    normalized = json.loads(raw.decode("utf-8"))
+    try:
+        normalized = json.loads(raw.decode("utf-8"))
+    except RecursionError as exc:
+        raise BitcodeFormatError("metadata exceeds the supported JSON nesting depth") from exc
     if not isinstance(normalized, dict):
         raise BitcodeFormatError("metadata must be a JSON object")
     return normalized
@@ -561,7 +564,7 @@ def detect_contract(data: bytes, *, source_name: str = "") -> RepresentationCont
         if stripped.startswith((b"{", b"[")):
             try:
                 json.loads(raw.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError):
+            except (RecursionError, UnicodeDecodeError, json.JSONDecodeError):
                 pass
             else:
                 detected = _Detection(MediaKind.DOCUMENT, "application/json", "json", "utf8+json")
@@ -715,12 +718,16 @@ class UniversalBitcodeRuntime:
             container_sha256=parsed.container_sha256,
         )
 
-    def verify(self, container: bytes | bytearray | memoryview) -> VerificationReport:
+    def decode_and_verify(
+        self, container: bytes | bytearray | memoryview
+    ) -> tuple[DecodedArtifact, VerificationReport]:
+        """Decode once and return both the verified artifact and its report."""
+
         raw_container = bytes(container)
         decoded = self.decode(raw_container)
         manifest = decoded.manifest
         codecs = Counter(chunk.codec for chunk in manifest.chunks)
-        return VerificationReport(
+        report = VerificationReport(
             valid=True,
             container_sha256=decoded.container_sha256,
             raw_sha256=manifest.raw_sha256,
@@ -735,6 +742,13 @@ class UniversalBitcodeRuntime:
             media_type=manifest.contract.media_type,
             format_name=manifest.contract.format_name,
         )
+        return decoded, report
+
+    def verify(self, container: bytes | bytearray | memoryview) -> VerificationReport:
+        """Fully decode a container and return its integrity report."""
+
+        _, report = self.decode_and_verify(container)
+        return report
 
     def close_loop(
         self,
@@ -809,7 +823,7 @@ class UniversalBitcodeRuntime:
             raise IntegrityError("payload digest mismatch")
         try:
             manifest_value = json.loads(manifest_bytes.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        except (RecursionError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise BitcodeFormatError("manifest is not valid UTF-8 JSON") from exc
         if _canonical_json(manifest_value) != manifest_bytes:
             raise BitcodeFormatError("manifest is not canonical JSON")

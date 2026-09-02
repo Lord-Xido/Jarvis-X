@@ -86,7 +86,10 @@ def _read_bounded(path: Path, runtime: UniversalBitcodeRuntime, *, container: bo
 
 
 def _metadata(value: str) -> dict[str, Any]:
-    parsed = json.loads(value)
+    try:
+        parsed = json.loads(value)
+    except RecursionError as exc:
+        raise ValueError("--metadata exceeds the supported JSON nesting depth") from exc
     if not isinstance(parsed, dict):
         raise ValueError("--metadata must decode to a JSON object")
     return parsed
@@ -179,9 +182,9 @@ def _run(args: argparse.Namespace, runtime: UniversalBitcodeRuntime) -> int:
         return 0
     if args.command == "decode":
         _distinct_paths(args.input, args.output)
-        decoded = runtime.decode(container)
+        decoded, verification = runtime.decode_and_verify(container)
         _atomic_write(args.output, decoded.data, force=args.force)
-        report = runtime.verify(container).as_dict()
+        report = verification.as_dict()
         report["output"] = str(args.output)
         _emit(report)
         return 0

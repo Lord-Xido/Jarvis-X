@@ -317,6 +317,21 @@ def test_invalid_utf8_manifest_is_rejected_after_digest_validation() -> None:
         runtime.inspect(broken)
 
 
+def test_over_nested_manifest_is_reported_as_a_format_error() -> None:
+    runtime = ub.UniversalBitcodeRuntime()
+    container = runtime.encode(b"")
+    fields = list(ub.HEADER.unpack_from(container))
+    old_size = fields[3]
+    payload = container[ub.HEADER_SIZE + old_size :]
+    depth = 100_000
+    manifest_bytes = b"[" * depth + b"0" + b"]" * depth
+    fields[3] = len(manifest_bytes)
+    fields[7] = sha256(manifest_bytes).digest()
+    broken = ub.HEADER.pack(*fields) + manifest_bytes + payload
+    with pytest.raises(ub.BitcodeFormatError, match="UTF-8 JSON"):
+        runtime.inspect(broken)
+
+
 def test_manifest_and_header_identities_must_agree() -> None:
     runtime = ub.UniversalBitcodeRuntime()
     container = runtime.encode(b"identities")
@@ -532,6 +547,35 @@ def test_cli_cycle_inspect_verify_and_decode(
 
     assert cli_main(["decode", str(container), str(restored)]) == 0
     capsys.readouterr()
+    assert restored.read_bytes() == source.read_bytes()
+
+
+def test_cli_decode_decompresses_the_container_once(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "source.txt"
+    container = tmp_path / "source.jxbi"
+    restored = tmp_path / "source.restored.txt"
+    source.write_text("bounded decode", encoding="utf-8")
+    assert cli_main(["encode", str(source), str(container)]) == 0
+    capsys.readouterr()
+
+    decode_calls = 0
+    original_decode = ub.UniversalBitcodeRuntime.decode
+
+    def counted_decode(
+        runtime: ub.UniversalBitcodeRuntime, data: bytes | bytearray | memoryview
+    ) -> ub.DecodedArtifact:
+        nonlocal decode_calls
+        decode_calls += 1
+        return original_decode(runtime, data)
+
+    monkeypatch.setattr(ub.UniversalBitcodeRuntime, "decode", counted_decode)
+    assert cli_main(["decode", str(container), str(restored)]) == 0
+    capsys.readouterr()
+    assert decode_calls == 1
     assert restored.read_bytes() == source.read_bytes()
 
 
