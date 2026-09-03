@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "cpp_runtime/include/jarvisx/world_engine_vmad.hpp"
+      - "cpp_runtime/include/jarvisx/bitwise_world500.hpp"
       - "cpp_runtime/include/jarvisx/recursive_cube_interpreter.hpp"
       - "cpp_runtime/src/world_engine_main.cpp"
       - "cpp_runtime/src/recursive_cube_main.cpp"
@@ -12,11 +13,13 @@ on:
       - "cpp_runtime/world_engine.cmake"
       - "cpp_runtime/CMakeLists.txt"
       - "docs/VMAD128_WORLD_ENGINE.md"
+      - "docs/DR_MOAGI_BITWISE_WORLD500.md"
       - "docs/RECURSIVE_CUBE_INTERPRETER.md"
       - ".github/workflows/world-engine-windows.yml"
   pull_request:
     paths:
       - "cpp_runtime/include/jarvisx/world_engine_vmad.hpp"
+      - "cpp_runtime/include/jarvisx/bitwise_world500.hpp"
       - "cpp_runtime/include/jarvisx/recursive_cube_interpreter.hpp"
       - "cpp_runtime/src/world_engine_main.cpp"
       - "cpp_runtime/src/recursive_cube_main.cpp"
@@ -25,6 +28,7 @@ on:
       - "cpp_runtime/world_engine.cmake"
       - "cpp_runtime/CMakeLists.txt"
       - "docs/VMAD128_WORLD_ENGINE.md"
+      - "docs/DR_MOAGI_BITWISE_WORLD500.md"
       - "docs/RECURSIVE_CUBE_INTERPRETER.md"
       - ".github/workflows/world-engine-windows.yml"
   workflow_dispatch:
@@ -89,6 +93,7 @@ jobs:
           Copy-Item "build/world-engine/Release/DrMoagi-World-Engine.exe" "$stage/DrMoagi-World-Engine.exe"
           Copy-Item "build/world-engine/Release/DrMoagi-Recursive-Cube.exe" "$stage/DrMoagi-Recursive-Cube.exe"
           Copy-Item "docs/VMAD128_WORLD_ENGINE.md" "$stage/VMAD128_WORLD_ENGINE.md"
+          Copy-Item "docs/DR_MOAGI_BITWISE_WORLD500.md" "$stage/DR_MOAGI_BITWISE_WORLD500.md"
           Copy-Item "docs/RECURSIVE_CUBE_INTERPRETER.md" "$stage/RECURSIVE_CUBE_INTERPRETER.md"
           $worldHash = (Get-FileHash "$stage/DrMoagi-World-Engine.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
           $cubeHash = (Get-FileHash "$stage/DrMoagi-Recursive-Cube.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -106,6 +111,7 @@ jobs:
             build/world-engine/package/DrMoagi-World-Engine.exe
             build/world-engine/package/DrMoagi-Recursive-Cube.exe
             build/world-engine/package/VMAD128_WORLD_ENGINE.md
+            build/world-engine/package/DR_MOAGI_BITWISE_WORLD500.md
             build/world-engine/package/RECURSIVE_CUBE_INTERPRETER.md
             build/world-engine/package/SHA256SUMS.txt
             build/world-engine/DrMoagi-World-Engine-Windows-x64.zip
