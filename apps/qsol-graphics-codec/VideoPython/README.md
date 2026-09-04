@@ -36,6 +36,7 @@ Optional: install `ffmpeg` on `PATH` to preserve/remux the source audio stream.
 ## Deterministic synthetic smoke test
 
 ```bash
+mkdir -p artifacts/mp4-ae
 python apps/qsol-graphics-codec/VideoPython/jarvisx_mp4_3d_autoencoder.py \
   --synthetic \
   --input artifacts/mp4-ae/synthetic.mp4 \
@@ -54,6 +55,7 @@ python apps/qsol-graphics-codec/VideoPython/jarvisx_mp4_3d_autoencoder.py \
 ## Real MP4
 
 ```bash
+mkdir -p artifacts/mp4-ae
 python apps/qsol-graphics-codec/VideoPython/jarvisx_mp4_3d_autoencoder.py \
   --input input.mp4 \
   --output artifacts/mp4-ae/reconstructed.mp4 \
