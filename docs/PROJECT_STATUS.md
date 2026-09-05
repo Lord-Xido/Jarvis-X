@@ -30,7 +30,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Trace and Omega journal | Stable reference | `tracer.py`, `ledger.py`, `ledger_store.py` | persistence is opt-in; timestamps are environmental inputs |
 | SystemRuntime control plane | Stable reference | `system_runtime.py`, `test_system_runtime.py`, ADR-007 | bounded task authority around the VM; not a host process sandbox |
 | Shared candidate admission receipt | Integration candidate | `candidate_contract.py`, `candidate_adapters.py`, focused tests, ADR-013 | backend-neutral commit/rollback evidence; migration of every optimizer is not yet complete |
-| Consolidated empirical validation v2 | Integration candidate | `empirical_validation_v2.py`, focused tests, retained JSON workflow artifact | verifies ten bounded software invariants only; no AGI, safety or production-performance inference |
+| Consolidated empirical validation v2 | Integration candidate | `empirical_validation_v2.py`, focused tests, retained JSON workflow artifact | verifies eleven bounded software invariants only; no AGI, safety or production-performance inference |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; cross-platform floating-point bit identity is not claimed |
 | C++ trainable 3D autoencoder | Reference laboratory | `cpp_runtime/`, CTest, reconstruction-error tests | trainable reference kernel; model quality is not established against external baselines |
 | C++ transactional 4D multimodal runtime | Reference laboratory | `cpp_runtime/`, CTest, checkpoint and scheduler tests | four deterministic modality fixtures; not a production multimodal foundation model |
@@ -43,6 +43,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Dr Moagi 3D OS control plane | Reference laboratory | `dr_moagi_os.py`, focused lifecycle/transaction tests | user-space sparse control plane; not a replacement host kernel and does not execute arbitrary host commands |
 | Dr Moagi 3D meta-optimizer | Reference laboratory | `dr_moagi_meta_optimizer.py`, focused tests | bounded configuration search; external SOTA superiority is not claimed |
 | Virtual 3D bitstream AE/AD auto-optimizer | Integration candidate | `dr_moagi_virtual_3d_ae.py`, optimizer tests, shared receipt adapter, empirical-v2 integration | bounded deterministic bitstream laboratory; not gradient-trained learning or dense realization of symbolic scale |
+| Inward recursive 3D bit AE/AD loop | Integration candidate | `dr_moagi_inward_3d_bits.py`, focused tests, empirical-v2 integration, `DR_MOAGI_INWARD_3D_BITS.md` | decoded bit state re-enters its encoder with full `(X,Omega,Z)` transaction/cycle checks; no universal convergence or learned-codec claim |
 | 10x10x10 inward 4D graph ANN | Reference laboratory | `inward4d_ann.py`, `test_inward4d_ann.py`, ADR-010 | same-width 1,000-node graph autoencoder; `R^4` is feature geometry; no universal convergence, compression or performance claim |
 | Moagi-Helmholtz orchestration runtime | Reference laboratory | `moagi_helmholtz.py`, `test_moagi_helmholtz.py`, ADR-004 | deterministic orchestration contract; bundled renderer/archive/inverse components are conformance fixtures |
 | Orthogonal quantization precision gate | Numerical reference | `orthogonal_quantization.py`, focused tests, ADR-005, empirical-v2 integration | proves normalization and nearest-neighbour error bounds for declared orthonormal transforms; not a production codec kernel |
@@ -61,7 +62,7 @@ python -m jarvisx.empirical_validation_v2 \
   --output artifacts/empirical-validation.json
 ```
 
-Empirical Validation v2 executes ten falsifiable checks:
+Empirical Validation v2 executes eleven falsifiable checks:
 
 1. deterministic VM state and trace replay;
 2. Omega journal tamper detection;
@@ -72,7 +73,8 @@ Empirical Validation v2 executes ten falsifiable checks:
 7. Dr Moagi Field Runtime deterministic sparse transition and validator rollback;
 8. Deep Distiller atomic state/Omega/Theta adaptation and rollback;
 9. virtual-3D optimizer/shared-admission agreement with fixed-point closure;
-10. orthogonal-transform quantization precision within the deterministic L2 envelope.
+10. inward 3D bit-state recursive re-entry, boundedness and atomic `(X,Omega,Z)` rollback;
+11. orthogonal-transform quantization precision within the deterministic L2 envelope.
 
 The inward 4D graph ANN and Moagi-Helmholtz orchestration runtime remain covered by focused unit tests but are not yet represented in the consolidated v2 artifact. The shared candidate contract is likewise an incremental migration boundary: an adaptive subsystem is not considered migrated until an adapter or native integration is tested.
 
@@ -82,7 +84,7 @@ The `Empirical Validation` GitHub Actions workflow publishes the machine-readabl
 
 | Issue / PR | Capability | Current classification | Required before completion |
 |---|---|---|---|
-| #223 | shared 3D optimizer admission + empirical evidence v2 | Integration candidate | all repository checks green, review and merge |
+| #223 | shared 3D optimizer admission + inward recursive 3D bit AE/AD + empirical evidence v2 | Integration candidate | all repository checks green, review and merge |
 | #48 | pull-request backlog consolidation | Governance work | classify overlaps, preserve unique evidence and reduce active drafts below ten |
 | #49 | branch protection and security settings | Repository administration | protect `main`, require CI/evidence/security checks and prevent unreviewed authority changes |
 | #50 | public GitHub profile README | Profile administration | create `Lord-Xido/Lord-Xido`, pin active repositories and review public metadata |
@@ -115,6 +117,7 @@ Jarvis-X does not currently claim:
 - bit-exact cross-platform floating-point results from the C++ research processor;
 - production-scale fractional PDE performance or physical validity from the numerical reference solver;
 - convergence of arbitrary learned Dr Moagi codecs from the reference explicit-step guard alone;
+- universal convergence of the inward recursive 3D bit-state loop;
 - universal convergence or compression from the same-width inward 4D graph autoencoder;
 - that an `R^4` feature coordinate establishes a physical fourth spatial dimension;
 - empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines.
