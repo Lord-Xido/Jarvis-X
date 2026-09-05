@@ -36,6 +36,7 @@ from .dr_moagi_field_runtime import (
     DrMoagiFieldRuntime,
     IdentityFieldCodec,
 )
+from .dr_moagi_inward_3d_bits import Inward3DBitConfig, Inward3DBitLoop
 from .dr_moagi_virtual_3d_ae import Config as Virtual3DConfig
 from .dr_moagi_virtual_3d_ae import DrMoagiVirtual3DAE
 from .empirical_validation import (
@@ -293,6 +294,86 @@ def _virtual_3d_optimizer_check() -> ValidationCheck:
     )
 
 
+def _inward_3d_bits_check() -> ValidationCheck:
+    config = Inward3DBitConfig(
+        tile=3,
+        bits=24,
+        latent=6,
+        iterations=6,
+        alpha=0.65,
+        beta=0.50,
+        omega_feedback=0.0,
+        seed=1337,
+        epsilon=0.0,
+    )
+    first = Inward3DBitLoop(config)
+    second = Inward3DBitLoop(config)
+
+    first_step = first.step()
+    second_step = first.step()
+    mirror_first = second.step()
+    mirror_second = second.step()
+
+    deterministic = (
+        first_step == mirror_first
+        and second_step == mirror_second
+        and first.authority_hash() == second.authority_hash()
+    )
+    reentry = first_step.committed and second_step.input_hash == first_step.candidate_hash
+    bounded = (
+        first.active_cells == config.tile**3
+        and all(0 <= value < (1 << config.bits) for value in first.state.values())
+        and all(0 <= value < (1 << config.bits) for value in first.omega.values())
+        and all(0 <= value < (1 << config.latent) for value in first.latent.values())
+    )
+
+    rejecting = Inward3DBitLoop(config, gate=lambda candidate, omega: False)
+    before_state = rejecting.snapshot()
+    before_omega = rejecting.omega_snapshot()
+    before_latent = rejecting.latent_snapshot()
+    before_hash = rejecting.authority_hash()
+    rejected = rejecting.step()
+    atomic = (
+        not rejected.committed
+        and rejecting.snapshot() == before_state
+        and rejecting.omega_snapshot() == before_omega
+        and rejecting.latent_snapshot() == before_latent
+        and rejecting.authority_hash() == before_hash
+    )
+
+    passed = deterministic and reentry and bounded and atomic
+    return ValidationCheck(
+        name="inward_3d_bit_recursive_reentry",
+        claim=(
+            "The inward 3D bit AE/AD deterministically re-enters each committed full state as the "
+            "next encoder input, stays bit-width bounded and rolls back atomically on gate rejection."
+        ),
+        protocol=(
+            "Execute two inward steps in two fresh engines, require the first candidate authority hash "
+            "to equal the next iteration input hash, compare deterministic replay, verify finite 3D bit "
+            "bounds, then force an external rejection and require X/Omega/Z rollback."
+        ),
+        passed=passed,
+        metrics={
+            "deterministic": deterministic,
+            "recursive_reentry": reentry,
+            "atomic_rollback": atomic,
+            "active_cells": first.active_cells,
+            "source_bits": first.active_cells * config.bits,
+            "latent_bits": first.active_cells * config.latent,
+            "first_reality_gap": first_step.reality_gap,
+            "second_reality_gap": second_step.reality_gap,
+            "first_candidate_hash": first_step.candidate_hash,
+            "second_input_hash": second_step.input_hash,
+        },
+        boundary=(
+            "This establishes bounded deterministic self-reentry for the declared grouped-majority bit "
+            "codec. It does not prove universal convergence, learned representation quality or physical "
+            "realization of a large virtual address space."
+        ),
+    )
+
+
 def _orthogonal_precision_check() -> ValidationCheck:
     values = (0.25, -0.75, 1.5, 0.125, -0.5, 0.9, 0.0, 0.33)
     basis = dct2_orthonormal_basis(len(values))
@@ -345,6 +426,7 @@ def run_validation(
         _field_runtime_check(),
         _deep_distiller_check(),
         _virtual_3d_optimizer_check(),
+        _inward_3d_bits_check(),
         _orthogonal_precision_check(),
     )
     return ValidationReport(
