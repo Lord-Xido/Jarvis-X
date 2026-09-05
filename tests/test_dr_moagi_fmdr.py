@@ -65,6 +65,8 @@ def test_history_analysis_detects_temporal_resonance_and_markov_persistence():
     assert report.selected_mode_index == 0
     assert report.markov_persistence == pytest.approx(1.0)
     assert report.markov_transition_matrix[0][0] == pytest.approx(1.0)
+    assert report.markov_transition_matrix[1][1] == pytest.approx(1.0)
+    assert report.modes[1].self_transition_probability == pytest.approx(0.5)
     assert selected.spectral_coherence == pytest.approx(1.0)
     assert selected.dominant_omega == pytest.approx(math.pi / 2)
     assert selected.resonance_score > 0.0
@@ -119,6 +121,21 @@ def test_engine_waits_for_history_then_closes_the_inward_loop():
     for frame in frames[4:]:
         engine.step(frame)
     assert len(engine.history) == config.max_history
+
+
+def test_engine_projects_values_even_before_resonance_feedback_activates():
+    x_mode, y_mode, _ = axis_wavevectors(8)
+    config = FMDRConfig(
+        wavevectors=(x_mode, y_mode),
+        value_min=-0.25,
+        value_max=0.25,
+        min_history=4,
+    )
+    engine = FourierMarkovDiffusionResonanceEngine({(0, 0, 0): 2.0}, config)
+
+    assert engine.state.field[(0, 0, 0)] == pytest.approx(0.25)
+    state = engine.step({(0, 0, 0): -2.0})
+    assert state.field[(0, 0, 0)] == pytest.approx(-0.25)
 
 
 def test_validator_rejection_rolls_back_state_and_history_atomically():
