@@ -289,7 +289,11 @@ def analyze_history(
 
         rate = diffusion_rate(wavevector, config.diffusion)
         attenuation = math.exp(-rate * config.dt)
-        self_probability = matrix[index][index]
+        self_probability = (
+            self_counts[index] / transition_counts[index]
+            if transition_counts[index]
+            else 0.5
+        )
         current = series[-1]
         stability = 0.5 + 0.5 * self_probability
         score = (
@@ -337,12 +341,23 @@ def _clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
 
 
+def _project_field(field: SparseField, config: FMDRConfig) -> SparseField:
+    projected: SparseField = {}
+    for coordinate, value in field.items():
+        updated = _clamp(value, config.value_min, config.value_max)
+        if updated != 0.0:
+            projected[coordinate] = updated
+    return projected
+
+
 def feedback_candidate(
     field: Mapping[Coordinate, float], report: FMDRReport, config: FMDRConfig
 ) -> SparseField:
     """Apply bounded reinforce/suppress feedback for the selected resonant mode."""
 
-    source = _field(field, max_active_cells=config.max_active_cells)
+    source = _project_field(
+        _field(field, max_active_cells=config.max_active_cells), config
+    )
     if not source:
         return {}
 
@@ -382,7 +397,9 @@ class FourierMarkovDiffusionResonanceEngine:
     )
 
     def __init__(self, initial_field: Mapping[Coordinate, float], config: FMDRConfig) -> None:
-        initial = _field(initial_field, max_active_cells=config.max_active_cells)
+        initial = _project_field(
+            _field(initial_field, max_active_cells=config.max_active_cells), config
+        )
         self.config = config
         self._history: tuple[SparseField, ...] = (initial,)
         report = analyze_history(self._history, config)
@@ -402,7 +419,10 @@ class FourierMarkovDiffusionResonanceEngine:
         *,
         validator: FieldValidator | None = None,
     ) -> FMDRState:
-        observed = _field(observation, max_active_cells=self.config.max_active_cells)
+        observed = _project_field(
+            _field(observation, max_active_cells=self.config.max_active_cells),
+            self.config,
+        )
         pending_history = (*self._history, observed)[-self.config.max_history :]
         report = analyze_history(pending_history, self.config)
         candidate = (
