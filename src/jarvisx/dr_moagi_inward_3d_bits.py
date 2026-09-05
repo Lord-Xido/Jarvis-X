@@ -17,7 +17,7 @@ import argparse
 import hashlib
 import json
 from dataclasses import asdict, dataclass
-from typing import Callable, Iterator
+from typing import Callable, Iterator, cast
 
 from .candidate_contract import canonical_state_hash
 from .dr_moagi_virtual_3d_ae import (
@@ -53,7 +53,10 @@ class Inward3DBitConfig:
             raise ValueError("invalid dimensions")
         if self.iterations < 1:
             raise ValueError("iterations must be >= 1")
-        if any(not 0.0 <= value <= 1.0 for value in (self.alpha, self.beta, self.omega_feedback)):
+        if any(
+            not 0.0 <= value <= 1.0
+            for value in (self.alpha, self.beta, self.omega_feedback)
+        ):
             raise ValueError("alpha, beta and omega_feedback must be in [0,1]")
         if self.epsilon < 0.0:
             raise ValueError("epsilon must be >= 0")
@@ -86,7 +89,13 @@ def hamming_fraction(left: int, right: int, width: int) -> float:
     return (left ^ right).bit_count() / width if width else 0.0
 
 
-def _exact_mask(point: Coord, width: int, fraction: float, seed: int, channel: str) -> int:
+def _exact_mask(
+    point: Coord,
+    width: int,
+    fraction: float,
+    seed: int,
+    channel: str,
+) -> int:
     """Select exactly round(fraction*width) deterministic bit positions per coordinate."""
 
     count = round(fraction * width)
@@ -120,12 +129,15 @@ def _authority_hash(
     omega: dict[Coord, int],
     latent: dict[Coord, int],
 ) -> str:
-    return canonical_state_hash(
-        {
-            "state": _volume_payload(state),
-            "omega": _volume_payload(omega),
-            "latent": _volume_payload(latent),
-        }
+    return cast(
+        str,
+        canonical_state_hash(
+            {
+                "state": _volume_payload(state),
+                "omega": _volume_payload(omega),
+                "latent": _volume_payload(latent),
+            }
+        ),
     )
 
 
@@ -139,8 +151,6 @@ class Inward3DBitLoop:
         gate: Gate | None = None,
     ) -> None:
         self.c = config or Inward3DBitConfig()
-        # Tile consumes the compatible virtual-3D config surface. Only the
-        # attributes used by Tile are required here.
         from .dr_moagi_virtual_3d_ae import Config as TileConfig
 
         self.tile = Tile(
@@ -200,7 +210,7 @@ class Inward3DBitLoop:
 
     def _coupled_latent(self, state: dict[Coord, int]) -> dict[Coord, int]:
         raw = self.encode_state(state)
-        return couple(self.tile, raw, self.c.latent, self.c.alpha)
+        return cast(dict[Coord, int], couple(self.tile, raw, self.c.latent, self.c.alpha))
 
     def decode_latent(self, latent: dict[Coord, int]) -> dict[Coord, int]:
         return {point: self.codec.decode(latent[point]) for point in self.tile.coords}
@@ -210,9 +220,9 @@ class Inward3DBitLoop:
         current: dict[Coord, int],
         decoded: dict[Coord, int],
     ) -> dict[Coord, int]:
-        # One-step residual memory. It remains part of the authoritative state
-        # and becomes stationary whenever the self-reconstruction residual does.
-        return {point: (current[point] ^ decoded[point]) & self.full for point in self.tile.coords}
+        return {
+            point: (current[point] ^ decoded[point]) & self.full for point in self.tile.coords
+        }
 
     def _feedback(
         self,
@@ -223,10 +233,18 @@ class Inward3DBitLoop:
         out: dict[Coord, int] = {}
         for point in self.tile.coords:
             reconstruction_mask = _exact_mask(
-                point, self.c.bits, self.c.beta, self.c.seed, "reconstruction"
+                point,
+                self.c.bits,
+                self.c.beta,
+                self.c.seed,
+                "reconstruction",
             )
             omega_mask = _exact_mask(
-                point, self.c.bits, self.c.omega_feedback, self.c.seed, "omega"
+                point,
+                self.c.bits,
+                self.c.omega_feedback,
+                self.c.seed,
+                "omega",
             )
             value = (
                 (current[point] & (self.full ^ reconstruction_mask))
@@ -242,7 +260,9 @@ class Inward3DBitLoop:
             return False
         maximum = (1 << width) - 1
         return all(
-            isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= maximum
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and 0 <= value <= maximum
             for value in volume.values()
         )
 
@@ -253,7 +273,10 @@ class Inward3DBitLoop:
         input_hash = _authority_hash(current, current_omega, previous_latent)
 
         raw_latent = self.encode_state(current)
-        coupled_latent = couple(self.tile, raw_latent, self.c.latent, self.c.alpha)
+        coupled_latent = cast(
+            dict[Coord, int],
+            couple(self.tile, raw_latent, self.c.latent, self.c.alpha),
+        )
         decoded = self.decode_latent(coupled_latent)
         next_omega = self._next_omega(current, decoded)
         candidate = self._feedback(current, decoded, next_omega)
@@ -279,7 +302,8 @@ class Inward3DBitLoop:
             for point in self.tile.coords
         )
         coupling_changed_bits = sum(
-            (raw_latent[point] ^ coupled_latent[point]).bit_count() for point in self.tile.coords
+            (raw_latent[point] ^ coupled_latent[point]).bit_count()
+            for point in self.tile.coords
         )
         omega_bits = sum(value.bit_count() for value in next_omega.values())
 
