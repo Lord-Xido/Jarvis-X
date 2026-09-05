@@ -97,7 +97,7 @@ class DrMoagiVirtual3DAE:
     def __init__(self,c:Config|None=None):
         self.c=c or Config();self.tile=Tile(self.c);self.codec=Codec(self.c.bits,self.c.latent)
         self.full=(1<<self.c.bits)-1;self.mask=feedback_mask(self.c.bits,self.c.beta,self.c.seed)
-        self.original={};self.state={};self.latent={};self.coupled={};self.decoded={}
+        self.original:dict[Coord,int]={};self.state:dict[Coord,int]={};self.latent:dict[Coord,int]={};self.coupled:dict[Coord,int]={};self.decoded:dict[Coord,int]={}
     @property
     def active_streams(self):return len(self.tile)
     def materialize(self):
