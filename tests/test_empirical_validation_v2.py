@@ -6,7 +6,7 @@ def test_v2_empirical_validation_aggregates_core_and_adaptive_evidence():
     names = {check.name for check in report.checks}
 
     assert report.schema_version == "jarvisx.empirical-validation.v2"
-    assert len(report.checks) == 10
+    assert len(report.checks) == 11
     assert report.passed
     assert {
         "vm_deterministic_replay",
@@ -14,5 +14,6 @@ def test_v2_empirical_validation_aggregates_core_and_adaptive_evidence():
         "field_runtime_candidate_transaction",
         "deep_distiller_atomic_adaptation",
         "virtual_3d_optimizer_admission",
+        "inward_3d_bit_recursive_reentry",
         "orthogonal_quantization_precision_gate",
     } <= names
