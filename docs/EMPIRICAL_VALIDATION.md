@@ -42,7 +42,8 @@ Hard constraints are evaluated separately from the scalar objective. An optimize
 | 7 | Field Runtime transaction | Run identical sparse field steps from opposite insertion orders, then force validator rejection | Identical state/metrics, bounded support and exact rollback | `dr_moagi_field_runtime.py` | Identity-codec fixture does not prove arbitrary learned-codec stability |
 | 8 | DM-DD atomic adaptation | Execute identical residual-learning steps, then reject an adaptive proposal | State, Ω memory and Θ parameters evolve deterministically and roll back as one tuple on rejection | `dr_moagi_deep_distiller.py` | Tests the bounded scalar-gain reference learner, not large-model quality |
 | 9 | Virtual 3D optimizer admission | Run bounded α/β search twice and adapt the result into the common candidate receipt | Same selected result and receipt; non-regressive score; shared decision agreement; zero terminal reality gap | `dr_moagi_virtual_3d_ae.py`, `candidate_adapters.py` | Bounded scalar search is not unrestricted self-modification or gradient-trained representation learning |
-| 10 | Orthogonal quantization precision | Verify an orthonormal DCT-II basis and nearest-neighbour quantization reconstruction | Orthogonality passes and spatial residual remains within the deterministic L2 envelope | `orthogonal_quantization.py` | Transform correctness is not a production codec or perceptual benchmark |
+| 10 | Inward 3D bit recursive re-entry | Execute two inward AE/AD iterations in two fresh engines, then force a gate rejection | First candidate authority hash equals the next iteration input hash; replay is identical; active state stays bit-width bounded; X/Ω/Z roll back atomically on rejection | `dr_moagi_inward_3d_bits.py` | Establishes bounded deterministic self-reentry for the declared bit codec, not universal convergence or learned representation quality |
+| 11 | Orthogonal quantization precision | Verify an orthonormal DCT-II basis and nearest-neighbour quantization reconstruction | Orthogonality passes and spatial residual remains within the deterministic L2 envelope | `orthogonal_quantization.py` | Transform correctness is not a production codec or perceptual benchmark |
 
 ## Machine-readable report
 
@@ -62,6 +63,8 @@ Every check contains:
 
 Candidate-admission receipts additionally contain parent/candidate state hashes, operator identity, objective before/after, component metrics, hard-constraint outcomes, resource envelope/usage, decision, rejection reasons and a deterministic SHA-256 receipt hash.
 
+The inward 3D recursion evidence additionally binds consecutive full-state hashes so a committed `(X, Ω, Z)` tuple is demonstrably the next iteration's encoder input. Non-fixed repeated full-state hashes are treated as cycles, not convergence.
+
 Timing fields remain observations only. Shared CI runners are not controlled benchmark hardware, so the evidence gate does not impose portable throughput claims.
 
 ## Interpretation
@@ -75,6 +78,7 @@ A green empirical-validation workflow establishes that the checked implementatio
 - physical realization of a virtual lattice;
 - cross-platform floating-point bit identity;
 - statistically significant model-quality superiority;
+- universal convergence of recursive bit-state dynamics;
 - safety merely because a policy or coherence gate exists.
 
 Claims outside the evidence matrix remain specifications, hypotheses or future experiments until a protocol, baseline, dataset and reproducible result are added.
