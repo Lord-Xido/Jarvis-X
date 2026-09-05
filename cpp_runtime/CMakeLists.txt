@@ -275,3 +275,4 @@ add_test(NAME pixels-to-bits-regressions COMMAND jarvisx-pixels-to-bits-tests)
 set_tests_properties(pixels-to-bits-regressions PROPERTIES TIMEOUT 120)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/world_engine.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/multimodal_generator3d.cmake)
