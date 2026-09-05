@@ -53,7 +53,7 @@ from .orthogonal_quantization import (
 def _candidate_contract_check() -> ValidationCheck:
     parent_hash = canonical_state_hash({"value": 1})
     candidate_hash = canonical_state_hash({"value": 2})
-    base = dict(
+    accepted_proposal = CandidateProposal(
         subsystem="empirical-fixture",
         candidate_id="candidate-1",
         operator_version="fixture-v1",
@@ -61,29 +61,25 @@ def _candidate_contract_check() -> ValidationCheck:
         candidate_state_hash=candidate_hash,
         objective_before=1.0,
         objective_after=0.5,
+        constraints=(ConstraintResult("finite", True),),
         resource_envelope=ResourceEnvelope(10, 10, 10),
         resource_usage=ResourceUsage(1, 1, 1),
     )
-    accepted = admit_candidate(
-        CandidateProposal(
-            **base,
-            constraints=(ConstraintResult("finite", True),),
-        )
+    rejected_proposal = CandidateProposal(
+        subsystem=accepted_proposal.subsystem,
+        candidate_id=accepted_proposal.candidate_id,
+        operator_version=accepted_proposal.operator_version,
+        parent_state_hash=accepted_proposal.parent_state_hash,
+        candidate_state_hash=accepted_proposal.candidate_state_hash,
+        objective_before=1.0,
+        objective_after=0.0,
+        constraints=(ConstraintResult("hard_guard", False),),
+        resource_envelope=accepted_proposal.resource_envelope,
+        resource_usage=accepted_proposal.resource_usage,
     )
-    rejected_base = dict(base)
-    rejected_base["objective_after"] = 0.0
-    rejected = admit_candidate(
-        CandidateProposal(
-            **rejected_base,
-            constraints=(ConstraintResult("hard_guard", False),),
-        )
-    )
-    repeated = admit_candidate(
-        CandidateProposal(
-            **base,
-            constraints=(ConstraintResult("finite", True),),
-        )
-    )
+    accepted = admit_candidate(accepted_proposal)
+    rejected = admit_candidate(rejected_proposal)
+    repeated = admit_candidate(accepted_proposal)
     passed = (
         accepted.decision is CandidateDecision.COMMIT
         and rejected.decision is CandidateDecision.ROLLBACK
