@@ -56,7 +56,16 @@ The empirical transition law is
 P_ij = count(q_t=i, q_t+1=j) / count(q_t=i)
 ```
 
-for rows with observed outgoing transitions. Unobserved rows use an identity row in the reference implementation so the matrix remains stochastic without inventing cross-mode evidence.
+for rows with observed outgoing transitions. Unobserved rows use an identity row in the reported transition matrix so the matrix remains stochastic without inventing cross-mode evidence.
+
+For resonance ranking, a mode-specific persistence estimate is kept separate from that reporting convention:
+
+```text
+p_k = count(k -> k) / count(outgoing from k),  if outgoing evidence exists
+p_k = 0.5,                                      otherwise.
+```
+
+The neutral `0.5` fallback prevents an unobserved mode from receiving artificial resonance reinforcement merely because its displayed Markov row is the identity.
 
 This is a finite-window empirical Markov model. It is not a claim that the complete underlying process is first-order Markov.
 
@@ -109,12 +118,12 @@ R_k = C_k * sqrt(peak_power_k) * S_k / (gamma + k^T D k)
 where
 
 ```text
-S_k = 0.5 + 0.5 P_kk
+S_k = 0.5 + 0.5 p_k
 ```
 
 and `gamma > 0` is a configured damping floor.
 
-This score is an engineering ranking functional, not a universal physical definition of resonance. It deliberately rewards temporally concentrated, mode-persistent energy and penalizes damping plus diffusive loss.
+This score is an engineering ranking functional, not a universal physical definition of resonance. It deliberately rewards temporally concentrated, empirically persistent energy and penalizes damping plus diffusive loss.
 
 ### Inward feedback
 
@@ -123,10 +132,10 @@ The highest-scoring mode may propose a same-space field correction. The referenc
 The feedback sign is determined by
 
 ```text
-s_k = 2 P_kk - 1.
+s_k = 2 p_k - 1.
 ```
 
-Persistent modes (`P_kk > 0.5`) are eligible for reinforcement; rapidly switching modes (`P_kk < 0.5`) are eligible for suppression.
+Persistent modes (`p_k > 0.5`) are eligible for reinforcement; rapidly switching modes (`p_k < 0.5`) are eligible for suppression; modes without transition evidence are neutral.
 
 The raw feedback is scaled by the configured feedback gain and normalized resonance score, then clipped per coordinate:
 
@@ -134,7 +143,7 @@ The raw feedback is scaled by the configured feedback gain and normalized resona
 |Delta Psi(r)| <= max_feedback_delta.
 ```
 
-The resulting value is projected into the configured value interval before it can become a candidate.
+Every initial field and every observation is also projected into the configured value interval before publication, including cycles that have not yet accumulated enough history to activate resonance feedback.
 
 ### Candidate-first recurrence
 
@@ -142,16 +151,18 @@ The operational recurrence is
 
 ```text
 observation_t
--> append to bounded history
+-> finite/resource validation
+-> value projection Pi_Lambda
+-> append to bounded pending history
 -> Fourier coefficients
 -> dominant-mode sequence
--> empirical Markov matrix
+-> empirical Markov matrix and persistence
 -> diffusion rates
 -> temporal resonance scores
--> selected modal correction
--> value/resource projection
+-> selected modal correction when min_history is satisfied
+-> bounded value projection
 -> optional external validator
--> COMMIT or ROLLBACK.
+-> COMMIT state and history or ROLLBACK both.
 ```
 
 A rejected candidate does not mutate either the published FMDR state or its history buffer.
@@ -205,14 +216,15 @@ The reference uses direct sparse Fourier sums and a naive short-window temporal 
 2. Diffusion coefficients are finite and non-negative.
 3. Damping is finite and strictly positive.
 4. Field values are finite and active support is resource-bounded.
-5. Markov rows are stochastic.
-6. Resonance is reported separately from Fourier amplitude and diffusion attenuation.
-7. Feedback is same-space and bounded per active coordinate.
-8. Value projection occurs before candidate publication.
-9. The history window is explicitly bounded.
-10. Validator rejection atomically preserves the prior published state and history.
-11. No FMDR result silently rewrites the canonical VM, source code, policy, provenance or transaction layers.
-12. Physical resonance, production performance and learned-model quality require separate evidence.
+5. Reported Markov rows are stochastic.
+6. Unobserved transition rows do not create artificial persistence in resonance ranking.
+7. Resonance is reported separately from Fourier amplitude and diffusion attenuation.
+8. Feedback is same-space and bounded per active coordinate.
+9. Value projection applies before every published state, even before feedback activation.
+10. The history window is explicitly bounded.
+11. Validator rejection atomically preserves the prior published state and history.
+12. No FMDR result silently rewrites the canonical VM, source code, policy, provenance or transaction layers.
+13. Physical resonance, production performance and learned-model quality require separate evidence.
 
 ## Validation
 
@@ -223,7 +235,9 @@ Acceptance requires focused tests for:
 - diffusion attenuation against the analytic exponential;
 - deterministic temporal resonance detection on a synthetic traveling mode;
 - stochastic Markov rows and persistent-mode self-transition probability;
+- neutral persistence when a mode has no outgoing transition evidence;
 - bounded per-cell reinforce/suppress feedback;
+- value projection before minimum-history feedback activation;
 - delayed feedback until the configured minimum history exists;
 - bounded history retention;
 - atomic rollback of state and history on validator rejection;
