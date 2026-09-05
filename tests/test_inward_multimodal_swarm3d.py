@@ -34,13 +34,13 @@ class ContractiveCodec:
 
 def test_rank_one_metric_inverse_and_riemannian_gradient_are_exact():
     inverse = riemannian_metric_inverse((2.0, 0.0, 0.0), alpha=1.0)
-    assert inverse == pytest.approx(
-        (
-            (0.2, 0.0, 0.0),
-            (0.0, 1.0, 0.0),
-            (0.0, 0.0, 1.0),
-        )
+    expected = (
+        (0.2, 0.0, 0.0),
+        (0.0, 1.0, 0.0),
+        (0.0, 0.0, 1.0),
     )
+    for row, expected_row in zip(inverse, expected):
+        assert row == pytest.approx(expected_row)
 
     gradient = local_riemannian_gradient(
         (1.0, 1.0, 0.0),
