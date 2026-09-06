@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -304,7 +304,7 @@ def get_settlement(task_id: str) -> dict[str, Any]:
 
 @app.get("/v1/market")
 def market_status() -> dict[str, Any]:
-    return market.snapshot()
+    return cast(dict[str, Any], market.snapshot())
 
 
 @app.get("/v1/ledger")
