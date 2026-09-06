@@ -41,6 +41,7 @@ The symbolic vocabulary used in the research documents maps to ordinary engineer
 | Bytecode VM | parser, assembler, decoder, registers and minimal 64-bit instruction execution | Alpha |
 | Core ISA | `SET`, `ADD`, `SUB`, `HALT` | Alpha |
 | Runtime controls | policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
+| Bit-serial mixed-signal control | delta-sigma, XNOR/popcount, 16-bit Omega memory, Theta masking, independent interlocks and PDM logic frames | Reference laboratory |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
@@ -244,6 +245,7 @@ Every canonical subsystem should provide:
 - [10x10x10 inward 4D graph ANN](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md)
 - [Dr. Moagi 4D quantum-inspired autoencoding equation](docs/DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md)
 - [Hierarchical 3D fractional smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md)
+- [DM-vΩΞ⁺ bit-serial mixed-signal control](docs/DM_VOMEGAXI_MIXED_SIGNAL_CONTROL.md)
 - [Roadmap](ROADMAP.md)
 - [Governance](GOVERNANCE.md)
 - [Security policy](SECURITY.md)

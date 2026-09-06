@@ -29,6 +29,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Cycle sandbox | Stable reference | `sandbox.py` | cycle bound only; no process isolation |
 | Trace and Omega journal | Stable reference | `tracer.py`, `ledger.py`, `ledger_store.py` | persistence is opt-in; timestamps are environmental inputs |
 | Consolidated empirical validation | Stable reference | `empirical_validation.py`, focused tests, JSON artifact workflow | verifies bounded software invariants only; no AGI, safety or production-performance inference |
+| DM-vOmegaXi+ mixed-signal control | Reference laboratory | `dm_vomegaxi_mixed_signal.py`, focused tests, ADR-013 | sampled software model and logic-intent frames only; no analog hardware, trained controller, calibrated plant, direct actuation or safety certification |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database or proof of long-memory quality |
