@@ -1,0 +1,159 @@
+{
+  "audit_date": "2026-09-01",
+  "entries": [
+    {
+      "bytes": 1164,
+      "category": "renderer-prototype",
+      "disposition": "hash-only-reference",
+      "index": 1,
+      "reason": "eager MP4 export and optional NumPy, Matplotlib, and ffmpeg dependencies",
+      "sha256": "984bd3fc4204a365192aa72cfb686f2ecd8571b04f085a9409be313c2d8bd1aa",
+      "source_name": "infinity_renderer.py"
+    },
+    {
+      "bytes": 2911,
+      "category": "state-evolution-prototype",
+      "disposition": "hash-only-reference",
+      "index": 2,
+      "reason": "unseeded random scoring and demonstration-scale mutation without an authority gate",
+      "sha256": "520b83bba2a5c236e65887bbabcd6cc9baf98d5bbf8111282266b66e9f875ded",
+      "source_name": "jarvis_x_engine.py"
+    },
+    {
+      "bytes": 4884,
+      "category": "presence-prototype",
+      "disposition": "excluded-live-code",
+      "index": 3,
+      "reason": "declares a trillion-iteration loop, importable filesystem side effects, and a symbolic token that is not authentication",
+      "sha256": "23cb4d933b61752984b93262bc8fedfc6c03d8e6cf377dbb745be7d609c98616",
+      "source_name": "jarvis_x_presence_engine.py"
+    },
+    {
+      "bytes": 2926,
+      "category": "electromagnetic-agent-scaffold",
+      "disposition": "excluded-live-code",
+      "index": 4,
+      "reason": "the archive's C++ agent modules contain placeholder comments rather than executable behavior",
+      "sha256": "0d19e5dbbc660cf5469ab6709d6ff1e664d29ee696cae6579c158f9a828a5395",
+      "source_name": "EM_AgenticSystem.zip"
+    },
+    {
+      "bytes": 1626,
+      "category": "threejs-geometry-prototype",
+      "disposition": "hash-only-reference",
+      "index": 5,
+      "reason": "useful deterministic spiral geometry, but tied to an unbundled Three.js runtime and scene side effects",
+      "sha256": "cb6ea389d39b160b3d1ced4e970acbd650ed709a6b37cccb4672908d58b86324",
+      "source_name": "codex_spiral_render_matrix.js"
+    },
+    {
+      "bytes": 1293,
+      "category": "3d-project-scaffold",
+      "disposition": "excluded-live-code",
+      "index": 6,
+      "reason": "contains placeholder geometry, a minimal render print, and an empty texture file",
+      "sha256": "43def8bdb51d70f3c08d7390af9171ddedbaa320dd857fe7875a24f05d11bea8",
+      "source_name": "Codex_3D_Project_Package.zip"
+    },
+    {
+      "bytes": 1686,
+      "category": "python-geometry-prototype",
+      "disposition": "hash-only-reference",
+      "index": 7,
+      "reason": "deterministic coordinate sketch retained as research provenance, not a rendering backend",
+      "sha256": "b47da0c923b4e35e76d59b9941708f03ff4a599c13c8babfd8f702c5c09a085b",
+      "source_name": "codex_spiral_render_engine.py"
+    },
+    {
+      "bytes": 2015,
+      "category": "gan-sdk-scaffold",
+      "disposition": "excluded-live-code",
+      "index": 8,
+      "reason": "core, API, GUI, CLI, music, and story modules are explicit placeholders",
+      "sha256": "9ec2d3b5a69ca36f5ec41dd67900f16c6dc17609ff3d42756f91baf5c61cde08",
+      "source_name": "Download-FractalGAN_Omega_SDK.zip"
+    },
+    {
+      "bytes": 1675,
+      "category": "codexlang-prototype",
+      "disposition": "hash-only-reference",
+      "index": 9,
+      "reason": "compiler checks substrings and the IDE only prints a sample; neither is a language implementation",
+      "sha256": "5a5dab5e23cdca10c02331e7b8be1c93fe4f07d406761d6947ad4a1d747ee8bd",
+      "source_name": "CodexLang_vOmega_Engine.zip"
+    },
+    {
+      "bytes": 1708,
+      "category": "cross-runtime-state-prototype",
+      "disposition": "promoted-concept",
+      "index": 10,
+      "reason": "typed state evolution across Python, YAML, and Unity informed contract separation; implementations remain references",
+      "sha256": "686c76fe73945c55579bfc44edb117760d5c07890b4350f2504a79b04c8f86ca",
+      "source_name": "Codex_Mathematical_Runtime_Export.zip"
+    },
+    {
+      "bytes": 1717,
+      "category": "living-fractal-scaffold",
+      "disposition": "excluded-live-code",
+      "index": 11,
+      "reason": "several modules are placeholders and the notebook-named file is not valid notebook JSON",
+      "sha256": "7473403b8c7cfc27027b526507ca02979d9518158170136aa0a07b65fa2f89a7",
+      "source_name": "CodexSynthetica_LivingFractal_v1.zip"
+    },
+    {
+      "bytes": 1222,
+      "category": "fastapi-visualizer-prototype",
+      "disposition": "hash-only-reference",
+      "index": 12,
+      "reason": "renders Matplotlib state inside each request and is not a bounded media interpreter",
+      "sha256": "0ba0980f425d9b4e3d6f21458a2cc909007eda2bb070dceaca4da56dd0fdea6e",
+      "source_name": "Download-the-FastAPI-Web-App-Script"
+    },
+    {
+      "bytes": 14511,
+      "category": "chunk-transfer-deployment-scaffold",
+      "disposition": "promoted-concept",
+      "index": 13,
+      "reason": "reversible chunk transport informed the bounded codec path; routing, policy, CodexLang, and deployment layers identify themselves as stubs",
+      "sha256": "d361b04c02295f407b4657996efa8b7de3543fb46be324c58ae31329f4d8f252",
+      "source_name": "lightning_bridge_stack_vOmega_multi_deploy.zip"
+    },
+    {
+      "bytes": 2074,
+      "category": "architecture-config-prototype",
+      "disposition": "promoted-concept",
+      "index": 14,
+      "reason": "candidate, filter, evolve, consolidate, and sandbox stages informed documentation but are not executable merely because they appear in JSON",
+      "sha256": "97ca0b6bb8459748bc36dbb6c47915e266cdaf4d8dc8257a9910cfa307e4fc41",
+      "source_name": "CodexAutoEvolutionEngine_Config.json"
+    },
+    {
+      "bytes": 685,
+      "category": "symbolic-physics-prototype",
+      "disposition": "hash-only-reference",
+      "index": 15,
+      "reason": "prints symbolic equations at import and does not implement a calibrated physical solver",
+      "sha256": "5d57888d61ec0b0e517135bf92249ed30dc072d7d4d10cf2ece27d2b8672d61f",
+      "source_name": "CodexLang_Physics_Engine.py"
+    },
+    {
+      "bytes": 1211,
+      "category": "symbolic-cli-prototype",
+      "disposition": "excluded-live-code",
+      "index": 16,
+      "reason": "starts an interactive input loop at import and returns a fixed sample result",
+      "sha256": "da247f6ed4af24d518dfc02e3d8c6bc47fdc08aebfaf0ea3d3eb6558f2cc104e",
+      "source_name": "SENSE_CLI_Interpreter.py"
+    }
+  ],
+  "live_code_copied": false,
+  "promoted_into": [
+    "src/jarvisx/universal_bitcode.py",
+    "src/jarvisx/universal_bitcode_cli.py",
+    "tests/test_universal_bitcode.py",
+    "docs/UNIVERSAL_BITCODE_PERMEATION_RUNTIME.md",
+    "docs/adr/0012-hierarchical-multimodal-bitcode-runtime.md"
+  ],
+  "schema": "jarvisx.rom-forge-provenance",
+  "version": 1
+}
