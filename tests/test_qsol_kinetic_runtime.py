@@ -37,7 +37,7 @@ def test_instruction_word_round_trip_and_spatial_payload() -> None:
 
 
 def test_dma_uses_true_uint8_byte_accounting() -> None:
-    runtime = QSOLKineticRuntime(KineticConfig(latent_dim=16, max_cycles=1))
+    runtime = QSOLKineticRuntime(KineticConfig(latent_dim=8, max_cycles=1))
     volume = sparse_volume()
     descriptor = DMADescriptor(channel=3, origin=(2, 3, 4), shape=(2, 2, 2))
 
