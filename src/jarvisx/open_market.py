@@ -4,7 +4,7 @@ import math
 import threading
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Iterable
+from typing import Callable, cast
 
 from .ledger import OmegaLedger
 from .system_runtime import (
@@ -498,7 +498,7 @@ class OpenMarketEngine:
             raise UnknownResource(f"bid {bid_id!r} does not exist") from exc
 
     def _log(self, opcode: int, state: dict[str, object]) -> dict[str, object]:
-        return self.ledger.log(state, opcode)
+        return cast(dict[str, object], self.ledger.log(state, opcode))
 
 
 __all__ = [
