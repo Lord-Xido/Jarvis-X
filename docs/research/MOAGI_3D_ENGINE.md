@@ -75,9 +75,9 @@ L_orth = sum_(i != j) |<Z_i,Z_j>|^2 / (||Z_i||^2 ||Z_j||^2 + delta).
 ## Build
 
 ```bash
-cmake -S . -B build
-cmake --build build --target jarvisx-moagi3d-engine jarvisx-moagi3d-engine-tests
-ctest --test-dir build -R moagi3d-engine --output-on-failure
+cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release
+cmake --build build/cpp-runtime --target jarvisx-moagi3d-engine jarvisx-moagi3d-engine-tests
+ctest --test-dir build/cpp-runtime -R moagi3d-engine --output-on-failure
 ```
 
 The executable is emitted as:
@@ -89,7 +89,7 @@ DrMoagi-3D-Engine
 Example:
 
 ```bash
-./build/cpp_runtime/DrMoagi-3D-Engine \
+./build/cpp-runtime/DrMoagi-3D-Engine \
   --edge 8 \
   --channels 3 \
   --latent-channels 4 \
