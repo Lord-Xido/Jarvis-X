@@ -210,7 +210,7 @@ class GeometricIntelligenceKernel:
 
         next_velocity: list[float] = []
         next_latent: list[float] = []
-        for z, v, target, memory, lap_value in zip(
+        for z, v, target, memory_value, lap_value in zip(
             previous.latent,
             previous.velocity,
             encoded,
@@ -222,7 +222,7 @@ class GeometricIntelligenceKernel:
                 -self.config.damping * v
                 -self.config.restoring_gain * (z - target)
                 +self.config.diffusion_gain * lap_value
-                -self.config.memory_gain * memory
+                -self.config.memory_gain * memory_value
             )
             v_next = _clamp(
                 v + acceleration,
@@ -235,7 +235,7 @@ class GeometricIntelligenceKernel:
 
         reconstruction = decode_field(next_latent)
         residual = tuple(x - xhat for x, xhat in zip(obs, reconstruction, strict=True))
-        memory = tuple(
+        next_memory = tuple(
             self.config.memory_decay * old + (1.0 - self.config.memory_decay) * error
             for old, error in zip(previous.memory, residual, strict=True)
         )
@@ -253,7 +253,7 @@ class GeometricIntelligenceKernel:
         current = GeometricState(
             latent=tuple(next_latent),
             velocity=tuple(next_velocity),
-            memory=memory,
+            memory=next_memory,
             major_phase=major_phase,
             micro_phase=micro_phase,
             step_index=previous.step_index + 1,
