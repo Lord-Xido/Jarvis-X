@@ -34,6 +34,7 @@ dependencies = [
     "uvicorn>=0.23.0",
     "fastapi>=0.100.0",
     "cryptography>=43.0",
+    "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
@@ -83,6 +84,7 @@ jarvisx-deep-distiller = "jarvisx.dr_moagi_deep_distiller_cli:main"
 jarvisx-dr-moagi-3d-animation = "jarvisx.dr_moagi_3d_animation_codec:main"
 jarvisx-dr-moagi-codegen = "jarvisx.dr_moagi_codegen_engine:main"
 jarvisx-dr-moagi-resonator = "jarvisx.dr_moagi_monadic_resonator:main"
+jarvisx-neural-feedback = "jarvisx.neural_feedback_cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
