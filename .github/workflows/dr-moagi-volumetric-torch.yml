@@ -1,0 +1,33 @@
+name: Dr Moagi Volumetric Torch
+
+on:
+  push:
+    paths:
+      - "apps/dr-moagi-volumetric-torch/**"
+      - ".github/workflows/dr-moagi-volumetric-torch.yml"
+  pull_request:
+    paths:
+      - "apps/dr-moagi-volumetric-torch/**"
+      - ".github/workflows/dr-moagi-volumetric-torch.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dr-moagi-volumetric-torch
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install CPU Torch
+        run: python -m pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.4"
+      - name: Compile backend
+        run: python -m py_compile engine.py test_engine.py
+      - name: Run focused mechanics tests
+        run: python -m unittest -v test_engine.py
