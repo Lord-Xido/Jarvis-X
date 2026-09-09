@@ -1,7 +1,7 @@
 """Transactional sparse-to-dense bridge for the Dr Moagi 3D runtimes.
 
 The sparse 1000x1000 lattice remains the logical scheduling/authority surface.
-Dense backends receive bounded tiles and return candidates.  Candidates are
+Dense backends receive bounded tiles and return candidates. Candidates are
 scattered only onto already-authoritative sparse coordinates, then admitted or
 rolled back through an explicit numerical/epistemic/authority gate.
 
@@ -11,18 +11,19 @@ The bridge deliberately keeps two geometries distinct:
 * dense D/H/W coordinates identify a bounded numerical tile presented to a
   neural or other dense backend.
 
-The default embedding places sparse loop values on the centre depth plane.  It
+The default embedding places sparse loop values on the centre depth plane. It
 does not identify recursive sparse encode/decode depth with physical world Z.
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Mapping, Protocol, Sequence
 
 from .candidate_receipt import (
     CandidateReceipt,
+    VerificationStatus,
     VerificationVector,
     build_candidate_receipt,
     hash_sparse_field,
@@ -70,7 +71,9 @@ class SparseDenseTransactionalRuntime(DrMoagiMultiparallel3D):
             coordinate = self._validate_coordinate(raw_coordinate)
             vector = self._validate_vector(raw_vector)
             if len(vector) != self.channel_count:
-                raise ValueError("external candidate channel count must match the loaded runtime")
+                raise ValueError(
+                    "external candidate channel count must match the loaded runtime"
+                )
             if self._active(vector):
                 parsed[coordinate] = vector
             if len(parsed) > self.config.max_active_loops:
@@ -79,7 +82,9 @@ class SparseDenseTransactionalRuntime(DrMoagiMultiparallel3D):
         if max_candidate_mse is None:
             budget = self.config.max_reconstruction_mse
         else:
-            if isinstance(max_candidate_mse, bool) or not isinstance(max_candidate_mse, (int, float)):
+            if isinstance(max_candidate_mse, bool) or not isinstance(
+                max_candidate_mse, (int, float)
+            ):
                 raise TypeError("max_candidate_mse must be numeric")
             budget = float(max_candidate_mse)
             if not math.isfinite(budget) or budget < 0.0:
@@ -105,7 +110,9 @@ class SparseDenseTransactionalRuntime(DrMoagiMultiparallel3D):
         old_core = self.global_core if self.global_core else zero
         new_core = global_core if global_core else zero
         core_sq = sum((a - b) ** 2 for a, b in zip(old_core, new_core))
-        global_core_delta_rms = math.sqrt(core_sq / self.channel_count) if self.channel_count else 0.0
+        global_core_delta_rms = (
+            math.sqrt(core_sq / self.channel_count) if self.channel_count else 0.0
+        )
         cycle = self.cycle + 1
         provisional = ExternalCandidateMetrics(
             cycle=cycle,
@@ -121,19 +128,15 @@ class SparseDenseTransactionalRuntime(DrMoagiMultiparallel3D):
 
         if candidate_mse > budget:
             self._cycle = cycle
-            return ExternalCandidateMetrics(
-                **{
-                    **provisional.__dict__,
-                    "rejection_reason": "candidate distortion budget exceeded",
-                }
+            return replace(
+                provisional,
+                rejection_reason="candidate distortion budget exceeded",
             )
         if validator is not None and not bool(validator(parsed, provisional)):
             self._cycle = cycle
-            return ExternalCandidateMetrics(
-                **{
-                    **provisional.__dict__,
-                    "rejection_reason": "external validator rejected candidate",
-                }
+            return replace(
+                provisional,
+                rejection_reason="external validator rejected candidate",
             )
 
         new_memory: SparseLoopField = {}
@@ -197,6 +200,7 @@ class DenseTileResult:
 class DenseTileBackend(Protocol):
     def process(self, tile: DenseTile) -> DenseTileResult:
         """Transform one bounded dense tile without mutating sparse authority."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -209,11 +213,23 @@ class SparseDenseBridgeConfig:
     convergence_tol: float = 1.0e-5
 
     def __post_init__(self) -> None:
-        if isinstance(self.tile_side, bool) or not isinstance(self.tile_side, int) or self.tile_side <= 0:
+        if (
+            isinstance(self.tile_side, bool)
+            or not isinstance(self.tile_side, int)
+            or self.tile_side <= 0
+        ):
             raise ValueError("tile_side must be a positive integer")
-        if isinstance(self.tile_depth, bool) or not isinstance(self.tile_depth, int) or self.tile_depth <= 0:
+        if (
+            isinstance(self.tile_depth, bool)
+            or not isinstance(self.tile_depth, int)
+            or self.tile_depth <= 0
+        ):
             raise ValueError("tile_depth must be a positive integer")
-        if isinstance(self.max_tiles, bool) or not isinstance(self.max_tiles, int) or self.max_tiles <= 0:
+        if (
+            isinstance(self.max_tiles, bool)
+            or not isinstance(self.max_tiles, int)
+            or self.max_tiles <= 0
+        ):
             raise ValueError("max_tiles must be a positive integer")
         for name in ("max_candidate_mse", "output_blend", "convergence_tol"):
             value = float(getattr(self, name))
@@ -268,7 +284,7 @@ class SparseDenseTileBridge:
             self._scatter_tile(candidate, parent, tile, result)
 
         epistemic_pass = True
-        epistemic_status = "NOT_APPLICABLE"
+        epistemic_status: VerificationStatus = "NOT_APPLICABLE"
         if epistemic_validator is not None:
             epistemic_pass = bool(epistemic_validator(candidate))
             epistemic_status = "PASS" if epistemic_pass else "FAIL"
@@ -297,15 +313,21 @@ class SparseDenseTileBridge:
         after = runtime.snapshot_surface()
         after_hash = hash_sparse_field(after)
         numerical_pass = external.candidate_mse <= self.config.max_candidate_mse
-        if not external.committed and external.rejection_reason == "candidate distortion budget exceeded":
+        if (
+            not external.committed
+            and external.rejection_reason == "candidate distortion budget exceeded"
+        ):
             numerical_pass = False
-        if not external.committed and external.rejection_reason == "external validator rejected candidate":
+        if (
+            not external.committed
+            and external.rejection_reason == "external validator rejected candidate"
+        ):
             authority_pass = False
 
         verification = VerificationVector(
             integrity="PASS",
             numerical="PASS" if numerical_pass else "FAIL",
-            epistemic=epistemic_status,  # type: ignore[arg-type]
+            epistemic=epistemic_status,
             authority="PASS" if external.committed else "FAIL",
         )
         hard_constraints = {
@@ -363,7 +385,11 @@ class SparseDenseTileBridge:
         epistemic_validator: EpistemicValidator | None = None,
         authority_validator: ExternalValidator | None = None,
     ) -> tuple[SparseDenseBridgeRun, ...]:
-        if isinstance(max_rounds, bool) or not isinstance(max_rounds, int) or max_rounds <= 0:
+        if (
+            isinstance(max_rounds, bool)
+            or not isinstance(max_rounds, int)
+            or max_rounds <= 0
+        ):
             raise ValueError("max_rounds must be a positive integer")
         runs: list[SparseDenseBridgeRun] = []
         for _ in range(max_rounds):
@@ -406,7 +432,15 @@ class SparseDenseTileBridge:
             local_y = coordinate[1] - origin[1]
             vector = field[coordinate]
             for channel, value in enumerate(vector):
-                values[self._flat_index(channel, centre, local_y, local_x, depth, side)] = value
+                index = self._flat_index(
+                    channel,
+                    centre,
+                    local_y,
+                    local_x,
+                    depth,
+                    side,
+                )
+                values[index] = value
         return DenseTile(
             tile_key=tile_key,
             origin=origin,
@@ -455,5 +489,12 @@ class SparseDenseTileBridge:
                 raise ValueError(f"dense backend metric {key!r} is non-finite")
 
     @staticmethod
-    def _flat_index(channel: int, depth: int, row: int, column: int, depth_size: int, side: int) -> int:
+    def _flat_index(
+        channel: int,
+        depth: int,
+        row: int,
+        column: int,
+        depth_size: int,
+        side: int,
+    ) -> int:
         return (((channel * depth_size + depth) * side + row) * side) + column
