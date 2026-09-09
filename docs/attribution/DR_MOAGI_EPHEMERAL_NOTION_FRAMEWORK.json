@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "framework": {
+    "id": "dr-moagi-3d-ephemeral-notion-intelligence-framework",
+    "name": "Dr Moagi 3D Ephemeral-Notion Intelligence Framework",
+    "version": "1.1",
+    "canonical_date": "2026-09-09",
+    "originator": {
+      "name": "Matladi Maxwell Moagi",
+      "github": "Lord-Xido"
+    },
+    "repository": "Lord-Xido/Jarvis-X",
+    "canonical_record": "docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md",
+    "permeation_manifest": "docs/attribution/PERMEATION_MANIFEST.md",
+    "governing_adr": "docs/adr/0015-dr-moagi-ephemeral-notion-attribution-provenance.md",
+    "initial_attribution_commit": "2499c2b683bf041a9c1a9b974b9869b9de92d8a2",
+    "canonical_state": "S_t=(X_t,Z_t,v_t,N_t,X_hat_t,e_t,R_t,Omega_t,Theta_t)",
+    "ephemeral_notion_contract": "N_t in T_(Z_t) M",
+    "internal_validity": "||Y*_t-F(Y*_t)|| < epsilon_i",
+    "external_validity": "d(X_world,X_hat) < epsilon_e",
+    "attribution_inheritance": "Artifacts explicitly identifying themselves as implementations or derivatives of the Dr Moagi 3D Ephemeral-Notion Intelligence Framework should preserve attribution to Matladi Maxwell Moagi (Lord-Xido), subject to repository license and applicable law.",
+    "design_ambition": "Pursue capability beyond contemporary state of the art through inward 3D latent coordination, reality coupling, continuous correction and fixed-point verification.",
+    "claim_boundary": "The design ambition is not by itself an empirical SOTA result, patent-novelty determination, legal-priority determination, freedom-to-operate opinion, or global-scientific-novelty determination."
+  }
+}
