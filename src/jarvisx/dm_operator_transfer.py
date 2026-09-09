@@ -88,7 +88,7 @@ class DMOperatorConfig:
 
     @property
     def memory_gain(self) -> float:
-        return (self.omega / self.omega0) ** self.xi
+        return float((self.omega / self.omega0) ** self.xi)
 
     @property
     def scalar_gain(self) -> float:
