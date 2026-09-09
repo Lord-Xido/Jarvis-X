@@ -2,24 +2,26 @@
 
 The glyph ``⟲⊙`` is treated here as an executable contract rather than a logo:
 recursive internal stabilization (⟲) may advance only while correspondence to a
-declared external reference (⊙) is non-worsening.  Convergence requires both an
+declared external reference (⊙) is non-worsening. Convergence requires both an
 internal fixed point and an external correspondence threshold.
 
 This module intentionally does not claim that an arbitrary reference field is
-"truth".  The caller owns observation provenance.  The runtime guarantees only
+"truth". The caller owns observation provenance. The runtime guarantees only
 that the declared anchor participates in every admitted recursive transition.
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import asdict, dataclass, replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Mapping
 
 from .dm_vomegaxi_fixed_point import (
     DMvOmegaXiFixedPointConfig,
     DMvOmegaXiFixedPointEngine,
+    FixedPointReport,
+    ThetaGate,
 )
 from .dr_moagi_field_runtime import Coordinate, SparseField
 
@@ -45,7 +47,7 @@ class SparseRealityAnchor:
     """Finite sparse 3D observation anchor with a bounded correction operator.
 
     ``correction_gain`` controls how strongly one recursive cycle moves a
-    candidate toward the observation.  A gain of 1 applies the full observed
+    candidate toward the observation. A gain of 1 applies the full observed
     correction; smaller gains make correspondence contract over repeated cycles.
     """
 
@@ -117,32 +119,15 @@ class SparseRealityAnchor:
 
 
 @dataclass(frozen=True)
-class RealityFixedPointReport:
+class RealityFixedPointReport(FixedPointReport):
     """One Generate→Contrast→Reckon→Verify→Correct→Recur transaction."""
 
-    iteration: int
-    committed: bool
-    active_cells: int
-    latent_cells: int
-    reconstruction_rms: float
-    memory_rms: float
-    theta_rms: float
-    fixed_point_residual: float
-    semantic_gap: float
-    internal_converged: bool
-    external_residual_before: float
-    external_residual_generated: float
-    external_residual_after: float
-    external_correspondence: bool
-    reality_corrected: bool
-    converged: bool
-    theta_gate_passed: bool
-    rejection_reason: str | None
-    state_hash: str
-    journal_hash: str = ""
-
-    def as_dict(self) -> dict[str, object]:
-        return asdict(self)
+    internal_converged: bool = False
+    external_residual_before: float = 0.0
+    external_residual_generated: float = 0.0
+    external_residual_after: float = 0.0
+    external_correspondence: bool = False
+    reality_corrected: bool = False
 
 
 class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
@@ -150,8 +135,8 @@ class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
 
     A cycle is admitted when numerical/policy constraints pass and the proposed
     transition does not worsen correspondence to the supplied world anchor.
-    The anchor's correction operator is applied before admission.  Successful
-    convergence requires *both* the inherited internal fixed-point tolerance and
+    The anchor's correction operator is applied before admission. Successful
+    convergence requires both the inherited internal fixed-point tolerance and
     the anchor's external correspondence tolerance.
     """
 
@@ -172,14 +157,14 @@ class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
         reality_anchor: SparseRealityAnchor,
         config: DMvOmegaXiFixedPointConfig | None = None,
         *,
-        theta_gate=None,
+        theta_gate: ThetaGate | None = None,
         journal_path: str | Path | None = None,
     ) -> None:
         if not isinstance(reality_anchor, SparseRealityAnchor):
             raise TypeError("reality_anchor must be a SparseRealityAnchor")
         super().__init__(config, theta_gate=theta_gate, journal_path=journal_path)
         self.reality_anchor = reality_anchor
-        self.reports: list[RealityFixedPointReport] = []
+        self.reports.clear()
 
     def step(self) -> RealityFixedPointReport:
         self._require_loaded()
@@ -203,8 +188,8 @@ class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
         corrected_eval = self.reality_anchor.evaluate(corrected)
 
         # Never accept a correction that is less reality-correspondent than the
-        # internally generated proposal.  This keeps the operator monotone in
-        # the declared external discrepancy even for future anchor variants.
+        # internally generated proposal. This keeps the operator monotone in the
+        # declared external discrepancy even for future anchor variants.
         if corrected_eval.residual <= generated_eval.residual:
             candidate = corrected
             final_eval = corrected_eval
@@ -253,16 +238,16 @@ class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
             theta_rms=theta_rms,
             fixed_point_residual=residual,
             semantic_gap=semantic_gap,
+            converged=converged,
+            theta_gate_passed=theta_gate_passed,
+            rejection_reason=rejection_reason,
+            state_hash=self._state_hash(authoritative),
             internal_converged=internal_converged,
             external_residual_before=before_eval.residual,
             external_residual_generated=generated_eval.residual,
             external_residual_after=final_eval.residual,
             external_correspondence=external_correspondence,
             reality_corrected=candidate != generated,
-            converged=converged,
-            theta_gate_passed=theta_gate_passed,
-            rejection_reason=rejection_reason,
-            state_hash=self._state_hash(authoritative),
         )
         record = provisional.as_dict()
         record.pop("journal_hash", None)
@@ -285,11 +270,14 @@ class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
             report = self.step()
             if report.converged or not report.committed:
                 break
-        return tuple(self.reports)
+        return tuple(
+            report for report in self.reports if isinstance(report, RealityFixedPointReport)
+        )
 
     def status(self) -> dict[str, object]:
         status = super().status()
-        latest = self.reports[-1] if self.reports else None
+        latest_base = self.reports[-1] if self.reports else None
+        latest = latest_base if isinstance(latest_base, RealityFixedPointReport) else None
         status.update(
             {
                 "glyph": self.GLYPH,
