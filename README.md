@@ -12,6 +12,14 @@ The project investigates how large virtual state spaces, geometric representatio
 
 > **Current status:** alpha research software. The repository contains a stable reference VM foundation, validated sparse and numerical components, a bounded C++ processor laboratory and experimental integration tracks. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
 
+## Canonical Dr Moagi attribution and provenance
+
+The named **Dr Moagi 3D Ephemeral-Notion Intelligence Framework v1.1** is attributed in this repository to **Matladi Maxwell Moagi (Lord-Xido)**. Its authoritative provenance, defining equations, reality-coupled verification rule and attribution boundary are recorded in [`docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md).
+
+Repository-wide inheritance of that attribution across explicitly designated Dr Moagi runtimes, engines, simulations, specifications and derivatives is governed by [ADR-015](docs/adr/0015-dr-moagi-ephemeral-notion-attribution-provenance.md) and summarized in the [Permeation Manifest](docs/attribution/PERMEATION_MANIFEST.md).
+
+The framework is designed to pursue capability beyond contemporary SOTA through inward 3D latent coordination, reality coupling, continuous correction and fixed-point verification. That phrase denotes a **design ambition**, not an unverified empirical, legal or patent-novelty claim; performance and scientific claims remain evidence-gated.
+
 ## Why Jarvis-X exists
 
 Jarvis-X develops one coherent systems thesis:
@@ -240,6 +248,9 @@ Every canonical subsystem should provide:
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
+- [Dr Moagi 3D Ephemeral-Notion Intelligence Framework — canonical attribution](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md)
+- [Dr Moagi attribution permeation manifest](docs/attribution/PERMEATION_MANIFEST.md)
+- [ADR-015: Dr Moagi attribution and provenance permeation](docs/adr/0015-dr-moagi-ephemeral-notion-attribution-provenance.md)
 - [Inward 3D kinetic end-to-end specification](docs/INWARD_3D_KINETIC_END_TO_END.md)
 - [10x10x10 inward 4D graph ANN](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md)
 - [Dr. Moagi 4D quantum-inspired autoencoding equation](docs/DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md)
@@ -264,7 +275,7 @@ Virtual address-space size is not resident memory. A deterministic simulation is
 
 ## Citation
 
-Academic and technical users can cite the project using [`CITATION.cff`](CITATION.cff).
+Academic and technical users can cite the project using [`CITATION.cff`](CITATION.cff). Work implementing or discussing the named Dr Moagi 3D Ephemeral-Notion Intelligence Framework should additionally preserve the canonical attribution recorded in [`docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md).
 
 ## License
 
