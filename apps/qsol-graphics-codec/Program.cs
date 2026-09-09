@@ -3,6 +3,7 @@ using QSol.GraphicsCodec.Codec;
 using QSol.GraphicsCodec.Core;
 using QSol.GraphicsCodec.Export;
 using QSol.GraphicsCodec.Procedural;
+using QSol.GraphicsCodec.Runtime;
 
 namespace QSol.GraphicsCodec;
 
@@ -14,6 +15,21 @@ internal static class Program
         {
             if (args.Contains("--self-test", StringComparer.OrdinalIgnoreCase))
                 return SelfTest();
+
+            if (args.Contains("--dm3d-self-test", StringComparer.OrdinalIgnoreCase))
+                return Dm3dSelfOptimizingRuntime.SelfTest();
+
+            var romPath = GetOption(args, "--dm3d-rom");
+            if (romPath is not null)
+            {
+                var rom = Dm3dRomImage.Build();
+                var directory = Path.GetDirectoryName(romPath);
+                if (!string.IsNullOrEmpty(directory))
+                    Directory.CreateDirectory(directory);
+                File.WriteAllBytes(romPath, rom);
+                Console.WriteLine($"DM3D ROM {rom.Length}B sha256={Dm3dRomImage.Sha256Hex(rom)} -> {Path.GetFullPath(romPath)}");
+                return 0;
+            }
 
             var decodePath = GetOption(args, "--decode");
             if (decodePath is not null)
@@ -92,6 +108,7 @@ internal static class Program
         Console.WriteLine(FormattableString.Invariant($"selected={result.Encoded.QuantizationBits} bits maxError={result.MaxVertexError:G6}"));
 
         Dmkb1.DmkbSelfTest.Run();
+        Dm3dSelfOptimizingRuntime.SelfTest();
         return 0;
     }
 
