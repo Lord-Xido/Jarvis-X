@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
-from typing import Callable, Mapping, Protocol, Sequence
+from typing import Callable, Mapping, Protocol, Sequence, cast
 
 from .candidate_receipt import (
     CandidateReceipt,
@@ -139,6 +139,8 @@ class SparseDenseTransactionalRuntime(DrMoagiMultiparallel3D):
                 rejection_reason="external validator rejected candidate",
             )
 
+        memory_state = cast(SparseLoopField, getattr(self, "_memory"))
+        velocity_state = cast(SparseLoopField, getattr(self, "_velocity"))
         new_memory: SparseLoopField = {}
         new_error: SparseLoopField = {}
         new_velocity: SparseLoopField = {}
@@ -146,14 +148,14 @@ class SparseDenseTransactionalRuntime(DrMoagiMultiparallel3D):
             prior = before.get(coordinate, zero)
             delta = self._sub(value, prior)
             new_error[coordinate] = delta
-            previous_memory = self._memory.get(coordinate, zero)
+            previous_memory = memory_state.get(coordinate, zero)
             memory = self._add(
                 self._scale(previous_memory, self.config.memory_decay),
                 self._scale(delta, 1.0 - self.config.memory_decay),
             )
             if self._active(memory):
                 new_memory[coordinate] = memory
-            new_velocity[coordinate] = self._velocity.get(coordinate, zero)
+            new_velocity[coordinate] = velocity_state.get(coordinate, zero)
 
         self._surface = parsed
         self._velocity = new_velocity
