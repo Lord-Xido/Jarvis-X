@@ -167,7 +167,12 @@ def step(field: Field3D, kernel: Kernel3D, config: DMOperatorConfig) -> Field3D:
 
 def kernel_l1_norm(kernel: Kernel3D) -> float:
     _shape3(kernel, "kernel")
-    return sum(abs(value) for plane in kernel for row in plane for value in row)
+    return math.fsum(
+        abs(value)
+        for plane in kernel
+        for row in plane
+        for value in row
+    )
 
 
 def operator_gain_bound(kernel: Kernel3D, config: DMOperatorConfig) -> float:
@@ -179,7 +184,12 @@ def operator_gain_bound(kernel: Kernel3D, config: DMOperatorConfig) -> float:
 def uniform_mode_eigenvalue(kernel: Kernel3D, config: DMOperatorConfig) -> float:
     """Periodic/interior uniform-mode eigenvalue of the continuous operator."""
 
-    kernel_sum = sum(value for plane in kernel for row in plane for value in row)
+    kernel_sum = math.fsum(
+        value
+        for plane in kernel
+        for row in plane
+        for value in row
+    )
     return config.scalar_gain * kernel_sum
 
 
