@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use Jarvis-X in research or technical work, please cite the software and the specific release or commit."
+message: "If you use Jarvis-X in research or technical work, please cite the software and the specific release or commit. For work implementing or discussing the Dr Moagi 3D Ephemeral-Notion Intelligence Framework, preserve the canonical attribution to Matladi Maxwell Moagi (Lord-Xido)."
 title: "Jarvis-X"
 type: software
 version: 0.1.0
@@ -16,8 +16,16 @@ keywords:
   - sparse computing
   - geometric autoencoding
   - auditable adaptive systems
+  - ephemeral notion intelligence
+  - reality-coupled verification
+  - Dr Moagi framework
 abstract: >-
   Jarvis-X is an experimental deterministic bytecode virtual machine and
   sparse-computing research platform focused on explicit state contracts,
   bounded execution, verifiable provenance, geometric representations and
-  carefully constrained adaptive runtime experiments.
+  carefully constrained adaptive runtime experiments. The repository also
+  contains the Dr Moagi 3D Ephemeral-Notion Intelligence Framework, a named
+  systems-level synthesis attributed to Matladi Maxwell Moagi (Lord-Xido),
+  with canonical provenance recorded at
+  docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md and repository-wide
+  inheritance governed by ADR-015.
