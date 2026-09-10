@@ -84,6 +84,7 @@ jarvisx-dr-moagi-3d-animation = "jarvisx.dr_moagi_3d_animation_codec:main"
 jarvisx-dr-moagi-codegen = "jarvisx.dr_moagi_codegen_engine:main"
 jarvisx-dr-moagi-resonator = "jarvisx.dr_moagi_monadic_resonator:main"
 jarvisx-dr-moagi-multiparallel = "jarvisx.dr_moagi_multiparallel_cli:main"
+jarvisx-dr-moagi-multimodal3d = "jarvisx.dr_moagi_multimodal_loop:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
