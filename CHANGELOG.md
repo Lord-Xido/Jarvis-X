@@ -8,6 +8,7 @@ The project follows semantic versioning where practical during alpha development
 
 ### Added
 
+- normalized, bounded recursive Q16.16 codec over sparse 3D neighborhoods, with five-category SHA3 receipts and an executable `10^18`-address cube example;
 - verifiable JSON-native Omega ledger entries;
 - atomic persistent-ledger writes;
 - deterministic clock injection for replay fixtures;
@@ -53,6 +54,7 @@ The project follows semantic versioning where practical during alpha development
 
 ### Fixed
 
+- Q16.16 negative-product rounding, missing optional `/64` encoder normalization, premature codec accumulation saturation, omitted sparse stencil halos, mutable receipt aliases and partial field commits on ledger failure;
 - raw `bytes` objects in ledger entries were not JSON serializable;
 - pytest used the invalid coverage reporter `term-local`;
 - tests could create or mutate an `omega_ledger.json` file in the working directory;

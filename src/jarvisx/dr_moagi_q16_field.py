@@ -17,11 +17,11 @@ model or access a physical quantum process.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import hashlib
 import json
 import math
 import random
+from dataclasses import dataclass, field, replace
 from typing import Mapping, Sequence
 
 Coordinate3D = tuple[int, int, int]
@@ -33,6 +33,8 @@ UINT32_MASK = (1 << 32) - 1
 Q_FRAC_BITS = 16
 Q_SCALE = 1 << Q_FRAC_BITS
 Q_OUTPUT_MAX_RAW = (1 << 16) - 1
+MAX_CODEC_TAPS = 4096
+CODEC_PROFILE = "dr-moagi-q16-codec-v2"
 
 
 def _require_int(name: str, value: int) -> int:
@@ -56,6 +58,10 @@ def q_from_float(value: float) -> int:
     value = float(value)
     if not math.isfinite(value):
         raise ValueError("value must be finite")
+    if value >= INT32_MAX / Q_SCALE:
+        return INT32_MAX
+    if value <= INT32_MIN / Q_SCALE:
+        return INT32_MIN
     return sat_i32(int(round(value * Q_SCALE)))
 
 
@@ -76,18 +82,25 @@ def q_mul(a: int, b: int) -> int:
     """Q16.16 multiply with a 64-bit-style intermediate and 16-bit rescale."""
 
     product = sat_i32(a) * sat_i32(b)
-    if product >= 0:
-        scaled = product >> Q_FRAC_BITS
-    else:
-        scaled = -((-product) >> Q_FRAC_BITS)
-    return sat_i32(scaled)
+    return sat_i32(product >> Q_FRAC_BITS)
 
 
 def q_shift_left(raw: int, bits: int) -> int:
     _require_int("bits", bits)
     if bits < 0:
         raise ValueError("bits must be non-negative")
-    return sat_i32(sat_i32(raw) << bits)
+    raw = sat_i32(raw)
+    if bits >= 31:
+        return INT32_MAX if raw > 0 else INT32_MIN if raw < 0 else 0
+    return sat_i32(raw << bits)
+
+
+def binary_intent_mask(enabled: bool) -> int:
+    """Expand a binary enable to a full 32-bit AND mask (one is not a full mask)."""
+
+    if not isinstance(enabled, bool):
+        raise TypeError("enabled must be a boolean")
+    return UINT32_MASK if enabled else 0
 
 
 def bitwise_gate(raw: int, mask: int) -> int:
@@ -114,6 +127,8 @@ class Q16Interval:
     upper: int = INT32_MAX
 
     def __post_init__(self) -> None:
+        _require_int("lower", self.lower)
+        _require_int("upper", self.upper)
         if self.lower < INT32_MIN or self.upper > INT32_MAX:
             raise ValueError("interval must fit signed 32-bit storage")
         if self.lower > self.upper:
@@ -128,42 +143,61 @@ class Sha3Ledger:
 
     GENESIS = bytes(32)
 
-    def __init__(self) -> None:
+    def __init__(self, max_entries: int = 1024) -> None:
+        if _require_int("max_entries", max_entries) <= 0:
+            raise ValueError("max_entries must be positive")
+        self.max_entries = max_entries
         self.head = self.GENESIS
         self.entries: list[dict[str, object]] = []
 
     @staticmethod
     def _record_bytes(record: Mapping[str, object]) -> bytes:
         return json.dumps(
-            dict(record), sort_keys=True, separators=(",", ":"), ensure_ascii=True
+            dict(record),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
         ).encode("utf-8")
 
     def bind(self, record: Mapping[str, object]) -> str:
-        payload = self.head + self._record_bytes(record)
+        if len(self.entries) >= self.max_entries:
+            raise ValueError("ledger entry budget exhausted")
+        if not self.verify():
+            raise ValueError("ledger is inconsistent")
+        encoded = self._record_bytes(record)
+        payload = self.head + encoded
         digest = hashlib.sha3_256(payload).digest()
         self.entries.append(
             {
                 "prev": self.head.hex(),
-                "record": dict(record),
+                "record": json.loads(encoded),
                 "hash": digest.hex(),
             }
         )
         self.head = digest
         return digest.hex()
 
-    def verify(self) -> bool:
+    def verify(self, expected_head: str | None = None) -> bool:
+        """Check consistency, optionally against an independently retained head."""
+
         previous = self.GENESIS
         for envelope in self.entries:
+            if not isinstance(envelope, dict):
+                return False
             if envelope.get("prev") != previous.hex():
                 return False
             record = envelope.get("record")
             if not isinstance(record, Mapping):
                 return False
-            digest = hashlib.sha3_256(previous + self._record_bytes(record)).digest()
+            try:
+                digest = hashlib.sha3_256(previous + self._record_bytes(record)).digest()
+            except (TypeError, ValueError, OverflowError):
+                return False
             if envelope.get("hash") != digest.hex():
                 return False
             previous = digest
-        return previous == self.head
+        return previous == self.head and (expected_head is None or previous.hex() == expected_head)
 
 
 @dataclass(frozen=True)
@@ -189,21 +223,38 @@ class FieldStepReport:
 
 
 @dataclass(frozen=True)
+class CodecStepReport:
+    tick: int
+    output: SparseRawField
+    processed_cells: int
+    squared_error_raw: int
+    max_error_raw: int
+    ledger_hash: str
+
+
+@dataclass(frozen=True)
 class DrMoagiQ16Config:
     side: int = 64
     lambda_inverse_raw: int = field(default_factory=lambda: q_from_float(1.0))
     gamma_gain_raw: int = field(default_factory=lambda: q_from_float(0.0))
     eta_amplitude_raw: int = field(default_factory=lambda: q_from_float(0.0))
     seed: int = 0
+    max_active_cells: int = 65536
+    max_ledger_entries: int = 1024
 
     def __post_init__(self) -> None:
         if isinstance(self.side, bool) or not isinstance(self.side, int) or self.side <= 0:
             raise ValueError("side must be a positive integer")
         for name in ("lambda_inverse_raw", "gamma_gain_raw", "eta_amplitude_raw"):
-            value = getattr(self, name)
+            value = _require_int(name, getattr(self, name))
             if value < INT32_MIN or value > INT32_MAX:
                 raise ValueError(f"{name} must fit signed 32-bit storage")
         _require_int("seed", self.seed)
+        if self.eta_amplitude_raw < 0:
+            raise ValueError("eta_amplitude_raw must be non-negative")
+        for name in ("max_active_cells", "max_ledger_entries"):
+            if _require_int(name, getattr(self, name)) <= 0:
+                raise ValueError(f"{name} must be positive")
 
 
 class DrMoagiQ16FieldRuntime:
@@ -211,7 +262,7 @@ class DrMoagiQ16FieldRuntime:
 
     def __init__(self, config: DrMoagiQ16Config | None = None) -> None:
         self.config = config or DrMoagiQ16Config()
-        self.ledger = Sha3Ledger()
+        self.ledger = Sha3Ledger(self.config.max_ledger_entries)
         self.rng = random.Random(self.config.seed)
         self.state: SparseRawField = {}
         self.previous_state: SparseRawField = {}
@@ -229,6 +280,8 @@ class DrMoagiQ16FieldRuntime:
         return out[0], out[1], out[2]
 
     def load(self, values: Mapping[Coordinate3D, int]) -> None:
+        if len(values) > self.config.max_active_cells:
+            raise ValueError("active cell budget exceeded")
         parsed: SparseRawField = {}
         for coordinate, raw in values.items():
             coord = self._coord(coordinate)
@@ -236,9 +289,25 @@ class DrMoagiQ16FieldRuntime:
         self.previous_state = dict(parsed)
         self.state = parsed
         self.tick = 0
+        self.ledger = Sha3Ledger(self.config.max_ledger_entries)
+        self.rng = random.Random(self.config.seed)
 
     def load_float(self, values: Mapping[Coordinate3D, float]) -> None:
+        if len(values) > self.config.max_active_cells:
+            raise ValueError("active cell budget exceeded")
         self.load({coord: q_from_float(value) for coord, value in values.items()})
+
+    def logical_layout(self) -> dict[str, int]:
+        """Describe virtual capacity; this does not allocate a dense field."""
+
+        cells = self.config.side**3
+        return {
+            "side": self.config.side,
+            "logical_cells": cells,
+            "dense_q16_bytes": 4 * cells,
+            "resident_cells": len(self.state),
+            "max_active_cells": self.config.max_active_cells,
+        }
 
     @staticmethod
     def encode_decode_cell(
@@ -251,48 +320,85 @@ class DrMoagiQ16FieldRuntime:
         constraint: Q16Interval,
         ledger: Sha3Ledger,
         tick: int = 0,
+        encoder_shift: int = 0,
     ) -> CellTrace:
         """Execute the stated discrete update law for one logical cell.
 
         G_k = V_k & Psi_k
-        C = sum_k Q16mul(G_k, W_phi_k)
+        C = sat(sum_k Q16mul(G_k, W_phi_k) >> encoder_shift)
         A = clamp(C, 0, INT32_MAX)
-        H_t = SHA3(H_{t-1} || serialize(A,t,coord))
         A_safe = project(A, Lambda_min, Lambda_max)
         U = sat(A_safe << 2)
         D = sum_j Q16mul(U, W_theta_j)
         V_out = clamp(D, 0, 2^16-1) [raw integer domain]
+        H_t = SHA3(H_{t-1} || serialize(completed_cell_receipt))
         """
 
-        if not (len(values) == len(psi_masks) == len(phi_weights)):
-            raise ValueError("values, psi_masks and phi_weights must have equal length")
-        if not theta_weights:
-            raise ValueError("theta_weights must not be empty")
-
-        gated = tuple(bitwise_gate(v, m) for v, m in zip(values, psi_masks))
-        convolution = 0
-        for g, w in zip(gated, phi_weights):
-            convolution = q_add(convolution, q_mul(g, w))
-        activation = project(convolution, 0, INT32_MAX)
+        if _require_int("tick", tick) < 0:
+            raise ValueError("tick must be non-negative")
+        trace = DrMoagiQ16FieldRuntime._evaluate_codec_cell(
+            coordinate,
+            values,
+            psi_masks,
+            phi_weights,
+            theta_weights,
+            constraint,
+            encoder_shift,
+        )
         ledger_hash = ledger.bind(
             {
-                "tick": int(tick),
+                "profile": CODEC_PROFILE,
+                "tick": tick,
                 "coordinate": list(coordinate),
-                "activation_raw": activation,
+                "values": list(values),
+                "psi_masks": list(psi_masks),
+                "phi_weights": list(phi_weights),
+                "theta_weights": list(theta_weights),
+                "encoder_shift": encoder_shift,
+                "bounds": [constraint.lower, constraint.upper],
+                "activation_raw": trace.activation_raw,
+                "output_raw": trace.output_raw,
             }
         )
+        return replace(trace, ledger_hash=ledger_hash)
+
+    @staticmethod
+    def _evaluate_codec_cell(
+        coordinate: Coordinate3D,
+        values: Sequence[int],
+        psi_masks: Sequence[int],
+        phi_weights: Sequence[int],
+        theta_weights: Sequence[int],
+        constraint: Q16Interval,
+        encoder_shift: int,
+    ) -> CellTrace:
+        if not isinstance(coordinate, tuple) or len(coordinate) != 3:
+            raise TypeError("coordinate must be a 3-tuple")
+        if any(_require_int("coordinate axis", axis) < 0 for axis in coordinate):
+            raise ValueError("coordinate axes must be non-negative")
+        if not isinstance(constraint, Q16Interval):
+            raise TypeError("constraint must be a Q16Interval")
+        if not 0 <= _require_int("encoder_shift", encoder_shift) <= 31:
+            raise ValueError("encoder_shift must be in [0, 31]")
+        if not (len(values) == len(psi_masks) == len(phi_weights)):
+            raise ValueError("values, psi_masks and phi_weights must have equal length")
+        if not 1 <= len(values) <= MAX_CODEC_TAPS or not 1 <= len(theta_weights) <= MAX_CODEC_TAPS:
+            raise ValueError(f"encoder and decoder require 1..{MAX_CODEC_TAPS} taps")
+
+        gated = tuple(bitwise_gate(v, m) for v, m in zip(values, psi_masks))
+        # Each product fits int64; sum of at most 4096 saturated Q16 terms does too.
+        convolution = sat_i32(sum(q_mul(g, w) for g, w in zip(gated, phi_weights)) >> encoder_shift)
+        activation = project(convolution, 0, INT32_MAX)
         safe = constraint.apply(activation)
         upshift = q_shift_left(safe, 2)
-        decoded = 0
-        for weight in theta_weights:
-            decoded = q_add(decoded, q_mul(upshift, weight))
+        decoded = sat_i32(sum(q_mul(upshift, weight) for weight in theta_weights))
         output = project(decoded, 0, Q_OUTPUT_MAX_RAW)
         return CellTrace(
             coordinate=coordinate,
             gated_values=gated,
             convolution_raw=convolution,
             activation_raw=activation,
-            ledger_hash=ledger_hash,
+            ledger_hash="",
             safe_activation_raw=safe,
             upshift_raw=upshift,
             decoded_raw=decoded,
@@ -302,6 +408,151 @@ class DrMoagiQ16FieldRuntime:
     @staticmethod
     def _sample(field: Mapping[Coordinate3D, int], coordinate: Coordinate3D) -> int:
         return sat_i32(field.get(coordinate, 0))
+
+    @staticmethod
+    def _kernel(kernel: Mapping[Coordinate3D, int]) -> dict[Coordinate3D, int]:
+        if not 1 <= len(kernel) <= MAX_CODEC_TAPS:
+            raise ValueError(f"kernel requires 1..{MAX_CODEC_TAPS} taps")
+        parsed: dict[Coordinate3D, int] = {}
+        for offset, raw in kernel.items():
+            if not isinstance(offset, tuple) or len(offset) != 3:
+                raise TypeError("kernel offset must be a 3-tuple")
+            for axis in offset:
+                _require_int("kernel offset axis", axis)
+            parsed[offset] = sat_i32(raw)
+        return dict(sorted(parsed.items()))
+
+    def _support(
+        self,
+        kernel: Mapping[Coordinate3D, int],
+        *extra_fields: Mapping[Coordinate3D, object],
+    ) -> set[Coordinate3D]:
+        support: set[Coordinate3D] = set()
+
+        def add(coord: Coordinate3D) -> None:
+            support.add(self._coord(coord))
+            if len(support) > self.config.max_active_cells:
+                raise ValueError("active cell budget exceeded")
+
+        for values in (self.state, *extra_fields):
+            for coord in values:
+                add(coord)
+        # Sampling at r + offset means a source at s influences r = s - offset.
+        for (x, y, z), value in self.state.items():
+            if sat_i32(value) == 0:
+                continue
+            for (dx, dy, dz), weight in kernel.items():
+                target = (x - dx, y - dy, z - dz)
+                if weight and all(0 <= axis < self.config.side for axis in target):
+                    add(target)
+        return support
+
+    @staticmethod
+    def _fingerprint(value: object) -> str:
+        encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha3_256(encoded.encode("utf-8")).hexdigest()
+
+    def step_codec(
+        self,
+        *,
+        phi_kernel: Mapping[Coordinate3D, int],
+        theta_weights: Sequence[int],
+        psi_masks: Mapping[Coordinate3D, int] | None = None,
+        constraints: Mapping[Coordinate3D, Q16Interval] | None = None,
+        encoder_shift: int = 6,
+    ) -> CodecStepReport:
+        """Run one synchronous, zero-padded 3D codec cycle and feed output back.
+
+        Only active coordinates and their stencil halo are evaluated. The
+        default encoder shift is the supplied /64 normalization; it is not an
+        additional Q16 multiplication rescale. One cycle creates one receipt.
+        Failed validation, resource limits or ledger binding leave state intact.
+        """
+
+        kernel = self._kernel(phi_kernel)
+        if not 1 <= len(theta_weights) <= MAX_CODEC_TAPS:
+            raise ValueError(f"decoder requires 1..{MAX_CODEC_TAPS} taps")
+        decoder = tuple(sat_i32(value) for value in theta_weights)
+        if not 0 <= _require_int("encoder_shift", encoder_shift) <= 31:
+            raise ValueError("encoder_shift must be in [0, 31]")
+        psi_masks = psi_masks or {}
+        constraints = constraints or {}
+        support = self._support(kernel, psi_masks, constraints)
+        masks = {
+            self._coord(c): _require_int("mask", m) & UINT32_MASK for c, m in psi_masks.items()
+        }
+        for coord, interval in constraints.items():
+            self._coord(coord)
+            if not isinstance(interval, Q16Interval):
+                raise TypeError("constraints must contain Q16Interval values")
+
+        next_state: SparseRawField = {}
+        squared_error = max_error = 0
+        weights = tuple(kernel.values())
+        for coord in sorted(support):
+            neighbors = [(coord[0] + dx, coord[1] + dy, coord[2] + dz) for dx, dy, dz in kernel]
+            trace = self._evaluate_codec_cell(
+                coord,
+                [self._sample(self.state, neighbor) for neighbor in neighbors],
+                [masks.get(neighbor, UINT32_MASK) for neighbor in neighbors],
+                weights,
+                decoder,
+                constraints.get(coord, Q16Interval(0, INT32_MAX)),
+                encoder_shift,
+            )
+            if trace.output_raw:
+                next_state[coord] = trace.output_raw
+            error = trace.output_raw - self._sample(self.state, coord)
+            squared_error += error * error
+            max_error = max(max_error, abs(error))
+
+        def rows(values: Mapping[Coordinate3D, int]) -> list[list[int]]:
+            return [[*coord, raw] for coord, raw in sorted(values.items())]
+
+        next_tick = self.tick + 1
+        ledger_hash = self.ledger.bind(
+            {
+                "structural": {
+                    "side": self.config.side,
+                    "phi_sha3": self._fingerprint(rows(kernel)),
+                    "theta_sha3": self._fingerprint(decoder),
+                },
+                "semantic": {
+                    "profile": CODEC_PROFILE,
+                    "encoder_shift": encoder_shift,
+                    "boundary": "zero",
+                    "psi_sha3": self._fingerprint(rows(masks)),
+                    "lambda_sha3": self._fingerprint(
+                        [
+                            [*coord, interval.lower, interval.upper]
+                            for coord, interval in sorted(constraints.items())
+                        ]
+                    ),
+                },
+                "behavioral": {
+                    "input_sha3": self._fingerprint(rows(self.state)),
+                    "output_sha3": self._fingerprint(rows(next_state)),
+                    "processed_cells": len(support),
+                    "squared_error_raw": squared_error,
+                    "max_error_raw": max_error,
+                },
+                "temporal": {"tick": next_tick},
+                "metadata": {
+                    "originator": "Matladi Maxwell Moagi (Lord-Xido)",
+                    "engine": "vOmegaXi-2026-DeltaS++++",
+                },
+            }
+        )
+        self.previous_state, self.state = dict(self.state), next_state
+        self.tick = next_tick
+        return CodecStepReport(
+            next_tick,
+            dict(next_state),
+            len(support),
+            squared_error,
+            max_error,
+            ledger_hash,
+        )
 
     def convolve(
         self,
@@ -338,11 +589,18 @@ class DrMoagiQ16FieldRuntime:
         """
 
         psi_raw = psi_raw or {}
-        phi_kernel = phi_kernel or {(0, 0, 0): 0}
+        phi_kernel = self._kernel(phi_kernel if phi_kernel is not None else {(0, 0, 0): 0})
         adaptive_gradient_raw = adaptive_gradient_raw or {}
         constraints = constraints or {}
 
-        support = set(self.state) | set(self.previous_state) | set(psi_raw) | set(adaptive_gradient_raw)
+        support = self._support(
+            phi_kernel, self.previous_state, psi_raw, adaptive_gradient_raw, constraints
+        )
+        for interval in constraints.values():
+            if not isinstance(interval, Q16Interval):
+                raise TypeError("constraints must contain Q16Interval values")
+        candidate_rng = random.Random()
+        candidate_rng.setstate(self.rng.getstate())
         next_state: SparseRawField = {}
         sum_abs_delta = 0
         max_abs_raw = 0
@@ -359,7 +617,7 @@ class DrMoagiQ16FieldRuntime:
             torsion = q_mul(self.config.gamma_gain_raw, q_sub(current, previous))
             eta = 0
             if self.config.eta_amplitude_raw:
-                eta_unit = q_from_float(self.rng.uniform(-1.0, 1.0))
+                eta_unit = q_from_float(candidate_rng.uniform(-1.0, 1.0))
                 eta = q_mul(self.config.eta_amplitude_raw, eta_unit)
 
             candidate = current
@@ -377,18 +635,18 @@ class DrMoagiQ16FieldRuntime:
             sum_abs_delta += delta
             max_abs_raw = max(max_abs_raw, abs(candidate))
 
-        self.previous_state = dict(self.state)
-        self.state = next_state
-        self.tick += 1
+        next_tick = self.tick + 1
         ledger_hash = self.ledger.bind(
             {
-                "tick": self.tick,
+                "tick": next_tick,
                 "cells": [
-                    [coord[0], coord[1], coord[2], raw]
-                    for coord, raw in sorted(next_state.items())
+                    [coord[0], coord[1], coord[2], raw] for coord, raw in sorted(next_state.items())
                 ],
             }
         )
+        self.previous_state, self.state = dict(self.state), next_state
+        self.tick = next_tick
+        self.rng.setstate(candidate_rng.getstate())
         mean_abs_delta = (sum_abs_delta / max(1, len(support))) / Q_SCALE
         return FieldStepReport(
             tick=self.tick,

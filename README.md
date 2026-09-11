@@ -60,6 +60,17 @@ Experimental engines remain in draft pull requests until their tests, interfaces
 
 ## Quick start
 
+### Run the normalized Dr Moagi Q16.16 cube
+
+```bash
+PYTHONPATH=src python examples/dr_moagi_q16_cube.py --side 1000000 --steps 3
+```
+
+This bounded sparse reference executes the `Psi -> Phi -> Lambda -> Theta`
+codec and feeds decoded cells into the next cycle, with exact error metrics
+and SHA3 receipts. The `10^18`-cell cube is a logical address space; the JSON
+reports actual processed cells. See the [arithmetic and provenance contract](docs/DR_MOAGI_Q16_FIELD_SUBSTRATE.md).
+
 ### Install the Python package for development
 
 ```bash
