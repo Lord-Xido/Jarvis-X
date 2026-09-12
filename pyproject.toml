@@ -85,6 +85,7 @@ jarvisx-dr-moagi-codegen = "jarvisx.dr_moagi_codegen_engine:main"
 jarvisx-dr-moagi-resonator = "jarvisx.dr_moagi_monadic_resonator:main"
 jarvisx-dr-moagi-multiparallel = "jarvisx.dr_moagi_multiparallel_cli:main"
 jarvisx-dr-moagi-multimodal3d = "jarvisx.dr_moagi_multimodal_loop:main"
+jarvisx-dr-moagi-operational = "jarvisx.dr_moagi_operational_runtime:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
