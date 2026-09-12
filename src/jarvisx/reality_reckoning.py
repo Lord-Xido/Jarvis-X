@@ -128,6 +128,7 @@ class RealityFixedPointReport(FixedPointReport):
     external_residual_after: float = 0.0
     external_correspondence: bool = False
     reality_corrected: bool = False
+    journal_hash: str = ""
 
 
 class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
@@ -168,7 +169,7 @@ class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
 
     def step(self) -> RealityFixedPointReport:
         self._require_loaded()
-        current = dict(self._state)
+        current: SparseField = self.snapshot()
         support = tuple(sorted(current))
 
         # Generate: execute the inherited bounded sparse internal operator.
@@ -275,7 +276,7 @@ class RealityConstrainedDMvOmegaXiEngine(DMvOmegaXiFixedPointEngine):
         )
 
     def status(self) -> dict[str, object]:
-        status = super().status()
+        status: dict[str, object] = super().status()
         latest_base = self.reports[-1] if self.reports else None
         latest = latest_base if isinstance(latest_base, RealityFixedPointReport) else None
         status.update(
