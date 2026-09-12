@@ -74,3 +74,6 @@ jarvisx_harden(jarvisx-compile-interpret-accelerator-tests)
 
 add_test(NAME compile-interpret-accelerator-regressions COMMAND jarvisx-compile-interpret-accelerator-tests)
 set_tests_properties(compile-interpret-accelerator-regressions PROPERTIES TIMEOUT 120)
+
+# Additional bounded Dr Moagi runtime modules.
+include(${CMAKE_CURRENT_SOURCE_DIR}/moagi3d_engine.cmake)
