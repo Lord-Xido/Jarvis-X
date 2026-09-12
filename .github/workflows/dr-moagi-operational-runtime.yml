@@ -1,0 +1,92 @@
+name: Dr Moagi Operational Runtime
+
+on:
+  push:
+    branches: [main, "codex/**"]
+    paths:
+      - "src/jarvisx/dr_moagi_multimodal_loop.py"
+      - "src/jarvisx/dr_moagi_operational_runtime.py"
+      - "tests/test_dr_moagi_multimodal_loop.py"
+      - "tests/test_dr_moagi_operational_runtime.py"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-operational-runtime.yml"
+  pull_request:
+    paths:
+      - "src/jarvisx/dr_moagi_multimodal_loop.py"
+      - "src/jarvisx/dr_moagi_operational_runtime.py"
+      - "tests/test_dr_moagi_multimodal_loop.py"
+      - "tests/test_dr_moagi_operational_runtime.py"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-operational-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install test tooling
+        run: python -m pip install --upgrade pip pytest pytest-cov
+
+      - name: Run bounded runtime tests
+        env:
+          PYTHONPATH: src
+        run: >-
+          python -m pytest
+          tests/test_dr_moagi_multimodal_loop.py
+          tests/test_dr_moagi_operational_runtime.py
+          --no-cov -q
+
+      - name: Run end-to-end operational smoke test
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m jarvisx.dr_moagi_operational_runtime \
+            --text "Jarvis X CI operational multimodal loop" \
+            --edge 8 \
+            --depths 2,3 \
+            --mixes 0.20,0.35 \
+            --cycles 2 \
+            --deterministic-stride 100000000000000000000 \
+            --memory "$RUNNER_TEMP/dr-moagi-memory.jsonl" \
+            --out "$RUNNER_TEMP/dr-moagi-operational-out" \
+            --quiet
+          test -s "$RUNNER_TEMP/dr-moagi-operational-out/operational-report.json"
+          test -s "$RUNNER_TEMP/dr-moagi-operational-out/metrics.json"
+          test -s "$RUNNER_TEMP/dr-moagi-operational-out/fused-latent.obj"
+          test -s "$RUNNER_TEMP/dr-moagi-memory.jsonl"
+
+      - name: Verify selected run is valid
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "dr-moagi-operational-out"
+          report = json.loads((root / "operational-report.json").read_text("utf-8"))
+          selected = report["selected"]["verification"]
+          assert selected["valid"] is True
+          assert selected["finite_metrics"] is True
+          assert selected["fusion_normalized"] is True
+          assert selected["generated_all_modalities"] is True
+          assert selected["input_lengths_preserved"] is True
+          print(json.dumps(selected, indent=2, sort_keys=True))
+          PY
