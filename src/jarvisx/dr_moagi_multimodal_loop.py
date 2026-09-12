@@ -156,10 +156,10 @@ class DrMoagiMultimodal3DLoop:
         if not 1<=temporal_depth<=64 or not 0<=temporal_decay<1 or not 0<=cross_modal_mix<=1: raise ValueError("invalid loop configuration")
         self.edge=edge; self.depth=temporal_depth; self.decay=temporal_decay; self.mix=cross_modal_mix
         self.coordinate_gain=coordinate_gain; self.eps=convergence_eps; self.streak_needed=convergence_streak
-        self.clock=clock or VirtualSeptillionClock(); self.cycle=0; self.streak=0; self.prev=None
-        self.models={m:Autoencoder3D(edge,seed^(0x9E3779B97F4A7C15*(i+1))) for i,m in enumerate(MODALITIES)}
-        self.inputs={}; self.lengths={}; self.history={m:deque(maxlen=temporal_depth) for m in MODALITIES}
-        self.generated={}; self.fused=None; self.last_metrics=None
+        self.clock=clock or VirtualSeptillionClock(); self.cycle=0; self.streak=0; self.prev: Optional[list[float]]=None
+        self.models: dict[Modality,Autoencoder3D]={m:Autoencoder3D(edge,seed^(0x9E3779B97F4A7C15*(i+1))) for i,m in enumerate(MODALITIES)}
+        self.inputs: dict[Modality,Volume3D]={}; self.lengths: dict[Modality,int]={}; self.history: dict[Modality,deque[Volume3D]]={m:deque(maxlen=temporal_depth) for m in MODALITIES}
+        self.generated: dict[Modality,Volume3D]={}; self.fused: Optional[Volume3D]=None; self.last_metrics: Optional[LoopMetrics]=None
     def set_payload(self,modality:Modality|str,payload:bytes|str):
         m=modality if isinstance(modality,Modality) else Modality(modality); raw=payload.encode() if isinstance(payload,str) else bytes(payload)
         self.inputs[m]=Payload3DAdapter.ingest(raw,m,self.edge); self.lengths[m]=max(1,len(raw)); self.history[m].clear()
@@ -196,13 +196,13 @@ class DrMoagiMultimodal3DLoop:
         else: virtual_ops=int(virtual_ops); address=SeptillionAddressSpace.address(virtual_ops); self.clock.probes+=1
         index=virtual_ops%VIRTUAL_STATES
         for m in MODALITIES: self.models[m].train_transactional(self.inputs[m])
-        temporal={}; losses={}
+        temporal: dict[Modality,Volume3D]={}; losses: dict[Modality,float]={}
         for m in MODALITIES:
             model=self.models[m]; self.history[m].appendleft(model.encode(self.inputs[m])); temporal[m]=self.temporal(m)
             losses[m]=self.inputs[m].mse(model.decode(temporal[m]))
         raw={m:1/(1e-6+losses[m]) for m in MODALITIES}; s=sum(raw.values()); weights={m:raw[m]/s for m in MODALITIES}
         self.fused=self.condition(self.fuse(temporal,weights),index)
-        generated={}; mm={}; rs=cs=0.0
+        generated: dict[Modality,Volume3D]={}; mm: dict[str,ModalityMetrics]={}; rs=cs=0.0
         for m in MODALITIES:
             model=self.models[m]; latent=temporal[m].blend(self.fused,self.mix); out=model.decode(latent); generated[m]=out
             cyc=latent.mse(model.encode(out)); rs+=losses[m]; cs+=cyc
