@@ -29,6 +29,10 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_3D_AUTOEXEC_ENGINE.md`
 - `docs/DR_MOAGI_FIRMWARE_CONTAINER.md`
 - `docs/DR_MOAGI_3D_ANIMATION_CODEC.md`
+- `docs/volumetric-rom-ann.md`
+- `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`
+- `cpp_runtime/src/volumetric_rom_ann_main.cpp`
+- the CMake target `DrMoagi-Volumetric-ROM-ANN`
 - other present and future files whose own title or specification explicitly places them in the Dr Moagi family.
 
 This list is representative, not exhaustive; the inheritance condition is the explicit Dr Moagi designation plus the repository context.
@@ -58,6 +62,21 @@ and validity is dual-gated by internal convergence and external correspondence:
 AND
 d(X_world, X_hat) < epsilon_e.
 ```
+
+The volumetric ROM ANN is an implementation-specific specialization of this family pattern:
+
+```text
+60-bit address
+  -> sparse 32^3 tile
+  -> 32^3 -> 16^3 -> 8^3 -> 4^3 -> 2^3 -> 1 inward contraction
+  -> recursive latent fixed point
+  -> reconstruction
+  -> error field
+  -> Omega / Theta / Pi update
+  -> recur
+```
+
+Its `2^60` logical address extent is a virtual addressing contract; it is not a claim of physically resident 1 EiB memory.
 
 ## Attribution inheritance rule
 

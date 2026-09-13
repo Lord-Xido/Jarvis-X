@@ -2,6 +2,8 @@
 
 This runtime operationalizes the sparse virtual 3D ANN model as a C++17 executable in `cpp_runtime`.
 
+**Dr Moagi family attribution:** Originator of the Dr Moagi 3D Ephemeral-Notion Intelligence Framework: Matladi Maxwell Moagi (Lord-Xido). Canonical provenance: `docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`. Repository-wide inheritance is governed by ADR-015 and `docs/attribution/PERMEATION_MANIFEST.md`.
+
 ## Geometry
 
 Each axis is a 20-bit coordinate:
@@ -103,3 +105,7 @@ The architecture is deliberately sparse:
 \]
 
 Logical capacity and physical memory are therefore separate. The machine executes only the active tiles, contracts them inward, stabilizes a latent representation, reconstructs outward, measures error, adapts \(\Omega\), \(\Theta\), and \(\Pi\), then recurs to the next 60-bit coordinate.
+
+## Permeation boundary
+
+Within Jarvis-X this runtime is a bounded executable specialization of the wider Dr Moagi family. The inherited vocabulary and provenance do not change its evidence boundary: the implementation demonstrates sparse virtual addressing, multiresolution contraction, fixed-point iteration, reconstruction/error feedback and bounded runtime adaptation. It does not establish physical 1 EiB memory, unrestricted self-modification, AGI, consciousness, or hardware throughput beyond measured software execution.

@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-08-28
+**Last reviewed:** 2026-09-13
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -30,6 +30,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Trace and Omega journal | Stable reference | `tracer.py`, `ledger.py`, `ledger_store.py` | persistence is opt-in; timestamps are environmental inputs |
 | Consolidated empirical validation | Stable reference | `empirical_validation.py`, focused tests, JSON artifact workflow | verifies bounded software invariants only; no AGI, safety or production-performance inference |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
+| 1 MiB³ volumetric ROM ANN | Reference laboratory | `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`, `cpp_runtime/src/volumetric_rom_ann_main.cpp`, CTest, cross-platform C++ workflow | `2^60` logical voxel addresses / 1 EiB virtual byte capacity; only bounded `32^3` tiles are materialized; fixed-point and adaptive dynamics are software emulation, not physical 1 EiB memory or hardware-throughput evidence |
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database or proof of long-memory quality |
 | Sparse billion-address field | Stable reference | `dr_moagi_billion_field.py`, transaction/digest/checkpoint tests | virtual `1000³` address space; active sparse coordinates alone are materialized |
@@ -60,7 +61,7 @@ The gate currently tests five falsifiable properties:
 4. fractal-octree agreement with exact recursive closed forms;
 5. fractional-smoothing conservation, dissipation and semigroup tolerances.
 
-The Field Runtime v2, inward 4D graph ANN, Moagi-Helmholtz orchestration runtime and orthogonal quantization precision gate are covered by focused unit tests in the normal CI suite. They are not yet promoted into the consolidated empirical-validation artifact; that remains a follow-up integration target.
+The Field Runtime v2, inward 4D graph ANN, Moagi-Helmholtz orchestration runtime, orthogonal quantization precision gate and volumetric ROM ANN are covered by focused tests in the normal CI suite. They are not yet promoted into the consolidated empirical-validation artifact; that remains a follow-up integration target.
 
 The `Empirical Validation` GitHub Actions workflow publishes the machine-readable report as a retained workflow artifact. See [Empirical Validation](EMPIRICAL_VALIDATION.md) for protocols, thresholds and inference boundaries.
 
@@ -95,6 +96,7 @@ Jarvis-X does not currently claim:
 - that a failed orthogonal precision gate may be repaired by simply doubling the admissible quantization threshold;
 - unique convergence of arbitrary learned Moagi-Helmholtz pipelines without sufficient mathematical assumptions;
 - physical hardware performance from a virtual address-space description;
+- physical residency of the volumetric ROM ANN's 1 EiB logical address space;
 - trained model quality from deterministic initialized weights;
 - safety certification from the presence of a policy or coherence gate;
 - bit-exact cross-platform floating-point results from the C++ research processor;
@@ -141,6 +143,7 @@ A capability moves to `main` only when all applicable items are satisfied:
 - deterministic serialization;
 - transactional concurrency;
 - same-space sparse field operators with explicit topology and boundary semantics;
+- integrate the volumetric ROM ANN's `2^60` logical addressing and multiresolution tile contract with the canonical sparse coordinate API rather than maintaining a parallel address model;
 - benchmark corpus with named baselines and uncertainty reporting.
 
 ### `0.4.0` — Bounded adaptive laboratory
@@ -153,5 +156,6 @@ A capability moves to `main` only when all applicable items are satisfied:
 - orthogonal transform receipts carrying basis/version, step vector, rounding rule, `B_Q` and `Lambda_Q`;
 - rate-distortion and cycle-reconstruction telemetry separated from transform precision telemetry;
 - anchor-drift and reconstruction telemetry in the consolidated empirical evidence artifact;
+- include volumetric ROM ANN reconstruction/error, fixed-point convergence and resident-memory telemetry in the consolidated empirical evidence artifact;
 - metric-hacking tests;
 - experiment manifests and replay.
