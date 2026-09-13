@@ -74,6 +74,18 @@ The `Empirical Validation` GitHub Actions workflow publishes the machine-readabl
 
 Other long-lived draft pull requests are research branches until explicitly classified, rebased and validated.
 
+### Normalized Dr Moagi Q16.16 cube codec
+
+**Integration candidate:** `src/jarvisx/dr_moagi_q16_field.py` now provides
+`step_codec`, a bounded sparse 3D encoder/decoder recurrence with `/64`
+normalization, exact raw reconstruction errors and five-category SHA3 receipts.
+`tests/test_dr_moagi_q16_codec.py` verifies it against a separate dense averaging
+oracle, including topology, numeric limits, deterministic replay and rollback.
+The example `examples/dr_moagi_q16_cube.py` addresses a logical `10^18`-cell cube
+while evaluating only bounded sparse neighborhoods. The implementation uses
+fixed supplied weights and does not establish dense exabyte execution,
+zero-distortion compression, neural training or hardware-scale throughput.
+
 ## Separate visual-computing repository
 
 `Lord-Xido/3D-Virtual-AI-Interactive-Interface` contains browser and native visual demonstrations. Its merged `2048³` voxel-video machine is a bounded sparse renderer over a large virtual address space. It does not allocate or display every virtual voxel.
