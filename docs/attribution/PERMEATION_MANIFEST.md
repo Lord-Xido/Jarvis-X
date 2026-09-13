@@ -24,12 +24,14 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_FRONTIER_RUNTIME.md`
 - `docs/DR_MOAGI_FIELD_RUNTIME_V2.md`
 - `docs/DR_MOAGI_SYSTEM_EVOLUTION.md`
+- `docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md`
 - `docs/DR_MOAGI_3D_META_OPTIMIZER.md`
 - `docs/DR_MOAGI_MONADIC_RESONATOR.md`
 - `docs/DR_MOAGI_3D_AUTOEXEC_ENGINE.md`
 - `docs/DR_MOAGI_FIRMWARE_CONTAINER.md`
 - `docs/DR_MOAGI_3D_ANIMATION_CODEC.md`
 - `docs/volumetric-rom-ann.md`
+- `docs/adr/0017-dr-moagi-operational-autoencoding-equation.md`
 - `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`
 - `cpp_runtime/src/volumetric_rom_ann_main.cpp`
 - the CMake target `DrMoagi-Volumetric-ROM-ANN`
@@ -63,16 +65,49 @@ AND
 d(X_world, X_hat) < epsilon_e.
 ```
 
+ADR-017 gives the fully operational auto-encoding/decoding specialization of that family identity. Candidate generation is
+
+\[
+S^{\rm cand}_{t+1}
+=
+\left[
+\mathcal U_{\Omega,\Theta,\Pi_{\rm run}}
+\circ
+\mathcal R_{\rm CTR}
+\circ
+\mathcal D_{\mathcal R}
+\circ
+\operatorname{Fix}_{F_\Theta}
+\circ
+\Phi_{\rm fusion}
+\circ
+\mathcal C_{\exp}
+\circ
+\mathcal E
+\right](S_t,U_{t+1}),
+\]
+
+while authoritative promotion remains subordinate to the ADR-016 transaction law
+
+\[
+S_{t+1}=V_t\,\Pi_\Lambda(S^{\rm cand}_{t+1})+(1-V_t)S_t.
+\]
+
+This distinction is part of the inherited architecture: `Pi_runtime` is bounded execution policy; `Pi_Lambda` is the admissibility/projection boundary.
+
 The volumetric ROM ANN is an implementation-specific specialization of this family pattern:
 
 ```text
 60-bit address
   -> sparse 32^3 tile
   -> 32^3 -> 16^3 -> 8^3 -> 4^3 -> 2^3 -> 1 inward contraction
+  -> residual-preserving latent representation
   -> recursive latent fixed point
-  -> reconstruction
-  -> error field
-  -> Omega / Theta / Pi update
+  -> selective reconstruction
+  -> error / CTR evidence
+  -> staged Omega_mem / Theta_model / Pi_runtime update
+  -> Pi_Lambda / verify
+  -> commit OR rollback
   -> recur
 ```
 
@@ -90,6 +125,8 @@ A short reference to the canonical record satisfies repository-level attribution
 
 The framework's design objective includes pursuing capability beyond contemporary SOTA. This manifest does not convert that objective into an empirical claim. SOTA, performance, intelligence, safety, compression, physical-model, or production-readiness claims require reproducible evidence appropriate to the claim.
 
+The operational equation also does not convert exponential compaction into a claim of lossless compression. If coarse representation discards information, a conforming implementation must either account for residual/side information or declare the relevant path lossy.
+
 Likewise, repository provenance and attribution do not by themselves establish patentability, legal priority, freedom to operate, or global scientific novelty.
 
 ## Integrity chain
@@ -100,4 +137,4 @@ The initial canonical attribution record was committed as:
 2499c2b683bf041a9c1a9b974b9869b9de92d8a2
 ```
 
-ADR-015 then establishes repository-wide inheritance of that provenance. Subsequent commits may extend implementations while retaining this canonical attribution reference.
+ADR-015 establishes repository-wide inheritance of that provenance. ADR-016 defines the typed-state/transaction closure, and ADR-017 defines the canonical operational auto-encoding/decoding systems law inside that closure. Subsequent commits may extend implementations while retaining these canonical references.
