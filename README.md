@@ -50,6 +50,7 @@ The symbolic vocabulary used in the research documents maps to ordinary engineer
 | Core ISA | `SET`, `ADD`, `SUB`, `HALT` | Alpha |
 | Runtime controls | policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
+| Volumetric ROM ANN | `2^60` logical 3D voxel addresses, bounded `32^3` demand tiles, `32^3 → 16^3 → 8^3 → 4^3 → 2^3 → 1` inward contraction, recursive Ω/Θ/Π feedback | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
 | Inward 4D graph ANN | deterministic 1,000-node folded graph autoencoder with exact gradients, guarded pruning and rollback | Reference laboratory |
@@ -159,7 +160,17 @@ Run a bounded inward experiment:
   --population 6
 ```
 
-See [`cpp_runtime/README.md`](cpp_runtime/README.md) for its state artifacts, determinism contract, sanitizer build and capability limits.
+Run the volumetric ROM ANN:
+
+```bash
+./build/cpp-runtime/DrMoagi-Volumetric-ROM-ANN \
+  --cycles 32 \
+  --active-tiles 64
+```
+
+The volumetric target exposes a `2^60` logical address universe but only materializes bounded active `32^3` tiles. Each tile contracts inward through a dyadic 3D pyramid, enters a recursive latent fixed-point loop, reconstructs outward, computes `e = X - X_hat`, then updates Ω memory, Θ parameters and the bounded Π runtime policy. See [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md).
+
+See [`cpp_runtime/README.md`](cpp_runtime/README.md) for C++ state artifacts, determinism contracts, sanitizer builds and capability limits.
 
 ## Architecture
 
@@ -181,6 +192,12 @@ Parser → Assembler → 64-bit bytecode
               ▼                     ▼
       authoritative state    isolated research layers
       registers / memory     C++ / numerical / visual
+                                    │
+                                    ▼
+                     sparse volumetric ROM ANN
+                     resolve → tile → contract
+                     → fixed point → decode
+                     → compare → Ω/Θ/Π → recur
 ```
 
 The canonical design rules are documented in [Architecture](docs/ARCHITECTURE.md).
@@ -248,6 +265,7 @@ Every canonical subsystem should provide:
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
+- [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md)
 - [Dr Moagi 3D Ephemeral-Notion Intelligence Framework — canonical attribution](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md)
 - [Dr Moagi attribution permeation manifest](docs/attribution/PERMEATION_MANIFEST.md)
 - [ADR-015: Dr Moagi attribution and provenance permeation](docs/adr/0015-dr-moagi-ephemeral-notion-attribution-provenance.md)
@@ -271,7 +289,7 @@ Large architectural proposals should begin as an issue or specification. Product
 
 Jarvis-X is an experimental software and mathematical research project. It does not claim consciousness, unrestricted autonomous self-modification, lossless compression of arbitrary high-dimensional inputs into smaller states, or production safety merely because a policy layer is present.
 
-Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code. The fractional solver is a small-grid CPU reference, not a calibrated physical model or production FFT implementation.
+Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code. The volumetric ROM ANN's 1 EiB figure is a `2^60` logical address-capacity statement, not a claim that 1 EiB of memory is physically allocated. The fractional solver is a small-grid CPU reference, not a calibrated physical model or production FFT implementation.
 
 ## Citation
 
