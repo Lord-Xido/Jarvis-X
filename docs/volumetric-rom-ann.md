@@ -83,6 +83,54 @@ STORE
 RECUR
 ```
 
+## Canonical 1000³ inward-loop specialization
+
+The logical `1000 x 1000 x 1000` multi-parallel formulation is defined in `docs/DR_MOAGI_1000_CUBED_INWARD_PERMEATION.md`.
+
+Its global law is
+
+\[
+\mathcal S_{t+1}
+=
+\mathfrak M_{\Theta_t,\Pi_t}(\mathcal S_t),
+\]
+
+with
+
+\[
+\mathfrak M
+=
+\mathcal O_{\Theta,\Pi}
+\circ
+\mathcal V
+\circ
+\mathcal D
+\circ
+\mathcal F
+\circ
+\mathcal C
+\circ
+\mathcal E.
+\]
+
+The specialization introduces the logical hierarchy
+
+\[
+1000^3\rightarrow100^3\rightarrow10^3\rightarrow Z^*,
+\]
+
+while retaining residuals for outward reconstruction and recursing only over an active error/information set. It is implemented as a sparse/tiled projection onto the existing runtimes; it does not require dense allocation of one billion heavyweight execution objects.
+
+The fixed-point target is
+
+\[
+\mathcal S^*
+=
+\mathfrak M_{\Theta^*,\Pi^*}(\mathcal S^*),
+\]
+
+with finite convergence tolerances and bounded iteration budgets in executable code.
+
 ## Build and run
 
 From the repository root:
