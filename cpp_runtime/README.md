@@ -1,8 +1,10 @@
 # Jarvis-X Inward C++ Runtime
 
-This C++17 subsystem implements a bounded sparse auto-encoding processor, deterministic parameter/schedule search loop, a trainable dense 3D convolutional autoencoder reference and a transactional 4D multimodal composition runtime. The numerical components are dependency-free; optional OpenGL/GLUT targets render the actual ANN tensor state interactively.
+This C++17 subsystem implements a bounded sparse auto-encoding processor, deterministic parameter/schedule search loop, a trainable dense 3D convolutional autoencoder reference, a transactional 4D multimodal composition runtime, and the Dr Moagi volumetric ROM ANN. The numerical components are dependency-free; optional OpenGL/GLUT targets render the actual ANN tensor state interactively.
 
 The sparse processor exposes a virtual `8192 × 8192 × 8192` coordinate domain through lazily materialized `8 × 8 × 8` tiles. The virtual extent is an addressing contract, not a dense allocation.
+
+The volumetric ROM ANN separately exposes `2^20` logical positions per axis (`2^60` voxel addresses total, equivalent to 1 EiB at one byte per logical voxel) while demand-materializing only bounded `32^3` tiles. Its address space is likewise virtual rather than physically resident.
 
 ## Sparse processor operational cycle
 
@@ -37,6 +39,30 @@ g++ -std=c++17 -O3 -Wall -Wextra -Wpedantic \
   cpp_runtime/src/main.cpp \
   -o jarvisx-runtime
 ```
+
+## Run the 1 MiB³ volumetric ROM ANN
+
+```bash
+./build/cpp-runtime/DrMoagi-Volumetric-ROM-ANN \
+  --cycles 32 \
+  --active-tiles 64
+```
+
+The target executes the immutable ROM sequence
+
+```text
+RESOLVE -> FETCH_ALLOC -> ENCODE_PYRAMID -> CONTRACT -> FIXPOINT
+        -> DECODE -> COMPARE -> UPDATE_OMEGA -> UPDATE_THETA
+        -> OPTIMIZE_RUNTIME -> STORE -> RECUR
+```
+
+Each active `32^3` tile is contracted geometrically through
+
+```text
+32^3 -> 16^3 -> 8^3 -> 4^3 -> 2^3 -> 1
+```
+
+before the recursive latent fixed-point update. The decoder reconstructs outward, measures `e = X - X_hat`, records sparse high-error regions, updates Omega memory and Theta parameters, and lets Pi adjust the bounded iteration budget. See [`docs/volumetric-rom-ann.md`](../docs/volumetric-rom-ann.md) for equations, provenance and capability limits.
 
 ## Run inward on the executable
 
@@ -159,7 +185,7 @@ Use `--reset` to discard an earlier checkpoint, `--state-dir PATH` to isolate an
 
 ## Determinism contract
 
-Sparse candidate generation, feature extraction, encoding, decoding and fitness selection are deterministic for the same input and genome. The 3D ANN core uses deterministic initialization and update order for the same model configuration and training sequence. The 4D multimodal scheduler, candidate evaluation and temporal-history updates are deterministic for the same configuration and checkpoint.
+Sparse candidate generation, feature extraction, encoding, decoding and fitness selection are deterministic for the same input and genome. The 3D ANN core uses deterministic initialization and update order for the same model configuration and training sequence. The 4D multimodal scheduler, candidate evaluation and temporal-history updates are deterministic for the same configuration and checkpoint. The volumetric ROM ANN uses deterministic addressing, tile synthesis, inward contraction and update order for the same configuration and cycle count.
 
 Wall-clock latency and rendering cadence are telemetry only and excluded from sparse-processor fitness and multimodal commit decisions. Platform floating-point and transcendental implementations may produce small cross-architecture differences; bit-exact portability is not claimed.
 
@@ -171,6 +197,8 @@ The CTest suite includes:
 - genome normalization before allocation;
 - repeatable sparse processor evaluation;
 - proof that wall-clock latency does not alter deterministic fitness;
+- volumetric ROM ANN 60-bit address round trips and bounded tile residency;
+- volumetric ROM ANN `32^3 -> 1` contraction, fixed-point, decode/error and Omega/Theta/Pi update coverage;
 - deterministic 3D ANN initialization;
 - measurable reconstruction-error reduction under training;
 - signed 3-bit latent-level validation;
