@@ -25,6 +25,7 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_FIELD_RUNTIME_V2.md`
 - `docs/DR_MOAGI_SYSTEM_EVOLUTION.md`
 - `docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md`
+- `docs/DR_MOAGI_RECURSIVE_SYNTHETIC_GYM.md`
 - `docs/DR_MOAGI_3D_META_OPTIMIZER.md`
 - `docs/DR_MOAGI_MONADIC_RESONATOR.md`
 - `docs/DR_MOAGI_3D_AUTOEXEC_ENGINE.md`
@@ -34,6 +35,7 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/adr/0017-dr-moagi-operational-autoencoding-equation.md`
 - `docs/adr/0018-sparse-speculative-3d-self-optimizing-runtime.md`
 - `docs/adr/0019-portable-continuity-envelope-and-learned-substrate.md`
+- `docs/adr/0020-recursive-synthetic-gym-self-generating-3d-engine.md`
 - `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`
 - `cpp_runtime/src/volumetric_rom_ann_main.cpp`
 - the CMake target `DrMoagi-Volumetric-ROM-ANN`
@@ -130,6 +132,28 @@ Theta_model / checkpoint-or-immutable-reference
 
 The phrase `carry your own weights` denotes owned/licensed checkpoint portability under this contract. Third-party or proprietary model weights are represented only by immutable references unless the deployment has the right and technical ability to transport them.
 
+ADR-020 extends the family into a bounded recursive synthetic virtual gym and self-generating 3D image/world engine:
+
+```text
+world / image / prompt
+  -> encode
+  -> 3D inward contraction + residual preservation
+  -> bounded latent fixed point
+  -> generate / decode bounded candidate images or world states
+  -> compare against target / reality
+  -> lift residual inward
+  -> run bounded parallel synthetic worlds
+  -> meta-contract evidence across branches
+  -> explicit credit assignment
+  -> stage Omega_mem / Pi_runtime / Gamma_sim / optional Theta_model changes
+  -> Pi_Lambda / verify
+  -> commit OR rollback
+  -> optionally package verified state through ADR-019
+  -> recur
+```
+
+Synthetic consistency is not external truth. Generated output may feed back into the encoder only as a controlled input path. Parameter adaptation remains a separate candidate transaction and may not bypass the authoritative promotion boundary. If every candidate branch fails hard gates, the prior authoritative state is retained.
+
 The volumetric ROM ANN is an implementation-specific specialization of this family pattern:
 
 ```text
@@ -166,6 +190,8 @@ Likewise, repository provenance and attribution do not by themselves establish p
 
 Portable continuity additionally does not imply semantic equivalence across incompatible models, legal portability of third-party checkpoints, bit-identical replay across heterogeneous hardware, unrestricted self-modification, or continuity of consciousness/subjective identity.
 
+The recursive synthetic gym additionally does not imply that a simulator reproduces the real world, that synthetic training equals real-world learning, that generated images establish semantic understanding, or that self-input alone changes learned parameters. Real-world correspondence, simulator calibration, generated-image quality, internal convergence and runtime efficiency remain separate evidence categories.
+
 ## Integrity chain
 
 The initial canonical attribution record was committed as:
@@ -174,4 +200,4 @@ The initial canonical attribution record was committed as:
 2499c2b683bf041a9c1a9b974b9869b9de92d8a2
 ```
 
-ADR-015 establishes repository-wide inheritance of that provenance. ADR-016 defines the typed-state/transaction closure, ADR-017 defines the canonical operational auto-encoding/decoding systems law, ADR-018 defines bounded sparse/speculative self-optimization, and ADR-019 defines the portable continuity envelope for checkpoint/memory/runtime/audit transport. Subsequent commits may extend implementations while retaining these canonical references.
+ADR-015 establishes repository-wide inheritance of that provenance. ADR-016 defines the typed-state/transaction closure, ADR-017 defines the canonical operational auto-encoding/decoding systems law, ADR-018 defines bounded sparse/speculative self-optimization, ADR-019 defines the portable continuity envelope for checkpoint/memory/runtime/audit transport, and ADR-020 defines the bounded recursive synthetic virtual gym and self-generating 3D image/world engine. Subsequent commits may extend implementations while retaining these canonical references.
