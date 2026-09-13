@@ -49,7 +49,10 @@ A later stage cannot compensate for defects in an earlier stage. New research tr
 
 **Target:** `0.3.0`
 
+A bounded reference milestone is already on `main`: the Dr Moagi volumetric ROM ANN exposes `2^60` logical voxel addresses through demand-materialized `32^3` tiles, performs a `32^3 -> 16^3 -> 8^3 -> 4^3 -> 2^3 -> 1` inward pyramid, then executes fixed-point reconstruction/error feedback. This is a reference laboratory, not yet the canonical sparse storage API.
+
 - [ ] unify coordinate, block and serialization contracts;
+- [ ] fold the volumetric ROM ANN's 60-bit address and tile contract into the canonical sparse coordinate API;
 - [ ] implement durable backing stores;
 - [ ] add revision-aware transactional concurrency;
 - [ ] support bounded heterogeneous blocks or octrees;
@@ -62,9 +65,12 @@ A later stage cannot compensate for defects in an earlier stage. New research tr
 - exact address round trips;
 - deterministic canonical serialization;
 - bounded streaming of large sparse fixtures;
-- rollback on failed layout or persistence commits.
+- rollback on failed layout or persistence commits;
+- volumetric reference engines reuse the canonical sparse-coordinate contract rather than maintaining incompatible address models.
 
 ## Phase 4 — Versioned ROM and replay
+
+The volumetric ROM ANN currently uses an immutable in-process execution sequence (`RESOLVE -> FETCH_ALLOC -> ENCODE_PYRAMID -> CONTRACT -> FIXPOINT -> DECODE -> COMPARE -> UPDATE_OMEGA -> UPDATE_THETA -> OPTIMIZE_RUNTIME -> STORE -> RECUR`). This is an execution reference, not yet the canonical external ROM envelope.
 
 - [ ] publish the canonical ISA table;
 - [ ] define a versioned ROM envelope with magic, version, endianness and integrity fields;
@@ -83,7 +89,8 @@ A later stage cannot compensate for defects in an earlier stage. New research tr
 - [ ] remove uncontrolled wall-clock signals from deterministic selection;
 - [ ] add metric-hacking, NaN, drift and rollback tests;
 - [ ] persist accepted and rejected decisions;
-- [ ] benchmark against fixed-parameter baselines.
+- [ ] benchmark against fixed-parameter baselines;
+- [ ] promote volumetric ROM ANN fixed-point convergence, reconstruction error, active-resident memory and Omega/Theta/Pi updates into the consolidated empirical evidence artifact.
 
 ### Exit criteria
 
