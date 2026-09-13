@@ -74,3 +74,29 @@ jarvisx_harden(jarvisx-compile-interpret-accelerator-tests)
 
 add_test(NAME compile-interpret-accelerator-regressions COMMAND jarvisx-compile-interpret-accelerator-tests)
 set_tests_properties(compile-interpret-accelerator-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-volumetric-rom-ann
+    src/volumetric_rom_ann_main.cpp
+)
+set_target_properties(jarvisx-volumetric-rom-ann PROPERTIES
+    OUTPUT_NAME "DrMoagi-Volumetric-ROM-ANN")
+jarvisx_include_runtime(jarvisx-volumetric-rom-ann)
+jarvisx_harden(jarvisx-volumetric-rom-ann)
+
+add_test(
+    NAME volumetric-rom-ann-runtime-smoke
+    COMMAND jarvisx-volumetric-rom-ann
+        --cycles 4
+        --active-tiles 8
+        --quiet
+)
+set_tests_properties(volumetric-rom-ann-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-volumetric-rom-ann-tests
+    tests/volumetric_rom_ann_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-volumetric-rom-ann-tests)
+jarvisx_harden(jarvisx-volumetric-rom-ann-tests)
+
+add_test(NAME volumetric-rom-ann-regressions COMMAND jarvisx-volumetric-rom-ann-tests)
+set_tests_properties(volumetric-rom-ann-regressions PROPERTIES TIMEOUT 120)
