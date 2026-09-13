@@ -10,13 +10,15 @@
 
 The project investigates how large virtual state spaces, geometric representations, residual memory and bounded adaptation can be implemented as reproducible software without confusing virtual extent with physical allocation or simulation with deployed intelligence.
 
-> **Current status:** alpha research software. The repository contains a stable reference VM foundation, validated sparse and numerical components, a bounded C++ processor laboratory and experimental integration tracks. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
+> **Current status:** alpha research software. The repository contains a stable reference VM foundation, validated sparse and numerical components, bounded C++ research runtimes, and canonical architectural specifications whose full cross-backend migration is still in progress. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
 
 ## Canonical Dr Moagi attribution and provenance
 
 The named **Dr Moagi 3D Ephemeral-Notion Intelligence Framework v1.1** is attributed in this repository to **Matladi Maxwell Moagi (Lord-Xido)**. Its authoritative provenance, defining equations, reality-coupled verification rule and attribution boundary are recorded in [`docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md).
 
 Repository-wide inheritance of that attribution across explicitly designated Dr Moagi runtimes, engines, simulations, specifications and derivatives is governed by [ADR-015](docs/adr/0015-dr-moagi-ephemeral-notion-attribution-provenance.md) and summarized in the [Permeation Manifest](docs/attribution/PERMEATION_MANIFEST.md).
+
+Structural closure is governed by [ADR-016](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md): one typed system state, one candidate-first transaction contract, explicit verification gates, and interchangeable geometry/backend profiles. The canonical end-to-end Dr Moagi auto-encoding/decoding systems law is defined by [ADR-017](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md) and the [Operational Auto-Encoding/Decoding Equation](docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md).
 
 The framework is designed to pursue capability beyond contemporary SOTA through inward 3D latent coordination, reality coupling, continuous correction and fixed-point verification. That phrase denotes a **design ambition**, not an unverified empirical, legal or patent-novelty claim; performance and scientific claims remain evidence-gated.
 
@@ -26,21 +28,76 @@ Jarvis-X develops one coherent systems thesis:
 
 1. represent large logical spaces sparsely;
 2. encode execution in deterministic fixed-width formats;
-3. measure prediction or reconstruction error explicitly;
-4. retain bounded correction memory;
-5. verify proposed state transitions before commit;
-6. journal enough information to audit and replay decisions.
+3. compact representations hierarchically while accounting for residual/side information;
+4. measure prediction or reconstruction error explicitly;
+5. retain bounded correction memory;
+6. verify proposed state transitions before commit;
+7. journal enough information to audit and replay decisions.
 
 The symbolic vocabulary used in the research documents maps to ordinary engineering mechanisms:
 
 | Symbol | Engineering interpretation |
 |---|---|
-| Ψ / Φ | observed and internal state |
-| Θ | model or execution parameters |
-| Ω | residual correction memory and journal state |
-| Λ | admissibility, policy and coherence constraints |
-| Π | projection into a valid state set |
-| Ξ | integrated runtime state |
+| `X` / `X_hat` | authoritative reference/domain state and reconstruction/prediction |
+| `Z` / `Z*` | encoded/latent state and bounded fixed-point result |
+| `Omega_mem` / Ω | adaptive residual/temporal memory |
+| `Theta_model` / Θ | model parameters |
+| `Pi_runtime` | bounded runtime/execution policy |
+| `Pi_Lambda` | admissibility/projection boundary for authoritative promotion |
+| `A_arch` | slower architecture/orchestration policy |
+| `R_CTR` | contrast/evidence/reckoning state |
+| `audit` | journal, lineage and integrity state |
+
+Implementation-facing APIs follow ADR-016's typed names when ambiguity matters; symbolic shorthand remains valid in mathematical documents.
+
+## Canonical Dr Moagi operational equation
+
+ADR-017 defines candidate generation as
+
+\[
+S^{\rm cand}_{t+1}
+=
+\left[
+\mathcal U_{\Omega,\Theta,\Pi_{\rm run}}
+\circ
+\mathcal R_{\rm CTR}
+\circ
+\mathcal D_{\mathcal R}
+\circ
+\operatorname{Fix}_{F_\Theta}
+\circ
+\Phi_{\rm fusion}
+\circ
+\mathcal C_{\exp}
+\circ
+\mathcal E
+\right](S_t,U_{t+1}).
+\]
+
+The resulting candidate remains provisional until the ADR-016 promotion law accepts it:
+
+\[
+S_{t+1}=V_t\,\Pi_\Lambda(S^{\rm cand}_{t+1})+(1-V_t)S_t.
+\]
+
+Operationally:
+
+```text
+typed input/event
+ -> encode
+ -> sparse exponential/multiresolution compaction
+ -> preserve residual hierarchy
+ -> fusion
+ -> bounded fixed point
+ -> selective residual-aware decode
+ -> compare / CTR evidence
+ -> stage Omega_mem / Theta_model / Pi_runtime
+ -> verify / Pi_Lambda
+ -> COMMIT or ROLLBACK
+ -> audit / recur
+```
+
+This is a canonical integration contract. It does not imply that every current backend already implements every stage or receipt.
 
 ## Capabilities on `main`
 
@@ -49,15 +106,17 @@ The symbolic vocabulary used in the research documents maps to ordinary engineer
 | Bytecode VM | parser, assembler, decoder, registers and minimal 64-bit instruction execution | Alpha |
 | Core ISA | `SET`, `ADD`, `SUB`, `HALT` | Alpha |
 | Runtime controls | policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
+| Typed-state/transaction closure | ADR-016 state namespaces, geometry profiles and candidate-first promotion contract | Specification |
+| Operational AE/AD system equation | ADR-017 encode → compact → fixed point → decode → evidence → staged adaptation → verify/commit law | Specification |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
-| Volumetric ROM ANN | `2^60` logical 3D voxel addresses, bounded `32^3` demand tiles, `32^3 → 16^3 → 8^3 → 4^3 → 2^3 → 1` inward contraction, recursive Ω/Θ/Π feedback | Reference laboratory |
+| Volumetric ROM ANN | `2^60` logical 3D voxel addresses, bounded `32^3` demand tiles, `32^3 → 16^3 → 8^3 → 4^3 → 2^3 → 1` inward contraction, recursive Ω/Θ/runtime-policy feedback | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
 | Inward 4D graph ANN | deterministic 1,000-node folded graph autoencoder with exact gradients, guarded pruning and rollback | Reference laboratory |
 | Model packaging | Hugging Face-compatible configuration, model and safetensors exporter | Reference |
 | Research specifications | reality-grounded observer dynamics, spatial bytecode and bounded optimization documents | Proposed / reference |
 
-Experimental engines remain in draft pull requests until their tests, interfaces and capability claims are reconciled with the canonical core.
+Experimental engines remain non-authoritative until their tests, interfaces and capability claims are reconciled with the canonical core and transaction contract.
 
 ## Quick start
 
@@ -137,12 +196,7 @@ The solver uses a dependency-free separable direct DFT for small correctness fix
 python examples/inward4d_ann_demo.py --epochs 25
 ```
 
-The reference executes a same-width graph autoencoder over exactly 1,000 nodes
-and 3,000 fully wrapped undirected synapses. It reports the complete
-self-description objective and commits an update only when the candidate does
-not regress. See the
-[end-to-end arithmetic](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md) for the fold,
-forward pass, analytic gradient, pruning, and capability boundary.
+The reference executes a same-width graph autoencoder over exactly 1,000 nodes and 3,000 fully wrapped undirected synapses. It reports the complete self-description objective and commits an update only when the candidate does not regress. See the [end-to-end arithmetic](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md) for the fold, forward pass, analytic gradient, pruning, and capability boundary.
 
 ### Build the C++ processor laboratory
 
@@ -168,39 +222,42 @@ Run the volumetric ROM ANN:
   --active-tiles 64
 ```
 
-The volumetric target exposes a `2^60` logical address universe but only materializes bounded active `32^3` tiles. Each tile contracts inward through a dyadic 3D pyramid, enters a recursive latent fixed-point loop, reconstructs outward, computes `e = X - X_hat`, then updates Ω memory, Θ parameters and the bounded Π runtime policy. See [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md).
+The volumetric target exposes a `2^60` logical address universe but only materializes bounded active `32^3` tiles. Each tile contracts inward through a dyadic 3D pyramid, enters a recursive latent fixed-point loop, reconstructs outward, computes `e = X - X_hat`, then updates adaptive memory, model parameters and the bounded runtime policy. See [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md).
 
 See [`cpp_runtime/README.md`](cpp_runtime/README.md) for C++ state artifacts, determinism contracts, sanitizer builds and capability limits.
 
 ## Architecture
 
 ```text
-Source assembly
-      │
-      ▼
-Parser → Assembler → 64-bit bytecode
-                         │
-                         ▼
-             ┌─────────────────────┐
-             │      CodexVM        │
-             │ decode → authorize  │
-             │ execute → trace     │
-             │ journal → constrain │
-             └─────────────────────┘
-                         │
-              ┌──────────┴──────────┐
-              ▼                     ▼
-      authoritative state    isolated research layers
-      registers / memory     C++ / numerical / visual
-                                    │
-                                    ▼
-                     sparse volumetric ROM ANN
-                     resolve → tile → contract
-                     → fixed point → decode
-                     → compare → Ω/Θ/Π → recur
+                    CodexVM / control plane
+                              │
+                              ▼
+                 typed candidate transaction
+                              │
+                              ▼
+                bounded research data plane
+                              │
+        ┌─────────────────────┴─────────────────────┐
+        ▼                                           ▼
+ sparse / volumetric profiles              multimodal / generative
+        │                                           │
+        └───────────────┬───────────────────────────┘
+                        ▼
+ encode → compact → residuals → fusion → fixed point
+        → decode → contrast / evidence
+        → stage Omega_mem / Theta_model / Pi_runtime
+                        │
+                        ▼
+              Verify + Pi_Lambda
+                  ╱             ╲
+              COMMIT          ROLLBACK
+                  │               │
+                  └───── audit ───┘
+                        │
+                        └────────────→ recur
 ```
 
-The canonical design rules are documented in [Architecture](docs/ARCHITECTURE.md).
+The canonical design rules are documented in [Architecture](docs/ARCHITECTURE.md). ADR-016 defines typed structural closure; ADR-017 defines the operational auto-encoding/decoding processing law inside that closure.
 
 ## Sparse fractal octree
 
@@ -229,9 +286,10 @@ At depth `D`:
 | Backlog consolidation | select canonical implementations and close superseded research branches | Issue #48 |
 | Repository protection | required checks, secret scanning and private vulnerability reporting | Issue #49 |
 | Public profile | account-level profile README and pinned-project cleanup | Issue #50 |
+| Typed-state migration | migrate representative VM/sparse/C++ paths to ADR-016/017 stage receipts | Issue #260 / follow-up integration |
 | Browser engines | bounded interactive 3D visual-computing demonstrations | Separate repository |
 
-Draft status is intentional: experimental subsystems are not represented as canonical until CI, review and integration boundaries are satisfied.
+Draft status is intentional: experimental subsystems are not represented as canonical implementations until CI, review and integration boundaries are satisfied.
 
 ## Repository structure
 
@@ -259,12 +317,16 @@ Every canonical subsystem should provide:
 - reproducible tests and examples;
 - honest implemented-versus-proposed boundaries;
 - transaction, rollback or failure semantics where state is mutated;
+- residual/side-information accounting where compaction is claimed;
 - no performance or intelligence claim without measurement.
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
+- [Canonical Dr Moagi operational auto-encoding/decoding equation](docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md)
+- [ADR-016: canonical typed state, transaction and geometry profiles](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md)
+- [ADR-017: canonical Dr Moagi operational auto-encoding/decoding equation](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md)
 - [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md)
 - [Dr Moagi 3D Ephemeral-Notion Intelligence Framework — canonical attribution](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md)
 - [Dr Moagi attribution permeation manifest](docs/attribution/PERMEATION_MANIFEST.md)
@@ -289,7 +351,7 @@ Large architectural proposals should begin as an issue or specification. Product
 
 Jarvis-X is an experimental software and mathematical research project. It does not claim consciousness, unrestricted autonomous self-modification, lossless compression of arbitrary high-dimensional inputs into smaller states, or production safety merely because a policy layer is present.
 
-Virtual address-space size is not resident memory. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code. The volumetric ROM ANN's 1 EiB figure is a `2^60` logical address-capacity statement, not a claim that 1 EiB of memory is physically allocated. The fractional solver is a small-grid CPU reference, not a calibrated physical model or production FFT implementation.
+Virtual address-space size is not resident memory. Exponential compaction is not automatically lossless; discarded information must be accounted for by residual/side information or declared lossy. A local fixed point is not proof of external correctness or global equilibrium. A deterministic simulation is not evidence of general intelligence. A cryptographic digest provides integrity, not reversibility. The C++ processor mutates bounded parameters and schedules; it does not rewrite arbitrary native code. The volumetric ROM ANN's 1 EiB figure is a `2^60` logical address-capacity statement, not a claim that 1 EiB of memory is physically allocated. ADR-017 is a canonical systems specification, not evidence that every backend already implements the complete equation. The fractional solver is a small-grid CPU reference, not a calibrated physical model or production FFT implementation.
 
 ## Citation
 

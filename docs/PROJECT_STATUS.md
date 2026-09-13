@@ -29,6 +29,8 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Cycle sandbox | Stable reference | `sandbox.py` | cycle bound only; no process isolation |
 | Trace and Omega journal | Stable reference | `tracer.py`, `ledger.py`, `ledger_store.py` | persistence is opt-in; timestamps are environmental inputs |
 | Consolidated empirical validation | Stable reference | `empirical_validation.py`, focused tests, JSON artifact workflow | verifies bounded software invariants only; no AGI, safety or production-performance inference |
+| Canonical typed state / transaction closure | Specification | ADR-016 | defines one typed state, geometry profiles, verification split and atomic promotion law; full adapter migration remains incomplete |
+| Dr Moagi operational auto-encoding/decoding equation | Specification | `docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md`, ADR-017 | canonical Layer-5 systems equation; existing engines implement subsets/adapters and are not automatically fully conformant |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
 | 1 MiB³ volumetric ROM ANN | Reference laboratory | `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`, `cpp_runtime/src/volumetric_rom_ann_main.cpp`, CTest, cross-platform C++ workflow | `2^60` logical voxel addresses / 1 EiB virtual byte capacity; only bounded `32^3` tiles are materialized; fixed-point and adaptive dynamics are software emulation, not physical 1 EiB memory or hardware-throughput evidence |
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
@@ -63,6 +65,8 @@ The gate currently tests five falsifiable properties:
 
 The Field Runtime v2, inward 4D graph ANN, Moagi-Helmholtz orchestration runtime, orthogonal quantization precision gate and volumetric ROM ANN are covered by focused tests in the normal CI suite. They are not yet promoted into the consolidated empirical-validation artifact; that remains a follow-up integration target.
 
+ADR-016 and ADR-017 are architectural/specification contracts. They require future adapter conformance tests and typed stage receipts before the repository may claim that the full end-to-end operator is implemented uniformly across backends.
+
 The `Empirical Validation` GitHub Actions workflow publishes the machine-readable report as a retained workflow artifact. See [Empirical Validation](EMPIRICAL_VALIDATION.md) for protocols, thresholds and inference boundaries.
 
 ## Active integration and administration work
@@ -89,12 +93,14 @@ Jarvis-X does not currently claim:
 - artificial general intelligence;
 - unrestricted autonomous source-code mutation;
 - production-grade isolation of hostile bytecode;
-- lossless compression of arbitrary data into a smaller state without side information;
+- lossless compression of arbitrary data into a smaller state without residual/side information;
+- that exponential compaction alone preserves all information;
+- that every current runtime already implements every ADR-017 operator or receipt;
 - global invertibility of ordinary RGB/video rendering to the original 3D mesh;
 - that MP4 is itself a global 3D-DCT codec;
 - that every transform used by a production codec is orthogonal or governed by ADR-005;
 - that a failed orthogonal precision gate may be repaired by simply doubling the admissible quantization threshold;
-- unique convergence of arbitrary learned Moagi-Helmholtz pipelines without sufficient mathematical assumptions;
+- unique convergence of arbitrary learned Moagi-Helmholtz or ADR-017 fixed-point pipelines without sufficient mathematical assumptions;
 - physical hardware performance from a virtual address-space description;
 - physical residency of the volumetric ROM ANN's 1 EiB logical address space;
 - trained model quality from deterministic initialized weights;
@@ -104,7 +110,7 @@ Jarvis-X does not currently claim:
 - convergence of arbitrary learned Dr Moagi codecs from the reference explicit-step guard alone;
 - universal convergence or compression from the same-width inward 4D graph autoencoder;
 - that an `R^4` feature coordinate establishes a physical fourth spatial dimension;
-- empirical superiority of fractal or hierarchical memory over transformer, state-space or retrieval baselines.
+- empirical superiority of fractal, residual-hierarchical or adaptive memory over transformer, state-space or retrieval baselines.
 
 ## Canonical promotion checklist
 
@@ -122,6 +128,8 @@ A capability moves to `main` only when all applicable items are satisfied:
 - [ ] explicit inference boundary preventing overstatement;
 - [ ] security analysis for untrusted inputs;
 - [ ] migration or compatibility note when replacing an existing subsystem.
+
+For ADR-016/017 conformance, an implementation additionally needs typed stage receipts, explicit residual/side-information accounting, bounded fixed-point termination, staged adaptive updates, a verification decision, and rollback across all touched authority namespaces.
 
 ## Release-readiness targets
 
@@ -144,6 +152,7 @@ A capability moves to `main` only when all applicable items are satisfied:
 - transactional concurrency;
 - same-space sparse field operators with explicit topology and boundary semantics;
 - integrate the volumetric ROM ANN's `2^60` logical addressing and multiresolution tile contract with the canonical sparse coordinate API rather than maintaining a parallel address model;
+- expose ADR-016 geometry-profile and ADR-017 encode/compact/decode receipts for representative sparse backends;
 - benchmark corpus with named baselines and uncertainty reporting.
 
 ### `0.4.0` — Bounded adaptive laboratory
@@ -157,5 +166,6 @@ A capability moves to `main` only when all applicable items are satisfied:
 - rate-distortion and cycle-reconstruction telemetry separated from transform precision telemetry;
 - anchor-drift and reconstruction telemetry in the consolidated empirical evidence artifact;
 - include volumetric ROM ANN reconstruction/error, fixed-point convergence and resident-memory telemetry in the consolidated empirical evidence artifact;
+- add ADR-017 fixed-point, residual-preservation, CTR/evidence and staged-adaptation conformance fixtures;
 - metric-hacking tests;
 - experiment manifests and replay.
