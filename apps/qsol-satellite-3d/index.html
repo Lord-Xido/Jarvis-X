@@ -3,133 +3,110 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>QSOL Satellite Signal Tracker 3D</title>
+<title>QSOL Dr Moagi ANN Satellite Tracker 3D</title>
 <style>
-:root{color-scheme:dark;--bg:#071015;--panel:#0d171d;--line:#26404d;--text:#e8f5fb;--muted:#8eacba;--a:#48c6ef;--b:#f2c14e;--c:#7bd389;--d:#ca8dfd;--bad:#ff7b72}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1320px;margin:auto;padding:18px}h1,h2,h3,p{margin-top:0}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.tag{color:var(--a);font:700 12px/1.2 ui-monospace,monospace;letter-spacing:.08em}.sub{color:var(--muted);max-width:820px}.grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.7fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}.scene-wrap{position:relative;min-height:560px}.scene-wrap canvas{display:block;width:100%;height:560px;border-radius:8px;background:radial-gradient(circle at 50% 44%,#10222c,#071015 70%)}.hud{position:absolute;left:20px;top:18px;font:12px ui-monospace,monospace;color:#d8edf6;pointer-events:none}.hud strong{color:var(--b)}.controls{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}button,input,select{font:inherit}button{border:1px solid var(--line);background:#13232c;color:var(--text);border-radius:8px;padding:9px 13px;cursor:pointer}button.primary{background:#153848;border-color:#2d718e}.kv{display:grid;grid-template-columns:1fr auto;gap:8px 14px;padding:8px 0;border-bottom:1px solid #18303b}.kv:last-child{border-bottom:0}.muted{color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.stage{font-weight:800;color:var(--b)}.bar{height:8px;background:#122630;border-radius:999px;overflow:hidden}.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--a),var(--c));width:65%}.pipeline{display:grid;gap:7px}.pipe{padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--muted)}.pipe.active{border-color:var(--b);color:var(--text);background:#2a2414}.eq{white-space:pre-wrap;overflow:auto;padding:10px;background:#081217;border:1px solid var(--line);border-radius:8px;color:#cfe8f3}.footer{margin-top:14px;color:var(--muted);font-size:12px}.row{display:grid;grid-template-columns:1fr 90px;gap:10px;align-items:center}.row input{width:100%}@media(max-width:900px){.grid{grid-template-columns:1fr}.scene-wrap canvas{height:470px}.scene-wrap{min-height:470px}}
+:root{color-scheme:dark;--bg:#071015;--panel:#0d171d;--line:#26404d;--text:#e8f5fb;--muted:#8eacba;--a:#48c6ef;--b:#f2c14e;--c:#7bd389;--d:#ca8dfd;--e:#ff9f6e}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1380px;margin:auto;padding:18px}h1,h2,h3,p{margin-top:0}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.tag{color:var(--a);font:700 12px/1.2 ui-monospace,monospace;letter-spacing:.08em}.sub{color:var(--muted);max-width:900px}.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,.74fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}.scene-wrap{position:relative;min-height:590px}.scene-wrap canvas{display:block;width:100%;height:590px;border-radius:8px;background:radial-gradient(circle at 50% 44%,#10222c,#071015 70%)}.hud{position:absolute;left:20px;top:18px;font:12px ui-monospace,monospace;color:#d8edf6;pointer-events:none}.hud strong{color:var(--b)}.controls{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}button,input{font:inherit}button{border:1px solid var(--line);background:#13232c;color:var(--text);border-radius:8px;padding:9px 13px;cursor:pointer}button.primary{background:#153848;border-color:#2d718e}.kv{display:grid;grid-template-columns:1fr auto;gap:8px 14px;padding:8px 0;border-bottom:1px solid #18303b}.kv:last-child{border-bottom:0}.muted{color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.stage{font-weight:800;color:var(--b)}.bar{height:8px;background:#122630;border-radius:999px;overflow:hidden}.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--a),var(--c));width:65%}.pipeline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.pipe{padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--muted);min-height:76px}.pipe.active{border-color:var(--b);color:var(--text);background:#2a2414}.eq{white-space:pre-wrap;overflow:auto;padding:10px;background:#081217;border:1px solid var(--line);border-radius:8px;color:#cfe8f3}.footer{margin-top:14px;color:var(--muted);font-size:12px}.row{display:grid;grid-template-columns:1fr 90px;gap:10px;align-items:center}.row input{width:100%}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;color:var(--muted);font:11px ui-monospace,monospace}.chip.on{border-color:var(--d);color:var(--text)}@media(max-width:980px){.grid{grid-template-columns:1fr}.scene-wrap canvas{height:500px}.scene-wrap{min-height:500px}.pipeline{grid-template-columns:1fr 1fr}}@media(max-width:620px){main{padding:10px}.pipeline{grid-template-columns:1fr}.scene-wrap canvas{height:430px}.scene-wrap{min-height:430px}}
 </style>
 </head>
 <body>
 <main>
   <div class="top">
     <div>
-      <div class="tag">QSOL :: SATELLITE SIGNAL TRACKER 3D</div>
-      <h1>3D orbit ↔ RF measurement ↔ cloud posterior loop</h1>
-      <p class="sub">A bounded synthetic estimator that keeps physical state <span class="mono">(x,y,z,vx,vy,vz)</span> separate from the signal manifold <span class="mono">Xi(tau, f_D, theta, t)</span>, then recursively maps one into the other through prediction, pattern matching, likelihood fusion and covariance contraction.</p>
+      <div class="tag">QSOL :: SATELLITE SIGNAL TRACKER 3D · DR MOAGI ANN</div>
+      <h1>3D orbit ↔ RF field ↔ autoencoder ↔ adaptive latent predictor</h1>
+      <p class="sub">A bounded synthetic research surface that keeps Cartesian state <span class="mono">(x,y,z,vx,vy,vz)</span>, the signal manifold <span class="mono">Xi(tau, f_D, theta, t)</span>, and neural latent state <span class="mono">Z_t</span> explicitly distinct. Synthetic observations are encoded, predicted, decoded, compared, fused and used to adapt ANN weights, memory and runtime policy.</p>
     </div>
-    <div class="controls">
-      <button class="primary" id="run">Pause</button>
-      <button id="step">Step</button>
-      <button id="reset">Reset</button>
-    </div>
+    <div class="controls"><button class="primary" id="run">Pause</button><button id="step">Step</button><button id="reset">Reset</button></div>
   </div>
 
   <div class="grid">
     <section class="card scene-wrap">
-      <canvas id="scene" width="960" height="560" aria-label="3D synthetic satellite orbit, edge receptors and cloud fusion geometry"></canvas>
-      <div class="hud mono">
-        <div>stage: <strong id="hudStage">ORBIT_PREDICT</strong></div>
-        <div>cycle: <strong id="hudCycle">0</strong></div>
-        <div>posterior: <strong id="hudConf">64.0%</strong></div>
-      </div>
+      <canvas id="scene" width="1000" height="590" aria-label="3D synthetic satellite orbit, signal manifold, ANN latent field and cloud posterior geometry"></canvas>
+      <div class="hud mono"><div>stage: <strong id="hudStage">ORBIT_PREDICT</strong></div><div>cycle: <strong id="hudCycle">0</strong></div><div>posterior: <strong id="hudConf">64.0%</strong></div><div>ANN loss: <strong id="hudLoss">0.0000</strong></div></div>
     </section>
 
     <aside class="card">
-      <h2>Estimator state</h2>
+      <h2>Unified adaptive state</h2>
       <div class="kv"><span class="muted">Pipeline</span><span class="stage" id="stageName">ORBIT_PREDICT</span></div>
       <div class="kv"><span class="muted">Receivers M</span><span id="rxCount">4</span></div>
       <div class="kv"><span class="muted">Range km</span><span id="rangeVal">—</span></div>
       <div class="kv"><span class="muted">Doppler Hz</span><span id="dopplerVal">—</span></div>
       <div class="kv"><span class="muted">Delay ms</span><span id="delayVal">—</span></div>
       <div class="kv"><span class="muted">Innovation norm</span><span id="innovVal">—</span></div>
+      <div class="kv"><span class="muted">Reconstruction loss</span><span id="lossVal">—</span></div>
+      <div class="kv"><span class="muted">Weight RMS</span><span id="weightVal">—</span></div>
       <div class="kv"><span class="muted">Normalized covariance</span><span id="covVal">1.000</span></div>
-      <div style="margin:12px 0 5px" class="muted">posterior confidence</div>
-      <div class="bar"><i id="confidenceBar"></i></div>
+      <div class="kv"><span class="muted">Policy recursion</span><span id="depthVal">2</span></div>
+      <div style="margin:12px 0 5px" class="muted">posterior confidence</div><div class="bar"><i id="confidenceBar"></i></div>
 
-      <h3 style="margin-top:18px">Synthetic controls</h3>
-      <div class="row"><label for="noise">Noise</label><output id="noiseOut">0.30</output></div>
-      <input id="noise" type="range" min="0" max="1" step="0.05" value="0.30">
-      <div class="row" style="margin-top:10px"><label for="receivers">Receivers</label><output id="receiverOut">4</output></div>
-      <input id="receivers" type="range" min="2" max="8" step="1" value="4">
+      <h3 style="margin-top:18px">Adaptive controls</h3>
+      <div class="row"><label for="noise">Synthetic noise</label><output id="noiseOut">0.30</output></div><input id="noise" type="range" min="0" max="1" step="0.05" value="0.30">
+      <div class="row" style="margin-top:10px"><label for="receivers">Receivers</label><output id="receiverOut">4</output></div><input id="receivers" type="range" min="2" max="8" step="1" value="4">
+      <div class="row" style="margin-top:10px"><label for="lr">Learning rate</label><output id="lrOut">0.025</output></div><input id="lr" type="range" min="0.002" max="0.08" step="0.001" value="0.025">
 
+      <h3 style="margin-top:18px">ANN channels</h3><div class="chips" id="chips"></div>
       <h3 style="margin-top:18px">Recursive operator</h3>
-      <div class="eq mono">S_(t+1) = T_cloud(S_t, z_(t+1,1:M))
+      <div class="eq mono">S_(t+1) = M_Theta,Pi(S_t, X_(t+1))
 
-x^- = F_orbit(x^+)
-Xi = C(y, q, tau_hat, fD_hat)
-e = z - h(x^-)
-x^+ = B(x^-, e, P)</div>
+Z_t       = E_Theta(X_t, Omega_t)
+Z^-_(t+1) = F_Theta(Z_t, Omega_t)
+Xhat      = D_Theta(Z^-_(t+1))
+E_(t+1)   = X_(t+1) - Xhat
+Theta'    = Theta - eta * grad_Theta L
+Omega'    = rho*Omega + (1-rho)*G(E,Z)
+Pi'       = U_Pi(Pi,E,Sigma)</div>
     </aside>
   </div>
 
-  <section class="card" style="margin-top:14px">
-    <h2>Kinetic pipeline</h2>
-    <div class="pipeline" id="pipeline"></div>
-  </section>
-
-  <section class="card" style="margin-top:14px">
-    <h2>Model boundary</h2>
-    <p class="muted">This is a deterministic synthetic visualization. It has no network, SDR, radio, satellite-control, filesystem, shell or device authority. The delay-Doppler peaks are generated locally to demonstrate the estimator geometry for public/open/authorized-signal research. The inward loop represents posterior uncertainty contraction, not literal contraction of space.</p>
-  </section>
-
-  <div class="footer mono">prediction -> RF geometry -> synthetic I/Q -> delay-Doppler match -> local track -> cloud fuse -> posterior correction -> next acquisition window -> recur</div>
+  <section class="card" style="margin-top:14px"><h2>Auto-adapting kinetic pipeline</h2><div class="pipeline" id="pipeline"></div></section>
+  <section class="card" style="margin-top:14px"><h2>Model boundary</h2><p class="muted">This is a deterministic synthetic visualization. It has no network, SDR, radio, satellite-control, filesystem, shell or device authority. The app uses synthetic complex-baseband observations and anonymous simulated tracks only. Adaptive ANN weights change only inside browser memory. The inward loop represents posterior/latent uncertainty contraction, not literal contraction of space. Public, open, consented or otherwise authorized signals are the intended research domain.</p></section>
+  <div class="footer mono">orbit -> RF geometry -> synthetic I/Q -> delay-Doppler match -> AUTO_ENCODE -> LATENT_PREDICT -> AUTO_DECODE -> RESIDUAL_COMPARE -> CLOUD_FUSE -> POSTERIOR_CORRECT -> ADAPT_WEIGHTS -> MEMORY_POLICY_UPDATE -> recur</div>
 </main>
 <script>
 (() => {
 'use strict';
 const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
-const stageName=document.getElementById('stageName'),hudStage=document.getElementById('hudStage'),hudCycle=document.getElementById('hudCycle'),hudConf=document.getElementById('hudConf');
-const rangeVal=document.getElementById('rangeVal'),dopplerVal=document.getElementById('dopplerVal'),delayVal=document.getElementById('delayVal'),innovVal=document.getElementById('innovVal'),covVal=document.getElementById('covVal'),confidenceBar=document.getElementById('confidenceBar'),rxCount=document.getElementById('rxCount');
-const noiseInput=document.getElementById('noise'),noiseOut=document.getElementById('noiseOut'),receiverInput=document.getElementById('receivers'),receiverOut=document.getElementById('receiverOut');
-const stages=[
- ['ORBIT_PREDICT','Propagate r and v through a bounded orbital dynamics model.'],
- ['RF_GEOMETRY','Map the predicted state into range, propagation delay, radial velocity and expected Doppler.'],
- ['IQ_SYNTH','Generate deterministic synthetic complex-baseband observations; no live RF or external stream is accessed.'],
- ['DELAY_DOPPLER_MATCH','Evaluate a bounded local Xi(tau, f_D, theta, t) hypothesis field and locate the correlation peak.'],
- ['LOCAL_TRACK','Refine synthetic delay and Doppler measurements around the matched peak.'],
- ['CLOUD_FUSE','Multiply independent receptor likelihood contributions in log space.'],
- ['POSTERIOR_CORRECT','Apply the innovation and contract the covariance around the corrected 3D state.'],
- ['WINDOW_PREDICT','Project the corrected state forward and narrow the next synthetic acquisition window.']
-];
-const pipeline=document.getElementById('pipeline');
-stages.forEach((s,i)=>{const d=document.createElement('div');d.className='pipe';d.dataset.i=i;d.innerHTML='<b>'+(i+1)+'. '+s[0]+'</b><br><span>'+s[1]+'</span>';pipeline.appendChild(d)});
-let state;
-function resetState(){state={cycle:0,stage:0,t:0,running:true,phase:0.25,cov:1,confidence:.64,innovation:.6,rangeKm:20200,dopplerHz:-3200,delayMs:67.38,trail:[]};renderUI();draw()}
+const stageName=document.getElementById('stageName'),hudStage=document.getElementById('hudStage'),hudCycle=document.getElementById('hudCycle'),hudConf=document.getElementById('hudConf'),hudLoss=document.getElementById('hudLoss');
+const rangeVal=document.getElementById('rangeVal'),dopplerVal=document.getElementById('dopplerVal'),delayVal=document.getElementById('delayVal'),innovVal=document.getElementById('innovVal'),lossVal=document.getElementById('lossVal'),weightVal=document.getElementById('weightVal'),covVal=document.getElementById('covVal'),depthVal=document.getElementById('depthVal'),confidenceBar=document.getElementById('confidenceBar'),rxCount=document.getElementById('rxCount');
+const noiseInput=document.getElementById('noise'),noiseOut=document.getElementById('noiseOut'),receiverInput=document.getElementById('receivers'),receiverOut=document.getElementById('receiverOut'),lrInput=document.getElementById('lr'),lrOut=document.getElementById('lrOut');
+const stages=[['ORBIT_PREDICT','Propagate bounded 3D position and velocity.'],['RF_GEOMETRY','Map state into predicted range, delay, radial velocity and Doppler.'],['IQ_SYNTH','Generate deterministic synthetic complex-baseband observations; no external RF source.'],['DELAY_DOPPLER_MATCH','Evaluate bounded Xi(tau, f_D, theta, t) hypotheses and locate a synthetic correlation peak.'],['AUTO_ENCODE','Compress normalized RF/kinetic observables into latent state Z_t.'],['LATENT_PREDICT','Evolve Z_t with a learned predictor plus bounded memory Omega_t.'],['AUTO_DECODE','Decode the predicted latent state into expected observables Xhat_t.'],['RESIDUAL_COMPARE','Compute E_t = X_t - Xhat_t and the reconstruction/prediction loss.'],['CLOUD_FUSE','Fuse independent synthetic receptor evidence and update global uncertainty.'],['POSTERIOR_CORRECT','Contract covariance and correct the current 3D track estimate.'],['ADAPT_WEIGHTS','Apply bounded gradient updates to encoder, predictor and decoder ANN weights.'],['MEMORY_POLICY_UPDATE','Update Omega and runtime policy Pi, then define the next acquisition/refinement window.']];
+const pipeline=document.getElementById('pipeline');stages.forEach((s,i)=>{const d=document.createElement('div');d.className='pipe';d.dataset.i=i;d.innerHTML='<b>'+(i+1)+'. '+s[0]+'</b><br><span>'+s[1]+'</span>';pipeline.appendChild(d)});
+const chips=document.getElementById('chips');['X','Z','Xhat','E','Omega','Theta','Pi'].forEach((name,i)=>{const e=document.createElement('span');e.className='chip'+(i<3?' on':'');e.textContent=name;chips.appendChild(e)});
+const IN=8,LAT=4;let state,timer=null;
 function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
-function syntheticNoise(k){const n=Number(noiseInput.value);return n*(Math.sin(k*12.9898+state.cycle*2.17)+.5*Math.cos(k*4.31+state.stage))*0.5}
+function seeded(i,j,s){return Math.sin((i+1)*12.9898+(j+1)*78.233+s)*.32}
+function matrix(r,c,s){return Array.from({length:r},(_,i)=>Array.from({length:c},(_,j)=>seeded(i,j,s)))}
+function resetState(){state={cycle:0,stage:0,t:0,running:true,phase:.25,cov:1,confidence:.64,innovation:.6,rangeKm:20200,dopplerHz:-3200,delayMs:67.38,loss:0,trail:[],x:Array(IN).fill(0),z:Array(LAT).fill(0),zPred:Array(LAT).fill(0),xHat:Array(IN).fill(0),res:Array(IN).fill(0),omega:Array(LAT).fill(0),policy:{depth:2,sparsity:.12,eta:Number(lrInput.value)},Wenc:matrix(LAT,IN,.4),Wpred:matrix(LAT,LAT,1.7),Wdec:matrix(IN,LAT,2.9)};renderUI();draw()}
+function syntheticNoise(k){const n=Number(noiseInput.value);return n*(Math.sin(k*12.9898+state.cycle*2.17)+.5*Math.cos(k*4.31+state.stage))*.5}
 function receivers(){return Number(receiverInput.value)}
-function advance(){
- const M=receivers(),n=Number(noiseInput.value),s=state.stage;
- if(s===0){state.phase+=0.055;state.t+=1;state.rangeKm=20200+850*Math.sin(state.phase*.82);state.dopplerHz=-3600*Math.cos(state.phase*.91)}
- if(s===1){state.delayMs=state.rangeKm/299792.458*1000}
- if(s===2){state.dopplerHz+=syntheticNoise(2)*85;state.delayMs+=syntheticNoise(3)*.03}
- if(s===3){state.innovation=Math.abs(syntheticNoise(4))*2.8+.18/(1+state.cycle)}
- if(s===4){state.innovation*=.72}
- if(s===5){state.innovation/=Math.sqrt(M);state.confidence=clamp(state.confidence+.012*M-.018*n,0,0.995)}
- if(s===6){state.cov=Math.max(.035,state.cov*(.88-.025*Math.min(M,6))+.018*n);state.confidence=clamp(1-.36*state.cov,0,0.995);state.innovation*=.48}
- if(s===7){state.trail.push(orbitPoint(state.phase));if(state.trail.length>90)state.trail.shift()}
- state.stage++;
- if(state.stage>=stages.length){state.stage=0;state.cycle++}
- renderUI();draw();
-}
+function tanh(x){return Math.tanh(clamp(x,-8,8))}
+function matVec(W,v){return W.map(row=>tanh(row.reduce((a,w,i)=>a+w*v[i],0)))}
+function norm(v){return Math.sqrt(v.reduce((a,x)=>a+x*x,0))}
+function currentFeatures(){const n=Number(noiseInput.value),M=receivers();return [Math.sin(state.phase),Math.cos(state.phase),clamp((state.rangeKm-20200)/1200,-1,1),clamp(state.dopplerHz/5000,-1,1),clamp((state.delayMs-67)/8,-1,1),clamp(n*2-1,-1,1),clamp((M-5)/4,-1,1),clamp(state.cov*2-1,-1,1)]}
+function encode(){state.x=currentFeatures();state.z=matVec(state.Wenc,state.x)}
+function predictLatent(){state.zPred=state.Wpred.map((row,j)=>tanh(row.reduce((a,w,i)=>a+w*state.z[i],0)+.12*state.omega[j]))}
+function decode(){state.xHat=matVec(state.Wdec,state.zPred)}
+function residual(){state.res=state.x.map((x,i)=>x-state.xHat[i]);state.loss=state.res.reduce((a,e)=>a+e*e,0)/IN;state.innovation=norm(state.res)}
+function adapt(){const eta=Number(lrInput.value),dz=Array(LAT).fill(0);for(let i=0;i<IN;i++){const g=state.res[i]*(1-state.xHat[i]*state.xHat[i]);for(let j=0;j<LAT;j++){dz[j]+=g*state.Wdec[i][j];state.Wdec[i][j]=clamp(state.Wdec[i][j]+eta*g*state.zPred[j],-1.5,1.5)}}for(let j=0;j<LAT;j++){const gp=dz[j]*(1-state.zPred[j]*state.zPred[j]);for(let k=0;k<LAT;k++)state.Wpred[j][k]=clamp(state.Wpred[j][k]+eta*.30*gp*state.z[k],-1.5,1.5);const ge=gp*(1-state.z[j]*state.z[j]);for(let i=0;i<IN;i++)state.Wenc[j][i]=clamp(state.Wenc[j][i]+eta*.12*ge*state.x[i],-1.5,1.5)}state.policy.eta=eta}
+function updateMemoryPolicy(){for(let j=0;j<LAT;j++)state.omega[j]=.90*state.omega[j]+.10*(state.zPred[j]-state.z[j]);state.policy.depth=clamp(Math.round(2+state.loss*8+state.cov*2),2,8);state.policy.sparsity=clamp(.08+state.loss*.3,.08,.45)}
+function weightRms(){let q=[];[state.Wenc,state.Wpred,state.Wdec].forEach(M=>M.forEach(r=>q.push(...r)));return Math.sqrt(q.reduce((a,x)=>a+x*x,0)/q.length)}
+function advance(){const M=receivers(),n=Number(noiseInput.value),s=state.stage;if(s===0){state.phase+=.055;state.t+=1;state.rangeKm=20200+850*Math.sin(state.phase*.82);state.dopplerHz=-3600*Math.cos(state.phase*.91)}if(s===1)state.delayMs=state.rangeKm/299792.458*1000;if(s===2){state.dopplerHz+=syntheticNoise(2)*85;state.delayMs+=syntheticNoise(3)*.03}if(s===3)state.innovation=Math.abs(syntheticNoise(4))*2.8+.18/(1+state.cycle);if(s===4)encode();if(s===5)predictLatent();if(s===6)decode();if(s===7)residual();if(s===8){state.innovation/=Math.sqrt(M);state.confidence=clamp(state.confidence+.012*M-.018*n-.015*state.loss,0,.995)}if(s===9){state.cov=Math.max(.03,state.cov*(.88-.025*Math.min(M,6))+.018*n+.01*state.loss);state.confidence=clamp(1-.36*state.cov-.06*state.loss,0,.995);state.trail.push(orbitPoint(state.phase));if(state.trail.length>100)state.trail.shift()}if(s===10)adapt();if(s===11)updateMemoryPolicy();state.stage++;if(state.stage>=stages.length){state.stage=0;state.cycle++}renderUI();draw()}
 function orbitPoint(a){return{x:5.8*Math.cos(a),y:4.5*Math.sin(a),z:1.9*Math.sin(a*.63)}}
-function project(p){const yaw=-.55,pitch=.42;let x=p.x,y=p.y,z=p.z;const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cp-z1*sp,z2=y*sp+z1*cp;const scale=39*6/(6+z2*.16);return{x:canvas.width*.47+x1*scale,y:canvas.height*.49-y1*scale,depth:z2}}
+function project(p){const yaw=-.55,pitch=.42;let x=p.x,y=p.y,z=p.z;const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);let x1=x*cy-z*sy,z1=x*sy+z*cy;let y1=y*cp-z1*sp,z2=y*sp+z1*cp;const scale=40*6/(6+z2*.16);return{x:canvas.width*.43+x1*scale,y:canvas.height*.52-y1*scale}}
 function line3(a,b,color,width=1,alpha=1){const A=project(a),B=project(b);ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore()}
 function dot3(p,r,color,alpha=1){const q=project(p);ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();ctx.restore();return q}
 function drawAxes(){const c='#29444f';line3({x:-7,y:0,z:0},{x:7,y:0,z:0},c);line3({x:0,y:-7,z:0},{x:0,y:7,z:0},c);line3({x:0,y:0,z:-5},{x:0,y:0,z:5},c)}
-function drawOrbit(){let prev=null;for(let i=0;i<=120;i++){const p=orbitPoint(i/120*Math.PI*2);if(prev)line3(prev,p,'#3e87a4',1.5,.85);prev=p}const sat=orbitPoint(state.phase);const q=dot3(sat,8,'#f2c14e');ctx.fillStyle='#f8e3a7';ctx.fillText('SAT',q.x+12,q.y-8);state.trail.forEach((p,i)=>dot3(p,2.3,'#48c6ef',(i+1)/state.trail.length*.55))}
+function drawOrbit(){let prev=null;for(let i=0;i<=120;i++){const p=orbitPoint(i/120*Math.PI*2);if(prev)line3(prev,p,'#3e87a4',1.5,.85);prev=p}const sat=orbitPoint(state.phase),q=dot3(sat,8,'#f2c14e');ctx.fillStyle='#f8e3a7';ctx.fillText('SAT',q.x+12,q.y-8);state.trail.forEach((p,i)=>dot3(p,2.2,'#48c6ef',(i+1)/Math.max(1,state.trail.length)*.55))}
 function rxPositions(){const M=receivers(),a=[];for(let i=0;i<M;i++){const th=i/M*Math.PI*2;a.push({x:2.6*Math.cos(th),y:2.6*Math.sin(th),z:-3.2})}return a}
-function drawReceivers(){const sat=orbitPoint(state.phase),r=rxPositions();r.forEach((p,i)=>{line3(p,sat,'#7bd389',1,.22);const q=dot3(p,5,'#7bd389');ctx.fillStyle='#a9e8b8';ctx.fillText('RX'+(i+1),q.x+7,q.y+4)})}
+function drawReceivers(){const sat=orbitPoint(state.phase);rxPositions().forEach((p,i)=>{line3(p,sat,'#7bd389',1,.20);const q=dot3(p,5,'#7bd389');ctx.fillStyle='#a9e8b8';ctx.fillText('RX'+(i+1),q.x+7,q.y+4)})}
 function drawPosterior(){const p=orbitPoint(state.phase),q=project(p),R=18+52*state.cov;ctx.save();ctx.strokeStyle='#ca8dfd';ctx.globalAlpha=.55;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(q.x,q.y,R,R*.58,.28,0,Math.PI*2);ctx.stroke();ctx.restore()}
-function drawSignalPanel(){const x=canvas.width-260,y=35,w=220,h=155;ctx.save();ctx.fillStyle='rgba(10,24,31,.88)';ctx.strokeStyle='#26404d';ctx.lineWidth=1;ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);ctx.fillStyle='#d6edf7';ctx.font='12px ui-monospace,monospace';ctx.fillText('Xi(tau, f_D, theta, t)',x+12,y+20);for(let i=0;i<5;i++){ctx.strokeStyle='#18333f';ctx.beginPath();ctx.moveTo(x+12,y+38+i*22);ctx.lineTo(x+w-12,y+38+i*22);ctx.stroke()}const px=x+45+(state.phase%(Math.PI*2))/(Math.PI*2)*135,py=y+120-clamp((state.dopplerHz+4000)/8000,0,1)*65;ctx.fillStyle='#ca8dfd';ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#8eacba';ctx.fillText('delay ->',x+146,y+h-10);ctx.save();ctx.translate(x+15,y+112);ctx.rotate(-Math.PI/2);ctx.fillText('Doppler ->',0,0);ctx.restore();ctx.restore()}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);drawAxes();drawOrbit();drawReceivers();drawPosterior();drawSignalPanel()}
-function renderUI(){const s=stages[state.stage];stageName.textContent=s[0];hudStage.textContent=s[0];hudCycle.textContent=state.cycle;rangeVal.textContent=state.rangeKm.toFixed(2);dopplerVal.textContent=state.dopplerHz.toFixed(1);delayVal.textContent=state.delayMs.toFixed(4);innovVal.textContent=state.innovation.toFixed(4);covVal.textContent=state.cov.toFixed(3);const c=(state.confidence*100).toFixed(1);hudConf.textContent=c+'%';confidenceBar.style.width=c+'%';rxCount.textContent=receivers();[...pipeline.children].forEach((el,i)=>el.classList.toggle('active',i===state.stage));noiseOut.value=Number(noiseInput.value).toFixed(2);receiverOut.value=receivers()}
-let timer=setInterval(()=>{if(state&&state.running)advance()},850);
-document.getElementById('run').addEventListener('click',e=>{state.running=!state.running;e.currentTarget.textContent=state.running?'Pause':'Run'});
-document.getElementById('step').addEventListener('click',()=>{state.running=false;document.getElementById('run').textContent='Run';advance()});
-document.getElementById('reset').addEventListener('click',()=>{resetState();document.getElementById('run').textContent='Pause'});
-noiseInput.addEventListener('input',()=>{noiseOut.value=Number(noiseInput.value).toFixed(2);renderUI();draw()});receiverInput.addEventListener('input',()=>{receiverOut.value=receivers();renderUI();draw()});
-window.addEventListener('resize',draw,{passive:true});
-resetState();
+function drawSignalPanel(){const x=canvas.width-285,y=34,w=245,h=165;ctx.save();ctx.fillStyle='rgba(10,24,31,.9)';ctx.strokeStyle='#26404d';ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);ctx.fillStyle='#d6edf7';ctx.font='12px ui-monospace,monospace';ctx.fillText('Xi(tau, f_D, theta, t)',x+12,y+20);for(let i=0;i<5;i++){ctx.strokeStyle='#18333f';ctx.beginPath();ctx.moveTo(x+12,y+40+i*23);ctx.lineTo(x+w-12,y+40+i*23);ctx.stroke()}const px=x+50+(state.phase%(Math.PI*2))/(Math.PI*2)*145,py=y+128-clamp((state.dopplerHz+4000)/8000,0,1)*72;ctx.fillStyle='#ca8dfd';ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#8eacba';ctx.fillText('delay ->',x+164,y+h-10);ctx.save();ctx.translate(x+15,y+120);ctx.rotate(-Math.PI/2);ctx.fillText('Doppler ->',0,0);ctx.restore();ctx.restore()}
+function drawLatentPanel(){const x=canvas.width-285,y=218,w=245,h=240;ctx.save();ctx.fillStyle='rgba(10,24,31,.9)';ctx.strokeStyle='#26404d';ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);ctx.fillStyle='#d6edf7';ctx.font='12px ui-monospace,monospace';ctx.fillText('3D ANN latent core Z / Omega',x+12,y+20);const cx=x+w/2,cy=y+120,scale=48;ctx.strokeStyle='#35515e';ctx.strokeRect(cx-scale,cy-scale,scale*2,scale*2);ctx.beginPath();ctx.moveTo(cx-scale,cy-scale);ctx.lineTo(cx-20,cy-82);ctx.lineTo(cx+scale+28,cy-82);ctx.lineTo(cx+scale,cy-scale);ctx.moveTo(cx+scale,cy+scale);ctx.lineTo(cx+scale+28,cy+18);ctx.lineTo(cx+scale+28,cy-82);ctx.stroke();const z=state.zPred,px=cx+clamp(z[0]||0,-1,1)*scale*.8,py=cy-clamp(z[1]||0,-1,1)*scale*.8;ctx.fillStyle='#ff9f6e';ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#48c6ef';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();ctx.fillStyle='#8eacba';ctx.fillText('z=['+z.map(v=>(v||0).toFixed(2)).join(', ')+']',x+12,y+194);ctx.fillText('loss='+state.loss.toFixed(4)+'  depth='+state.policy.depth,x+12,y+214);ctx.restore()}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);drawAxes();drawOrbit();drawReceivers();drawPosterior();drawSignalPanel();drawLatentPanel()}
+function renderUI(){const s=stages[state.stage];stageName.textContent=s[0];hudStage.textContent=s[0];hudCycle.textContent=state.cycle;hudConf.textContent=(state.confidence*100).toFixed(1)+'%';hudLoss.textContent=state.loss.toFixed(4);rangeVal.textContent=state.rangeKm.toFixed(1);dopplerVal.textContent=state.dopplerHz.toFixed(1);delayVal.textContent=state.delayMs.toFixed(4);innovVal.textContent=state.innovation.toFixed(4);lossVal.textContent=state.loss.toFixed(5);weightVal.textContent=weightRms().toFixed(4);covVal.textContent=state.cov.toFixed(3);depthVal.textContent=state.policy.depth;confidenceBar.style.width=(state.confidence*100).toFixed(1)+'%';rxCount.textContent=receivers();noiseOut.value=Number(noiseInput.value).toFixed(2);receiverOut.value=receivers();lrOut.value=Number(lrInput.value).toFixed(3);document.querySelectorAll('.pipe').forEach((e,i)=>e.classList.toggle('active',i===state.stage));document.querySelectorAll('.chip').forEach((e,i)=>e.classList.toggle('on',i===state.stage%7||i<2))}
+function start(){if(timer)clearInterval(timer);timer=setInterval(advance,800)}
+document.getElementById('run').addEventListener('click',e=>{state.running=!state.running;e.currentTarget.textContent=state.running?'Pause':'Run';if(state.running)start();else{clearInterval(timer);timer=null}});document.getElementById('step').addEventListener('click',()=>{if(state.running){state.running=false;document.getElementById('run').textContent='Run';clearInterval(timer);timer=null}advance()});document.getElementById('reset').addEventListener('click',()=>resetState());[noiseInput,receiverInput,lrInput].forEach(el=>el.addEventListener('input',()=>renderUI()));
+resetState();if(!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches))start();else{state.running=false;document.getElementById('run').textContent='Run'}
 })();
 </script>
 </body>
