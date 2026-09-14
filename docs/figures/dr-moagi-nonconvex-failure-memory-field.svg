@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Dr Moagi Non-Convex Failure-Memory Decision Field</title>
+  <desc id="desc">Conceptual architecture schematic showing a non-convex decision landscape, historical failure-memory repulsion, evidence-supported attractors, and the Psi-Phi-Lambda-Omega-Theta stack.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07131f"/>
+      <stop offset="0.55" stop-color="#0b1f2f"/>
+      <stop offset="1" stop-color="#091018"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="50%" cy="45%" r="55%">
+      <stop offset="0" stop-color="#d8fbff"/>
+      <stop offset="0.25" stop-color="#66e6ff"/>
+      <stop offset="0.75" stop-color="#146b8a"/>
+      <stop offset="1" stop-color="#092737"/>
+    </radialGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#46dfff" stop-opacity="0.85"/>
+      <stop offset="0.5" stop-color="#6fe8ff" stop-opacity="0.65"/>
+      <stop offset="1" stop-color="#f7d26d" stop-opacity="0.75"/>
+    </linearGradient>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#73e7ff"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ff5d70"/>
+    </marker>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="70" y="45" width="1460" height="70" rx="5" fill="none" stroke="#61dfff" stroke-opacity="0.6"/>
+  <text x="800" y="90" fill="#d9f8ff" text-anchor="middle" font-size="31" font-family="system-ui, sans-serif" font-weight="700">NON-CONVEX FAILURE-MEMORY DECISION FIELD</text>
+  <text x="800" y="119" fill="#9edbea" text-anchor="middle" font-size="16" font-family="system-ui, sans-serif">evidence-gated learning from recurring failure mechanisms</text>
+
+  <!-- central stack orb -->
+  <circle cx="800" cy="245" r="112" fill="url(#orb)" stroke="#88efff" stroke-width="2" filter="url(#glow)"/>
+  <circle cx="800" cy="245" r="77" fill="none" stroke="#c9f8ff" stroke-opacity="0.38"/>
+  <circle cx="800" cy="245" r="43" fill="none" stroke="#c9f8ff" stroke-opacity="0.32"/>
+  <text x="800" y="135" fill="#c9f8ff" text-anchor="middle" font-size="22" font-family="serif">Ψ · Φ · Λ⁻¹ · Ω · Θ</text>
+
+  <!-- network nodes -->
+  <g fill="#dffaff" stroke="#79eaff" stroke-width="1.4">
+    <circle cx="765" cy="195" r="8"/><circle cx="830" cy="190" r="8"/><circle cx="735" cy="240" r="8"/>
+    <circle cx="865" cy="236" r="8"/><circle cx="760" cy="285" r="8"/><circle cx="835" cy="292" r="8"/>
+    <circle cx="800" cy="245" r="9"/>
+  </g>
+  <g stroke="#8aefff" stroke-opacity="0.65">
+    <path d="M765 195 L800 245 L830 190 M735 240 L800 245 L865 236 M760 285 L800 245 L835 292 M765 195 L735 240 M830 190 L865 236 M760 285 L835 292" fill="none"/>
+  </g>
+
+  <!-- left inputs -->
+  <g font-family="system-ui, sans-serif" font-size="17" fill="#c7edf5">
+    <text x="475" y="178">HISTORY</text><text x="475" y="204">ECONOMICS</text><text x="475" y="230">GOVERNANCE</text>
+    <text x="475" y="256">BIOSAFETY</text><text x="475" y="282">ETHICS</text>
+  </g>
+  <g stroke="#d4b469" stroke-dasharray="4 6" fill="none" opacity="0.85">
+    <path d="M565 174 C650 174 675 195 700 210"/><path d="M565 200 C650 200 675 210 700 222"/>
+    <path d="M565 226 C650 226 675 225 700 235"/><path d="M565 252 C650 252 675 240 700 248"/>
+    <path d="M565 278 C650 278 675 255 700 260"/>
+  </g>
+
+  <!-- right receipts -->
+  <g font-family="system-ui, sans-serif" font-size="17" fill="#d9f8ff">
+    <text x="1035" y="175">BIAS INDEX</text><text x="1035" y="212">RESOURCE EFFICIENCY</text><text x="1035" y="249">RISK TOLERANCE</text><text x="1035" y="286">CTR-VERIFIED CANDIDATE</text>
+  </g>
+  <g stroke="#77e6ff" fill="none" opacity="0.82">
+    <path d="M900 205 C955 190 985 175 1020 175"/><path d="M905 230 C960 220 985 212 1020 212"/>
+    <path d="M905 255 C960 260 985 249 1020 249"/><path d="M895 280 C955 295 985 286 1020 286"/>
+  </g>
+
+  <!-- landscape -->
+  <path d="M110 540 C230 475 310 505 420 545 C520 580 590 470 690 500 C780 525 840 465 930 500 C1040 540 1110 470 1210 510 C1315 555 1415 500 1490 520 L1490 760 C1380 735 1300 760 1190 730 C1070 700 970 760 860 730 C760 700 650 770 540 735 C430 700 310 765 200 735 C155 723 130 710 110 700 Z" fill="#0f3140" stroke="url(#surface)" stroke-width="3"/>
+
+  <!-- contour lines -->
+  <g fill="none" stroke="url(#surface)" stroke-opacity="0.52">
+    <path d="M145 590 C285 535 380 570 475 605 C585 645 650 555 735 575 C830 600 910 545 995 575 C1095 610 1190 560 1280 590 C1355 615 1415 598 1470 590"/>
+    <path d="M135 635 C260 590 365 620 455 650 C560 685 645 610 735 630 C820 650 900 605 990 630 C1090 660 1175 620 1275 650 C1355 675 1410 665 1475 650"/>
+    <path d="M130 680 C255 645 350 665 450 695 C555 730 650 665 745 685 C835 705 915 665 1005 690 C1100 715 1190 680 1280 705 C1360 728 1420 718 1470 708"/>
+  </g>
+
+  <!-- sinks / hazard basins -->
+  <g fill="none" stroke="#8fdff3" stroke-opacity="0.68" stroke-width="2">
+    <ellipse cx="360" cy="580" rx="88" ry="36"/><ellipse cx="360" cy="580" rx="55" ry="22"/>
+    <ellipse cx="590" cy="650" rx="92" ry="38"/><ellipse cx="590" cy="650" rx="58" ry="23"/>
+    <ellipse cx="1000" cy="565" rx="92" ry="37"/><ellipse cx="1000" cy="565" rx="57" ry="22"/>
+    <ellipse cx="1255" cy="620" rx="98" ry="40"/><ellipse cx="1255" cy="620" rx="62" ry="24"/>
+  </g>
+  <g font-family="system-ui, sans-serif" font-size="17" fill="#f0f7f9">
+    <text x="285" y="532">SUNK-COST PERSISTENCE</text>
+    <text x="500" y="705">SHORT-HORIZON GREED</text>
+    <text x="935" y="520">OVERCONFIDENCE</text>
+    <text x="1175" y="680">DOMAIN HAZARD NEGLECT</text>
+  </g>
+
+  <!-- candidate path -->
+  <path d="M455 655 C565 610 660 590 760 600 C875 610 970 650 1110 625 C1195 610 1270 575 1355 565" fill="none" stroke="#73e7ff" stroke-width="5" marker-end="url(#arrowBlue)" filter="url(#glow)"/>
+  <text x="470" y="615" fill="#9eeeff" font-size="18" font-family="system-ui, sans-serif">candidate trajectory</text>
+
+  <!-- repulsion field -->
+  <g stroke="#ff5d70" stroke-width="3" fill="none" marker-end="url(#arrowRed)" filter="url(#glow)">
+    <path d="M790 625 Q760 590 735 555"/><path d="M800 630 Q800 585 800 545"/><path d="M810 625 Q845 590 870 555"/>
+    <path d="M785 635 Q745 625 710 618"/><path d="M815 635 Q855 625 895 615"/>
+  </g>
+  <text x="800" y="685" fill="#ff8c98" text-anchor="middle" font-size="19" font-family="system-ui, sans-serif">historical failure-memory repulsion</text>
+  <text x="800" y="710" fill="#ff8c98" text-anchor="middle" font-size="15" font-family="monospace">q̇ = −M(q)∇S(q) + u_explore + u_constraint</text>
+
+  <!-- attractor -->
+  <g transform="translate(1380 545)">
+    <circle r="25" fill="none" stroke="#f4d477" stroke-width="2"/>
+    <circle r="13" fill="#f4d477" fill-opacity="0.35" stroke="#f4d477"/>
+  </g>
+  <text x="1365" y="505" text-anchor="middle" fill="#f5da87" font-size="18" font-family="system-ui, sans-serif">EVIDENCE-SUPPORTED</text>
+  <text x="1365" y="527" text-anchor="middle" fill="#f5da87" font-size="18" font-family="system-ui, sans-serif">ATTRACTOR</text>
+
+  <!-- footer law -->
+  <rect x="250" y="790" width="1100" height="65" rx="7" fill="#081a25" stroke="#4fdcf8" stroke-opacity="0.5"/>
+  <text x="800" y="817" text-anchor="middle" fill="#d6f7ff" font-size="18" font-family="monospace">observed failure → provenanced memory → contextual field → CTR challenge → verify</text>
+  <text x="800" y="842" text-anchor="middle" fill="#f5d67d" font-size="18" font-family="monospace">candidate ≠ authoritative state   |   COMMIT only if Vₜ = 1</text>
+</svg>
