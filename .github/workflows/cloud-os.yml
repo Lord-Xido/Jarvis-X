@@ -12,6 +12,7 @@ on:
       - "src/jarvisx/qvector_bytecode3d.py"
       - "src/jarvisx/qvector_v2.py"
       - "src/jarvisx/qvector_field_bytecode.py"
+      - "src/jarvisx/sparse_cube64.py"
       - "tests/test_cloud_os.py"
       - "tests/test_cloud_service.py"
       - "tests/test_cloud_service_v2.py"
@@ -20,10 +21,12 @@ on:
       - "tests/test_qvector_v2.py"
       - "tests/test_qvector_field_bytecode.py"
       - "tests/test_qvector_optimizer_v2.py"
+      - "tests/test_sparse_cube64.py"
       - "docs/DR_MOAGI_CLOUD_OS.md"
       - "docs/DR_MOAGI_BYTECODE3D.md"
       - "docs/DR_MOAGI_QVECTOR3D.md"
       - "docs/DR_MOAGI_QVECTOR3D_V2.md"
+      - "docs/DR_MOAGI_SPARSE_CUBE64.md"
       - "examples/bytecode3d_demo.py"
       - "examples/qvector3d_demo.py"
       - "examples/qvector_field_v2_demo.py"
@@ -59,6 +62,7 @@ jobs:
           src/jarvisx/qvector_bytecode3d.py
           src/jarvisx/qvector_v2.py
           src/jarvisx/qvector_field_bytecode.py
+          src/jarvisx/sparse_cube64.py
           tests/test_cloud_os.py
           tests/test_cloud_service.py
           tests/test_cloud_service_v2.py
@@ -67,11 +71,12 @@ jobs:
           tests/test_qvector_v2.py
           tests/test_qvector_field_bytecode.py
           tests/test_qvector_optimizer_v2.py
+          tests/test_sparse_cube64.py
           examples/bytecode3d_demo.py
           examples/qvector3d_demo.py
           examples/qvector_field_v2_demo.py
 
-      - name: Test cloud OS, scalar bytecode, and Q16.16x3 engines
+      - name: Test cloud OS, scalar bytecode, Q16.16x3 engines, and Cube64
         run: >-
           pytest -q
           tests/test_cloud_os.py
@@ -82,6 +87,7 @@ jobs:
           tests/test_qvector_v2.py
           tests/test_qvector_field_bytecode.py
           tests/test_qvector_optimizer_v2.py
+          tests/test_sparse_cube64.py
           --no-cov
 
       - name: Run scalar bytecode smoke demo
