@@ -13,6 +13,7 @@ on:
       - "src/jarvisx/qvector_v2.py"
       - "src/jarvisx/qvector_field_bytecode.py"
       - "src/jarvisx/sparse_cube64.py"
+      - "src/jarvisx/dr_moagi_3d_1000x.py"
       - "tests/test_cloud_os.py"
       - "tests/test_cloud_service.py"
       - "tests/test_cloud_service_v2.py"
@@ -22,14 +23,17 @@ on:
       - "tests/test_qvector_field_bytecode.py"
       - "tests/test_qvector_optimizer_v2.py"
       - "tests/test_sparse_cube64.py"
+      - "tests/test_dr_moagi_3d_1000x.py"
       - "docs/DR_MOAGI_CLOUD_OS.md"
       - "docs/DR_MOAGI_BYTECODE3D.md"
       - "docs/DR_MOAGI_QVECTOR3D.md"
       - "docs/DR_MOAGI_QVECTOR3D_V2.md"
       - "docs/DR_MOAGI_SPARSE_CUBE64.md"
+      - "docs/DR_MOAGI_3D_1000X_ENGINE.md"
       - "examples/bytecode3d_demo.py"
       - "examples/qvector3d_demo.py"
       - "examples/qvector_field_v2_demo.py"
+      - "pyproject.toml"
       - "Dockerfile.cloud"
       - "docker-compose.cloud.yml"
       - ".github/workflows/cloud-os.yml"
@@ -63,6 +67,7 @@ jobs:
           src/jarvisx/qvector_v2.py
           src/jarvisx/qvector_field_bytecode.py
           src/jarvisx/sparse_cube64.py
+          src/jarvisx/dr_moagi_3d_1000x.py
           tests/test_cloud_os.py
           tests/test_cloud_service.py
           tests/test_cloud_service_v2.py
@@ -72,11 +77,12 @@ jobs:
           tests/test_qvector_field_bytecode.py
           tests/test_qvector_optimizer_v2.py
           tests/test_sparse_cube64.py
+          tests/test_dr_moagi_3d_1000x.py
           examples/bytecode3d_demo.py
           examples/qvector3d_demo.py
           examples/qvector_field_v2_demo.py
 
-      - name: Test cloud OS, scalar bytecode, Q16.16x3 engines, and Cube64
+      - name: Test cloud OS, Q16.16x3, Cube64, and sparse 1000x engine
         run: >-
           pytest -q
           tests/test_cloud_os.py
@@ -88,7 +94,12 @@ jobs:
           tests/test_qvector_field_bytecode.py
           tests/test_qvector_optimizer_v2.py
           tests/test_sparse_cube64.py
+          tests/test_dr_moagi_3d_1000x.py
           --no-cov
+
+      - name: Run sparse 1000x engine smoke cycle
+        run: >-
+          python -c "from jarvisx.dr_moagi_3d_1000x import DrMoagi3D1000xEngine,EngineConfig; e=DrMoagi3D1000xEngine(EngineConfig(max_active_tiles=64)); e.ingest_bytes(b'cloud multimodal smoke'); r=e.cycle(); assert r.active_tiles == 64; assert r.work_reduction_factor > 0"
 
       - name: Run scalar bytecode smoke demo
         env:
