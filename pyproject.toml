@@ -67,12 +67,16 @@ Changelog = "https://github.com/Lord-Xido/Jarvis-X/blob/main/CHANGELOG.md"
 [project.scripts]
 jarvisx = "jarvisx.cli:main"
 jarvisx-hyperion = "jarvisx.hyperion_cli:main"
+jarvisx-3d-console = "jarvisx.dr_moagi_operational_console:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+jarvisx = ["static/*.html"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
