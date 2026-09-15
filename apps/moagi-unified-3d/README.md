@@ -2,6 +2,32 @@
 
 A single-file Python reference runtime for the Jarvis-X sparse recursive 3D auto-encoding/decoding architecture.
 
+## Canonical architecture
+
+This runtime is an implementation layer beneath the **Dr. Moagi 1K³ Cloud Autoencoding/Decoding Organism**, canonically attributed within Jarvis-X as:
+
+> **Conceived and specified by Dr. Matladi Maxwell Moagi.**
+
+The canonical distributed architecture is defined in:
+
+- [`DR_MOAGI_1K3_CLOUD_ORGANISM.md`](./DR_MOAGI_1K3_CLOUD_ORGANISM.md)
+
+Its invariant is:
+
+```text
+1024³ virtual sparse body
+  -> 32³ cloud organs
+  -> local recurrent latent cores
+  -> Omega memory
+  -> global latent core
+  -> residual reconstruction
+  -> Top-K error-guided regeneration
+  -> adaptive cloud rescheduling
+  -> recur
+```
+
+The existing `runtime.py` and `terabyte_3d_engine.py` are concrete software substrates for progressively operationalizing that architecture.
+
 ## Operational pipeline
 
 ```text
@@ -78,6 +104,8 @@ Disable residual quantization for near-exact residual storage:
 ```bash
 python apps/moagi-unified-3d/runtime.py --headless --residual-quantum 0
 ```
+
+For the hierarchical streaming implementation, see [`TERABYTE_ENGINE.md`](./TERABYTE_ENGINE.md).
 
 ## Grounding
 
