@@ -1,0 +1,33 @@
+name: Moagi Terabyte 3D Engine
+
+on:
+  push:
+    paths:
+      - 'apps/moagi-unified-3d/terabyte_3d_engine.py'
+      - 'apps/moagi-unified-3d/test_terabyte_3d_engine.py'
+      - '.github/workflows/moagi-terabyte-3d.yml'
+  pull_request:
+    paths:
+      - 'apps/moagi-unified-3d/terabyte_3d_engine.py'
+      - 'apps/moagi-unified-3d/test_terabyte_3d_engine.py'
+      - '.github/workflows/moagi-terabyte-3d.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install runtime dependency
+        run: python -m pip install --upgrade pip numpy
+      - name: Run invariant tests
+        run: python apps/moagi-unified-3d/test_terabyte_3d_engine.py
+      - name: Run full 100^3 streaming smoke block
+        run: >-
+          python apps/moagi-unified-3d/terabyte_3d_engine.py
+          --logical-gb 1000
+          --blocks 1
+          --correction-cycles 1
