@@ -1,0 +1,26 @@
+services:
+  jarvisx-cloud-os:
+    build:
+      context: .
+      dockerfile: Dockerfile.cloud
+    ports:
+      - "8080:8080"
+    environment:
+      JARVISX_CLOUD_LEDGER: /app/state/cloud-os-ledger.jsonl
+      JARVISX_CLOUD_MAX_CELLS: "1000000"
+      JARVISX_CLOUD_MAX_CONCURRENCY: "4"
+    volumes:
+      - ./state:/app/state
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json,urllib.request; d=json.load(urllib.request.urlopen('http://127.0.0.1:8080/health')); assert d['status']=='ok' and d['ledger_valid']",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
