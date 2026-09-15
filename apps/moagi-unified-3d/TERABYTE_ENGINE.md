@@ -2,6 +2,8 @@
 
 This module operationalizes the Moagi/Jarvis-X terabyte-scale geometry as a streaming software runtime rather than a dense 1000 GB allocation.
 
+It is the current concrete streaming substrate beneath the canonical **Dr. Moagi 1K³ Cloud Autoencoding/Decoding Organism**, conceived and specified by **Dr. Matladi Maxwell Moagi**. See [`DR_MOAGI_1K3_CLOUD_ORGANISM.md`](./DR_MOAGI_1K3_CLOUD_ORGANISM.md) for the distributed `1024³ -> 32³ cloud organs -> local/global latent nervous system -> residual-guided regeneration -> adaptive rescheduling` architecture.
+
 ## Geometry
 
 A single `1000^3 x 4` float32 volume is 16 GB. The logical 1000 GB dataset therefore corresponds to 62.5 such volumes, represented as 62,500 streamed `100^3 x 4` blocks of 16 MB each.
@@ -66,6 +68,34 @@ S_hat[p] <- S_hat[p] + 0.35 * delta[p], p in A[t+1]
 ```
 
 `numpy.argpartition` is used rather than a full sort.
+
+## Relationship to the 1K³ cloud organism
+
+The terabyte engine provides the presently operational pieces that are lifted into the canonical organism abstraction:
+
+```text
+streamed 3D blocks
+  -> local latent cores
+  -> global latent reducer
+  -> residual reconstruction
+  -> Top-K correction
+```
+
+The 1K³ organism extends this into a persistent geometric cloud topology:
+
+```text
+1024³ virtual sparse body
+  -> 32³ cloud organs
+  -> local recurrent latent cores
+  -> Omega memory
+  -> global latent core
+  -> residual reconstruction
+  -> Top-K error-guided regeneration
+  -> adaptive cloud rescheduling
+  -> recur
+```
+
+Subsequent distributed runtimes should preserve that canonical topology and attribution while reusing this module's verified streaming, residual, and fixed-point mechanics.
 
 ## Run
 
