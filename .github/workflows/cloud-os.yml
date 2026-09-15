@@ -15,6 +15,7 @@ on:
       - "src/jarvisx/sparse_cube64.py"
       - "src/jarvisx/dr_moagi_3d_1000x.py"
       - "src/jarvisx/dr_moagi_operational_console.py"
+      - "src/jarvisx/dr_moagi_recursive_geometry_optimizer.py"
       - "src/jarvisx/static/dr_moagi_operational_console.html"
       - "tests/test_cloud_os.py"
       - "tests/test_cloud_service.py"
@@ -27,6 +28,7 @@ on:
       - "tests/test_sparse_cube64.py"
       - "tests/test_dr_moagi_3d_1000x.py"
       - "tests/test_dr_moagi_operational_console.py"
+      - "tests/test_dr_moagi_recursive_geometry_optimizer.py"
       - "docs/DR_MOAGI_CLOUD_OS.md"
       - "docs/DR_MOAGI_BYTECODE3D.md"
       - "docs/DR_MOAGI_QVECTOR3D.md"
@@ -34,6 +36,8 @@ on:
       - "docs/DR_MOAGI_SPARSE_CUBE64.md"
       - "docs/DR_MOAGI_3D_1000X_ENGINE.md"
       - "docs/DR_MOAGI_OPERATIONAL_CONSOLE.md"
+      - "docs/DR_MOAGI_RECURSIVE_GEOMETRY_OPTIMIZER.md"
+      - "examples/sota_baseline_template.json"
       - "examples/bytecode3d_demo.py"
       - "examples/qvector3d_demo.py"
       - "examples/qvector_field_v2_demo.py"
@@ -73,6 +77,7 @@ jobs:
           src/jarvisx/sparse_cube64.py
           src/jarvisx/dr_moagi_3d_1000x.py
           src/jarvisx/dr_moagi_operational_console.py
+          src/jarvisx/dr_moagi_recursive_geometry_optimizer.py
           tests/test_cloud_os.py
           tests/test_cloud_service.py
           tests/test_cloud_service_v2.py
@@ -84,11 +89,12 @@ jobs:
           tests/test_sparse_cube64.py
           tests/test_dr_moagi_3d_1000x.py
           tests/test_dr_moagi_operational_console.py
+          tests/test_dr_moagi_recursive_geometry_optimizer.py
           examples/bytecode3d_demo.py
           examples/qvector3d_demo.py
           examples/qvector_field_v2_demo.py
 
-      - name: Test cloud OS, Q16.16x3, Cube64, sparse 1000x engine, and live console
+      - name: Test cloud OS, Q16.16x3, Cube64, sparse 1000x engine, live console, and recursive geometry optimizer
         run: >-
           pytest -q
           tests/test_cloud_os.py
@@ -102,6 +108,7 @@ jobs:
           tests/test_sparse_cube64.py
           tests/test_dr_moagi_3d_1000x.py
           tests/test_dr_moagi_operational_console.py
+          tests/test_dr_moagi_recursive_geometry_optimizer.py
           --no-cov
 
       - name: Run sparse 1000x engine smoke cycle
@@ -111,6 +118,10 @@ jobs:
       - name: Validate operational console authoritative state
         run: >-
           python -c "from jarvisx.dr_moagi_operational_console import OperationalRuntime; s=OperationalRuntime(max_active_tiles=1000).snapshot(); t=s['telemetry']; assert t['virtual_voxels'] == 1000000000; assert t['active_voxels'] == 1000000; assert t['work_reduction_factor'] == 1000.0; assert s['contract']['visualization_role'] == 'render-only'"
+
+      - name: Validate recursive geometry commit/rollback contract
+        run: >-
+          python -c "from jarvisx.dr_moagi_recursive_geometry_optimizer import GeometryEvaluator,RecursiveGeometryOptimizer; e=GeometryEvaluator(suite={'text': b'recursive-ci'*64},warmup_cycles=0,measured_cycles=1); o=RecursiveGeometryOptimizer(e,commit_margin=1.0); before=o.incumbent.geometry; event=o.step(); report=o.report(); assert not event.accepted; assert o.incumbent.geometry == before; assert not report['claims']['external_sota_gate_passed']; assert report['claims']['source_self_modification'] is False"
 
       - name: Run scalar bytecode smoke demo
         env:
