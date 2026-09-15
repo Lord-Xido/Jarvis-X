@@ -1,0 +1,7 @@
+{
+  "name": "replace-with-same-workload-baseline",
+  "max_residual_mse": 0.0,
+  "max_median_latency_ms": 0.0,
+  "max_active_voxels": null,
+  "minimum_work_reduction": null
+}
