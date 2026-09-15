@@ -1,13 +1,12 @@
 """Sparse 3D multimodal engine with a 1000x algorithmic work-reduction target.
 
 The engine exposes a virtual 1000^3 address space but materializes only an
-active fraction of 3D tiles.  With the canonical active fraction of 0.001 and
+active fraction of 3D tiles. With the canonical active fraction of 0.001 and
 10^3-voxel tiles, one cycle touches 1,000,000 logical voxels instead of
-1,000,000,000, giving a 1000x *work-reduction target*.  This is deliberately
-separate from any wall-clock performance claim.
+1,000,000,000, giving a 1000x *work-reduction target*.
 
-NumPy is an optional acceleration backend.  Install ``jarvisx[accel]`` to use
-this module operationally.
+This is deliberately separate from any wall-clock performance claim. NumPy is
+an optional acceleration backend; install ``jarvisx[accel]`` to execute it.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ from typing import Any, Sequence
 
 try:
     import numpy as np
-except ImportError:  # pragma: no cover - exercised by environments without accel extra
+except ImportError:  # pragma: no cover - environments without the accel extra
     np = None  # type: ignore[assignment]
 
 CUBE_EDGE = 1000
@@ -35,8 +34,8 @@ FEATURES_PER_TILE = 8
 def _require_numpy() -> Any:
     if np is None:
         raise RuntimeError(
-            "DrMoagi3D1000xEngine requires the optional acceleration backend; "
-            "install with `python -m pip install -e '.[accel]'`"
+            "DrMoagi3D1000xEngine requires NumPy; install with "
+            "`python -m pip install -e '.[accel]'`"
         )
     return np
 
@@ -119,7 +118,7 @@ def pack_voxel64(
     residual: Any,
     opcode: Any,
 ) -> Any:
-    """Vector-pack the canonical 64-bit Cube64 control word.
+    """Vector-pack the canonical Cube64 control word.
 
     Layout: payload[16] | feature[12] | memory[8] | activation[8] |
     residual[12] | opcode[8].
@@ -151,7 +150,7 @@ def pack_voxel64(
 
 
 class MultimodalDescriptor:
-    """Dependency-light byte front-end shared by text/image/audio/video/code/3D."""
+    """Deterministic byte descriptor for text, code, image, audio, video and 3D."""
 
     @staticmethod
     def from_bytes(payload: bytes, width: int = 4096) -> Any:
@@ -168,8 +167,8 @@ class MultimodalDescriptor:
         else:
             repeats = math.ceil(width / raw.size)
             values = backend.tile(raw, repeats)[:width].astype(backend.float32)
-
         values = values.astype(backend.float32) / 255.0
+
         digest = backend.frombuffer(
             hashlib.blake2b(payload, digest_size=64).digest(), dtype=backend.uint8
         ).astype(backend.float32) / 255.0
@@ -180,7 +179,7 @@ class MultimodalDescriptor:
 
 
 class DrMoagi3D1000xEngine:
-    """Sparse, vectorized, residual-scheduled reference engine."""
+    """Sparse, vectorized, residual-scheduled 3D reference engine."""
 
     def __init__(self, config: EngineConfig | None = None) -> None:
         backend = _require_numpy()
@@ -278,12 +277,13 @@ class DrMoagi3D1000xEngine:
         )
         residual_ms = (time.perf_counter() - t0) * 1000.0
 
+        # Correct rows while reconstruction still has the same row ordering.
         t0 = time.perf_counter()
-        self._schedule(residual)
-        self.tile_features -= self.config.correction_gain * (
-            self.tile_features - reconstruction
-        )
+        self.tile_features -= self.config.correction_gain * delta
         backend.clip(self.tile_features, 0.0, 1.0, out=self.tile_features)
+
+        # Reorder only after correction so residual priority cannot misalign rows.
+        self._schedule(residual)
         scheduling_ms = (time.perf_counter() - t0) * 1000.0
 
         self.cycle_index += 1
@@ -306,9 +306,13 @@ class DrMoagi3D1000xEngine:
     def packed_control_words(self, opcode: int = 8) -> Any:
         backend = _require_numpy()
         n = self.active_tile_ids.size
-        feature = backend.clip(backend.rint(self.tile_features.mean(axis=1) * 4095), 0, 4095)
+        feature = backend.clip(
+            backend.rint(self.tile_features.mean(axis=1) * 4095), 0, 4095
+        )
         residual = backend.clip(backend.rint(self.residual_score * 4095), 0, 4095)
-        activation = backend.clip(backend.rint(self.tile_features.max(axis=1) * 255), 0, 255)
+        activation = backend.clip(
+            backend.rint(self.tile_features.max(axis=1) * 255), 0, 255
+        )
         memory = backend.clip(backend.rint(self.omega.mean(axis=1) * 255), 0, 255)
         payload = self.active_tile_ids % 65536
         opcodes = backend.full(n, opcode, dtype=backend.uint64)
@@ -356,17 +360,18 @@ def _scalar_roundtrip(x: Any, matrix: Any) -> Any:
     backend = _require_numpy()
     rows, features = x.shape
     latent_dim = matrix.shape[1]
-    z = [[0.0] * latent_dim for _ in range(rows)]
+    latent = [[0.0] * latent_dim for _ in range(rows)]
     for i in range(rows):
         for j in range(latent_dim):
             for k in range(features):
-                z[i][j] += float(x[i, k]) * float(matrix[k, j])
+                latent[i][j] += float(x[i, k]) * float(matrix[k, j])
+
     output = backend.empty_like(x)
     for i in range(rows):
         for k in range(features):
             value = 0.0
             for j in range(latent_dim):
-                value += z[i][j] * float(matrix[k, j])
+                value += latent[i][j] * float(matrix[k, j])
             output[i, k] = value
     return output
 
