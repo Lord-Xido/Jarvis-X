@@ -68,6 +68,7 @@ Changelog = "https://github.com/Lord-Xido/Jarvis-X/blob/main/CHANGELOG.md"
 jarvisx = "jarvisx.cli:main"
 jarvisx-hyperion = "jarvisx.hyperion_cli:main"
 jarvisx-3d-console = "jarvisx.dr_moagi_operational_console:main"
+jarvisx-3d-optimize = "jarvisx.dr_moagi_recursive_geometry_optimizer:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
