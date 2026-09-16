@@ -28,6 +28,36 @@ Its invariant is:
 
 The existing `runtime.py` and `terabyte_3d_engine.py` are concrete software substrates for progressively operationalizing that architecture.
 
+## VOXEL3D ROM permeation layer
+
+The unified runtime now has a reference boundary for the structured `\x7FVOXEL3D` ROM image:
+
+- [`VOXEL3D_ROM_RUNTIME.md`](./VOXEL3D_ROM_RUNTIME.md) — binary identity, ABI rules, state model, CTR boundary, and end-to-end pipeline.
+- [`voxel3d_rom_runtime.py`](./voxel3d_rom_runtime.py) — strict ROM parser plus reference orchestration bridge.
+- [`test_voxel3d_rom_runtime.py`](./test_voxel3d_rom_runtime.py) — validation, anchor, raw-word, and CTR commit-gate tests.
+- [`voxel3d_visualizer.html`](./voxel3d_visualizer.html) — dependency-free live browser visualization of the inward recursive runtime.
+
+The ROM layer follows:
+
+```text
+ROM byte image
+  -> decode
+  -> spatial VM
+  -> SVO compute / encoder
+  -> latent core Z_t
+  -> decoder
+  -> reconstruction X_hat_t
+  -> residual R_t
+  -> CTR verify / correct
+  -> scheduler Pi_t
+  -> engine state
+  -> raymarcher
+  -> frame output
+  -> recur
+```
+
+Unknown VM opcode semantics remain explicitly `UNSPECIFIED` until the ABI defines them. The reference layer therefore does not claim that the observed ROM bytes are native CPU/GPU instructions.
+
 ## Operational pipeline
 
 ```text
@@ -103,6 +133,18 @@ Disable residual quantization for near-exact residual storage:
 
 ```bash
 python apps/moagi-unified-3d/runtime.py --headless --residual-quantum 0
+```
+
+Inspect a VOXEL3D binary or hex image:
+
+```bash
+python apps/moagi-unified-3d/voxel3d_rom_runtime.py path/to/image.hex --step --verified
+```
+
+Open the live architecture visualization directly in a browser:
+
+```text
+apps/moagi-unified-3d/voxel3d_visualizer.html
 ```
 
 For the hierarchical streaming implementation, see [`TERABYTE_ENGINE.md`](./TERABYTE_ENGINE.md).
