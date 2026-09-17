@@ -153,5 +153,9 @@ no_implicit_optional = true
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "jarvisx.dm3d_rom"
+module = "dm3d_rom"
 disable_error_code = ["call-overload"]
+
+[[tool.mypy.overrides]]
+module = "dr_moagi_1b_intelligence"
+disable_error_code = ["call-overload", "no-redef"]
