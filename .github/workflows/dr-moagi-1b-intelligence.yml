@@ -1,0 +1,54 @@
+name: Dr Moagi 1B 3D Intelligence Engine
+
+on:
+  push:
+    paths:
+      - "src/jarvisx/dr_moagi_1b_intelligence.py"
+      - "src/jarvisx/dm3d_rom.py"
+      - "tests/test_dr_moagi_1b_intelligence.py"
+      - "docs/DR_MOAGI_1B_3D_INTELLIGENCE_ENGINE.md"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-1b-intelligence.yml"
+  pull_request:
+    paths:
+      - "src/jarvisx/dr_moagi_1b_intelligence.py"
+      - "src/jarvisx/dm3d_rom.py"
+      - "tests/test_dr_moagi_1b_intelligence.py"
+      - "docs/DR_MOAGI_1B_3D_INTELLIGENCE_ENGINE.md"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-1b-intelligence.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+      - name: Verify focused engine tests
+        run: pytest -q tests/test_dr_moagi_1b_intelligence.py --no-cov
+      - name: Verify exact 1B manifest
+        run: |
+          jarvisx-dr-moagi-1b manifest > /tmp/manifest.json
+          python - <<'PY'
+          import json
+          with open('/tmp/manifest.json') as f:
+              m = json.load(f)
+          assert m['logical_weights'] == 1_000_000_000
+          assert sum(b['count'] for b in m['banks'].values()) == 1_000_000_000
+          print('exact logical weight count:', m['logical_weights'])
+          PY
+      - name: Run multimodal sparse smoke path
+        run: jarvisx-dr-moagi-1b smoke
+      - name: Run byte-exact 3D codec smoke path
+        run: jarvisx-dr-moagi-1b tile-smoke --pattern 1
