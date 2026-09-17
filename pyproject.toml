@@ -151,3 +151,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 no_implicit_optional = true
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "jarvisx.dm3d_rom"
+disable_error_code = ["call-overload"]
