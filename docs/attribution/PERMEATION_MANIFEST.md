@@ -26,6 +26,9 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_SYSTEM_EVOLUTION.md`
 - `docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md`
 - `docs/DR_MOAGI_3D_META_OPTIMIZER.md`
+- `docs/research/DR_MOAGI_3D_BIT_SELF_LOOP.md`
+- `cpp_runtime/include/jarvisx/bit_self_loop3d.hpp`
+- `cpp_runtime/tests/bit_self_loop3d_tests.cpp`
 - `docs/DR_MOAGI_MONADIC_RESONATOR.md`
 - `docs/DR_MOAGI_3D_AUTOEXEC_ENGINE.md`
 - `docs/DR_MOAGI_FIRMWARE_CONTAINER.md`
@@ -112,6 +115,23 @@ The volumetric ROM ANN is an implementation-specific specialization of this fami
 ```
 
 Its `2^60` logical address extent is a virtual addressing contract; it is not a claim of physically resident 1 EiB memory.
+
+The bit-level inward self-loop is the binary specialization of the same family contract:
+
+```text
+60-bit spatial address + 64-bit voxel state
+  -> 2x2x2 majority contraction
+  -> XOR residual shell
+  -> bounded Hamming refinement
+  -> exact reference reconstruction
+  -> XOR/Hamming error field
+  -> staged Omega / Theta / Pi candidates
+  -> Pi_Lambda verification
+  -> commit OR rollback
+  -> re-encode verified state and recur
+```
+
+The XOR shell is lossless only when its residual words are retained. Learned, quantized or pruned implementations must report the distortion introduced by any discarded information.
 
 ## Attribution inheritance rule
 
