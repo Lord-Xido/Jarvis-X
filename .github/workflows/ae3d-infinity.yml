@@ -1,0 +1,33 @@
+name: AE3D Infinity Engine
+
+on:
+  pull_request:
+    paths:
+      - 'apps/ae3d-infinity-ide-sdk/**'
+      - '.github/workflows/ae3d-infinity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ae3d-infinity-ide-sdk/**'
+      - '.github/workflows/ae3d-infinity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ae3d-infinity-ide-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Unit tests
+        run: npm test
+      - name: Smoke test
+        run: npm run smoke
+      - name: Reference benchmark
+        run: npm run bench
