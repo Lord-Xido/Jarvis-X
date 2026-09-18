@@ -36,6 +36,8 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_3D_ANIMATION_CODEC.md`
 - `docs/volumetric-rom-ann.md`
 - `docs/adr/0017-dr-moagi-operational-autoencoding-equation.md`
+- `docs/adr/0018-sparse-speculative-3d-self-optimizing-runtime.md`
+- `docs/adr/0019-portable-continuity-envelope-and-learned-substrate.md`
 - `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`
 - `cpp_runtime/src/volumetric_rom_ann_main.cpp`
 - the CMake target `DrMoagi-Volumetric-ROM-ANN`
@@ -99,6 +101,39 @@ S_{t+1}=V_t\,\Pi_\Lambda(S^{\rm cand}_{t+1})+(1-V_t)S_t.
 
 This distinction is part of the inherited architecture: `Pi_runtime` is bounded execution policy; `Pi_Lambda` is the admissibility/projection boundary.
 
+ADR-018 extends the processing law with bounded computational selectivity:
+
+```text
+encode
+  -> sparse active support
+  -> bounded expert routing
+  -> adaptive inward depth
+  -> isolated speculative branches
+  -> verified branch selection
+  -> staged adaptation
+  -> Pi_Lambda / verify
+  -> commit OR rollback
+```
+
+Sparse routing, speculation and runtime optimization remain provisional until the same authoritative promotion boundary accepts them. Virtual scale, simulated telemetry and internal fixed-point convergence remain distinct from measured performance or external correctness.
+
+ADR-019 extends continuity from persisted memory to a versioned portable continuity envelope:
+
+```text
+Theta_model / checkpoint-or-immutable-reference
+  + Omega_mem
+  + Pi_runtime
+  + verification / audit lineage
+  + architecture / compatibility state
+  + optional resumable execution state
+  -> serialize / hash / transport
+  -> isolated restore candidate
+  -> compatibility + verification
+  -> commit restored state OR reject
+```
+
+The phrase `carry your own weights` denotes owned/licensed checkpoint portability under this contract. Third-party or proprietary model weights are represented only by immutable references unless the deployment has the right and technical ability to transport them.
+
 The volumetric ROM ANN is an implementation-specific specialization of this family pattern:
 
 ```text
@@ -150,6 +185,8 @@ The operational equation also does not convert exponential compaction into a cla
 
 Likewise, repository provenance and attribution do not by themselves establish patentability, legal priority, freedom to operate, or global scientific novelty.
 
+Portable continuity additionally does not imply semantic equivalence across incompatible models, legal portability of third-party checkpoints, bit-identical replay across heterogeneous hardware, unrestricted self-modification, or continuity of consciousness/subjective identity.
+
 ## Integrity chain
 
 The initial canonical attribution record was committed as:
@@ -158,4 +195,4 @@ The initial canonical attribution record was committed as:
 2499c2b683bf041a9c1a9b974b9869b9de92d8a2
 ```
 
-ADR-015 establishes repository-wide inheritance of that provenance. ADR-016 defines the typed-state/transaction closure, and ADR-017 defines the canonical operational auto-encoding/decoding systems law inside that closure. Subsequent commits may extend implementations while retaining these canonical references.
+ADR-015 establishes repository-wide inheritance of that provenance. ADR-016 defines the typed-state/transaction closure, ADR-017 defines the canonical operational auto-encoding/decoding systems law, ADR-018 defines bounded sparse/speculative self-optimization, and ADR-019 defines the portable continuity envelope for checkpoint/memory/runtime/audit transport. Subsequent commits may extend implementations while retaining these canonical references.
