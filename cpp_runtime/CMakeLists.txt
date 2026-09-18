@@ -274,4 +274,13 @@ jarvisx_harden(jarvisx-pixels-to-bits-tests)
 add_test(NAME pixels-to-bits-regressions COMMAND jarvisx-pixels-to-bits-tests)
 set_tests_properties(pixels-to-bits-regressions PROPERTIES TIMEOUT 120)
 
+add_executable(jarvisx-bit-self-loop3d-tests
+    tests/bit_self_loop3d_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-bit-self-loop3d-tests)
+jarvisx_harden(jarvisx-bit-self-loop3d-tests)
+
+add_test(NAME bit-self-loop3d-regressions COMMAND jarvisx-bit-self-loop3d-tests)
+set_tests_properties(bit-self-loop3d-regressions PROPERTIES TIMEOUT 120)
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/world_engine.cmake)
