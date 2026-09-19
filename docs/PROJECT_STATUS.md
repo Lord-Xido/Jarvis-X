@@ -43,6 +43,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Hugging Face exporter | Stable reference | `scripts/export_huggingface_model.py` | initialized weights are not trained weights |
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
 | 3D swarm bytecode architecture | Specification | `docs/DR_MOAGI_3D_SWARM_BYTECODE_ISA.md` | document does not establish hardware performance |
+| Septillion³ recursive swarm AE/AD | Integration candidate | `dr_moagi_septillion_swarm.py`, `test_dr_moagi_septillion_swarm.py`, ADR-021 | `10^72` sites are virtual addressing semantics; only the bounded active swarm is resident; local decoder adaptation is verification-gated and does not establish pretrained model quality |
 
 ## Empirical evidence gate
 
