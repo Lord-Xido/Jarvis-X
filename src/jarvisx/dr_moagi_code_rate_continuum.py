@@ -253,7 +253,7 @@ def measure_codegen_continuum(
             template=generation.template,
             digest=False,
         )
-        return HighThroughputCodeGenerator(trial).benchmark().lines_per_second
+        return float(HighThroughputCodeGenerator(trial).benchmark().lines_per_second)
 
     return CodeRateContinuum(continuum).run(measure)
 
