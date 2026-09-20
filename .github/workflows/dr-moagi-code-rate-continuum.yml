@@ -1,0 +1,49 @@
+name: Dr Moagi Code-Rate Continuum
+
+on:
+  push:
+    paths:
+      - 'src/jarvisx/dr_moagi_code_rate_continuum.py'
+      - 'tests/test_dr_moagi_code_rate_continuum.py'
+      - 'docs/DR_MOAGI_CODE_RATE_CONTINUUM.md'
+      - 'docs/adr/0025-dr-moagi-code-rate-continuum.md'
+      - '.github/workflows/dr-moagi-code-rate-continuum.yml'
+  pull_request:
+    paths:
+      - 'src/jarvisx/dr_moagi_code_rate_continuum.py'
+      - 'tests/test_dr_moagi_code_rate_continuum.py'
+      - 'docs/DR_MOAGI_CODE_RATE_CONTINUUM.md'
+      - 'docs/adr/0025-dr-moagi-code-rate-continuum.md'
+      - '.github/workflows/dr-moagi-code-rate-continuum.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-continuum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime and tests
+        run: python -m pip install -e '.[test]'
+      - name: Run continuum unit tests
+        run: pytest tests/test_dr_moagi_code_rate_continuum.py -q --no-cov
+      - name: Smoke measured finite-N continuum
+        run: |
+          python -m jarvisx.dr_moagi_code_rate_continuum \
+            --levels 3 \
+            --lines-per-trial 10000 \
+            --candidate-chunks 256 1024 4096 \
+            > /tmp/code-rate-continuum.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('/tmp/code-rate-continuum.json').read_text())
+          assert data['finite_lambda'] > 0
+          assert data['empirical_lambda_infinity_upper'] >= data['finite_lambda']
+          assert len(data['levels']) == 3
+          PY
