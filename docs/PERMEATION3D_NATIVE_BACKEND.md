@@ -2,6 +2,10 @@
 
 ## Purpose
 
+## Terminology boundary
+
+This document uses **permeation** in the software/backend sense: pushing the kinetic 3D execution path through additional implementation layers while preserving its semantic state contract. It is distinct from the **EEIITL electromagnetic Permeation Layer** in `docs/EEIITL_PERMEATION_LAYER.md`, where permeation denotes physical volumetric electromagnetic propagation, induced response, sensing, and thresholded logic.
+
 This layer pushes the kinetic 3D runtime one level deeper into the execution stack without changing its observable state law.
 
 ```text
