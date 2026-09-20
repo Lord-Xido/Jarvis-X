@@ -120,6 +120,8 @@ For volumetric autoencoding systems, additive evolution terms must inhabit the s
 
 The Moagi-Helmholtz functional is the canonical Layer 5 orchestration contract for multimodal-conditioned geometry generation, refinement, archival coding and reverse inference. It does not require the canonical VM to depend on a neural, renderer or codec backend.
 
+The EEIITL Permeation Layer is an optional Layer 5 physical-field research subsystem. It models transient electromagnetic propagation, induced response, spatial thresholding, sparse sensing, and candidate-first edge/cloud control through typed field/logical/control states. It does not make the physical field authoritative over the canonical VM and must preserve the same projection, policy, verification, commit/rollback, and evidence boundaries. See `docs/EEIITL_PERMEATION_LAYER.md` and ADR-023.
+
 Orthogonal transform adapters additionally inherit ADR-005: normalization is verified before transpose-as-inverse reconstruction, quantization error receives its own deterministic envelope, and a transform defect cannot be hidden by widening a multimedia distortion threshold.
 
 ### Layer 6 — Interfaces and visualization
