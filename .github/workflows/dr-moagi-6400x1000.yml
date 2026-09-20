@@ -1,0 +1,40 @@
+name: Dr Moagi 6400x1000 C++
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/include/jarvisx/dr_moagi_6400x1000.hpp"
+      - "cpp_runtime/src/dr_moagi_6400x1000_main.cpp"
+      - "cpp_runtime/tests/dr_moagi_6400x1000_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DR_MOAGI_6400X1000_ENGINE.md"
+      - "docs/adr/0022-dr-moagi-6400x1000-geometric-engine.md"
+      - ".github/workflows/dr-moagi-6400x1000.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/include/jarvisx/dr_moagi_6400x1000.hpp"
+      - "cpp_runtime/src/dr_moagi_6400x1000_main.cpp"
+      - "cpp_runtime/tests/dr_moagi_6400x1000_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DR_MOAGI_6400X1000_ENGINE.md"
+      - "docs/adr/0022-dr-moagi-6400x1000-geometric-engine.md"
+      - ".github/workflows/dr-moagi-6400x1000.yml"
+
+jobs:
+  build-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S cpp_runtime -B build/cpp-runtime -DJARVISX_BUILD_GL_VISUALIZER=OFF
+
+      - name: Build
+        run: cmake --build build/cpp-runtime --config Release --target jarvisx-dr-moagi-6400x1000 jarvisx-dr-moagi-6400x1000-tests
+
+      - name: Test
+        run: ctest --test-dir build/cpp-runtime -C Release -R dr-moagi-6400x1000 --output-on-failure
