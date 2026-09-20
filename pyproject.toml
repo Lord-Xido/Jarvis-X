@@ -86,7 +86,7 @@ jarvisx-dr-moagi-resonator = "jarvisx.dr_moagi_monadic_resonator:main"
 jarvisx-dr-moagi-multiparallel = "jarvisx.dr_moagi_multiparallel_cli:main"
 jarvisx-dr-moagi-multimodal3d = "jarvisx.dr_moagi_multimodal_loop:main"
 jarvisx-dr-moagi-operational = "jarvisx.dr_moagi_operational_runtime:main"
-jarvisx-dr-moagi-septillion-swarm = "jarvisx.dr_moagi_septillion_swarm:demo"
+jarvisx-dr-moagi-septillion-swarm = "jarvisx.dr_moagi_septillion_swarm:demo"\njarvisx-dr-moagi-trillion3-kinetic-swarm = "jarvisx.dr_moagi_trillion3_kinetic_swarm:demo"
 jarvisx-dm3d-rom = "jarvisx.dm3d_rom:main"
 jarvisx-dr-moagi-1b = "jarvisx.dr_moagi_1b_intelligence:main"
 
