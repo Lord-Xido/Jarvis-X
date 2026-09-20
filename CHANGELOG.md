@@ -37,7 +37,8 @@ The project follows semantic versioning where practical during alpha development
 - vectorized `N x 3` Phase3D runtime with true two-parameter torus initialization and relativistic momentum integration;
 - dimensionally explicit central potential, shell/energy telemetry, and measured node-update throughput;
 - end-to-end Phase3D-to-implicit-field runtime with semantic, memory-budget, and minimum-throughput-improvement promotion gates;
-- interactive DM-vΩΞ⁺ Total Permeation 3D browser HUD with measured local render telemetry and an explicit external Phase3D telemetry bridge.\n- bounded `10^12 × 10^12 × 10^12` kinetic hyper-swarm reference with sparse active topology, explicit cognitive/consensus/projection velocity receipts, manifold closure, bounded Ω memory and deterministic tests;
+- interactive DM-vΩΞ⁺ Total Permeation 3D browser HUD with measured local render telemetry and an explicit external Phase3D telemetry bridge.
+- bounded `10^12 × 10^12 × 10^12` kinetic hyper-swarm reference with sparse active topology, explicit cognitive/consensus/projection velocity receipts, manifold closure, bounded Ω memory and deterministic tests;
 
 ### Changed
 
