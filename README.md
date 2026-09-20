@@ -322,6 +322,7 @@ Every canonical subsystem should provide:
 
 ## Documentation
 
+- [Hyperscale Geometric VM — standalone 64,000-particle browser demo](apps/hyperscale-geometric-vm/README.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
 - [Canonical Dr Moagi operational auto-encoding/decoding equation](docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md)
