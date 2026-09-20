@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Dr Moagi 6400 x 1000 3D geometric coordinating autoencoding/decoding runtime visualizer">
+  <title>Dr Moagi · 6400×1000 3D Engine</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#020611;--panel:rgba(5,14,30,.78);--border:rgba(104,196,255,.25);
+      --text:#e8f7ff;--muted:#8ab4cc;--cyan:#62ddff;--mag:#d875ff;--mint:#84ffd9;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% 35%,#0a1730 0%,#020611 62%,#010309 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+    body{overflow:hidden}
+    #viewport{position:fixed;inset:0}
+    canvas{display:block;width:100%;height:100%}
+    .hud{position:fixed;z-index:3;border:1px solid var(--border);background:var(--panel);backdrop-filter:blur(12px);border-radius:14px;box-shadow:0 0 32px rgba(66,159,255,.10)}
+    .hero{top:14px;left:14px;padding:13px 15px;width:min(470px,calc(100vw - 28px));pointer-events:none}
+    .eyebrow{margin:0 0 4px;font-size:11px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+    h1{margin:0;font-size:24px;letter-spacing:.18em;font-weight:750}
+    .subtitle{margin:5px 0 0;font-size:12px;line-height:1.45;color:var(--muted)}
+    .equation{margin:10px 0 0;font:italic 22px/1.25 Georgia,serif;color:#f0fbff;text-shadow:0 0 15px rgba(98,221,255,.22)}
+    .sequence{margin:9px 0 0;font-size:12px;color:#b5dcf2}
+    .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
+    .stat{padding:7px 9px;border:1px solid rgba(123,194,255,.15);border-radius:9px;background:rgba(255,255,255,.025)}
+    .stat label{display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+    .stat strong{display:block;margin-top:2px;font-size:13px}
+    .controls{right:14px;bottom:14px;padding:12px;width:min(390px,calc(100vw - 28px))}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    button{min-height:42px;border-radius:9px;border:1px solid rgba(108,197,255,.3);background:rgba(73,143,208,.11);color:var(--text);font-weight:650;padding:8px 13px;cursor:pointer}
+    button:hover{background:rgba(73,143,208,.2)}
+    button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+    .range-row{margin-top:9px;display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;font-size:12px;color:var(--muted)}
+    input[type=range]{width:100%}
+    .legend{left:14px;bottom:14px;padding:9px 12px;font-size:11px;color:var(--muted);pointer-events:none}
+    .legend span+span{margin-left:12px}
+    .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+    .cyan{background:var(--cyan)}.mag{background:var(--mag)}.mint{background:var(--mint)}
+    .boundary{right:14px;top:14px;width:min(330px,calc(100vw - 28px));padding:11px 13px;pointer-events:none}
+    .boundary strong{font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+    .boundary p{margin:5px 0 0;color:var(--muted);font-size:10px;line-height:1.45}
+    @media(max-width:840px){.boundary{display:none}.hero{width:min(460px,calc(100vw - 28px))}.legend{display:none}}
+    @media(max-width:520px){h1{font-size:18px}.subtitle{font-size:11px}.equation{font-size:17px}.hero{padding:10px 12px}.controls{padding:10px}.stats{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+  <div id="viewport" aria-label="Interactive 3D visualization of the Dr Moagi 6400 by 1000 autoencoding and decoding engine"></div>
+
+  <section class="hud hero" aria-live="polite">
+    <p class="eyebrow">Jarvis-X · Dr Moagi Equation Engine</p>
+    <h1>3D 6400×1000 AE/AD</h1>
+    <p class="subtitle">20×20×16 logical cells · 100 clusters × 64 cells · 1000 programmable iteration slots per panel</p>
+    <div class="equation">Q = F<sub>Θ</sub>(Z) − Z &nbsp; · &nbsp; ΔZ = P↑ C<sub>core</sub> R↓(Q)</div>
+    <div id="sequence" class="sequence">6400 → 800 → 100 → 18 → 4 → 1 → 4 → 18 → 100 → 800 → 6400</div>
+    <div class="stats">
+      <div class="stat"><label>Phase</label><strong id="phase">Ingest / Encode</strong></div>
+      <div class="stat"><label>Active cells</label><strong id="active">6,400</strong></div>
+      <div class="stat"><label>Logical slots</label><strong>6,400,000 / cycle</strong></div>
+      <div class="stat"><label>Iteration depth</label><strong>1,000 / panel</strong></div>
+    </div>
+  </section>
+
+  <aside class="hud boundary">
+    <strong>Operational boundary</strong>
+    <p>This visualization renders the finite 6400-cell control topology and its programmed contraction/expansion schedule. Logical iteration depth is not a claim of equal physical hardware concurrency or 1000× measured speedup.</p>
+  </aside>
+
+  <div class="hud controls">
+    <div class="row">
+      <button id="toggle" type="button">Pause</button>
+      <button id="reset" type="button">Reset</button>
+      <button id="core" type="button">Core solve</button>
+    </div>
+    <div class="range-row">
+      <label for="speed">Speed</label>
+      <input id="speed" type="range" min="0.25" max="3" step="0.25" value="1">
+      <output id="speed-out">1.00×</output>
+    </div>
+    <div class="range-row">
+      <label for="timeline">Timeline</label>
+      <input id="timeline" type="range" min="0" max="1000" step="1" value="0">
+      <output id="timeline-out">0%</output>
+    </div>
+  </div>
+
+  <div class="hud legend">
+    <span><i class="dot cyan"></i>encoded field</span>
+    <span><i class="dot mag"></i>residual / Ω recurrence</span>
+    <span><i class="dot mint"></i>decoded expansion</span>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" referrerpolicy="no-referrer"></script>
+  <script>
+  (() => {
+    'use strict';
+    if (!globalThis.THREE) {
+      document.getElementById('viewport').textContent = 'Three.js failed to load.';
+      return;
+    }
+
+    const THREE = globalThis.THREE;
+    const host = document.getElementById('viewport');
+    const phaseEl = document.getElementById('phase');
+    const activeEl = document.getElementById('active');
+    const sequenceEl = document.getElementById('sequence');
+    const toggleBtn = document.getElementById('toggle');
+    const resetBtn = document.getElementById('reset');
+    const coreBtn = document.getElementById('core');
+    const speedInput = document.getElementById('speed');
+    const speedOut = document.getElementById('speed-out');
+    const timelineInput = document.getElementById('timeline');
+    const timelineOut = document.getElementById('timeline-out');
+
+    const PANEL_COUNT = 6400;
+    const CYCLE_SECONDS = 28;
+    const stages = [
+      { name:'Ingest / Encode', count:6400, spread:[18,12,10], x:-24 },
+      { name:'Contract 800', count:800, spread:[10,7,6], x:-15 },
+      { name:'Contract 100', count:100, spread:[6,4,3.5], x:-9 },
+      { name:'Contract 18', count:18, spread:[3.6,2.6,2.2], x:-5 },
+      { name:'Contract 4', count:4, spread:[1.8,1.6,1.4], x:-2.2 },
+      { name:'Core Solve / Auto-Optimize', count:1, spread:[0.1,0.1,0.1], x:0 },
+      { name:'Expand 4', count:4, spread:[1.8,1.6,1.4], x:2.2 },
+      { name:'Expand 18', count:18, spread:[3.6,2.6,2.2], x:5 },
+      { name:'Expand 100', count:100, spread:[6,4,3.5], x:9 },
+      { name:'Expand 800', count:800, spread:[10,7,6], x:15 },
+      { name:'Decode 6400', count:6400, spread:[18,12,10], x:24 }
+    ];
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020611);
+    scene.fog = new THREE.FogExp2(0x020611, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(54, innerWidth / innerHeight, 0.1, 220);
+    camera.position.set(0, 8, 52);
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    host.append(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0x6985a5, 0.9));
+    const cyanLight = new THREE.PointLight(0x62ddff, 14, 100, 2); cyanLight.position.set(-16,12,14); scene.add(cyanLight);
+    const magLight = new THREE.PointLight(0xd875ff, 12, 100, 2); magLight.position.set(16,-5,-9); scene.add(magLight);
+
+    const coreGroup = new THREE.Group();
+    scene.add(coreGroup);
+    const core = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(2.4, 2),
+      new THREE.MeshStandardMaterial({ color:0xbfefff, emissive:0x348eff, emissiveIntensity:2.4, metalness:.15, roughness:.12, transparent:true, opacity:.92 })
+    );
+    coreGroup.add(core);
+
+    const ringList = [];
+    for (let i=0;i<6;i++) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(4.3 + i*1.2, .055 + i*.008, 12, 100),
+        new THREE.MeshBasicMaterial({ color:i%2 ? 0xd875ff : 0x62ddff, transparent:true, opacity:.72-i*.07 })
+      );
+      ring.rotation.x = i%2 ? Math.PI/3 : Math.PI/2;
+      ring.rotation.y = i*.31;
+      coreGroup.add(ring);
+      ringList.push(ring);
+    }
+
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(.09,.09,28,12),
+      new THREE.MeshBasicMaterial({ color:0x8be9ff, transparent:true, opacity:.28 })
+    );
+    coreGroup.add(beam);
+
+    const platform = new THREE.Mesh(
+      new THREE.CylinderGeometry(7.8,9,3.5,64),
+      new THREE.MeshStandardMaterial({ color:0x071421, metalness:.86, roughness:.3, emissive:0x102b4b, emissiveIntensity:.65 })
+    );
+    platform.position.y=-8;
+    coreGroup.add(platform);
+
+    function hash01(n, salt=0) {
+      const v = Math.sin(n*12.9898 + salt*78.233) * 43758.5453123;
+      return v - Math.floor(v);
+    }
+
+    const starsGeo = new THREE.BufferGeometry();
+    const starCount = 1800;
+    const starPositions = new Float32Array(starCount*3);
+    for (let i=0;i<starCount;i++) {
+      starPositions[i*3] = (hash01(i,1)-.5)*160;
+      starPositions[i*3+1] = (hash01(i,2)-.5)*100;
+      starPositions[i*3+2] = (hash01(i,3)-.5)*160;
+    }
+    starsGeo.setAttribute('position', new THREE.BufferAttribute(starPositions,3));
+    const stars = new THREE.Points(starsGeo,new THREE.PointsMaterial({ color:0xbddfff,size:.18,transparent:true,opacity:.8,depthWrite:false }));
+    scene.add(stars);
+
+    const cellGeometry = new THREE.BoxGeometry(.25,.25,.25);
+    const cellMaterial = new THREE.MeshBasicMaterial({ vertexColors:true,transparent:true,opacity:.94 });
+    const cells = new THREE.InstancedMesh(cellGeometry,cellMaterial,PANEL_COUNT);
+    cells.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(cells);
+
+    const cyan = new THREE.Color(0x62ddff), mag = new THREE.Color(0xd875ff), mint = new THREE.Color(0x84ffd9);
+    for (let i=0;i<PANEL_COUNT;i++) {
+      const c = i%3===0 ? cyan : (i%3===1 ? mag : mint);
+      cells.setColorAt(i,c);
+    }
+    cells.instanceColor.needsUpdate=true;
+
+    const targets = [];
+    for (let s=0;s<stages.length;s++) {
+      const stage = stages[s];
+      const count = stage.count;
+      const side = Math.max(1,Math.ceil(Math.cbrt(count)));
+      const buffer = new Float32Array(PANEL_COUNT*4);
+      for (let i=0;i<PANEL_COUNT;i++) {
+        const j=i%count;
+        const ix=j%side, iy=Math.floor(j/side)%side, iz=Math.floor(j/(side*side))%side;
+        const nx=side>1 ? ix/(side-1)-.5 : 0;
+        const ny=side>1 ? iy/(side-1)-.5 : 0;
+        const nz=side>1 ? iz/(side-1)-.5 : 0;
+        buffer[i*4]   = stage.x + nx*stage.spread[0] + (hash01(i,s+11)-.5)*.22;
+        buffer[i*4+1] = ny*stage.spread[1] + (hash01(i,s+23)-.5)*.22;
+        buffer[i*4+2] = nz*stage.spread[2] + (hash01(i,s+37)-.5)*.22;
+        buffer[i*4+3] = i<count ? 1 : .012;
+      }
+      targets.push(buffer);
+    }
+
+    const flowCount=1000;
+    const flowGeo=new THREE.BufferGeometry();
+    const flowPos=new Float32Array(flowCount*3);
+    flowGeo.setAttribute('position',new THREE.BufferAttribute(flowPos,3));
+    const flowPoints=new THREE.Points(flowGeo,new THREE.PointsMaterial({ color:0xcc79ff,size:.2,transparent:true,opacity:.88,depthWrite:false }));
+    scene.add(flowPoints);
+
+    const dummy=new THREE.Object3D();
+    let running=true, speed=1, elapsed=0, last=performance.now(), dragging=false, px=0, py=0;
+
+    function smoothstep(x){return x*x*(3-2*x)}
+    function phaseAtTime(){
+      const u=((elapsed%CYCLE_SECONDS)+CYCLE_SECONDS)%CYCLE_SECONDS/CYCLE_SECONDS*(stages.length-1);
+      return {a:Math.floor(u), b:Math.min(Math.floor(u)+1,stages.length-1), f:smoothstep(u-Math.floor(u))};
+    }
+
+    function updateCells(nowSeconds){
+      const {a,b,f}=phaseAtTime(), A=targets[a], B=targets[b];
+      const active=Math.round(stages[a].count+(stages[b].count-stages[a].count)*f);
+      phaseEl.textContent=stages[a].name;
+      activeEl.textContent=active.toLocaleString();
+      sequenceEl.textContent=a<5
+        ? '6400 → 800 → 100 → 18 → 4 → 1'
+        : (a===5 ? 'Q = FΘ(Z) − Z · fixed-point / core correction' : '1 → 4 → 18 → 100 → 800 → 6400');
+
+      for(let i=0;i<PANEL_COUNT;i++) {
+        const x=A[i*4]+(B[i*4]-A[i*4])*f;
+        const y=A[i*4+1]+(B[i*4+1]-A[i*4+1])*f;
+        const z=A[i*4+2]+(B[i*4+2]-A[i*4+2])*f;
+        const base=A[i*4+3]+(B[i*4+3]-A[i*4+3])*f;
+        const pulse=.82+.12*Math.sin(nowSeconds*2.1+i*.071);
+        dummy.position.set(x,y,z);
+        dummy.rotation.set(nowSeconds*.12+i*.0008,nowSeconds*.17+i*.0011,0);
+        dummy.scale.setScalar(Math.max(.0001,base*pulse));
+        dummy.updateMatrix();
+        cells.setMatrixAt(i,dummy.matrix);
+      }
+      cells.instanceMatrix.needsUpdate=true;
+      timelineInput.value=Math.round((((elapsed%CYCLE_SECONDS)+CYCLE_SECONDS)%CYCLE_SECONDS/CYCLE_SECONDS)*1000);
+      timelineOut.value=Math.round(Number(timelineInput.value)/10)+'%';
+    }
+
+    function updateFlow(nowSeconds){
+      const pos=flowGeo.attributes.position.array;
+      for(let i=0;i<flowCount;i++) {
+        const u=(i/flowCount+nowSeconds*.035)%1;
+        const x=(u-.5)*62;
+        const pull=Math.exp(-Math.pow((u-.5)*7,2));
+        const angle=u*Math.PI*9+i*.19;
+        const radius=(4.8+2.2*Math.sin(i*.37))*(1-.78*pull);
+        pos[i*3]=x;
+        pos[i*3+1]=Math.sin(angle)*radius*.5;
+        pos[i*3+2]=Math.cos(angle)*radius*.72;
+      }
+      flowGeo.attributes.position.needsUpdate=true;
+    }
+
+    function animate(now){
+      const dt=Math.min((now-last)/1000,.05); last=now;
+      if(running)elapsed+=dt*speed;
+      const nowSeconds=now/1000;
+      updateCells(nowSeconds);
+      updateFlow(nowSeconds);
+      core.rotation.x+=.004*speed; core.rotation.y+=.007*speed;
+      core.scale.setScalar(1+.09*Math.sin(nowSeconds*2.5));
+      ringList.forEach((r,i)=>{r.rotation.z+=(i%2?.004:-.003)*speed;r.rotation.y+=(i%2?-.002:.0025)*speed});
+      platform.rotation.y+=.0009*speed;
+      stars.rotation.y+=.00018*speed;
+      if(!dragging){
+        camera.position.x=Math.sin(nowSeconds*.05)*7;
+        camera.position.y=8+Math.sin(nowSeconds*.07)*2;
+        camera.lookAt(0,0,0);
+      }
+      renderer.render(scene,camera);
+      requestAnimationFrame(animate);
+    }
+
+    toggleBtn.addEventListener('click',()=>{running=!running;toggleBtn.textContent=running?'Pause':'Play'});
+    resetBtn.addEventListener('click',()=>{elapsed=0;running=true;toggleBtn.textContent='Pause'});
+    coreBtn.addEventListener('click',()=>{elapsed=CYCLE_SECONDS*.5;running=false;toggleBtn.textContent='Play'});
+    speedInput.addEventListener('input',()=>{speed=Math.max(.25,Math.min(3,Number(speedInput.value)||1));speedOut.value=speed.toFixed(2)+'×'});
+    timelineInput.addEventListener('input',()=>{elapsed=(Number(timelineInput.value)/1000)*CYCLE_SECONDS;running=false;toggleBtn.textContent='Play';timelineOut.value=Math.round(Number(timelineInput.value)/10)+'%'});
+
+    renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+    renderer.domElement.addEventListener('pointermove',e=>{if(!dragging)return;camera.position.x+=(e.clientX-px)*.035;camera.position.y-=(e.clientY-py)*.035;px=e.clientX;py=e.clientY;camera.lookAt(0,0,0)});
+    renderer.domElement.addEventListener('pointerup',e=>{dragging=false;renderer.domElement.releasePointerCapture(e.pointerId)});
+    renderer.domElement.addEventListener('pointercancel',()=>{dragging=false});
+    renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();camera.position.z=Math.max(22,Math.min(82,camera.position.z+e.deltaY*.035))},{passive:false});
+
+    addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2))});
+    requestAnimationFrame(animate);
+  })();
+  </script>
+</body>
+</html>
