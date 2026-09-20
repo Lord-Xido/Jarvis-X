@@ -1,0 +1,116 @@
+name: Dr Moagi Operational Speed Benchmark
+
+on:
+  push:
+    branches:
+      - benchmark/dr-moagi-operational-speed-20260920
+    paths:
+      - ".github/workflows/dr-moagi-operational-speed.yml"
+      - "cpp_runtime/**"
+  pull_request:
+    paths:
+      - ".github/workflows/dr-moagi-operational-speed.yml"
+      - "cpp_runtime/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Record host
+        run: |
+          mkdir -p benchmark-results
+          {
+            echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "commit=${GITHUB_SHA}"
+            echo "runner_os=${RUNNER_OS}"
+            echo "nproc=$(nproc)"
+            uname -a
+            lscpu
+            free -h
+          } | tee benchmark-results/host.txt
+
+      - name: Configure Release build
+        run: |
+          cmake -S cpp_runtime -B build/bench \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DJARVISX_BUILD_GL_VISUALIZER=OFF
+
+      - name: Build benchmark targets
+        run: |
+          cmake --build build/bench --config Release --parallel \
+            --target jarvisx-dr-moagi-6400x1000 jarvisx-bitmatrix1gib jarvisx-dr-moagi-1gib-bit-engine
+
+      - name: Benchmark 6400x1000 engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe=build/bench/DrMoagi-6400x1000-3D
+          : > benchmark-results/engine.txt
+          for workers in 1 2 4; do
+            echo "=== workers=${workers} ===" | tee -a benchmark-results/engine.txt
+            "$exe" --cycles 5 --iterations 1000 --workers "$workers" \
+              | tee -a benchmark-results/engine.txt
+          done
+
+      - name: Benchmark full 1 GiB sparse3d stream
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p benchmark-results/bit-sparse3d
+          /usr/bin/time -v -o benchmark-results/bit-sparse3d/time.txt \
+            build/bench/jarvisx-bitmatrix1gib \
+              --bytes 1073741824 \
+              --chunk-mib 8 \
+              --pattern sparse3d \
+              --window-ms 100 \
+              --output-dir benchmark-results/bit-sparse3d \
+            | tee benchmark-results/bit-sparse3d/console.txt
+          cat benchmark-results/bit-sparse3d/report.txt
+
+      - name: Benchmark full combined 1 GiB plus 6400x1000 engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/time -v -o benchmark-results/combined-time.txt \
+            build/bench/DrMoagi-1GiB-BitIterations-3D \
+              --cycles 1 \
+              --iterations 1000 \
+              --workers 4 \
+              --bytes 1073741824 \
+              --chunk-mib 8 \
+              --pattern sparse3d \
+            | tee benchmark-results/combined.txt
+
+      - name: Summarize benchmark
+        shell: bash
+        run: |
+          {
+            echo "# Dr Moagi operational benchmark"
+            echo
+            echo "## Host"
+            grep -E 'timestamp_utc=|commit=|nproc=|Model name:|CPU\(s\):|Thread\(s\) per core:|Core\(s\) per socket:' benchmark-results/host.txt || true
+            echo
+            echo "## 6400x1000 engine"
+            cat benchmark-results/engine.txt
+            echo
+            echo "## Full 1 GiB bit stream"
+            cat benchmark-results/bit-sparse3d/report.txt
+            echo
+            echo "## Combined engine"
+            cat benchmark-results/combined.txt
+          } | tee benchmark-results/SUMMARY.md
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-moagi-operational-speed-${{ github.sha }}
+          path: benchmark-results
+          compression-level: 6
