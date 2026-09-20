@@ -12,6 +12,7 @@ on:
       - "apps/dr-moagi-cognitive/**"
       - "apps/dmvann-chat/**"
       - "apps/3d-rade-swarm/**"
+      - "apps/dr-moagi-6400x1000-3d/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   pull_request:
     paths:
@@ -21,6 +22,7 @@ on:
       - "apps/dr-moagi-cognitive/**"
       - "apps/dmvann-chat/**"
       - "apps/3d-rade-swarm/**"
+      - "apps/dr-moagi-6400x1000-3d/**"
       - ".github/workflows/dmvx-matrix-pages.yml"
   workflow_dispatch:
 
@@ -134,7 +136,8 @@ jobs:
           cp -a apps/dr-moagi-geometry/. dist/dr-moagi-geometry/
           cp -a apps/dr-moagi-cognitive/. dist/dr-moagi-cognitive/
           cp -a apps/dmvann-chat/. dist/dmvann-chat/
-          cp -a apps/3d-rade-swarm/. dist/3d-rade-swarm/\n          cp -a apps/dr-moagi-6400x1000-3d/. dist/dr-moagi-6400x1000-3d/
+          cp -a apps/3d-rade-swarm/. dist/3d-rade-swarm/
+          cp -a apps/dr-moagi-6400x1000-3d/. dist/dr-moagi-6400x1000-3d/
       - name: Upload static runtimes
         id: upload
         continue-on-error: true
@@ -176,6 +179,7 @@ jobs:
                 `- Dr Moagi cognitive 3D web app: ${pageUrl.replace(/\/$/, '')}/dr-moagi-cognitive/`,
                 `- DMVANN Chat: ${pageUrl.replace(/\/$/, '')}/dmvann-chat/`,
                 `- 3D-RADE swarm engine: ${pageUrl.replace(/\/$/, '')}/3d-rade-swarm/`,
+                `- Dr Moagi 6400x1000 Three.js visualizer: ${pageUrl.replace(/\/$/, '')}/dr-moagi-6400x1000-3d/`,
                 `- deployed commit: \`${context.sha}\``,
                 `- invariant test job: ${process.env.TEST_RESULT}`,
                 `- Pages deployment job: ${process.env.DEPLOY_RESULT}`,
