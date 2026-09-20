@@ -115,6 +115,12 @@ class MonadicResonator:
     """Composable implementation of the DM-vOmegaXi+ latent-flow law."""
 
     LAW_ID = "DM-vOmegaXi+-MONADIC-FLOW"
+    GLYPH_ID = "DM-vOmegaXi+-GLYPH-v1"
+    GLYPH = "↻_{ΩΞ}^{v+}"
+    GLYPH_EXPANSION = (
+        "encode -> fold -> move -> remember -> attend -> decode -> "
+        "measure -> verify -> correct -> recur"
+    )
     EQUATION = "X[t+1] = D_psi(E_phi(X[t]) + integral_t^{t+1} f_theta(Z(tau),tau) dtau)"
 
     def __init__(
@@ -320,6 +326,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     reports = engine.rollout(args.state, steps=args.steps)
     payload = {
         "law_id": engine.LAW_ID,
+        "glyph_id": engine.GLYPH_ID,
+        "glyph": engine.GLYPH,
+        "glyph_expansion": engine.GLYPH_EXPANSION,
         "equation": engine.EQUATION,
         "steps": [report.as_dict() for report in reports],
     }
