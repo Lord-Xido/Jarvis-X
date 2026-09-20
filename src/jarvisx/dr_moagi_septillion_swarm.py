@@ -190,7 +190,11 @@ class DrMoagiSeptillionSwarmEngine:
     def _materialize_agents(self) -> list[SwarmAgent]:
         agents: list[SwarmAgent] = []
         for index in range(self.config.active_agents):
-            address = tuple(virtual_coordinate(index, axis, self.config.seed) for axis in range(3))
+            address = (
+                virtual_coordinate(index, 0, self.config.seed),
+                virtual_coordinate(index, 1, self.config.seed),
+                virtual_coordinate(index, 2, self.config.seed),
+            )
             position = [chart_coordinate(value) for value in address]
             velocity = [0.0, 0.0, 0.0]
             features = self._procedural_features(position, cycle=0)

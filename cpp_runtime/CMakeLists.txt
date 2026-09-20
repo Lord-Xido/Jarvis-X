@@ -77,6 +77,20 @@ set_target_properties(jarvisx-pixels-to-bits PROPERTIES OUTPUT_NAME "DrMoagi-Pix
 jarvisx_include_runtime(jarvisx-pixels-to-bits)
 jarvisx_harden(jarvisx-pixels-to-bits)
 
+add_executable(jarvisx-dr-moagi-6400x1000
+    src/dr_moagi_6400x1000_main.cpp
+)
+set_target_properties(jarvisx-dr-moagi-6400x1000 PROPERTIES OUTPUT_NAME "DrMoagi-6400x1000-3D")
+jarvisx_include_runtime(jarvisx-dr-moagi-6400x1000)
+jarvisx_harden(jarvisx-dr-moagi-6400x1000)
+
+add_executable(jarvisx-dr-moagi-1gib-bit-engine
+    src/dr_moagi_1gib_bit_engine_main.cpp
+)
+set_target_properties(jarvisx-dr-moagi-1gib-bit-engine PROPERTIES OUTPUT_NAME "DrMoagi-1GiB-BitIterations-3D")
+jarvisx_include_runtime(jarvisx-dr-moagi-1gib-bit-engine)
+jarvisx_harden(jarvisx-dr-moagi-1gib-bit-engine)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -202,6 +216,28 @@ add_test(
 )
 set_tests_properties(pixels-to-bits-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME dr-moagi-6400x1000-runtime-smoke
+    COMMAND jarvisx-dr-moagi-6400x1000
+        --cycles 1
+        --workers 2
+        --iterations 64
+        --quiet
+)
+set_tests_properties(dr-moagi-6400x1000-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_test(
+    NAME dr-moagi-1gib-bit-engine-runtime-smoke
+    COMMAND jarvisx-dr-moagi-1gib-bit-engine
+        --cycles 1
+        --workers 2
+        --iterations 64
+        --bytes 8388608
+        --chunk-mib 1
+        --quiet
+)
+set_tests_properties(dr-moagi-1gib-bit-engine-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -282,5 +318,14 @@ jarvisx_harden(jarvisx-bit-self-loop3d-tests)
 
 add_test(NAME bit-self-loop3d-regressions COMMAND jarvisx-bit-self-loop3d-tests)
 set_tests_properties(bit-self-loop3d-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-dr-moagi-6400x1000-tests
+    tests/dr_moagi_6400x1000_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-dr-moagi-6400x1000-tests)
+jarvisx_harden(jarvisx-dr-moagi-6400x1000-tests)
+
+add_test(NAME dr-moagi-6400x1000-regressions COMMAND jarvisx-dr-moagi-6400x1000-tests)
+set_tests_properties(dr-moagi-6400x1000-regressions PROPERTIES TIMEOUT 120)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/world_engine.cmake)

@@ -1,0 +1,85 @@
+name: Dr Moagi 6400x1000 C++
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/include/jarvisx/dr_moagi_6400x1000.hpp"
+      - "cpp_runtime/src/dr_moagi_6400x1000_main.cpp"
+      - "cpp_runtime/src/dr_moagi_1gib_bit_engine_main.cpp"
+      - "cpp_runtime/tests/dr_moagi_6400x1000_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DR_MOAGI_6400X1000_ENGINE.md"
+      - "docs/adr/0022-dr-moagi-6400x1000-geometric-engine.md"
+      - ".github/workflows/dr-moagi-6400x1000.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/include/jarvisx/dr_moagi_6400x1000.hpp"
+      - "cpp_runtime/src/dr_moagi_6400x1000_main.cpp"
+      - "cpp_runtime/src/dr_moagi_1gib_bit_engine_main.cpp"
+      - "cpp_runtime/tests/dr_moagi_6400x1000_tests.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DR_MOAGI_6400X1000_ENGINE.md"
+      - "docs/adr/0022-dr-moagi-6400x1000-geometric-engine.md"
+      - ".github/workflows/dr-moagi-6400x1000.yml"
+
+jobs:
+  build-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S cpp_runtime -B build/cpp-runtime -DJARVISX_BUILD_GL_VISUALIZER=OFF
+
+      - name: Build
+        run: cmake --build build/cpp-runtime --config Release --target jarvisx-dr-moagi-6400x1000 jarvisx-dr-moagi-6400x1000-tests jarvisx-dr-moagi-1gib-bit-engine
+
+      - name: Test
+        run: ctest --test-dir build/cpp-runtime -C Release -R "dr-moagi-" --output-on-failure
+
+      - name: Package Windows executables
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $source = Get-ChildItem -Path build/cpp-runtime -Recurse -Filter 'DrMoagi-1GiB-BitIterations-3D.exe' | Select-Object -First 1
+          if (-not $source) { throw 'Windows executable not found' }
+          $compact = Join-Path $PWD 'dist/DrMoagi-1GiB-BitIterations-3D.exe'
+          $exact = Join-Path $PWD 'dist/DrMoagi-1GiB-BitIterations-3D-EXACT-1GiB.exe'
+          Copy-Item $source.FullName $compact -Force
+          Copy-Item $source.FullName $exact -Force
+          $targetBytes = [Int64]1073741824
+          $stream = [System.IO.File]::Open($exact, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+          try {
+            if ($stream.Length -gt $targetBytes) { throw 'Compiled PE already exceeds 1 GiB' }
+            $stream.SetLength($targetBytes)
+          } finally {
+            $stream.Dispose()
+          }
+          $actual = (Get-Item $exact).Length
+          if ($actual -ne $targetBytes) { throw "Exact-size package is $actual bytes, expected $targetBytes" }
+          Get-FileHash $compact -Algorithm SHA256 | ForEach-Object { "COMPACT SHA256 $($_.Hash)  $($_.Path | Split-Path -Leaf)" } | Set-Content dist/SHA256SUMS.txt
+          Get-FileHash $exact -Algorithm SHA256 | ForEach-Object { "EXACT1G SHA256 $($_.Hash)  $($_.Path | Split-Path -Leaf)" } | Add-Content dist/SHA256SUMS.txt
+          @(
+            'Dr Moagi 1 GiB 3D AE/AD Bit Iterations Processor',
+            '',
+            'DrMoagi-1GiB-BitIterations-3D.exe is the compact operational PE.',
+            'DrMoagi-1GiB-BitIterations-3D-EXACT-1GiB.exe is exactly 1,073,741,824 bytes.',
+            'The exact-size file is the same executable with a trailing zero-data PE overlay; the 1 GiB file size is packaging, not extra compute capability.',
+            'With no arguments the program processes the canonical 1 GiB / 2048^3-bit virtual volume and executes one 6400-panel x 1000-slot AE/AD macrocycle.',
+            'Use --help for runtime options.'
+          ) | Set-Content dist/README.txt
+
+      - name: Upload Windows executable artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DrMoagi-1GiB-BitIterations-3D-Windows
+          path: dist/
+          compression-level: 9
+          if-no-files-found: error
