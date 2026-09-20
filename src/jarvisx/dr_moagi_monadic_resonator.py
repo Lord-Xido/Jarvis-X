@@ -121,6 +121,7 @@ class MonadicResonator:
         "encode -> fold -> move -> remember -> attend -> decode -> "
         "measure -> verify -> correct -> recur"
     )
+    GLYPH_RUNTIME_SLICE = "encode -> move -> decode -> recur"
     EQUATION = "X[t+1] = D_psi(E_phi(X[t]) + integral_t^{t+1} f_theta(Z(tau),tau) dtau)"
 
     def __init__(
@@ -329,6 +330,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "glyph_id": engine.GLYPH_ID,
         "glyph": engine.GLYPH,
         "glyph_expansion": engine.GLYPH_EXPANSION,
+        "glyph_runtime_slice": engine.GLYPH_RUNTIME_SLICE,
         "equation": engine.EQUATION,
         "steps": [report.as_dict() for report in reports],
     }
