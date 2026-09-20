@@ -128,6 +128,7 @@ def test_cli_emits_auditable_equation_payload(capsys: pytest.CaptureFixture[str]
     assert payload["glyph_id"] == MonadicResonator.GLYPH_ID
     assert payload["glyph"] == MonadicResonator.GLYPH
     assert payload["glyph_expansion"] == MonadicResonator.GLYPH_EXPANSION
+    assert payload["glyph_runtime_slice"] == MonadicResonator.GLYPH_RUNTIME_SLICE
     assert payload["equation"] == MonadicResonator.EQUATION
     assert payload["steps"][0]["output_state"] == [1.0, 2.0]
 
