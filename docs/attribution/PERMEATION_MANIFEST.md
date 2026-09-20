@@ -35,6 +35,8 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_FIRMWARE_CONTAINER.md`
 - `docs/DR_MOAGI_3D_ANIMATION_CODEC.md`
 - `docs/volumetric-rom-ann.md`
+- `docs/EEIITL_PERMEATION_LAYER.md`
+- `docs/adr/0023-eeiitl-volumetric-electromagnetic-permeation.md`
 - `docs/adr/0017-dr-moagi-operational-autoencoding-equation.md`
 - `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`
 - `cpp_runtime/src/volumetric_rom_ann_main.cpp`
