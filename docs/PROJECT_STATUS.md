@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-09-13
+**Last reviewed:** 2026-09-20
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -44,6 +44,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Reality-grounded observer dynamics | Specification | `docs/REALITY_GROUNDED_OBSERVER_DYNAMICS.md` | proposed formal framework |
 | 3D swarm bytecode architecture | Specification | `docs/DR_MOAGI_3D_SWARM_BYTECODE_ISA.md` | document does not establish hardware performance |
 | Septillion³ recursive swarm AE/AD | Integration candidate | `dr_moagi_septillion_swarm.py`, `test_dr_moagi_septillion_swarm.py`, ADR-021 | `10^72` sites are virtual addressing semantics; only the bounded active swarm is resident; local decoder adaptation is verification-gated and does not establish pretrained model quality |
+| Trillion³ kinetic hyper-swarm | Reference laboratory | `dr_moagi_trillion3_kinetic_swarm.py`, `test_dr_moagi_trillion3_kinetic_swarm.py`, ADR-024 | `10^36` sites and `10^48` logical parameter-address positions are virtual semantics; only a bounded active 3D block is resident; local aggregation is not Byzantine consensus and manifold projection does not establish semantic truth |
 
 ## Empirical evidence gate
 
