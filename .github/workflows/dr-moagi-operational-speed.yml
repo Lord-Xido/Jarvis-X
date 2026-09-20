@@ -7,6 +7,10 @@ on:
     paths:
       - ".github/workflows/dr-moagi-operational-speed.yml"
       - "cpp_runtime/**"
+  pull_request:
+    paths:
+      - ".github/workflows/dr-moagi-operational-speed.yml"
+      - "cpp_runtime/**"
   workflow_dispatch:
 
 permissions:
