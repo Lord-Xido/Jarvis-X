@@ -18,6 +18,45 @@ The runtime deliberately keeps the encoder `E_phi`, continuous latent dynamics
 `f_theta`, and decoder `D_psi` as separate callables. This prevents a numerical
 implementation from conflating representation, evolution, and reconstruction.
 
+## Canonical single-unit glyph
+
+The repository-wide DM-vOmegaXi+ single-unit operational glyph is
+
+```text
+↻_{ΩΞ}^{v+}
+```
+
+with the canonical deterministic expansion
+
+```text
+encode -> fold -> move -> remember -> attend -> decode
+       -> measure -> verify -> correct -> recur
+```
+
+The glyph is a compact specification token, not a claim that one Unicode symbol
+physically performs all stages. A conforming runtime must expose which stages it
+actually executes.
+
+This monadic resonator currently implements the bounded slice
+
+```text
+encode -> move -> decode -> recur
+```
+
+and exports both the full glyph expansion and that implemented slice in its JSON
+telemetry. Memory, attention, CTR verification, and corrective commit semantics
+remain owned by their existing higher-level Jarvis-X subsystems until an explicit
+composition layer joins them.
+
+The fixed-point interpretation is
+
+```text
+S[t+1] = ↻_{ΩΞ}^{v+}(S[t])
+S*     = ↻_{ΩΞ}^{v+}(S*)
+```
+
+subject to bounded numerical execution and repository stability gates.
+
 ## Operational pipeline
 
 1. Validate a finite observable state `X_t`.
