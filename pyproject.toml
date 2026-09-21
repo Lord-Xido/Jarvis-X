@@ -72,6 +72,7 @@ Changelog = "https://github.com/Lord-Xido/Jarvis-X/blob/main/CHANGELOG.md"
 
 [project.scripts]
 jarvisx = "jarvisx.cli:main"
+jarvisx-system = "jarvisx.operational_control:main"
 jarvisx-hyperion = "jarvisx.hyperion_cli:main"
 jarvisx-dr-moagi = "jarvisx.dr_moagi_autoexec_cli:main"
 jarvisx-dr-moagi-os = "jarvisx.dr_moagi_os_cli:main"
