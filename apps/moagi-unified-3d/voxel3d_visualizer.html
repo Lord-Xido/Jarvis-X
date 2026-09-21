@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Jarvis X — VOXEL3D ROM Runtime</title>
+<style>
+:root{--bg:#020817;--panel:#071529cc;--line:#35b9ff;--text:#dff6ff;--muted:#75a9c7;--violet:#996cff;--ok:#66ffd1;--warn:#ffd166}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:radial-gradient(circle at 50% 18%,#0b2452 0,#030b1d 35%,#01050d 78%);color:var(--text);font:14px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
+body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(#12365b33 1px,transparent 1px),linear-gradient(90deg,#12365b33 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,#000 0,#0008 60%,transparent);pointer-events:none}
+#app{height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:12px}
+header,footer,.panel{border:1px solid #217fb399;background:linear-gradient(180deg,#06142add,#030a18dd);box-shadow:0 0 24px #008cff1d,inset 0 0 24px #008cff0d;border-radius:10px}
+header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}.brand{font-size:24px;letter-spacing:.32em;text-shadow:0 0 16px #48c6ff}.sub{font-size:11px;color:var(--muted);letter-spacing:.2em}.status{display:flex;gap:10px;align-items:center}.pill{padding:5px 9px;border:1px solid #2b8fc0;border-radius:999px;color:#b9edff}.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok);display:inline-block;margin-right:6px}
+main{min-height:0;display:grid;grid-template-columns:1.2fr 2.4fr 1.1fr;gap:10px}.panel{min-height:0;position:relative;overflow:hidden;padding:10px}.title{color:#8edcff;font-size:11px;letter-spacing:.16em;margin-bottom:8px}.kv{display:grid;grid-template-columns:1fr auto;gap:5px 10px;color:var(--muted);font-size:12px}.kv b{color:var(--text);font-weight:600}.anchors{display:flex;flex-direction:column;gap:6px}.anchor{padding:7px;border:1px solid #1d5d83aa;background:#05101fcc;border-radius:6px;font-size:11px}.anchor span{float:right;color:#69d4ff}.legend{position:absolute;left:10px;right:10px;bottom:10px;color:#6ea6c4;font-size:10px}
+#scene{width:100%;height:100%;display:block}.center{padding:0}.overlay{position:absolute;inset:0;pointer-events:none}.coreLabel{position:absolute;left:50%;top:37%;transform:translate(-50%,-50%);text-align:center;text-shadow:0 0 20px #5cf}.coreLabel strong{display:block;font-size:22px;letter-spacing:.12em}.coreLabel small{color:#9ddfff}.loop{position:absolute;left:7%;right:7%;bottom:8%;display:flex;justify-content:space-between;color:#c7f4ff;font-size:11px;letter-spacing:.08em}.loop span{padding:4px 6px;border-bottom:1px solid #40bfff66}.arrow{color:#57cfff}.phase{position:absolute;top:10px;left:10px;padding:7px 9px;border:1px solid #277aa5;background:#061326d9;border-radius:6px;color:#9fe4ff;font-size:11px}
+.trace{height:170px;overflow:auto;border:1px solid #144a6c;background:#020914;padding:8px;border-radius:6px;font-size:11px}.trace div{padding:3px 0;border-bottom:1px solid #12314a55}.ok{color:var(--ok)}.warn{color:var(--warn)}button{appearance:none;border:1px solid #2c9ed2;background:#08213d;color:#dff7ff;padding:7px 10px;border-radius:7px;cursor:pointer;font:inherit}button:hover{background:#0b3056}.controls{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}footer{display:flex;align-items:center;justify-content:center;gap:14px;padding:8px 12px;font-size:11px;color:#8dc6df}.flow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.flow b{color:#dff8ff}.sep{color:#41c7ff}
+@media(max-width:900px){main{grid-template-columns:1fr}.left,.right{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div><div class="brand">JARVIS X</div><div class="sub">VOXEL AUTO-ENCODING / DECODING SYSTEM</div></div>
+  <div class="status"><span class="pill"><span class="dot"></span>ENGINE STATE RUN</span><span class="pill" id="cyclePill">CYCLE 0000</span></div>
+</header>
+<main>
+<section class="panel left">
+  <div class="title">VOXEL3D ROM BYTE IMAGE</div>
+  <div class="kv">
+    <span>magic</span><b>7F 56 4F 58 45 4C 33 44</b>
+    <span>format</span><b>\x7FVOXEL3D</b>
+    <span>native executable</span><b class="warn">NO</b>
+    <span>opcode semantics</span><b class="warn">UNSPECIFIED</b>
+    <span>byte order</span><b>little / ABI-bound</b>
+  </div>
+  <div class="title" style="margin-top:14px">DISCOVERED ANCHORS</div>
+  <div class="anchors" id="anchors"></div>
+  <div class="legend">Observed strings are section anchors/capability declarations. Unknown opcodes remain opaque until an ABI assigns semantics.</div>
+</section>
+<section class="panel center">
+  <canvas id="scene"></canvas>
+  <div class="overlay">
+    <div class="phase" id="phase">ROM_BYTE_IMAGE</div>
+    <div class="coreLabel"><strong>LATENT CORE Z<sub>t</sub></strong><small>inward sparse voxel contraction</small></div>
+    <div class="loop"><span>GENERATE</span><span class="arrow">→</span><span>CONTRAST</span><span class="arrow">→</span><span>RECKON</span><span class="arrow">→</span><span>VERIFY</span><span class="arrow">→</span><span>CORRECT</span><span class="arrow">→</span><span>RECUR</span></div>
+  </div>
+</section>
+<section class="panel right">
+  <div class="title">AUTO EXEC LOOP</div>
+  <div class="kv">
+    <span>state</span><b id="state">RUN</b>
+    <span>cycle</span><b id="cycle">0</b>
+    <span>CTR verified</span><b id="verified" class="warn">false</b>
+    <span>commit correction</span><b id="commit" class="warn">false</b>
+    <span>working set</span><b>1,048,576</b>
+    <span>render target</span><b>7680 × 4320</b>
+  </div>
+  <div class="controls"><button id="step">STEP</button><button id="verify">VERIFY + STEP</button><button id="auto">AUTO</button><button id="reset">RESET</button></div>
+  <div class="title" style="margin-top:12px">RUNTIME TRACE</div>
+  <div class="trace" id="trace"></div>
+</section>
+</main>
+<footer><div class="flow"><b>ROM Byte Image</b> <span class="sep">→</span> Decode <span class="sep">→</span> Spatial VM <span class="sep">→</span> GLSL SVO Engine <span class="sep">→</span> Encoder <span class="sep">→</span> Z<sub>t</sub> <span class="sep">→</span> Decoder <span class="sep">→</span> X̂<sub>t</sub> <span class="sep">→</span> R<sub>t</sub> <span class="sep">→</span> CTR <span class="sep">→</span> Π<sub>t</sub> <span class="sep">→</span> Raymarcher <span class="sep">→</span> Frame</div></footer>
+</div>
+<script>
+const anchors=["GLSL_SVO_ENGINE","SVO_COMPUTE_SHADER_KERNEL_VECTOR","RAYMARCHER_INIT","AUTO_EXEC_LOOP_0","ENGINE_STATE_RUN","VOXEL_COUNT_1MB3","STACK_TRACE_ZERO","VOXEL_ENGINE_EOF"];
+const phases=["ROM_BYTE_IMAGE","DECODE","SPATIAL_VM","GLSL_SVO_ENGINE","SVO_COMPUTE_ENCODER","LATENT_CORE_Z_T","DECODER","RECONSTRUCTION_X_HAT_T","RESIDUAL_CONTRAST","CTR_VERIFY_CORRECT","SCHEDULER_PI_T","ENGINE_STATE_RUN","RAYMARCHER_INIT","FRAME_OUTPUT"];
+const A=document.getElementById('anchors');anchors.forEach((x,i)=>{const d=document.createElement('div');d.className='anchor';d.innerHTML=x+'<span>0x'+(0x40+i*0x30).toString(16).padStart(4,'0').toUpperCase()+'</span>';A.appendChild(d)});
+const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');let W=0,H=0,t=0,cycle=0,phaseIndex=0,auto=false,verified=false;
+function resize(){const r=canvas.getBoundingClientRect();canvas.width=Math.floor(r.width*devicePixelRatio);canvas.height=Math.floor(r.height*devicePixelRatio);ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);W=r.width;H=r.height}addEventListener('resize',resize);resize();
+function proj(x,y,z){const s=Math.min(W,H)*.24;const p=2.7/(2.7+z);return [W/2+(x-y)*.78*s*p,H*.40+(x+y)*.31*s*p-z*.58*s*p,p]}
+function line(a,b,alpha=.5){ctx.strokeStyle=`rgba(80,190,255,${alpha})`;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke()}
+function cube(size,z,alpha){const v=[];for(let i=0;i<8;i++){const sx=(i&1)?1:-1,sy=(i&2)?1:-1,sz=(i&4)?1:-1;v.push(proj(sx*size,sy*size,z+sz*size))}const e=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[4,5],[4,6],[3,7],[5,7],[6,7]];e.forEach(([a,b])=>line(v[a],v[b],alpha))}
+function draw(){t+=.01;ctx.clearRect(0,0,W,H);ctx.lineWidth=1;for(let i=0;i<6;i++){const s=1-i*.12+Math.sin(t*2+i)*.01;cube(s,0,.18+i*.07)}for(let i=0;i<90;i++){const a=i*.91+t*.2,r=.15+(i%13)/14,z=Math.sin(i*2.1+t)*.7;const p=proj(Math.cos(a)*r,Math.sin(a)*r,z);ctx.fillStyle=`rgba(${90+i%80},${160+i%90},255,${.18+(i%5)*.09})`;ctx.fillRect(p[0],p[1],2+(i%3),2+(i%3))}const glow=ctx.createRadialGradient(W/2,H*.40,2,W/2,H*.40,Math.min(W,H)*.14);glow.addColorStop(0,'rgba(255,255,255,.95)');glow.addColorStop(.15,'rgba(80,200,255,.65)');glow.addColorStop(.5,'rgba(130,90,255,.18)');glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);requestAnimationFrame(draw)}draw();
+function log(msg,cls=''){const tr=document.getElementById('trace'),d=document.createElement('div');d.className=cls;d.textContent=`[${String(cycle).padStart(4,'0')}] ${msg}`;tr.prepend(d)}
+function sync(){document.getElementById('cycle').textContent=cycle;document.getElementById('cyclePill').textContent='CYCLE '+String(cycle).padStart(4,'0');document.getElementById('phase').textContent=phases[phaseIndex];document.getElementById('verified').textContent=verified;document.getElementById('verified').className=verified?'ok':'warn';document.getElementById('commit').textContent=verified;document.getElementById('commit').className=verified?'ok':'warn'}
+function step(v=false){verified=v;cycle++;phaseIndex=(phaseIndex+1)%phases.length;sync();log(phases[phaseIndex]+(verified?' — CTR verified, correction commit enabled':' — observation only; no persistent correction'),verified?'ok':'');}
+document.getElementById('step').onclick=()=>step(false);document.getElementById('verify').onclick=()=>step(true);document.getElementById('reset').onclick=()=>{cycle=0;phaseIndex=0;verified=false;auto=false;document.getElementById('auto').textContent='AUTO';document.getElementById('trace').innerHTML='';sync()};document.getElementById('auto').onclick=e=>{auto=!auto;e.target.textContent=auto?'STOP':'AUTO'};setInterval(()=>{if(auto)step((cycle%6)===4)},650);sync();log('VOXEL3D reference runtime initialized');
+</script>
+</body>
+</html>
