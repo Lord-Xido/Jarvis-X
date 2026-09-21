@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "apps/windows/jarvisx-multimodal-studio/**"
+      - "docs/adr/0011-dm-vomegaxi-core-lattice-interface.md"
       - ".github/workflows/jarvisx-multimodal-windows.yml"
   push:
     branches: [main]
     paths:
       - "apps/windows/jarvisx-multimodal-studio/**"
+      - "docs/adr/0011-dm-vomegaxi-core-lattice-interface.md"
       - ".github/workflows/jarvisx-multimodal-windows.yml"
   workflow_dispatch:
 
@@ -48,6 +50,9 @@ jobs:
           Path("/tmp/jarvisx-ui.js").write_text("\n".join(scripts), encoding="utf-8")
           PY
           node --check /tmp/jarvisx-ui.js
+
+      - name: Verify Core Lattice architecture contract
+        run: python3 -m unittest -v apps/windows/jarvisx-multimodal-studio/tests/test_core_lattice_contract.py
 
       - name: Build twice and prove reproducibility
         shell: bash
