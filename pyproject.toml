@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvisx"
-version = "0.3.0"
-description = "Jarvis-X deterministic VM with neural runtimes and a multi-tenant consultancy SaaS enterprise"
+version = "0.4.0"
+description = "Jarvis-X neural runtimes, consultancy SaaS, and proof-carrying autonomic enterprise OS"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [{name = "Lord-Xido"}]
-keywords = ["assembly", "interpreter", "virtual-machine", "ann", "30d", "saas", "billing", "multi-tenant"]
+keywords = ["assembly", "virtual-machine", "ann", "30d", "saas", "billing", "multi-tenant", "digital-twin", "event-sourcing", "workflow", "autonomic"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -53,6 +53,7 @@ Issues = "https://github.com/Lord-Xido/Jarvis-X/issues"
 [project.scripts]
 jarvisx = "jarvisx.cli:main"
 drmoagi-saas = "jarvisx.saas.cli:main"
+drmoagi-autonomy = "jarvisx.saas.autonomy.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
