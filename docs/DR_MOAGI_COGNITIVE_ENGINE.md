@@ -700,3 +700,77 @@ C_{t+1}^{cand}
 \]
 
 This is the architectural closure of the Dr Moagi Cognitive Engine: **encode, relate, reason, reconstruct, contrast, verify, correct, and recur — without allowing an internal candidate to become authoritative merely because the system generated it.**
+
+
+---
+
+# 14. Computational Geometry Verification Extension
+
+ADR-028 adds an optional, non-authoritative geometry receipt to the cognitive
+verification path.
+
+For a three-axis latent chart, define a software metric (g^{(Z)}), a symmetric
+curvature proxy (mathcal G^{(Z)}), and an informational source tensor
+(mathcal T^{(mathrm{info})}). The local computational residual is
+
+[
+oxed{
+mathcal R^{(Z)}
+=
+mathcal G^{(Z)}
++
+Lambda_Z g^{(Z)}
+-
+kappa_Zmathcal T^{(mathrm{info})}
+}
+]
+
+with software-defined coupling parameters.
+
+For a closed latent transport loop (P_1,ldots,P_n),
+
+[
+z' = P_ncdots P_1z,
+qquad
+h_Z=|z'-z|_2.
+]
+
+The geometry verifier emits
+
+[
+R_{m geom}
+=
+[
+|mathcal R^{(Z)}|_F,
+h_Z,
+e_{m recon},
+delta_{m fp},
+A_Z
+],
+]
+
+where (A_Z) is a combined telemetry norm. The receipt is accepted only when
+each declared residual lies inside its own bound.
+
+The cognitive verification path may therefore be extended as:
+
+```text
+latent candidate
+ -> reconstruction / fixed-point evidence
+ -> computational geometry receipt
+ -> CTR evidence
+ -> Pi_Lambda
+ -> COMMIT or ROLLBACK
+```
+
+The geometry receipt is evidence only. It does not replace external-world
+correspondence, domain validation, or the canonical transaction boundary.
+
+The terms metric, curvature, source tensor and holonomy are computational
+definitions. They are inspired by differential geometry but are not claims that
+the cognitive engine obeys general relativity or that its internal tensors are
+physical spacetime quantities.
+
+NEXUS-3D, defined by ADR-028, is the associated GUI/media projection surface.
+It may visualize multimodal outputs and measured browser/media telemetry, but it
+is not an alternate authoritative cognitive-state channel.
