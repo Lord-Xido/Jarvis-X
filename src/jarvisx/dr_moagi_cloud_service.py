@@ -20,6 +20,7 @@ from .dr_moagi_cloud_runtime import (
     JsonObject,
     ResourceLimits,
 )
+from .dr_moagi_permeation_operation import DrMoagiPermeationExecutor
 
 DEFAULT_DATA_DIR = Path("state/dr-moagi-cloud")
 
@@ -93,13 +94,21 @@ def build_default_coordinator(settings: CloudServiceSettings) -> DrMoagiCloudCoo
         max_output_bytes=settings.max_output_bytes,
         max_runtime_ms=settings.max_runtime_ms,
     )
+    operations = frozenset(
+        {
+            "echo.v1",
+            "dr-moagi-field-step.v1",
+            "permeate-roundtrip.v1",
+        }
+    )
     return DrMoagiCloudCoordinator(
         executors={
             "echo.v1": EchoExecutor(),
             "dr-moagi-field-step.v1": DrMoagiFieldStepExecutor(),
+            "permeate-roundtrip.v1": DrMoagiPermeationExecutor(),
         },
         policy=JobPolicy(
-            allowed_operations=frozenset({"echo.v1", "dr-moagi-field-step.v1"}),
+            allowed_operations=operations,
             limits=limits,
         ),
         store=AtomicJobStore(settings.data_dir),
