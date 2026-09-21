@@ -1,14 +1,27 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PORT=10000 \
+    JARVISX_STATE_DIR=/var/lib/jarvisx
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY pyproject.toml README.md LICENSE ./
+COPY src ./src
 
-COPY src/ ./src/
-COPY setup.py .
-RUN pip install .
+RUN python -m pip install --no-cache-dir . \
+    && useradd --create-home --uid 10001 jarvisx \
+    && mkdir -p /var/lib/jarvisx \
+    && chown -R jarvisx:jarvisx /var/lib/jarvisx /app
 
+USER jarvisx
+
+VOLUME ["/var/lib/jarvisx"]
 EXPOSE 10000
 
-CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port $PORT"]
+HEALTHCHECK --interval=20s --timeout=3s --start-period=5s --retries=3 \
+  CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT','10000') + '/healthz', timeout=2).read()"
+
+CMD ["sh", "-c", "jarvisx-operationalize serve --host 0.0.0.0 --port ${PORT:-10000}"]
