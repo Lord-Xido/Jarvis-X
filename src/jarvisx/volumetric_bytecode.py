@@ -284,14 +284,30 @@ class VolumetricBytecodeVM:
             if value
         }
 
+    def is_mirror_symmetric(self, field: Mapping[VoxelKey, int]) -> bool:
+        """Return True when every active voxel has an equal XYZ mirror."""
+
+        return all(
+            field.get(self.mirror_key(key), 0) == value
+            for key, value in field.items()
+        )
+
     def fold_xyz_mirror_union(self, latent: Mapping[VoxelKey, int]) -> SparseField:
-        keys = set(latent)
-        keys.update(self.mirror_key(key) for key in tuple(keys))
+        """Close the latent field under XYZ mirror union, one pair at a time."""
+
         folded: SparseField = {}
-        for key in keys:
-            value = latent.get(key, 0) | latent.get(self.mirror_key(key), 0)
-            if value:
-                folded[key] = value
+        visited: set[VoxelKey] = set()
+        for key, value in latent.items():
+            if key in visited:
+                continue
+            mirror = self.mirror_key(key)
+            union = value | latent.get(mirror, 0)
+            if union:
+                folded[key] = union
+                if mirror != key:
+                    folded[mirror] = union
+            visited.add(key)
+            visited.add(mirror)
         return folded
 
     def _logical_bits(self) -> int:
@@ -312,8 +328,14 @@ class VolumetricBytecodeVM:
         codec_roundtrip = self.decode(latent)
         codec_error = _hamming_bits(before, codec_roundtrip)
 
-        folded = self.fold_xyz_mirror_union(latent)
-        candidate = self.sparse_mask(self.decode(folded))
+        if self.is_mirror_symmetric(before):
+            # Fixed-point fast path: codec verification still runs, but an
+            # already symmetric sparse field does not need another mirror
+            # closure allocation and decode pass.
+            candidate = before
+        else:
+            folded = self.fold_xyz_mirror_union(latent)
+            candidate = self.sparse_mask(self.decode(folded))
         if len(candidate) > self.config.max_active_voxels:
             raise VolumetricBytecodeError("candidate active set exceeds max_active_voxels")
 

@@ -122,3 +122,43 @@ def test_reference_trace_contains_verify_and_permeate_without_halt_per_cycle() -
     assert VolumetricOp.VERIFY_CTR in REFERENCE_CYCLE_OPS
     assert VolumetricOp.PERMEATE in REFERENCE_CYCLE_OPS
     assert VolumetricOp.HALT not in REFERENCE_CYCLE_OPS
+
+
+def test_mirror_symmetric_state_skips_redundant_fold(monkeypatch: pytest.MonkeyPatch) -> None:
+    vm = VolumetricBytecodeVM(
+        VolumetricConfig(axis_extent=8, max_iterations=1, epsilon_active_change=0.0)
+    )
+    vm.load_modalities(
+        {
+            "gui": {
+                (0, 1, 2): 0b0000_0011,
+                (7, 6, 5): 0b0000_0011,
+            }
+        }
+    )
+
+    def unexpected_fold(_latent: object) -> object:
+        raise AssertionError("mirror fold should not run for a symmetric fixed point")
+
+    monkeypatch.setattr(vm, "fold_xyz_mirror_union", unexpected_fold)
+
+    receipt = vm.step()
+
+    assert receipt.converged is True
+    assert receipt.changed_bits == 0
+    assert receipt.codec_roundtrip_error_bits == 0
+
+
+def test_pairwise_mirror_union_matches_expected_closure() -> None:
+    vm = VolumetricBytecodeVM(VolumetricConfig(axis_extent=8))
+    latent = {
+        ("gui", 0, 1, 2): 0b0000_0011,
+        ("gui", 7, 6, 5): 0b0000_0101,
+    }
+
+    folded = vm.fold_xyz_mirror_union(latent)
+
+    assert folded == {
+        ("gui", 0, 1, 2): 0b0000_0111,
+        ("gui", 7, 6, 5): 0b0000_0111,
+    }
