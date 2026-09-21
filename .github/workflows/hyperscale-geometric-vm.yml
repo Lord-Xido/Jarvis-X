@@ -1,0 +1,44 @@
+name: Hyperscale Geometric VM
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/hyperscale-geometric-vm/**"
+      - ".github/workflows/hyperscale-geometric-vm.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hyperscale-geometric-vm-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate numerical model and scripts
+        run: node --test apps/hyperscale-geometric-vm/test_model.cjs
+      - name: Install browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/hyperscale-browser" --no-save --package-lock=false playwright@1.62.1 three@0.128.0
+          node "$RUNNER_TEMP/hyperscale-browser/node_modules/playwright/cli.js" install chromium --only-shell --with-deps
+      - name: Check offline and WebGL browser behavior
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/hyperscale-browser/node_modules/playwright
+          THREE_JS_PATH: ${{ runner.temp }}/hyperscale-browser/node_modules/three/build/three.min.js
+          SCREENSHOT_DIR: ${{ runner.temp }}/hyperscale-screenshots
+        run: node apps/hyperscale-geometric-vm/test_browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hyperscale-browser-screenshots
+          path: ${{ runner.temp }}/hyperscale-screenshots
+          if-no-files-found: ignore
