@@ -120,6 +120,33 @@ Experimental engines remain non-authoritative until their tests, interfaces and 
 
 ## Quick start
 
+### Prove the integrated system
+
+The repository-wide operational entrypoint verifies the bounded Python control plane
+before service launch:
+
+```bash
+python -m pip install -e ".[test]"
+jarvisx-operationalize doctor
+jarvisx-operationalize smoke
+```
+
+Launch the canonical service directly:
+
+```bash
+jarvisx-operationalize serve --host 0.0.0.0 --port 10000
+```
+
+or as the hardened container profile:
+
+```bash
+docker compose -f compose.dr-moagi-os.yml up --build
+```
+
+The cross-language acceptance boundary is defined by
+[`system-operational.yml`](.github/workflows/system-operational.yml) and
+[System Operationalisation](docs/SYSTEM_OPERATIONALISATION.md).
+
 ### Install the Python package for development
 
 ```bash

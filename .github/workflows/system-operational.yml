@@ -1,0 +1,145 @@
+name: Jarvis-X System Operational Gate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: system-operational-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-control-plane:
+    name: Python control plane
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install package
+        run: python -m pip install -e ".[test]"
+      - name: Execute bounded operational smoke receipt
+        run: jarvisx-operationalize smoke --json
+
+  javascript-fabric:
+    name: JavaScript runtime fabric
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate runtime fabric contract
+        run: node tools/verify-dr-moagi-runtime-fabric.mjs
+      - name: DMVANN deterministic tests
+        run: node --test apps/dmvann-chat/test_core.mjs
+      - name: Cognitive control-plane tests
+        run: node --test apps/dr-moagi-cognitive/test_core.mjs
+      - name: Geometry optimizer tests
+        run: node --test apps/dr-moagi-geometry/test_core.mjs
+
+  java-kernel:
+    name: Java kernel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Compile and test Java platform
+        working-directory: apps/dr-moagi-platform-java
+        run: |
+          mkdir -p build
+          javac --release 17 -Xlint:all -Werror -d build src/DrMoagiPlatform.java test/DrMoagiPlatformTest.java
+          java -ea -cp build DrMoagiPlatformTest
+
+  graphics-codec:
+    name: .NET graphics codec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build codec
+        run: dotnet build apps/qsol-graphics-codec/QSol.GraphicsCodec.csproj -c Release
+      - name: Verify round trip
+        run: >-
+          dotnet run
+          --project apps/qsol-graphics-codec/QSol.GraphicsCodec.csproj
+          -c Release
+          --no-build
+          --
+          --self-test
+
+  native-runtime:
+    name: C++ runtime
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: >-
+          cmake -S cpp_runtime -B build/cpp-runtime
+          -DCMAKE_BUILD_TYPE=Release
+          -DJARVISX_ENABLE_SANITIZERS=OFF
+      - name: Build
+        run: cmake --build build/cpp-runtime --config Release --parallel 2
+      - name: Test
+        run: ctest --test-dir build/cpp-runtime -C Release --output-on-failure
+
+  production-container:
+    name: Production container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build canonical image
+        run: docker build -t jarvisx-system:ci .
+      - name: Start canonical service
+        run: docker run -d --name jarvisx-system -p 10000:10000 jarvisx-system:ci
+      - name: Verify live health endpoint
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:10000/healthz; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs jarvisx-system
+          exit 1
+      - name: Show logs on failure
+        if: failure()
+        run: docker logs jarvisx-system || true
+      - name: Stop service
+        if: always()
+        run: docker rm -f jarvisx-system || true
+
+  system-gate:
+    name: Entire system operational
+    if: always()
+    needs:
+      - python-control-plane
+      - javascript-fabric
+      - java-kernel
+      - graphics-codec
+      - native-runtime
+      - production-container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every operational surface
+        run: |
+          test "${{ needs.python-control-plane.result }}" = "success"
+          test "${{ needs.javascript-fabric.result }}" = "success"
+          test "${{ needs.java-kernel.result }}" = "success"
+          test "${{ needs.graphics-codec.result }}" = "success"
+          test "${{ needs.native-runtime.result }}" = "success"
+          test "${{ needs.production-container.result }}" = "success"
+          echo "Jarvis-X entire-system operational gate: PASS"
