@@ -6,9 +6,11 @@ on:
     paths:
       - "src/jarvisx/kinetic3d.py"
       - "src/jarvisx/kinetic3d_backend.py"
+      - "src/jarvisx/kinetic3d_capsule.py"
       - "src/jarvisx/kinetic3d_api.py"
       - "tests/test_kinetic3d.py"
       - "tests/test_kinetic3d_backend.py"
+      - "tests/test_kinetic3d_capsule.py"
       - "native/kinetic3d_backend.cpp"
       - "deploy/kinetic3d/**"
       - ".github/workflows/kinetic3d.yml"
@@ -17,9 +19,11 @@ on:
     paths:
       - "src/jarvisx/kinetic3d.py"
       - "src/jarvisx/kinetic3d_backend.py"
+      - "src/jarvisx/kinetic3d_capsule.py"
       - "src/jarvisx/kinetic3d_api.py"
       - "tests/test_kinetic3d.py"
       - "tests/test_kinetic3d_backend.py"
+      - "tests/test_kinetic3d_capsule.py"
       - "native/kinetic3d_backend.cpp"
       - "deploy/kinetic3d/**"
       - ".github/workflows/kinetic3d.yml"
@@ -39,9 +43,9 @@ jobs:
       - name: Install
         run: python -m pip install -e ".[test]"
       - name: Unit tests
-        run: pytest -q tests/test_kinetic3d.py tests/test_kinetic3d_backend.py
+        run: pytest -q tests/test_kinetic3d.py tests/test_kinetic3d_backend.py tests/test_kinetic3d_capsule.py
       - name: Compile modules
-        run: python -m compileall -q src/jarvisx/kinetic3d.py src/jarvisx/kinetic3d_backend.py src/jarvisx/kinetic3d_api.py
+        run: python -m compileall -q src/jarvisx/kinetic3d.py src/jarvisx/kinetic3d_backend.py src/jarvisx/kinetic3d_capsule.py src/jarvisx/kinetic3d_api.py
 
   native-parity:
     runs-on: ubuntu-latest
@@ -55,10 +59,10 @@ jobs:
         run: python -m pip install -e ".[test]"
       - name: Compile native backend
         run: g++ -O3 -std=c++17 -fPIC -shared native/kinetic3d_backend.cpp -o /tmp/libjarvisx_kinetic3d.so
-      - name: Native parity tests
+      - name: Native parity and capsule tests
         env:
           JARVISX_KINETIC3D_NATIVE_LIB: /tmp/libjarvisx_kinetic3d.so
-        run: pytest -q tests/test_kinetic3d.py tests/test_kinetic3d_backend.py
+        run: pytest -q tests/test_kinetic3d.py tests/test_kinetic3d_backend.py tests/test_kinetic3d_capsule.py
 
   container-smoke:
     runs-on: ubuntu-latest
@@ -68,11 +72,11 @@ jobs:
         run: docker build -f deploy/kinetic3d/Dockerfile -t jarvisx-kinetic3d:test .
       - name: Start runtime
         run: docker run -d --rm --name jarvisx-kinetic3d -p 8000:8000 jarvisx-kinetic3d:test
-      - name: Wait for health and native backend
+      - name: Wait for health, native backend and JXK2
         run: |
           for i in $(seq 1 30); do
             if health=$(curl --fail --silent http://127.0.0.1:8000/healthz); then
-              python -c 'import json,sys; d=json.loads(sys.argv[1]); assert "native-cpu" in d["available_backends"]' "$health"
+              python -c 'import json,sys; d=json.loads(sys.argv[1]); assert "native-cpu" in d["available_backends"]; assert d["capsule_format"] == "JXK2"; assert d["adaptive_planner"] == "deterministic-rate-distortion"' "$health"
               exit 0
             fi
             sleep 1
@@ -93,6 +97,14 @@ jobs:
             -d '{"session_id":"ci","shape":[2,2,2],"values":[1,1,1,1,1,1,9,1],"active_threshold":0.1,"coarse_factor":2,"refine_threshold":0,"tolerance":0,"backend":"auto"}' \
             http://127.0.0.1:8000/v1/kinetic3d/execute)
           python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["verification"]["passed"]; assert d["epoch_after"] == 2; assert d["active_indices"] == [6]; assert d["telemetry"]["active_cells"] == 1; assert d["telemetry"]["backend"] == "native-cpu"' "$response"
+      - name: Execute adaptive JXK2 transition
+        run: |
+          payload=$(python -c 'import json; print(json.dumps({"session_id":"adaptive-ci","shape":[4,4,4],"values":[2.0]*64,"tolerance":0.0,"backend":"auto"}))')
+          response=$(curl --fail --silent \
+            -H 'content-type: application/json' \
+            -d "$payload" \
+            http://127.0.0.1:8000/v2/kinetic3d/execute-adaptive)
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["committed"]; assert d["verification"]["passed"]; assert d["telemetry"]["backend"] == "native-cpu"; assert d["capsule"]["format"] == "JXK2"; assert d["capsule"]["bytes"] > 0; assert d["adaptive_plan"]["selected"]["max_abs_error"] == 0.0' "$response"
       - name: Inspect committed world state
         run: |
           state=$(curl --fail --silent http://127.0.0.1:8000/v1/kinetic3d/state/ci)
