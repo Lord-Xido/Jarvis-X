@@ -97,15 +97,15 @@ def _validate_field(field: Field3D, core_signature: Sequence[float]) -> int:
     width = len(core_signature)
     if width <= 0:
         raise ValueError("core_signature must contain at least one channel")
-    for value in core_signature:
-        if not math.isfinite(value):
+    for component in core_signature:
+        if not math.isfinite(component):
             raise ValueError("core_signature values must be finite")
-    for coordinate, value in field.items():
+    for coordinate, vector in field.items():
         if len(coordinate) != 3:
             raise ValueError("field coordinates must be (x, y, z)")
-        if len(value) != width:
+        if len(vector) != width:
             raise ValueError("all field vectors must match core_signature width")
-        if any(not math.isfinite(component) for component in value):
+        if any(not math.isfinite(component) for component in vector):
             raise ValueError("field values must be finite")
     return width
 

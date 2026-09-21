@@ -209,3 +209,39 @@ pack modalities
 ```
 
 This extension does not replace JX3DVM1 and does not convert symbolic iteration depth into a measured physical speedup claim.
+
+
+## Cognitive field geometry and NEXUS-3D extension
+
+ADR-028 extends the Dr Moagi family with a bounded computational geometry
+verification layer and a secure multimodal GUI/media projection surface.
+
+The computational geometry path is:
+
+```text
+latent state
+  -> software metric / curvature proxy
+  -> informational source tensor
+  -> field residual
+  -> loop-holonomy residual
+  -> reconstruction + fixed-point evidence
+  -> geometry receipt
+  -> CTR / Pi_Lambda
+  -> commit OR rollback
+```
+
+The implementation surfaces are:
+
+- `docs/DR_MOAGI_COGNITIVE_FIELD_GEOMETRY.md`
+- `src/jarvisx/cognitive_field_geometry.py`
+- `tests/test_cognitive_field_geometry.py`
+- `apps/nexus-3d/index.html`
+- `src/jarvisx/nexus3d_api.py`
+- `tests/test_nexus3d_api.py`
+- `docs/adr/0028-cognitive-field-geometry-nexus3d.md`
+
+The geometry terms are computational definitions and do not identify latent
+state with physical spacetime. NEXUS-3D remains a non-authoritative
+observation/media adapter. Provider credentials stay server-side, and any
+future operational GUI mutation must remain subordinate to ADR-026,
+CTR and Pi_Lambda.

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS-3D // Jarvis-X Multimodal Workspace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Inter',sans-serif;overflow:hidden;user-select:none}
+    .font-orbitron{font-family:'Orbitron',sans-serif}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:rgba(15,23,42,.6)}
+    ::-webkit-scrollbar-thumb{background:rgba(99,102,241,.4);border-radius:4px}
+    .glass-panel{background:rgba(15,23,42,.75);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);box-shadow:0 8px 32px rgba(0,0,0,.37)}
+    .glass-button{background:rgba(30,41,59,.7);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);transition:all .2s cubic-bezier(.4,0,.2,1)}
+    .glass-button:hover{background:rgba(51,65,85,.85);border-color:rgba(129,140,248,.5);box-shadow:0 0 15px rgba(99,102,241,.3);transform:translateY(-1px)}
+    @keyframes pulse-glow{0%,100%{box-shadow:0 0 15px rgba(99,102,241,.4),inset 0 0 10px rgba(99,102,241,.2)}50%{box-shadow:0 0 25px rgba(129,140,248,.8),inset 0 0 15px rgba(129,140,248,.4)}}
+    .neon-pulse{animation:pulse-glow 3s infinite ease-in-out}
+    #canvas-container{position:absolute;inset:0;width:100vw;height:100vh;z-index:0}
+    @media (prefers-reduced-motion:reduce){.neon-pulse,.animate-pulse{animation:none!important}.transition-all,.transition{transition:none!important}}
+  </style>
+</head>
+<body class="h-full w-full relative overflow-hidden bg-slate-950 text-slate-100">
+  <div id="canvas-container"></div>
+
+  <div class="relative z-10 flex h-full w-full flex-col justify-between pointer-events-none p-3 md:p-6">
+    <header class="glass-panel rounded-2xl p-4 flex items-center justify-between pointer-events-auto shadow-2xl">
+      <div class="flex items-center space-x-3">
+        <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/30 neon-pulse">
+          <i class="fa-solid fa-cube text-indigo-400 text-xl"></i>
+        </div>
+        <div>
+          <h1 class="font-orbitron font-bold text-lg md:text-xl tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300">NEXUS-3D</h1>
+          <p class="text-xs text-slate-400 flex items-center gap-2">
+            <span id="provider-dot" class="inline-block w-2 h-2 rounded-full bg-amber-400"></span>
+            <span id="provider-status">Jarvis-X multimodal GUI adapter</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 md:space-x-3">
+        <div class="hidden sm:flex items-center bg-slate-900/60 rounded-xl p-1 border border-slate-700/50">
+          <button onclick="setCameraPreset('core')" class="px-2.5 py-1 text-xs rounded-lg text-slate-300 hover:text-white hover:bg-indigo-600/40 transition"><i class="fa-solid fa-atom mr-1"></i>Core</button>
+          <button onclick="setCameraPreset('gallery')" class="px-2.5 py-1 text-xs rounded-lg text-slate-300 hover:text-white hover:bg-indigo-600/40 transition"><i class="fa-solid fa-cubes-stacked mr-1"></i>Gallery</button>
+          <button onclick="setCameraPreset('wide')" class="px-2.5 py-1 text-xs rounded-lg text-slate-300 hover:text-white hover:bg-indigo-600/40 transition"><i class="fa-solid fa-expand mr-1"></i>Orbit</button>
+        </div>
+        <button id="search-toggle-btn" onclick="toggleSearchGrounding()" class="glass-button px-3 py-1.5 rounded-xl text-xs flex items-center space-x-2 text-slate-300" title="Enable provider search grounding">
+          <i class="fa-solid fa-globe text-cyan-400"></i><span class="hidden md:inline">Search Web</span><span id="search-status-dot" class="w-2 h-2 rounded-full bg-slate-600"></span>
+        </button>
+        <button id="tts-toggle-btn" onclick="toggleAutoTTS()" class="glass-button px-3 py-1.5 rounded-xl text-xs flex items-center space-x-2 text-slate-300" title="Toggle automatic speech output">
+          <i id="tts-icon" class="fa-solid fa-volume-high text-indigo-400"></i><span class="hidden md:inline">Voice TTS</span><span id="tts-status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        </button>
+        <button onclick="togglePanel('chat-panel')" class="glass-button p-2.5 rounded-xl text-indigo-400 hover:text-indigo-300"><i class="fa-solid fa-message"></i></button>
+      </div>
+    </header>
+
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 my-4 overflow-hidden pointer-events-none">
+      <section id="chat-panel" class="lg:col-span-5 xl:col-span-4 glass-panel rounded-2xl flex flex-col pointer-events-auto h-full max-h-[82vh] border border-slate-800 shadow-2xl">
+        <div class="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
+          <div class="flex items-center space-x-2"><i class="fa-solid fa-brain text-indigo-400 text-sm"></i><span class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">AI CONSOLE NODE</span></div>
+          <div class="flex items-center space-x-2">
+            <select id="mode-selector" onchange="handleModeChange()" class="bg-slate-950 text-indigo-300 text-xs rounded-lg border border-slate-700 px-2 py-1 outline-none focus:border-indigo-500">
+              <option value="chat">💬 Chat & Vision</option>
+              <option value="image">🎨 Generate Image</option>
+              <option value="tts">🗣️ TTS Voice</option>
+            </select>
+            <button onclick="clearChatLog()" class="text-slate-400 hover:text-slate-200 text-xs p-1" title="Clear Chat"><i class="fa-solid fa-trash-can"></i></button>
+          </div>
+        </div>
+
+        <div id="chat-feed" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+          <div class="flex items-start space-x-2.5">
+            <div class="w-7 h-7 rounded-lg bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-indigo-300 font-bold shrink-0">AI</div>
+            <div class="glass-panel p-3 rounded-2xl rounded-tl-none border-slate-700/50 max-w-[85%] text-slate-300 leading-relaxed">
+              <p class="font-semibold text-indigo-300 mb-1">NEXUS-3D Online</p>
+              <p>This workspace is a non-authoritative Jarvis-X GUI/media surface. Provider credentials stay on the server.</p>
+              <ul class="list-disc list-inside mt-2 space-y-1 text-slate-400">
+                <li>Chat with text or an attached image.</li>
+                <li>Generate images and project them into the 3D gallery.</li>
+                <li>Generate speech and drive the visualizer from measured audio spectrum data.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="attachment-bar" class="hidden px-4 py-2 bg-slate-900/80 border-t border-slate-800 flex items-center justify-between">
+          <div class="flex items-center space-x-2 overflow-hidden">
+            <img id="attached-img-preview" class="w-10 h-10 object-cover rounded-lg border border-indigo-500/50" src="" alt="Preview">
+            <span id="attached-filename" class="text-xs text-slate-300 truncate max-w-[150px]">image.png</span>
+          </div>
+          <button onclick="removeAttachedImage()" class="text-rose-400 hover:text-rose-300 text-xs p-1"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="p-3 border-t border-slate-800 bg-slate-900/60 rounded-b-2xl flex flex-col gap-2">
+          <div class="relative flex items-center">
+            <textarea id="prompt-input" rows="2" maxlength="32768" placeholder="Ask, generate, or speak..." class="w-full bg-slate-950/90 text-slate-200 text-xs rounded-xl pl-3 pr-20 py-2.5 border border-slate-700/80 focus:border-indigo-500 focus:outline-none resize-none"></textarea>
+            <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+            <div class="absolute right-2 flex items-center space-x-1">
+              <button onclick="document.getElementById('image-upload').click()" class="text-slate-400 hover:text-indigo-400 p-1.5 rounded-lg text-sm transition" title="Attach image"><i class="fa-solid fa-paperclip"></i></button>
+              <button id="mic-btn" onclick="toggleVoiceInput()" class="text-slate-400 hover:text-indigo-400 p-1.5 rounded-lg text-sm transition" title="Voice input"><i class="fa-solid fa-microphone"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center space-x-1 overflow-x-auto py-0.5 max-w-[70%]">
+              <button onclick="setPrompt('Generate a futuristic holographic city in neon cyberpunk style')" class="px-2 py-1 text-[10px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap">🌆 Cyber City</button>
+              <button onclick="setPrompt('Explain quantum computing in simple terms with key facts')" class="px-2 py-1 text-[10px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap">⚛️ Quantum</button>
+              <button onclick="setPrompt('Research major space exploration developments this year')" class="px-2 py-1 text-[10px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap">🚀 Space Tech</button>
+            </div>
+            <button id="send-btn" onclick="executeSubmission()" class="glass-button px-4 py-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-500 text-white font-medium text-xs flex items-center space-x-1.5">
+              <span>Execute</span><i class="fa-solid fa-paper-plane text-xs"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="lg:col-span-3 xl:col-span-5 flex flex-col justify-between items-center pointer-events-none p-2">
+        <div class="glass-panel px-4 py-2 rounded-full flex items-center space-x-3 pointer-events-auto border border-indigo-500/30">
+          <div id="ai-status-indicator" class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></div>
+          <span id="ai-status-text" class="font-orbitron text-xs tracking-wider text-slate-300">CORE STATUS: IDLE</span>
+        </div>
+        <div class="w-full max-w-sm glass-panel rounded-2xl p-3 pointer-events-auto flex flex-col items-center gap-2 border border-slate-800">
+          <div class="flex items-center justify-between w-full text-[10px] text-slate-400 font-orbitron">
+            <span>MEASURED AUDIO SPECTRUM</span><span id="audio-freq-display">0 Hz</span>
+          </div>
+          <div id="visualizer-bars" class="flex items-end justify-center gap-1.5 h-12 w-full px-2"></div>
+        </div>
+      </section>
+
+      <section id="gallery-panel" class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl flex flex-col pointer-events-auto h-full max-h-[82vh] border border-slate-800 shadow-2xl">
+        <div class="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
+          <div class="flex items-center space-x-2"><i class="fa-solid fa-layer-group text-cyan-400 text-sm"></i><span class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">3D HOLOGRAM GALLERY</span></div>
+          <span id="hologram-count-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-900/80 text-indigo-300 border border-indigo-500/30">0 Nodes</span>
+        </div>
+        <div id="gallery-list" class="flex-1 overflow-y-auto p-3 space-y-3">
+          <div id="empty-gallery-msg" class="text-center py-10 text-slate-500 text-xs">
+            <i class="fa-solid fa-photo-film text-2xl mb-2 text-slate-600"></i>
+            <p>No 3D Holograms Created</p>
+            <p class="text-[10px] text-slate-600 mt-1">Generate an image or attach one to render it in the 3D scene.</p>
+          </div>
+        </div>
+        <div class="p-3 border-t border-slate-800 bg-slate-900/60 rounded-b-2xl space-y-2 text-xs">
+          <div class="flex items-center justify-between font-orbitron text-[11px] text-slate-300"><span>VOICE ENGINE</span><i class="fa-solid fa-microphone-lines text-indigo-400"></i></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-400">Voice Persona</label>
+              <select id="tts-voice-select" class="w-full bg-slate-950 text-slate-200 text-xs rounded-lg border border-slate-700 px-2 py-1 outline-none">
+                <option value="Zephyr">Zephyr</option><option value="Puck">Puck</option><option value="Charon">Charon</option><option value="Kore">Kore</option><option value="Aoede">Aoede</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400">3D Environment</label>
+              <select id="theme-select" onchange="change3DTheme(this.value)" class="w-full bg-slate-950 text-slate-200 text-xs rounded-lg border border-slate-700 px-2 py-1 outline-none">
+                <option value="cyberpunk">Cyber Neon</option><option value="deepspace">Deep Space</option><option value="matrix">Matrix Grid</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="glass-panel rounded-xl px-4 py-2 flex items-center justify-between text-[11px] text-slate-400 pointer-events-auto">
+      <div class="flex items-center space-x-4 min-w-0">
+        <span class="flex items-center gap-1.5 truncate"><i class="fa-solid fa-microchip text-indigo-400"></i><span id="model-label">Provider models: loading…</span></span>
+        <span class="hidden md:inline text-slate-600">|</span>
+        <span class="hidden md:inline">GUI authority: observation/media adapter only</span>
+      </div>
+      <div class="flex items-center space-x-3 shrink-0">
+        <span id="fps-display" class="font-mono text-xs text-slate-500">0 FPS</span>
+        <button onclick="reset3DCamera()" class="hover:text-slate-200" title="Reset View"><i class="fa-solid fa-rotate-left"></i> Reset View</button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    let searchGroundingEnabled=false,autoTTSVoiceEnabled=true,attachedImageBase64=null,attachedImageMime=null,isRecordingVoice=false,speechRecognition=null;
+    let providerCapabilities=null,hologramNodes=[];
+    let scene,camera,renderer,coreSphere,coreOuterWireframe,particleSystem;
+    let visualizer3DBars=[],targetCameraPos={x:0,y:0,z:12},isMouseDown=false,mousePreviousPos={x:0,y:0};
+    let audioCtx=null,audioAnalyser=null,audioFreqData=null,currentAudio=null,currentAudioUrl=null,isAudioActive=false;
+    const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false;
+
+    async function apiFetch(path,payload){
+      const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      let data=null;
+      try{data=await response.json()}catch(_){data={detail:'Invalid server response'}}
+      if(!response.ok)throw new Error(data?.detail||`HTTP ${response.status}`);
+      return data;
+    }
+
+    async function loadCapabilities(){
+      try{
+        const response=await fetch('/api/nexus3d/capabilities');
+        if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        providerCapabilities=await response.json();
+        const models=providerCapabilities.models||{};
+        document.getElementById('model-label').textContent=`Text: ${models.text||'?'} · Image: ${models.image||'?'} · TTS: ${models.tts||'?'}`;
+        document.getElementById('provider-status').textContent=providerCapabilities.configured?'Provider configured · same-origin proxy':'Provider key not configured · visualization available';
+        document.getElementById('provider-dot').className=`inline-block w-2 h-2 rounded-full ${providerCapabilities.configured?'bg-emerald-400':'bg-amber-400'}`;
+      }catch(err){
+        document.getElementById('provider-status').textContent='Backend capabilities unavailable';
+        document.getElementById('provider-dot').className='inline-block w-2 h-2 rounded-full bg-rose-500';
+      }
+    }
+
+    function init3DScene(){
+      const container=document.getElementById('canvas-container'),width=window.innerWidth,height=window.innerHeight;
+      scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x030712,.035);
+      camera=new THREE.PerspectiveCamera(60,width/height,.1,1000);camera.position.set(0,0,12);
+      renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setSize(width,height);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));renderer.toneMapping=THREE.ACESFilmicToneMapping;container.appendChild(renderer.domElement);
+      scene.add(new THREE.AmbientLight(0xffffff,.8));
+      const p1=new THREE.PointLight(0x6366f1,2,50);p1.position.set(10,10,10);scene.add(p1);
+      const p2=new THREE.PointLight(0x06b6d4,2,50);p2.position.set(-10,-10,10);scene.add(p2);
+      coreSphere=new THREE.Mesh(new THREE.IcosahedronGeometry(2,4),new THREE.MeshStandardMaterial({color:0x4f46e5,roughness:.2,metalness:.8,emissive:0x3730a3,emissiveIntensity:.6}));scene.add(coreSphere);
+      coreOuterWireframe=new THREE.Mesh(new THREE.IcosahedronGeometry(2.6,2),new THREE.MeshBasicMaterial({color:0x06b6d4,wireframe:true,transparent:true,opacity:.35}));scene.add(coreOuterWireframe);
+      const count=1200,geo=new THREE.BufferGeometry(),positions=new Float32Array(count*3),colors=new Float32Array(count*3);
+      for(let i=0;i<count*3;i+=3){positions[i]=(Math.random()-.5)*60;positions[i+1]=(Math.random()-.5)*60;positions[i+2]=(Math.random()-.5)*60;colors[i]=.3+Math.random()*.5;colors[i+1]=.5+Math.random()*.5;colors[i+2]=.9}
+      geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+      particleSystem=new THREE.Points(geo,new THREE.PointsMaterial({size:.12,vertexColors:true,transparent:true,opacity:.7}));scene.add(particleSystem);
+      for(let i=0;i<32;i++){const angle=i/32*Math.PI*2,bar=new THREE.Mesh(new THREE.BoxGeometry(.15,.2,.15),new THREE.MeshStandardMaterial({color:0x06b6d4,emissive:0x0891b2,emissiveIntensity:.3}));bar.position.set(Math.cos(angle)*4.2,0,Math.sin(angle)*4.2);bar.lookAt(coreSphere.position);scene.add(bar);visualizer3DBars.push(bar)}
+      window.addEventListener('resize',onWindowResize);
+      renderer.domElement.addEventListener('mousedown',e=>{isMouseDown=true;mousePreviousPos={x:e.clientX,y:e.clientY}});
+      renderer.domElement.addEventListener('mousemove',e=>{if(!isMouseDown)return;targetCameraPos.x+=(e.clientX-mousePreviousPos.x)*.02;targetCameraPos.y-=(e.clientY-mousePreviousPos.y)*.02;mousePreviousPos={x:e.clientX,y:e.clientY}});
+      window.addEventListener('mouseup',()=>{isMouseDown=false});
+      renderer.domElement.addEventListener('wheel',e=>{targetCameraPos.z=Math.max(5,Math.min(30,targetCameraPos.z+e.deltaY*.01))},{passive:true});
+      animate3D();
+    }
+
+    function onWindowResize(){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight)}
+    function setCameraPreset(type){if(type==='core')targetCameraPos={x:0,y:0,z:9};if(type==='gallery')targetCameraPos={x:6,y:2,z:14};if(type==='wide')targetCameraPos={x:0,y:5,z:20}}
+    function reset3DCamera(){targetCameraPos={x:0,y:0,z:12}}
+    function change3DTheme(theme){const palette={cyberpunk:[0x4f46e5,0x3730a3,0x06b6d4],deepspace:[0x2563eb,0x1d4ed8,0x38bdf8],matrix:[0x059669,0x047857,0x34d399]}[theme]||[0x4f46e5,0x3730a3,0x06b6d4];coreSphere.material.color.setHex(palette[0]);coreSphere.material.emissive.setHex(palette[1]);coreOuterWireframe.material.color.setHex(palette[2])}
+
+    let frameCount=0,lastTime=performance.now(),fps=0;
+    function animate3D(){
+      requestAnimationFrame(animate3D);frameCount++;const now=performance.now();
+      if(now-lastTime>=1000){fps=Math.round(frameCount*1000/(now-lastTime));document.getElementById('fps-display').textContent=`${fps} FPS`;frameCount=0;lastTime=now}
+      camera.position.x+=(targetCameraPos.x-camera.position.x)*.05;camera.position.y+=(targetCameraPos.y-camera.position.y)*.05;camera.position.z+=(targetCameraPos.z-camera.position.z)*.05;camera.lookAt(0,0,0);
+      if(!reducedMotion){coreSphere.rotation.y+=.008;coreSphere.rotation.x+=.004;coreOuterWireframe.rotation.y-=.012;coreOuterWireframe.rotation.z+=.006;if(particleSystem)particleSystem.rotation.y+=.0008}
+      const t=performance.now();
+      hologramNodes.forEach((node,idx)=>{const denom=Math.max(1,hologramNodes.length),angle=t*.0005+idx*Math.PI*2/denom;node.mesh.position.x=Math.cos(angle)*6.5;node.mesh.position.z=Math.sin(angle)*6.5;node.mesh.position.y=Math.sin(t*.001+idx)*.5;node.mesh.lookAt(camera.position)});
+      if(isAudioActive)updateAudioVisualizer3D();
+      renderer.render(scene,camera);
+    }
+
+    function create3DHologramNode(imageUrl,title){
+      new THREE.TextureLoader().load(imageUrl,texture=>{
+        const aspect=Math.max(.25,Math.min(4,texture.image.width/texture.image.height)),w=2.4,h=w/aspect;
+        const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture,side:THREE.DoubleSide,roughness:.3,metalness:.2}));
+        const border=new THREE.Mesh(new THREE.PlaneGeometry(w+.1,h+.1),new THREE.MeshBasicMaterial({color:0x06b6d4,wireframe:true}));border.position.z=-.01;mesh.add(border);scene.add(mesh);
+        hologramNodes.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),mesh,title,url:imageUrl});renderHologramGalleryUI();setAIStatus('HOLOGRAM SPAWNED IN 3D SPACE','emerald')
+      },undefined,()=>setAIStatus('HOLOGRAM TEXTURE FAILED','rose'));
+    }
+    function focusOn3DNode(id){const node=hologramNodes.find(n=>n.id===id);if(node)targetCameraPos={x:node.mesh.position.x*1.5,y:node.mesh.position.y,z:node.mesh.position.z*1.5}}
+
+    function initAudioContext(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+    function pcmToWav(pcm16Array,sampleRate=24000){const channels=1,byteRate=sampleRate*2,buffer=new ArrayBuffer(44+pcm16Array.length*2),view=new DataView(buffer);writeString(view,0,'RIFF');view.setUint32(4,36+pcm16Array.length*2,true);writeString(view,8,'WAVE');writeString(view,12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,channels,true);view.setUint32(24,sampleRate,true);view.setUint32(28,byteRate,true);view.setUint16(32,2,true);view.setUint16(34,16,true);writeString(view,36,'data');view.setUint32(40,pcm16Array.length*2,true);for(let i=0;i<pcm16Array.length;i++)view.setInt16(44+i*2,pcm16Array[i],true);return new Blob([buffer],{type:'audio/wav'})}
+    function writeString(view,offset,string){for(let i=0;i<string.length;i++)view.setUint8(offset+i,string.charCodeAt(i))}
+
+    async function playAudioAndVisualize(audioUrl){
+      initAudioContext();await audioCtx.resume();
+      if(currentAudio){currentAudio.pause();currentAudio=null}
+      if(currentAudioUrl)URL.revokeObjectURL(currentAudioUrl);
+      currentAudioUrl=audioUrl;currentAudio=new Audio(audioUrl);
+      const source=audioCtx.createMediaElementSource(currentAudio);audioAnalyser=audioCtx.createAnalyser();audioAnalyser.fftSize=256;audioAnalyser.smoothingTimeConstant=.75;source.connect(audioAnalyser);audioAnalyser.connect(audioCtx.destination);audioFreqData=new Uint8Array(audioAnalyser.frequencyBinCount);
+      isAudioActive=true;setAIStatus('SPEECH ENGINE TRANSMITTING…','indigo');
+      try{await currentAudio.play()}catch(err){isAudioActive=false;appendChatMessage('ai',`⚠️ Audio playback failed: ${err.message}`)}
+      currentAudio.onended=()=>{isAudioActive=false;setAIStatus('CORE STATUS: IDLE','cyan');reset3DAudioBars();if(currentAudioUrl){URL.revokeObjectURL(currentAudioUrl);currentAudioUrl=null}}
+    }
+
+    function updateAudioVisualizer3D(){
+      if(!audioAnalyser||!audioFreqData)return;audioAnalyser.getByteFrequencyData(audioFreqData);
+      let peak=0,peakIndex=0;
+      for(let i=0;i<visualizer3DBars.length;i++){const idx=Math.floor(i/visualizer3DBars.length*audioFreqData.length),value=audioFreqData[idx]/255,height=.2+value*2.2;visualizer3DBars[i].scale.y=height;visualizer3DBars[i].material.emissiveIntensity=.3+value*1.5;if(audioFreqData[idx]>peak){peak=audioFreqData[idx];peakIndex=idx}}
+      const peakHz=Math.round(peakIndex*audioCtx.sampleRate/audioAnalyser.fftSize);document.getElementById('audio-freq-display').textContent=`${peakHz} Hz`;render2DAudioHUD(false);
+    }
+    function reset3DAudioBars(){visualizer3DBars.forEach(bar=>{bar.scale.y=1;bar.material.emissiveIntensity=.3});document.getElementById('audio-freq-display').textContent='0 Hz';render2DAudioHUD(true)}
+    function render2DAudioHUD(reset=false){const c=document.getElementById('visualizer-bars');if(c.children.length===0){for(let i=0;i<16;i++){const bar=document.createElement('div');bar.className='w-1.5 bg-cyan-400 rounded-t transition-all duration-75';bar.style.height='10%';c.appendChild(bar)}}const children=Array.from(c.children);children.forEach((bar,i)=>{let value=0;if(!reset&&audioFreqData&&audioFreqData.length){const idx=Math.floor(i/children.length*audioFreqData.length);value=audioFreqData[idx]/255}bar.style.height=`${Math.max(10,Math.round(value*100))}%`})}
+
+    function imagePayload(){if(!attachedImageBase64)return null;const marker=';base64,';const idx=attachedImageBase64.indexOf(marker);if(idx<0)return null;return{mime_type:attachedImageMime||'image/png',data:attachedImageBase64.slice(idx+marker.length)}}
+    async function fetchGeminiTextOrVision(promptText){setAIStatus('PROCESSING MATRIX QUERY…','indigo');return apiFetch('/api/nexus3d/chat',{prompt:promptText,image:imagePayload(),grounding:searchGroundingEnabled})}
+    async function fetchGeminiImageGen(promptText){setAIStatus('SYNTHESIZING ARTWORK…','cyan');const result=await apiFetch('/api/nexus3d/image',{prompt:promptText});const image=result.image;if(!image)return null;return`data:${image.mime_type};base64,${image.data}`}
+    async function fetchGeminiTTS(textToSpeak){setAIStatus('SYNTHESIZING VOICE MATRIX…','indigo');const voice=document.getElementById('tts-voice-select').value||'Zephyr',result=await apiFetch('/api/nexus3d/tts',{text:textToSpeak,voice}),audio=result.audio;if(!audio)return null;const binary=atob(audio.data),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);const rate=parseInt((audio.mime_type.match(/rate=(\d+)/)||[])[1]||'24000',10),pcm16=new Int16Array(bytes.buffer,bytes.byteOffset,Math.floor(bytes.byteLength/2));return URL.createObjectURL(pcmToWav(pcm16,rate))}
+
+    async function executeSubmission(){
+      const input=document.getElementById('prompt-input'),userText=input.value.trim(),mode=document.getElementById('mode-selector').value;if(!userText&&!attachedImageBase64)return;
+      appendChatMessage('user',userText,attachedImageBase64);input.value='';document.getElementById('send-btn').disabled=true;
+      try{
+        if(mode==='chat'){const response=await fetchGeminiTextOrVision(userText||'Analyze this image');removeAttachedImage();appendChatMessage('ai',response.text,null,response.sources||[]);if(autoTTSVoiceEnabled){const audioUrl=await fetchGeminiTTS(response.text.slice(0,800));if(audioUrl)await playAudioAndVisualize(audioUrl)}else setAIStatus('CORE STATUS: IDLE','cyan')}
+        else if(mode==='image'){const imageUrl=await fetchGeminiImageGen(userText);if(!imageUrl)throw new Error('provider returned no image');appendChatMessage('ai',`Generated artwork for: "${userText}"`,imageUrl);create3DHologramNode(imageUrl,userText)}
+        else{const audioUrl=await fetchGeminiTTS(userText);if(!audioUrl)throw new Error('provider returned no audio');appendChatMessage('ai',`🗣️ Voice generated for: "${userText}"`);await playAudioAndVisualize(audioUrl)}
+      }catch(err){appendChatMessage('ai',`⚠️ ${err.message}`);setAIStatus('REQUEST FAILED','rose')}
+      finally{document.getElementById('send-btn').disabled=false}
+    }
+
+    function safeHref(uri){try{const u=new URL(uri,location.origin);return(u.protocol==='https:'||u.protocol==='http:')?u.href:null}catch(_){return null}}
+    function appendChatMessage(sender,text,imgUrl=null,sources=[]){
+      const feed=document.getElementById('chat-feed'),msg=document.createElement('div');msg.className=`flex items-start space-x-2.5 ${sender==='user'?'flex-row-reverse space-x-reverse':''}`;
+      const avatar=sender==='user'?'bg-cyan-600/30 border-cyan-400/40 text-cyan-300':'bg-indigo-600/30 border-indigo-400/40 text-indigo-300',bubble=sender==='user'?'bg-indigo-950/80 border-indigo-500/40 text-indigo-100 rounded-tr-none':'glass-panel border-slate-700/50 text-slate-200 rounded-tl-none';
+      const safeSources=(sources||[]).map(s=>({title:String(s.title||'Source'),uri:safeHref(s.uri)})).filter(s=>s.uri);
+      const sourcesHTML=safeSources.length?`<div class="mt-2 pt-2 border-t border-slate-700/60 text-[10px] text-cyan-300"><span class="font-semibold block mb-1"><i class="fa-solid fa-globe mr-1"></i>Sources:</span><div class="flex flex-wrap gap-1">${safeSources.map(s=>`<a href="${escapeHTML(s.uri)}" target="_blank" rel="noopener noreferrer" class="bg-slate-800/80 hover:bg-slate-700 px-1.5 py-0.5 rounded text-cyan-400 underline truncate max-w-[180px]">${escapeHTML(s.title)}</a>`).join('')}</div></div>`:'';const imageHTML=imgUrl?`<img src="${imgUrl}" class="mt-2 max-h-48 rounded-lg border border-slate-700 object-cover" alt="Attachment">`:'';
+      msg.innerHTML=`<div class="w-7 h-7 rounded-lg border ${avatar} flex items-center justify-center font-bold shrink-0 text-xs">${sender==='user'?'YOU':'AI'}</div><div class="${bubble} p-3 rounded-2xl max-w-[85%] leading-relaxed shadow-lg"><p class="whitespace-pre-wrap">${escapeHTML(String(text||''))}</p>${imageHTML}${sourcesHTML}</div>`;feed.appendChild(msg);feed.scrollTop=feed.scrollHeight;
+    }
+
+    function handleImageSelect(event){const file=event.target.files[0];if(!file)return;if(file.size>8*1024*1024){appendChatMessage('ai','⚠️ Image exceeds the 8 MiB client limit.');event.target.value='';return}const reader=new FileReader();reader.onload=e=>{attachedImageBase64=e.target.result;attachedImageMime=file.type;document.getElementById('attached-img-preview').src=attachedImageBase64;document.getElementById('attached-filename').textContent=file.name;document.getElementById('attachment-bar').classList.remove('hidden')};reader.readAsDataURL(file)}
+    function removeAttachedImage(){attachedImageBase64=null;attachedImageMime=null;document.getElementById('attached-img-preview').src='';document.getElementById('attachment-bar').classList.add('hidden');document.getElementById('image-upload').value=''}
+    function toggleSearchGrounding(){searchGroundingEnabled=!searchGroundingEnabled;const dot=document.getElementById('search-status-dot'),btn=document.getElementById('search-toggle-btn');dot.className=`w-2 h-2 rounded-full ${searchGroundingEnabled?'bg-cyan-400 animate-pulse':'bg-slate-600'}`;btn.classList.toggle('border-cyan-500/50',searchGroundingEnabled);btn.classList.toggle('bg-cyan-950/40',searchGroundingEnabled)}
+    function toggleAutoTTS(){autoTTSVoiceEnabled=!autoTTSVoiceEnabled;document.getElementById('tts-status-dot').className=`w-2 h-2 rounded-full ${autoTTSVoiceEnabled?'bg-emerald-400':'bg-slate-600'}`;document.getElementById('tts-icon').className=`fa-solid ${autoTTSVoiceEnabled?'fa-volume-high text-indigo-400':'fa-volume-xmark text-slate-500'}`}
+    function toggleVoiceInput(){const mic=document.getElementById('mic-btn');if(!('webkitSpeechRecognition'in window)&&!('SpeechRecognition'in window)){appendChatMessage('ai','Speech recognition is not supported in this browser.');return}if(isRecordingVoice){speechRecognition.stop();return}const SpeechRec=window.SpeechRecognition||window.webkitSpeechRecognition;speechRecognition=new SpeechRec();speechRecognition.continuous=false;speechRecognition.interimResults=false;speechRecognition.onstart=()=>{isRecordingVoice=true;mic.classList.add('text-rose-500','animate-pulse');setAIStatus('LISTENING TO VOICE INPUT…','rose')};speechRecognition.onresult=e=>{document.getElementById('prompt-input').value=e.results[0][0].transcript;setAIStatus('VOICE CAPTURED','emerald')};speechRecognition.onerror=()=>setAIStatus('VOICE INPUT FAILED','rose');speechRecognition.onend=()=>{isRecordingVoice=false;mic.classList.remove('text-rose-500','animate-pulse')};speechRecognition.start()}
+
+    function setAIStatus(text,color='cyan'){document.getElementById('ai-status-text').textContent=text;const map={cyan:'bg-cyan-400',indigo:'bg-indigo-400',emerald:'bg-emerald-400',rose:'bg-rose-500'};document.getElementById('ai-status-indicator').className=`w-3 h-3 rounded-full animate-pulse ${map[color]||map.cyan}`}
+    function setPrompt(str){document.getElementById('prompt-input').value=str}
+    function handleModeChange(){const mode=document.getElementById('mode-selector').value,label=document.getElementById('send-btn').querySelector('span');label.textContent=mode==='image'?'Create Art':mode==='tts'?'Synthesize':'Execute'}
+    function clearChatLog(){document.getElementById('chat-feed').innerHTML=''}
+    function renderHologramGalleryUI(){const list=document.getElementById('gallery-list'),badge=document.getElementById('hologram-count-badge');badge.textContent=`${hologramNodes.length} Nodes`;list.innerHTML='';if(!hologramNodes.length){list.innerHTML='<div class="text-center py-10 text-slate-500 text-xs"><p>No 3D Holograms Created</p></div>';return}hologramNodes.forEach(node=>{const card=document.createElement('div');card.className='glass-panel p-2 rounded-xl flex items-center space-x-3 hover:border-indigo-500/50 cursor-pointer transition';card.onclick=()=>focusOn3DNode(node.id);card.innerHTML=`<img src="${node.url}" class="w-12 h-12 object-cover rounded-lg border border-slate-700" alt=""><div class="overflow-hidden flex-1"><p class="text-xs text-slate-200 truncate font-medium">${escapeHTML(node.title)}</p><span class="text-[10px] text-indigo-400 flex items-center gap-1 mt-0.5"><i class="fa-solid fa-crosshairs"></i> Focus Camera</span></div>`;list.appendChild(card)})}
+    function togglePanel(id){document.getElementById(id).classList.toggle('hidden')}
+    function escapeHTML(str){return String(str).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]))}
+
+    window.addEventListener('load',()=>{init3DScene();render2DAudioHUD(true);loadCapabilities();document.getElementById('prompt-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();executeSubmission()}})});
+  </script>
+</body>
+</html>
