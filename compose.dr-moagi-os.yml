@@ -2,8 +2,9 @@ services:
   dr-moagi-os:
     build:
       context: .
-      dockerfile: deploy/dr_moagi_os/Dockerfile
-    image: jarvisx-dr-moagi-os:local
+      dockerfile: Dockerfile
+    image: jarvisx:local
+    init: true
     restart: unless-stopped
     ports:
       - "10000:10000"
@@ -21,6 +22,25 @@ services:
       JARVISX_OS_AUTORUN_INTERVAL: "0.5"
     volumes:
       - dr-moagi-os-state:/var/lib/jarvisx
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:10000/healthz', timeout=2).read()
+      interval: 20s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
 
 volumes:
   dr-moagi-os-state:
