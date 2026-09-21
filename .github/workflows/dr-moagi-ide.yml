@@ -6,15 +6,23 @@ on:
     paths:
       - "src/jarvisx/dr_moagi_ide.py"
       - "src/jarvisx/dr_moagi_ide_api.py"
+      - "src/jarvisx/unified_runtime.py"
+      - "src/jarvisx/unified_runtime_api.py"
       - "apps/dr-moagi-ide/**"
       - "tests/test_dr_moagi_ide.py"
+      - "tests/test_unified_runtime.py"
+      - "docs/JARVIS_X_UNIFIED_RUNTIME.md"
       - ".github/workflows/dr-moagi-ide.yml"
   pull_request:
     paths:
       - "src/jarvisx/dr_moagi_ide.py"
       - "src/jarvisx/dr_moagi_ide_api.py"
+      - "src/jarvisx/unified_runtime.py"
+      - "src/jarvisx/unified_runtime_api.py"
       - "apps/dr-moagi-ide/**"
       - "tests/test_dr_moagi_ide.py"
+      - "tests/test_unified_runtime.py"
+      - "docs/JARVIS_X_UNIFIED_RUNTIME.md"
       - ".github/workflows/dr-moagi-ide.yml"
   workflow_dispatch:
 
@@ -31,12 +39,14 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install -e ".[test]"
-      - run: pytest -q tests/test_dr_moagi_ide.py
+      - run: pytest -q tests/test_dr_moagi_ide.py tests/test_unified_runtime.py
       - name: Import API
         env:
           JARVISX_IDE_DB: ${{ runner.temp }}/ide.sqlite3
           JARVISX_STATE_DIR: ${{ runner.temp }}/dr-moagi-os
-        run: python -c "from jarvisx.dr_moagi_ide_api import app; assert app.title == 'Dr Moagi ANN IDE'"
+        run: |
+          python -c "from jarvisx.dr_moagi_ide_api import app; assert app.title == 'Dr Moagi ANN IDE'"
+          python -c "from jarvisx.unified_runtime_api import app; assert app.title == 'JARVIS-X Unified Runtime'"
 
   container:
     runs-on: ubuntu-latest
@@ -50,6 +60,8 @@ jobs:
           for i in {1..30}; do
             if curl --fail --silent http://127.0.0.1:8000/healthz >/tmp/health.json; then
               cat /tmp/health.json
+              curl --fail --silent http://127.0.0.1:8000/runtime/healthz >/tmp/runtime-health.json
+              cat /tmp/runtime-health.json
               exit 0
             fi
             sleep 1
