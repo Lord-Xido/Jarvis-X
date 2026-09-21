@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AE-3D Infinity IDE / SDK / ANN Engine</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+:root{--bg:#020617;--panel:#0f172acc;--line:#243244;--text:#e2e8f0;--muted:#7f8ea3;--cyan:#22d3ee;--purple:#a855f7;--green:#34d399;--rose:#fb7185}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
+#app{height:100vh;display:grid;grid-template-rows:54px 1fr 170px}.top{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);background:#07101f}.brand{font-weight:800;color:var(--cyan);letter-spacing:.08em;margin-right:auto}.pill{border:1px solid var(--line);border-radius:8px;background:#101827;padding:7px 9px;color:var(--text)}button{cursor:pointer}.run{background:#0e7490;border-color:#0891b2}.train{background:#6d28d9;border-color:#7c3aed}.turbo{background:#be123c;border-color:#e11d48}.main{min-height:0;display:grid;grid-template-columns:minmax(360px,42%) 1fr}.left{min-width:0;border-right:1px solid var(--line);display:grid;grid-template-rows:auto 1fr auto;background:#07101f}.section{padding:10px 12px;border-bottom:1px solid var(--line)}label{color:var(--muted);font-size:11px}.input-row{display:flex;gap:8px}.input-row input{flex:1}.control-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.ctl{background:#0b1322;border:1px solid var(--line);padding:7px;border-radius:8px}.ctl input{width:100%}input,textarea{background:#020817;color:#dbeafe;border:1px solid var(--line);border-radius:7px;padding:8px;outline:none}textarea{width:100%;height:100%;resize:none;line-height:1.45;font-size:12px}.editor-wrap{min-height:0;padding:10px}.editor-actions{display:flex;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}.right{min-width:0;display:grid;grid-template-rows:1fr auto}.view-wrap{position:relative;min-height:0}#view3d{position:absolute;inset:0}.overlay{position:absolute;left:12px;top:12px;background:#020617cc;border:1px solid var(--line);border-radius:10px;padding:10px;width:min(420px,calc(100% - 24px));backdrop-filter:blur(10px)}.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding:10px;border-top:1px solid var(--line);background:#07101f}.metric{background:#0b1322;border:1px solid var(--line);border-radius:8px;padding:7px}.metric b{display:block;color:var(--cyan);font-size:13px;margin-top:3px}.hex{font-size:10px;line-height:1.4;color:#9fb1c8;word-break:break-all}.bottom{display:grid;grid-template-columns:1.1fr .9fr;border-top:1px solid var(--line);min-height:0}.console,.io{min-height:0;padding:8px 10px;background:#030a14}.console{border-right:1px solid var(--line)}pre{margin:0;white-space:pre-wrap;word-break:break-word;height:100%;overflow:auto;color:#a7f3d0}.io-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;height:100%}.io-box{border:1px solid var(--line);border-radius:8px;padding:7px;overflow:auto}.tiny{font-size:10px;color:var(--muted);margin-bottom:4px}.output-text{color:#f8fafc;white-space:pre-wrap;word-break:break-word}.actions{display:flex;gap:6px;flex-wrap:wrap}@media(max-width:980px){.main{grid-template-columns:1fr}.right{display:none}.bottom{grid-template-columns:1fr}.io{display:none}.console{border-right:0}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand">AE-3D∞ IDE · SDK · ANN ENGINE</div>
+    <button id="btn-run" class="pill run">Run</button>
+    <button id="btn-step" class="pill">Step</button>
+    <button id="btn-train" class="pill train">Train ×10</button>
+    <button id="btn-turbo" class="pill turbo">1000-pass test</button>
+    <button id="btn-export" class="pill">Export model</button>
+    <button id="btn-reset" class="pill">Reset</button>
+  </header>
+
+  <main class="main">
+    <section class="left">
+      <div class="section">
+        <label>BYTE STREAM INPUT</label>
+        <div class="input-row"><input id="input-text" value="AUTOENCODER_3D_BYTES" /></div>
+        <div class="control-grid">
+          <div class="ctl"><label>Feedback β <span id="beta-v">0.85</span></label><input id="beta" type="range" min="0" max="1" step="0.01" value="0.85"></div>
+          <div class="ctl"><label>Fold gain <span id="fold-v">0.06</span></label><input id="fold" type="range" min="0" max="0.25" step="0.01" value="0.06"></div>
+          <div class="ctl"><label>Recursion N <span id="depth-v">4</span></label><input id="depth" type="range" min="1" max="64" step="1" value="4"></div>
+        </div>
+      </div>
+      <div class="editor-wrap"><textarea id="editor" spellcheck="false"></textarea></div>
+      <div class="editor-actions"><button id="btn-script" class="pill run">Run SDK Script</button><button id="btn-clear-console" class="pill">Clear Console</button></div>
+    </section>
+
+    <section class="right">
+      <div class="view-wrap">
+        <div id="view3d"></div>
+        <div class="overlay">
+          <div style="font-weight:800;color:var(--purple);margin-bottom:6px">LIVE 216-VOXEL TOROIDAL FIELD</div>
+          <div class="tiny">Actual runtime state: active voxels and latent energy drive node color. The torus is the visualization surface; computation remains ordinary typed-array ANN arithmetic.</div>
+          <div class="tiny" style="margin-top:7px">Clock <b id="m-clock" style="color:var(--green)">0</b> · 6×6×6 · d=32 · INT8</div>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><label>Byte accuracy</label><b id="m-acc">—</b></div>
+        <div class="metric"><label>BER</label><b id="m-ber">—</b></div>
+        <div class="metric"><label>MSE</label><b id="m-mse">—</b></div>
+        <div class="metric"><label>PSNR</label><b id="m-psnr">—</b></div>
+        <div class="metric"><label>Active voxels</label><b id="m-active">—</b></div>
+        <div class="metric"><label>Stability</label><b id="m-stability">—</b></div>
+        <div class="metric"><label>Quant MSE</label><b id="m-qmse">—</b></div>
+        <div class="metric"><label>Runtime</label><b id="m-time">—</b></div>
+        <div class="metric"><label>Throughput</label><b id="m-rate">—</b></div>
+      </div>
+    </section>
+  </main>
+
+  <section class="bottom">
+    <div class="console"><div class="tiny">SDK CONSOLE</div><pre id="console"></pre></div>
+    <div class="io"><div class="io-grid">
+      <div class="io-box"><div class="tiny">INPUT HEX</div><div class="hex" id="hex-in"></div><div class="tiny" style="margin-top:8px">OUTPUT HEX</div><div class="hex" id="hex-out"></div></div>
+      <div class="io-box"><div class="tiny">DECODED OUTPUT</div><div class="output-text" id="text-out"></div></div>
+    </div></div>
+  </section>
+</div>
+<script src="src/engine.js"></script>
+<script src="src/sdk.js"></script>
+<script src="src/ide.js"></script>
+</body>
+</html>
