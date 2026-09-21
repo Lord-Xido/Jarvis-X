@@ -24,8 +24,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 ROOT = Path(__file__).resolve().parents[2]
+REPO_STATIC_DIR = ROOT / "apps/nexus-3d"
+PACKAGE_STATIC_DIR = Path(__file__).resolve().parent / "_static/nexus3d"
+DEFAULT_STATIC_DIR = REPO_STATIC_DIR if REPO_STATIC_DIR.is_dir() else PACKAGE_STATIC_DIR
 STATIC_DIR = Path(
-    os.getenv("JARVISX_NEXUS3D_STATIC_DIR", str(ROOT / "apps/nexus-3d"))
+    os.getenv("JARVISX_NEXUS3D_STATIC_DIR", str(DEFAULT_STATIC_DIR))
 )
 
 PROVIDER_BASE_URL = os.getenv(
