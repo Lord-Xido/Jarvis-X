@@ -99,7 +99,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-jarvisx = ["_reference/dr_moagi_3d_animation_autoencoder/*.part"]
+jarvisx = ["_reference/dr_moagi_3d_animation_autoencoder/*.part", "_static/nexus3d/*"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
