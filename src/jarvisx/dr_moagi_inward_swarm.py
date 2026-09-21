@@ -68,7 +68,7 @@ class InwardSwarmConfig:
 
     @property
     def total_fold_edge(self) -> int:
-        return self.fold_edge**self.fold_levels
+        return int(self.fold_edge**self.fold_levels)
 
     @property
     def fold_volume(self) -> int:
