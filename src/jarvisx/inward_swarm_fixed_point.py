@@ -120,8 +120,8 @@ class InwardSwarmConfig:
         if self.word_bits > 31:
             raise ValueError("word_bits must be <= 31 for the int32 accelerator contract")
         for name in ("spatial_weight", "latent_weight"):
-            value = float(getattr(self, name))
-            if not math.isfinite(value) or value <= 0.0:
+            numeric_value = float(getattr(self, name))
+            if not math.isfinite(numeric_value) or numeric_value <= 0.0:
                 raise ValueError(f"{name} must be finite and positive")
 
     @property
