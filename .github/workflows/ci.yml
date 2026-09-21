@@ -62,6 +62,7 @@ jobs:
           - tests/test_saas.py
           - tests/test_autonomic_enterprise.py
           - tests/test_motion3d.py
+          - tests/test_chrysalis3d.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -122,9 +123,12 @@ jobs:
           - src/jarvisx/saas/autonomy/workflow.py
           - src/jarvisx/motion3d.py
           - src/jarvisx/motion3d_cli.py
+          - src/jarvisx/chrysalis3d.py
+          - src/jarvisx/chrysalis3d_cli.py
           - tests/test_saas.py
           - tests/test_autonomic_enterprise.py
           - tests/test_motion3d.py
+          - tests/test_chrysalis3d.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
