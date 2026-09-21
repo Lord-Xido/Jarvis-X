@@ -1,0 +1,45 @@
+name: Jarvis-X 3D Virtual Computer CI
+
+on:
+  push:
+    branches: [agent/3d-virtual-computer]
+    paths:
+      - "src/jarvisx/virtual3d/**"
+      - "tests/test_virtual3d.py"
+      - "examples/virtual3d_rom_demo.py"
+      - "docs/DR_MOAGI_3D_VIRTUAL_COMPUTER.md"
+      - ".github/workflows/virtual3d-ci.yml"
+  pull_request:
+    branches: [agent/dr-moagi-spatial-runtime, main]
+    paths:
+      - "src/jarvisx/virtual3d/**"
+      - "tests/test_virtual3d.py"
+      - "examples/virtual3d_rom_demo.py"
+      - "docs/DR_MOAGI_3D_VIRTUAL_COMPUTER.md"
+      - ".github/workflows/virtual3d-ci.yml"
+
+jobs:
+  virtual3d:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install project and test dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e ".[test]"
+
+      - name: Run 3D virtual computer tests
+        run: pytest -v tests/test_virtual3d.py
+
+      - name: Run ROM demonstration
+        run: python examples/virtual3d_rom_demo.py
