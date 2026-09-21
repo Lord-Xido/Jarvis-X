@@ -15,6 +15,7 @@ Executable .NET 8 reference implementation of the inward kinetic encoding model 
 - Transform and kinetic velocity state preserved in the stream.
 - OBJ export from the decoded state for inspection in Blender, Unity, Unreal import pipelines, MeshLab, etc.
 - Deterministic self-test suitable for CI.
+- Python Conv3D MP4 autoencoder path with serialized latent archive, measurable MSE/PSNR, and optional source-audio remux.
 
 ## Operational loop
 
@@ -96,6 +97,26 @@ dotnet run --project apps/qsol-graphics-codec/QSol.GraphicsCodec.csproj -c Relea
   --decode artifacts/qsol-graphics-codec/frame-0000.q3d \
   --obj artifacts/qsol-graphics-codec/reconstructed.obj
 ```
+
+## Neural MP4 path
+
+The Python video path treats time as the third convolutional dimension:
+
+```text
+MP4 -> X[N,3,T,H,W] -> E_phi -> Z[N,Cz,T/4,H/4,W/4]
+    -> latent.npz -> D_theta -> X_hat -> reconstructed MP4
+```
+
+Install and run the synthetic end-to-end path:
+
+```bash
+python -m pip install -r apps/qsol-graphics-codec/VideoPython/requirements.txt
+python apps/qsol-graphics-codec/VideoPython/jarvisx_mp4_3d_autoencoder.py \
+  --synthetic --epochs 1 --width 32 --height 32 \
+  --clip-len 4 --latent-ch 4 --device cpu
+```
+
+See `VideoPython/README.md` for real-MP4 usage, serialization semantics, metrics, and scope.
 
 ## Binary pipeline
 
