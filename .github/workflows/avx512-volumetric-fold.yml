@@ -1,0 +1,28 @@
+name: AVX-512 volumetric fold
+
+on:
+  push:
+    paths:
+      - "native/avx512-volumetric-fold/**"
+      - ".github/workflows/avx512-volumetric-fold.yml"
+  pull_request:
+    paths:
+      - "native/avx512-volumetric-fold/**"
+      - ".github/workflows/avx512-volumetric-fold.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and semantic self-test
+        run: make -C native/avx512-volumetric-fold test
+      - name: Cross-assemble Windows x64 object
+        run: make -C native/avx512-volumetric-fold windows-object
+      - name: Confirm AVX-512 ternary instruction is present
+        run: |
+          objdump -d -M intel native/avx512-volumetric-fold/volumetric_fold_avx512.o \
+            | grep -q "vpternlogq"
