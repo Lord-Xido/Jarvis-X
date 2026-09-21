@@ -161,3 +161,28 @@ The initial canonical attribution record was committed as:
 ```
 
 ADR-015 establishes repository-wide inheritance of that provenance. ADR-016 defines the typed-state/transaction closure, and ADR-017 defines the canonical operational auto-encoding/decoding systems law inside that closure. Subsequent commits may extend implementations while retaining these canonical references.
+
+## GUI permeation extension
+
+ADR-026 extends the same family authority boundary to GUI observation,
+projection and command surfaces, including `src/jarvisx/gui_control_plane.py`,
+`src/jarvisx/dr_moagi_os_ui.py`, and `apps/total-permeation-3d/`.
+
+The inherited GUI law is:
+
+```text
+authoritative state
+  -> immutable GUI snapshot
+  -> sparse panel / 3D LOD projection
+  -> user interaction
+  -> bounded epoch-targeted command proposal
+  -> capability / bounds checks
+  -> CTR / Pi_Lambda
+  -> commit OR rollback
+  -> new snapshot
+  -> render / recur
+```
+
+Rendered GUI state is a projection of authoritative state, not an alternate
+state authority. Render-only changes remain local; operational changes remain
+candidate transactions until the canonical verifier commits them.
