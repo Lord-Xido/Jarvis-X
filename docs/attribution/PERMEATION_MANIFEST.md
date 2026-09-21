@@ -186,3 +186,26 @@ authoritative state
 Rendered GUI state is a projection of authoritative state, not an alternate
 state authority. Render-only changes remain local; operational changes remain
 candidate transactions until the canonical verifier commits them.
+
+## Volumetric bytecode symbolic-traversal extension
+
+ADR-027 and `src/jarvisx/volumetric_bytecode.py` specialize the Dr Moagi family into a bounded sparse volumetric bytecode reference. The logical `10^24`-per-axis coordinate domain and `(10^6)^(10^6)` cycle target remain virtual/symbolic metadata; physical work is limited by the active-set and iteration budgets.
+
+The inherited execution law is:
+
+```text
+pack modalities
+  -> sparse active support
+  -> octree accounting
+  -> typed encode
+  -> exact XYZ mirror fold
+  -> mirror injection
+  -> decode
+  -> XOR/Hamming evidence
+  -> CTR-style verification
+  -> commit OR rollback
+  -> permeation snapshot
+  -> recur within finite budget
+```
+
+This extension does not replace JX3DVM1 and does not convert symbolic iteration depth into a measured physical speedup claim.
