@@ -4,7 +4,6 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
 
 permissions:
   contents: read
@@ -60,6 +59,7 @@ jobs:
           - tests/test_ann30d_safe.py
           - tests/test_abstraction3d.py
           - tests/test_ledger.py
+          - tests/test_saas.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -91,6 +91,24 @@ jobs:
 
   code-quality:
     runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        quality-file:
+          - src/jarvisx/saas/__init__.py
+          - src/jarvisx/saas/app.py
+          - src/jarvisx/saas/billing.py
+          - src/jarvisx/saas/cli.py
+          - src/jarvisx/saas/db.py
+          - src/jarvisx/saas/geometry.py
+          - src/jarvisx/saas/rls.py
+          - src/jarvisx/saas/security.py
+          - src/jarvisx/saas/service.py
+          - src/jarvisx/saas/service_base.py
+          - src/jarvisx/saas/service_billing.py
+          - src/jarvisx/saas/service_corporate.py
+          - tests/test_saas.py
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -98,9 +116,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install black isort
-      - name: Check formatting
-        run: black --check src/jarvisx tests
-        continue-on-error: true
-      - name: Check import sorting
-        run: isort --check-only src/jarvisx tests
-        continue-on-error: true
+      - name: Check ${{ matrix.quality-file }}
+        run: |
+          black --check "${{ matrix.quality-file }}"
+          isort --check-only "${{ matrix.quality-file }}"
