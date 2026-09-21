@@ -361,6 +361,7 @@ export class CognitiveMatrixEngine {
       Number.isFinite(ctrEnergy) &&
       Number.isFinite(fixedPointResidual) &&
       ctrEnergy <= this.ctrThreshold;
+    const decision = accepted ? "COMMIT" : "ROLLBACK";
 
     if (accepted) {
       this.committed.set(this.candidate);
@@ -375,6 +376,7 @@ export class CognitiveMatrixEngine {
     const stats = this.memory.stats();
     this.last = Object.freeze({
       accepted,
+      decision,
       version: this.version,
       input: target,
       reconstruction: decoded.reconstruction,
