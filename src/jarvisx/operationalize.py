@@ -62,16 +62,27 @@ def run_preflight() -> OperationalReport:
         "jarvisx.nexus3d_api",
     )
 
-    checks = tuple(
-        _capture(
-            f"import:{module_name}",
-            lambda module_name=module_name: (
-                import_module(module_name).__name__ + " importable"
-            ),
-        )
-        for module_name in modules
-    )
-    return OperationalReport(mode="doctor", checks=checks)
+    checks: list[OperationalCheck] = []
+    for module_name in modules:
+        try:
+            imported_name = import_module(module_name).__name__
+        except Exception as exc:
+            checks.append(
+                OperationalCheck(
+                    name=f"import:{module_name}",
+                    ok=False,
+                    detail=f"{type(exc).__name__}: {exc}",
+                )
+            )
+        else:
+            checks.append(
+                OperationalCheck(
+                    name=f"import:{module_name}",
+                    ok=True,
+                    detail=imported_name + " importable",
+                )
+            )
+    return OperationalReport(mode="doctor", checks=tuple(checks))
 
 
 def _transaction_smoke() -> str:
