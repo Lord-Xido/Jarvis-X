@@ -46,6 +46,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Septillion³ recursive swarm AE/AD | Integration candidate | `dr_moagi_septillion_swarm.py`, `test_dr_moagi_septillion_swarm.py`, ADR-021 | `10^72` sites are virtual addressing semantics; only the bounded active swarm is resident; local decoder adaptation is verification-gated and does not establish pretrained model quality |
 | Trillion³ kinetic hyper-swarm | Reference laboratory | `dr_moagi_trillion3_kinetic_swarm.py`, `test_dr_moagi_trillion3_kinetic_swarm.py`, ADR-024 | `10^36` sites and `10^48` logical parameter-address positions are virtual semantics; only a bounded active 3D block is resident; local aggregation is not Byzantine consensus and manifold projection does not establish semantic truth |
 | Hyperscale Geometric VM | Demonstration | `apps/hyperscale-geometric-vm/`, numerical tests and browser smoke workflow | 64,000 simulated particles; 4,000 drawn in Canvas fallback; exponent tower is symbolic, radial summary is untrained, and no canonical VM state is changed |
+| Recursive 3D bits symbolic-horizon adapter | Integration candidate | `src/jarvisx/recursive_bits3d.py`, `tests/test_recursive_bits3d.py`, `docs/DR_MOAGI_3D_BITS_ITERATION_LOOP.md`, ADR-029 | exact linear bit/byte↔3D mapping over the bounded volumetric VM; `a^(a^a)` remains symbolic metadata and is not physical throughput or speedup evidence |
 
 ## Empirical evidence gate
 
