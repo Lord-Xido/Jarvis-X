@@ -73,6 +73,7 @@ jobs:
           isort --check-only --diff
           setup.py
           src/jarvisx/core.py
+          src/jarvisx/operational_control.py
           src/jarvisx/ledger.py
           src/jarvisx/ledger_store.py
           src/jarvisx/fractional_smoothing_3d.py
@@ -82,6 +83,7 @@ jobs:
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           tests/test_vm.py
+          tests/test_operational_control.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
           tests/test_inward4d_ann.py
