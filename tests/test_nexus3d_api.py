@@ -151,3 +151,13 @@ def test_frontend_uses_same_origin_proxy_and_contains_no_provider_key_literal() 
 def test_inline_image_rejects_invalid_base64() -> None:
     with pytest.raises(ValueError):
         InlineImage(mime_type="image/png", data="not-base64%%%")
+
+
+def test_repository_and_packaged_frontend_are_identical() -> None:
+    root = Path(__file__).resolve().parents[1]
+    repository_page = (root / "apps/nexus-3d/index.html").read_text(encoding="utf-8")
+    packaged_page = (
+        root / "src/jarvisx/_static/nexus3d/index.html"
+    ).read_text(encoding="utf-8")
+
+    assert packaged_page == repository_page
