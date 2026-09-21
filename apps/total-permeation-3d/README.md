@@ -73,6 +73,32 @@ The display distinguishes:
 
 No visual effect is evidence of a new physical law, quantum execution, consciousness, or external state-of-the-art performance.
 
+## GUI permeation contract
+
+When this visualization is connected to an operational Jarvis-X runtime, it must
+use the shared GUI contract in `jarvisx.gui_control_plane` and ADR-026:
+
+```text
+authoritative runtime
+  -> immutable snapshot
+  -> panel projection / LOD
+  -> render
+  -> user intent
+  -> bounded command proposal
+  -> runtime capability/bounds checks
+  -> CTR / Pi_Lambda
+  -> commit | rollback
+  -> new immutable snapshot
+```
+
+Render-only controls remain local to the browser. Operational controls are
+proposals against a specific runtime epoch and cannot directly mutate
+authoritative state.
+
+Large logical panel counts are virtualized in the same way as large logical
+compute spaces: foreground panels may render at high cadence, background panels
+at reduced cadence, and off-screen panels need not be scheduled at all.
+
 ## Authority boundary
 
 This browser app is visualization-only. It does not mutate authoritative Phase3D state, model weights, runtime configuration, files, devices or external systems.
