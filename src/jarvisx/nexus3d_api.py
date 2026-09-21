@@ -121,7 +121,8 @@ class GeminiGateway:
         return bool(self.api_key)
 
     def generate(self, model: str, payload: dict[str, Any]) -> dict[str, Any]:
-        if not self.api_key:
+        api_key = self.api_key
+        if not api_key:
             raise ProviderError(
                 "Gemini provider is not configured; set GEMINI_API_KEY "
                 "or GOOGLE_GEMINI_API_KEY on the server"
@@ -134,7 +135,7 @@ class GeminiGateway:
             method="POST",
             headers={
                 "Content-Type": "application/json",
-                "x-goog-api-key": self.api_key,
+                "x-goog-api-key": api_key,
                 "User-Agent": "Jarvis-X-NEXUS3D/1.0",
             },
         )
@@ -254,7 +255,7 @@ def _provider_http_error(exc: ProviderError) -> HTTPException:
 
 @app.middleware("http")
 async def security_headers(request: Any, call_next: Any) -> Response:
-    response = await call_next(request)
+    response = cast(Response, await call_next(request))
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(self)"
