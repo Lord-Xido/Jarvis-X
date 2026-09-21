@@ -17,7 +17,7 @@ import json
 import struct
 import zlib
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, TypedDict
 
 ROM_SIZE = 1024 * 1024
 HEADER_SIZE = 4096
@@ -78,6 +78,22 @@ OP_NAMES: Dict[int, str] = {
 }
 
 EXPECTED_SHA256 = "bb61432c3c952742f2c7fb81b47e1590b87e451efcf85fb87d896e39237f14e0"
+
+
+class HeaderInfo(TypedDict):
+    magic: str
+    abi_major: int
+    abi_minor: int
+    header_size: int
+    rom_size: int
+    word_size: int
+    active_program_words: int
+    shape: tuple[int, int, int]
+    total_bits: int
+    dense_state_bytes: int
+    entry_offset: int
+    code_crc32: int
+    sha256: str
 
 
 def pack_word(
@@ -215,7 +231,7 @@ def build_rom() -> bytes:
     return bytes(rom)
 
 
-def parse_header(rom: bytes) -> Dict[str, object]:
+def parse_header(rom: bytes) -> HeaderInfo:
     """Parse and validate fixed header fields."""
 
     if len(rom) != ROM_SIZE:
@@ -242,31 +258,31 @@ def parse_header(rom: bytes) -> Dict[str, object]:
 
 def iter_program_words(rom: bytes) -> Iterable[int]:
     header = parse_header(rom)
-    count = int(header["active_program_words"])
-    offset = int(header["entry_offset"])
+    count = header["active_program_words"]
+    offset = header["entry_offset"]
     for index in range(count):
         yield struct.unpack_from("<Q", rom, offset + index * WORD_SIZE)[0]
 
 
-def validate_rom(rom: bytes, require_reference_hash: bool = False) -> Dict[str, object]:
+def validate_rom(rom: bytes, require_reference_hash: bool = False) -> HeaderInfo:
     """Validate size, geometry, code CRC, and optionally the reference hash."""
 
     header = parse_header(rom)
     expected_crc = zlib.crc32(rom[HEADER_SIZE:]) & 0xFFFFFFFF
-    if int(header["code_crc32"]) != expected_crc:
+    if header["code_crc32"] != expected_crc:
         raise ValueError("ROM code CRC mismatch")
     if header["shape"] != (NX, NY, NZ):
         raise ValueError("ROM geometry mismatch")
-    if int(header["total_bits"]) != TOTAL_BITS:
+    if header["total_bits"] != TOTAL_BITS:
         raise ValueError("ROM logical bit count mismatch")
-    if int(header["dense_state_bytes"]) != STATE_BYTES:
+    if header["dense_state_bytes"] != STATE_BYTES:
         raise ValueError("ROM dense-state byte count mismatch")
     if require_reference_hash and header["sha256"] != EXPECTED_SHA256:
         raise ValueError("ROM reference SHA-256 mismatch")
     return header
 
 
-def write_rom(path: Path) -> Dict[str, object]:
+def write_rom(path: Path) -> HeaderInfo:
     rom = build_rom()
     path.write_bytes(rom)
     return validate_rom(rom, require_reference_hash=True)
