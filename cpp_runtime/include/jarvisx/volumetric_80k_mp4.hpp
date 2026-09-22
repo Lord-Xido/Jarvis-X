@@ -229,7 +229,11 @@ public:
     }
 
     StepReceipt step(std::uint64_t cycle) {
-        const Vec3u voxel = resolve(cycle);
+        return step_at(cycle, resolve(cycle));
+    }
+
+    StepReceipt step_at(std::uint64_t cycle, const Vec3u& voxel) {
+        (void)pack_voxel(voxel);
         const Vec3u brick_coord{
             voxel.x / kBrickEdge,
             voxel.y / kBrickEdge,
