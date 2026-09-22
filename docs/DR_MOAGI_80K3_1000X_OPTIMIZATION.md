@@ -90,11 +90,22 @@ fast-path wall time
 measured speedup
 ```
 
-Run:
+Run the A/B benchmark:
 
 ```bash
 ./build/cpp-runtime/DrMoagi-80K3-Fast-Bench \
   --ticks 4 \
+  --candidates 64 \
+  --select-ratio 0.10 \
+  --active-bricks 64
+```
+
+Run the operational DM80K runtime with the portable scheduler enabled:
+
+```bash
+./build/cpp-runtime/DrMoagi-80K3-MP4 \
+  --cycles 60 \
+  --fast \
   --candidates 64 \
   --select-ratio 0.10 \
   --active-bricks 64
