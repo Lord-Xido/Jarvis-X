@@ -49,6 +49,15 @@ int main() {
     assert(stats.candidates_seen == 8u);
     assert(stats.cache_hits == 4u);
 
+    RuntimePolicy tiny_runtime{};
+    tiny_runtime.max_active_bricks = 1u;
+    Scheduler eviction_scheduler(cached, tiny_runtime);
+    const auto evict_first = eviction_scheduler.tick(0u);
+    const auto evict_second = eviction_scheduler.tick(1u);
+    assert(evict_first.processed == 4u);
+    assert(evict_second.cache_hits == 0u);
+    assert(evict_second.processed == 4u);
+
     std::cout << "80K^3 fast-path regressions passed\n";
     return 0;
 }
