@@ -256,7 +256,7 @@ public:
         const bool committed = finite && non_worsening && within_ceiling;
 
         if (committed) {
-            commit_adaptation();
+            commit_adaptation(mse_after);
             ++stats_.commits;
         } else {
             ++stats_.rollbacks;
@@ -473,12 +473,12 @@ private:
         }
     }
 
-    void commit_adaptation() {
+    void commit_adaptation(float mse) {
         const float rho = policy_.omega_decay;
         for (std::size_t i = 0; i < kLatentDim; ++i) {
             const float omega_candidate =
                 rho * omega_[i] + (1.0F - rho) * latent_[i];
-            const float gradient = stats_.last_mse * latent_[i];
+            const float gradient = mse * latent_[i];
             const float theta_candidate =
                 std::clamp(theta_[i] - policy_.learning_rate * gradient, -2.0F, 2.0F);
             omega_[i] = omega_candidate;
