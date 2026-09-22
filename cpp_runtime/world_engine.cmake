@@ -100,3 +100,30 @@ jarvisx_harden(jarvisx-volumetric-rom-ann-tests)
 
 add_test(NAME volumetric-rom-ann-regressions COMMAND jarvisx-volumetric-rom-ann-tests)
 set_tests_properties(volumetric-rom-ann-regressions PROPERTIES TIMEOUT 120)
+
+
+add_executable(jarvisx-volumetric-80k-mp4
+    src/volumetric_80k_mp4_main.cpp
+)
+set_target_properties(jarvisx-volumetric-80k-mp4 PROPERTIES
+    OUTPUT_NAME "DrMoagi-80K3-MP4")
+jarvisx_include_runtime(jarvisx-volumetric-80k-mp4)
+jarvisx_harden(jarvisx-volumetric-80k-mp4)
+
+add_test(
+    NAME volumetric-80k-mp4-runtime-smoke
+    COMMAND jarvisx-volumetric-80k-mp4
+        --cycles 2
+        --active-bricks 2
+        --quiet
+)
+set_tests_properties(volumetric-80k-mp4-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-volumetric-80k-mp4-tests
+    tests/volumetric_80k_mp4_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-volumetric-80k-mp4-tests)
+jarvisx_harden(jarvisx-volumetric-80k-mp4-tests)
+
+add_test(NAME volumetric-80k-mp4-regressions COMMAND jarvisx-volumetric-80k-mp4-tests)
+set_tests_properties(volumetric-80k-mp4-regressions PROPERTIES TIMEOUT 120)
