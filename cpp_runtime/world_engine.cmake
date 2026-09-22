@@ -119,6 +119,18 @@ add_test(
 )
 set_tests_properties(volumetric-80k-mp4-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME volumetric-80k-mp4-fast-runtime-smoke
+    COMMAND jarvisx-volumetric-80k-mp4
+        --cycles 2
+        --active-bricks 8
+        --fast
+        --candidates 8
+        --select-ratio 0.25
+        --quiet
+)
+set_tests_properties(volumetric-80k-mp4-fast-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-volumetric-80k-mp4-tests
     tests/volumetric_80k_mp4_tests.cpp
 )
