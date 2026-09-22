@@ -106,7 +106,8 @@ public:
             auto cache_it = cache_.find(candidate.brick_key);
 
             if (cache_it != cache_.end() &&
-                coherent(cache_it->second, tick_index)) {
+                coherent(cache_it->second, tick_index) &&
+                engine_.activate_resident_brick(candidate.brick_key)) {
                 ++cache_hits;
                 ++cache_it->second.touches;
                 continue;
