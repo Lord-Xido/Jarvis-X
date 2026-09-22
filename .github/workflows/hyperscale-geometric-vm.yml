@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Validate numerical model and scripts
@@ -36,7 +36,7 @@ jobs:
           THREE_JS_PATH: ${{ runner.temp }}/hyperscale-browser/node_modules/three/build/three.min.js
           SCREENSHOT_DIR: ${{ runner.temp }}/hyperscale-screenshots
         run: node apps/hyperscale-geometric-vm/test_browser.cjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: hyperscale-browser-screenshots
