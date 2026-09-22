@@ -120,6 +120,16 @@ public:
 
     [[nodiscard]] std::size_t size() const noexcept { return bricks_.size(); }
 
+    Brick* find(std::uint64_t key) noexcept {
+        const auto it = bricks_.find(key);
+        return it == bricks_.end() ? nullptr : &it->second;
+    }
+
+    const Brick* find(std::uint64_t key) const noexcept {
+        const auto it = bricks_.find(key);
+        return it == bricks_.end() ? nullptr : &it->second;
+    }
+
     [[nodiscard]] std::uint64_t resident_bytes() const noexcept {
         return static_cast<std::uint64_t>(bricks_.size()) *
                static_cast<std::uint64_t>(kBrickVoxels) *
@@ -283,6 +293,20 @@ public:
     }
 
     [[nodiscard]] const EngineStats& stats() const noexcept { return stats_; }
+
+    [[nodiscard]] bool has_resident_brick(std::uint64_t key) const noexcept {
+        return store_.find(key) != nullptr;
+    }
+
+    bool activate_resident_brick(std::uint64_t key) noexcept {
+        Brick* brick = store_.find(key);
+        if (brick == nullptr) {
+            return false;
+        }
+        current_ = brick;
+        ++brick->touches;
+        return true;
+    }
 
     [[nodiscard]] std::vector<std::uint8_t> render_rgb(
         std::uint32_t width,
