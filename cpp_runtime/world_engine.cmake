@@ -127,3 +127,24 @@ jarvisx_harden(jarvisx-volumetric-80k-mp4-tests)
 
 add_test(NAME volumetric-80k-mp4-regressions COMMAND jarvisx-volumetric-80k-mp4-tests)
 set_tests_properties(volumetric-80k-mp4-regressions PROPERTIES TIMEOUT 120)
+
+
+add_executable(jarvisx-volumetric-80k-fast-bench
+    src/volumetric_80k_fast_bench.cpp
+)
+set_target_properties(jarvisx-volumetric-80k-fast-bench PROPERTIES
+    OUTPUT_NAME "DrMoagi-80K3-Fast-Bench")
+jarvisx_include_runtime(jarvisx-volumetric-80k-fast-bench)
+jarvisx_harden(jarvisx-volumetric-80k-fast-bench)
+
+add_executable(jarvisx-volumetric-80k-fastpath-tests
+    tests/volumetric_80k_fastpath_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-volumetric-80k-fastpath-tests)
+jarvisx_harden(jarvisx-volumetric-80k-fastpath-tests)
+
+add_test(
+    NAME volumetric-80k-fastpath-regressions
+    COMMAND jarvisx-volumetric-80k-fastpath-tests
+)
+set_tests_properties(volumetric-80k-fastpath-regressions PROPERTIES TIMEOUT 120)
