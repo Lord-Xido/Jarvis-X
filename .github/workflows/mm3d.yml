@@ -1,0 +1,52 @@
+name: Jarvis-X MM3D
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/mm3d_engine.py"
+      - "tests/test_mm3d_engine.py"
+      - "docs/MM3D_ENGINE.md"
+      - "pyproject.toml"
+      - ".github/workflows/mm3d.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/mm3d_engine.py"
+      - "tests/test_mm3d_engine.py"
+      - "pyproject.toml"
+      - ".github/workflows/mm3d.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mm3d-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  neural-smoke:
+    name: Trainable MM3D smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install MM3D backend
+        run: python -m pip install -e ".[mm3d]" pytest
+
+      - name: Compile neural backend
+        run: python -m py_compile src/jarvisx/mm3d_engine.py tests/test_mm3d_engine.py
+
+      - name: Run MM3D forward/backward smoke tests
+        run: pytest -q -o addopts="" tests/test_mm3d_engine.py
+
+      - name: Run bounded generation smoke
+        run: jarvisx-mm3d --steps 1 --out /tmp/mm3d-output
