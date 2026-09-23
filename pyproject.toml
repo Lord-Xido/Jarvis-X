@@ -59,6 +59,11 @@ test = [
 torch = [
     "torch>=2.4",
 ]
+mm3d = [
+    "torch>=2.4",
+    "numpy>=1.24",
+    "Pillow>=10.0",
+]
 graphics = [
     "numpy>=1.24",
 ]
@@ -92,6 +97,7 @@ jarvisx-dm3d-rom = "jarvisx.dm3d_rom:main"
 jarvisx-dm3d-bit-rom = "jarvisx.dm3d_bit_rom:main"
 jarvisx-dr-moagi-1b = "jarvisx.dr_moagi_1b_intelligence:main"
 jarvisx-nexus3d = "jarvisx.nexus3d_cli:main"
+jarvisx-mm3d = "jarvisx.mm3d_engine:main"
 jarvisx-operationalize = "jarvisx.operationalize:main"
 
 [tool.setuptools]
