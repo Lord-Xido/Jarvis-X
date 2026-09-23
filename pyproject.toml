@@ -123,6 +123,7 @@ branch = true
 omit = [
     "*/tests/*",
     "*/test_*.py",
+    "*/mm3d_engine.py",
 ]
 
 [tool.coverage.report]
