@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>3D-RADE Evolutionary Production Renderer</title>
+<style>
+:root{--bg:#03050a;--panel:rgba(5,12,24,.86);--cyan:#00e7ff;--text:#d8f7ff;--muted:#6ea7ba;--good:#41f59a;--warn:#ffd166;--bad:#ff5c7a}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--text)}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.panel{position:absolute;z-index:3;background:var(--panel);border:1px solid rgba(0,231,255,.25);box-shadow:0 0 28px rgba(0,231,255,.12);backdrop-filter:blur(10px);border-radius:10px;padding:14px}
+#head{left:16px;top:16px;width:min(540px,calc(100vw - 32px))}h1{font-size:16px;margin:0 0 8px;color:var(--cyan);letter-spacing:.08em}#eq{font-size:11px;color:#9ceeff;line-height:1.5}.small{font-size:10px;color:var(--muted)}
+#controls{right:16px;top:16px;width:320px}.row{display:flex;gap:8px;align-items:center;margin:7px 0}.row label{flex:1;font-size:10px;color:#87cae0}.row output{width:74px;text-align:right;color:var(--cyan);font-size:10px}input[type=range]{width:100%}button{border:1px solid rgba(0,231,255,.35);background:rgba(0,231,255,.08);color:var(--cyan);padding:8px 10px;border-radius:6px;cursor:pointer;font:inherit;font-size:10px}button:hover{background:rgba(0,231,255,.18)}button.primary{background:rgba(65,245,154,.12);border-color:rgba(65,245,154,.5);color:var(--good)}
+#telemetry{left:16px;right:16px;bottom:16px;display:grid;grid-template-columns:repeat(8,minmax(88px,1fr));gap:8px}.m{border-left:2px solid rgba(0,231,255,.35);padding-left:8px}.m b{display:block;color:var(--cyan);font-size:13px}.m span{font-size:9px;color:var(--muted)}
+#pipeline{left:16px;top:170px;width:230px}.stage{font-size:10px;padding:6px 8px;margin:5px 0;border:1px solid rgba(255,255,255,.08);border-radius:5px;color:#79aabd}.stage.active{border-color:rgba(0,231,255,.55);color:#dffcff;box-shadow:inset 0 0 12px rgba(0,231,255,.1)}.stage.good{border-color:rgba(65,245,154,.45);color:var(--good)}
+#log{right:16px;bottom:112px;width:320px;max-height:180px;overflow:hidden;font-size:9px;color:#83b8ca}.logline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0}
+@media(max-width:900px){#controls{top:auto;bottom:112px;width:290px}#pipeline{display:none}#telemetry{grid-template-columns:repeat(4,1fr)}#log{display:none}}
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="head" class="panel">
+  <h1>3D‑RADE :: EVOLUTIONARY PRODUCTION RENDERER</h1>
+  <div id="eq">P* = argmax F(P)^α · S(P)^β · N(P)^γ · Q(P)^δ<br/>Generate → Verify → Learn → Measure → Evolve → Deploy → Generate</div>
+  <div class="small">Real 3D voxel state • proof-gated synthetic scenes • continual adaptation • micro-evolution</div>
+</div>
+<div id="pipeline" class="panel">
+  <div class="small">KINETIC EXECUTION</div>
+  <div class="stage" data-stage="seed">1. Seed Pipeline</div>
+  <div class="stage" data-stage="population">2. Population N</div>
+  <div class="stage" data-stage="evaluate">3. Parallel Evaluation</div>
+  <div class="stage" data-stage="select">4. Selection / Mutation</div>
+  <div class="stage" data-stage="deploy">5. Champion Deployment</div>
+  <div class="stage" data-stage="synth">6. Synthetic Scene</div>
+  <div class="stage" data-stage="verify">7. Validation Gate</div>
+  <div class="stage" data-stage="learn">8. Continual Learning</div>
+  <div class="stage" data-stage="micro">9. Micro‑Evolution</div>
+</div>
+<div id="controls" class="panel">
+  <div class="row"><label>Voxel side</label><output id="gridOut">12³</output></div><input id="grid" type="range" min="8" max="20" step="2" value="12" />
+  <div class="row"><label>Population</label><output id="popOut">18</output></div><input id="pop" type="range" min="6" max="40" step="2" value="18" />
+  <div class="row"><label>Mutation σ</label><output id="mutOut">0.080</output></div><input id="mut" type="range" min="0.01" max="0.25" step="0.005" value="0.08" />
+  <div class="row"><label>Convergence ε</label><output id="epsOut">0.0005</output></div><input id="eps" type="range" min="0.0001" max="0.01" step="0.0001" value="0.0005" />
+  <div class="row"><button class="primary" id="toggle">START</button><button id="step">STEP</button><button id="reset">RESET</button></div>
+</div>
+<div id="log" class="panel"></div>
+<div id="telemetry" class="panel">
+  <div class="m"><b id="mode">IDLE</b><span>MODE</span></div>
+  <div class="m"><b id="gen">0</b><span>GENERATION</span></div>
+  <div class="m"><b id="fit">0.0000</b><span>FITNESS</span></div>
+  <div class="m"><b id="fid">0.0000</b><span>FIDELITY</span></div>
+  <div class="m"><b id="spd">0.0000</b><span>SPEED</span></div>
+  <div class="m"><b id="nov">0.0000</b><span>NOVELTY</span></div>
+  <div class="m"><b id="val">0.0000</b><span>VALIDITY</span></div>
+  <div class="m"><b id="accepted">0</b><span>VERIFIED SCENES</span></div>
+</div>
+<script>
+'use strict';
+const TAU=Math.PI*2, clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const gauss=()=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v)};
+const mix=(a,b,t)=>a+(b-a)*t;
+
+class Grid3D{
+  constructor(n){this.n=n;this.count=n*n*n;this.xyz=new Float32Array(this.count*3);let k=0;for(let z=0;z<n;z++)for(let y=0;y<n;y++)for(let x=0;x<n;x++){this.xyz[k*3]=(x/(n-1))*2-1;this.xyz[k*3+1]=(y/(n-1))*2-1;this.xyz[k*3+2]=(z/(n-1))*2-1;k++;}}
+}
+
+const PARAM_KEYS=['freq','phase','warp','threshold','gain','bias','torus','twist'];
+const BOUNDS={freq:[0.5,4.5],phase:[-Math.PI,Math.PI],warp:[0,1.5],threshold:[0.1,0.9],gain:[0.5,6],bias:[-1.5,1.5],torus:[0.1,1.2],twist:[-2,2]};
+const DEFAULT={freq:2.25,phase:.4,warp:.48,threshold:.50,gain:3.3,bias:-.12,torus:.58,twist:.36};
+function randomParams(){const p={};for(const k of PARAM_KEYS){const [a,b]=BOUNDS[k];p[k]=mix(a,b,Math.random())}return p}
+function bounded(p){const q={};for(const k of PARAM_KEYS){const [a,b]=BOUNDS[k];q[k]=clamp(p[k],a,b)}return q}
+function mutate(p,sigma){const q={...p};for(const k of PARAM_KEYS){const [a,b]=BOUNDS[k];q[k]+=gauss()*sigma*(b-a);q[k]=clamp(q[k],a,b)}return q}
+function cross(a,b){const q={};for(const k of PARAM_KEYS){const t=Math.random();q[k]=mix(a[k],b[k],t)}return bounded(q)}
+
+function targetDensity(x,y,z,scene=DEFAULT){
+  const r=Math.hypot(x,y,z);const ring=Math.hypot(x,y)-scene.torus;const tor=Math.hypot(ring,z);
+  const shell=Math.exp(-18*(r-.62)*(r-.62));const torus=Math.exp(-22*(tor-.22)*(tor-.22));
+  const wave=.5+.5*Math.sin(scene.freq*(x+y+z)*Math.PI+scene.phase+scene.twist*Math.atan2(y,x));
+  return clamp(.56*shell+.32*torus+.12*wave);
+}
+function predictDensity(x,y,z,p){
+  const r=Math.hypot(x,y,z);const a=Math.atan2(y,x);const zz=z+p.warp*Math.sin(p.freq*a+p.phase)*.16;
+  const ring=Math.hypot(x,y)-p.torus;const tor=Math.hypot(ring,zz);const f=.58*Math.exp(-p.gain*5*(r-.62)*(r-.62))+.30*Math.exp(-p.gain*6*(tor-.22)*(tor-.22));
+  const wave=.12*(.5+.5*Math.sin(p.freq*(x+y+z)*Math.PI+p.phase+p.twist*a));
+  const raw=f+wave+p.bias*.08;return clamp((raw-(p.threshold-.5)*.35));
+}
+
+class Variant{
+  constructor(params){this.p=bounded(params||randomParams());this.fitness=0;this.fidelity=0;this.speed=0;this.novelty=0;this.validity=0;this.ms=0;this.field=null}
+  evaluate(grid,target,centroid){
+    const t0=performance.now(), out=new Float32Array(grid.count);let mse=0, tv=0, mean=0;
+    for(let i=0;i<grid.count;i++){const j=i*3,x=grid.xyz[j],y=grid.xyz[j+1],z=grid.xyz[j+2],v=predictDensity(x,y,z,this.p),t=targetDensity(x,y,z,target);out[i]=v;const d=v-t;mse+=d*d;mean+=v;if(i>0)tv+=Math.abs(v-out[i-1]);}
+    this.ms=Math.max(.001,performance.now()-t0);this.fidelity=clamp(1-mse/grid.count);this.speed=clamp(1/(1+this.ms/2));
+    let nd=0;for(const k of PARAM_KEYS){const [a,b]=BOUNDS[k];nd+=Math.abs(this.p[k]-centroid[k])/(b-a)}this.novelty=clamp(nd/PARAM_KEYS.length*2);
+    mean/=grid.count;tv/=Math.max(1,grid.count-1);const finite=Number.isFinite(mean)&&Number.isFinite(tv)?1:0;const occupancy=1-Math.min(1,Math.abs(mean-.35)/.65);const coherence=1-Math.min(1,tv*.9);this.validity=clamp(finite*(.45*occupancy+.55*coherence));
+    const e=1e-9;this.fitness=Math.exp(.48*Math.log(this.fidelity+e)+.14*Math.log(this.speed+e)+.12*Math.log(this.novelty+e)+.26*Math.log(this.validity+e));this.field=out;return this;
+  }
+}
+
+class MetaController{
+  constructor(){this.reset()}
+  reset(){this.grid=new Grid3D(+gridEl.value);this.population=[];this.generation=0;this.best=null;this.prevBest=0;this.stable=0;this.converged=false;this.mode='IDLE';this.accepted=0;this.rejected=0;this.onlineStep=0;this.scene={...DEFAULT};this.stage('seed');this.seed();this.renderTelemetry();log('Seed pipeline initialized');}
+  seed(){const n=+popEl.value;this.population=[new Variant({...DEFAULT})];while(this.population.length<n)this.population.push(new Variant());}
+  centroid(){const c={};for(const k of PARAM_KEYS)c[k]=this.population.reduce((s,v)=>s+v.p[k],0)/this.population.length;return c}
+  evaluate(){this.stage('evaluate');const c=this.centroid();for(const v of this.population)v.evaluate(this.grid,this.scene,c);this.population.sort((a,b)=>b.fitness-a.fitness);this.best=this.population[0];this.generation++;const delta=Math.abs(this.best.fitness-this.prevBest);this.stable=delta<+epsEl.value?this.stable+1:0;this.prevBest=this.best.fitness;if(this.stable>=7)this.converged=true;}
+  evolve(){this.stage('select');const keep=Math.max(2,Math.ceil(this.population.length*.25)), elite=this.population.slice(0,keep), next=[new Variant({...elite[0].p})];while(next.length<+popEl.value){const a=elite[(Math.random()*keep)|0],b=elite[(Math.random()*keep)|0];next.push(new Variant(mutate(cross(a.p,b.p),+mutEl.value)))}this.population=next;this.stage('population');}
+  generationStep(){this.mode='EVOLVING';this.evaluate();if(this.converged){this.mode='PRODUCTION';this.stage('deploy');log(`Converged at generation ${this.generation}; champion deployed`)}else this.evolve();this.renderTelemetry();}
+  generateScene(){this.stage('synth');const s={...DEFAULT};for(const k of PARAM_KEYS){const [a,b]=BOUNDS[k];s[k]=clamp(DEFAULT[k]+gauss()*.035*(b-a),a,b)}return s}
+  validateScene(s){this.stage('verify');let ok=true;for(const k of PARAM_KEYS){const [a,b]=BOUNDS[k];ok=ok&&Number.isFinite(s[k])&&s[k]>=a&&s[k]<=b}const probes=[[-1,-1,-1],[0,0,0],[.5,.5,.5],[1,1,1]];for(const q of probes){const v=targetDensity(q[0],q[1],q[2],s);ok=ok&&Number.isFinite(v)&&v>=0&&v<=1}return ok}
+  lossFor(p,scene,sample=320){let mse=0;for(let i=0;i<sample;i++){const x=Math.random()*2-1,y=Math.random()*2-1,z=Math.random()*2-1,d=predictDensity(x,y,z,p)-targetDensity(x,y,z,scene);mse+=d*d}return mse/sample}
+  learn(scene){this.stage('learn');if(!this.best)return;const p={...this.best.p}, lr=.055, h=1e-3;for(const k of PARAM_KEYS){const [a,b]=BOUNDS[k], span=b-a, p1={...p},p2={...p};p1[k]=clamp(p[k]+h*span,a,b);p2[k]=clamp(p[k]-h*span,a,b);const g=(this.lossFor(p1,scene,180)-this.lossFor(p2,scene,180))/(2*h*span);p[k]=clamp(p[k]-lr*g*span,a,b)}this.best=new Variant(p);const c=this.centroid();this.best.evaluate(this.grid,this.scene,c);}
+  microEvolve(){this.stage('micro');const base=this.best?.p||DEFAULT, candidates=[new Variant({...base})];for(let i=1;i<Math.max(8,Math.floor(+popEl.value/2));i++)candidates.push(new Variant(mutate(base,+mutEl.value*.35)));const c=this.centroid();for(const v of candidates)v.evaluate(this.grid,this.scene,c);candidates.sort((a,b)=>b.fitness-a.fitness);if(candidates[0].fitness>(this.best?.fitness||0))this.best=candidates[0];this.stage('deploy');}
+  online(){this.mode='PRODUCTION';const scene=this.generateScene();if(!this.validateScene(scene)){this.rejected++;log('Synthetic scene rejected by validation gate');return}this.accepted++;this.onlineStep++;this.learn(scene);if(this.onlineStep%12===0)this.microEvolve();else this.stage('deploy');this.renderTelemetry();}
+  tick(){if(!this.converged)this.generationStep();else this.online()}
+  stage(name){document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x.dataset.stage===name))}
+  renderTelemetry(){modeEl.textContent=this.mode;genEl.textContent=this.generation;const b=this.best;if(b){fitEl.textContent=b.fitness.toFixed(4);fidEl.textContent=b.fidelity.toFixed(4);spdEl.textContent=b.speed.toFixed(4);novEl.textContent=b.novelty.toFixed(4);valEl.textContent=b.validity.toFixed(4)}accEl.textContent=this.accepted;}
+}
+
+const canvas=document.getElementById('view'),ctx=canvas.getContext('2d',{alpha:false});let W=0,H=0,dpr=1,angle=0;
+function resize(){dpr=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
+function project(x,y,z){const ca=Math.cos(angle),sa=Math.sin(angle),x1=x*ca-z*sa,z1=x*sa+z*ca,cb=Math.cos(angle*.63),sb=Math.sin(angle*.63),y1=y*cb-z1*sb,z2=y*sb+z1*cb,cam=3.2,sc=Math.min(W,H)*.24/(cam-z2);return [W*.52+x1*sc,H*.54-y1*sc,sc,z2]}
+function draw(){angle+=.0025;ctx.fillStyle='#03050a';ctx.fillRect(0,0,W,H);const b=controller.best||controller.population[0];if(b&&!b.field){const c=controller.centroid();b.evaluate(controller.grid,controller.scene,c)}const pts=[],g=controller.grid,f=b?.field;if(f){for(let i=0;i<g.count;i++){const v=f[i];if(v<.33)continue;const j=i*3,p=project(g.xyz[j],g.xyz[j+1],g.xyz[j+2]);pts.push([p[3],p[0],p[1],p[2],v])}pts.sort((a,b)=>a[0]-b[0]);for(const p of pts){const a=clamp((p[4]-.3)*1.5),r=clamp(p[2]*.025,1.1,4.3);ctx.beginPath();ctx.arc(p[1],p[2],r,0,TAU);ctx.fillStyle=`rgba(${Math.floor(40+80*p[4])},${Math.floor(180+70*p[4])},255,${.10+.70*a})`;ctx.fill()}}
+  ctx.strokeStyle='rgba(0,231,255,.08)';ctx.beginPath();const o=project(0,0,0);for(const q of [[1,0,0],[0,1,0],[0,0,1]]){const p=project(...q);ctx.moveTo(o[0],o[1]);ctx.lineTo(p[0],p[1])}ctx.stroke();requestAnimationFrame(draw)}requestAnimationFrame(draw);
+
+const gridEl=document.getElementById('grid'),popEl=document.getElementById('pop'),mutEl=document.getElementById('mut'),epsEl=document.getElementById('eps');
+const modeEl=document.getElementById('mode'),genEl=document.getElementById('gen'),fitEl=document.getElementById('fit'),fidEl=document.getElementById('fid'),spdEl=document.getElementById('spd'),novEl=document.getElementById('nov'),valEl=document.getElementById('val'),accEl=document.getElementById('accepted');
+function bind(el,out,fmt=x=>x){const o=document.getElementById(out);const f=()=>o.textContent=fmt(el.value);el.addEventListener('input',f);f()}bind(gridEl,'gridOut',x=>`${x}³`);bind(popEl,'popOut');bind(mutEl,'mutOut',x=>(+x).toFixed(3));bind(epsEl,'epsOut',x=>(+x).toFixed(4));
+const logBox=document.getElementById('log');function log(s){const d=document.createElement('div');d.className='logline';d.textContent=`${new Date().toLocaleTimeString()}  ${s}`;logBox.prepend(d);while(logBox.children.length>12)logBox.lastChild.remove()}
+let controller=new MetaController(),running=false,last=0;function loop(t){if(running&&t-last>85){controller.tick();last=t}requestAnimationFrame(loop)}requestAnimationFrame(loop);
+document.getElementById('toggle').onclick=e=>{running=!running;e.target.textContent=running?'PAUSE':'START';log(running?'Autonomous loop started':'Loop paused')};
+document.getElementById('step').onclick=()=>controller.tick();document.getElementById('reset').onclick=()=>{running=false;document.getElementById('toggle').textContent='START';controller=new MetaController()};
+for(const el of [gridEl,popEl])el.addEventListener('change',()=>{if(!running)controller=new MetaController()});
+</script>
+</body>
+</html>
