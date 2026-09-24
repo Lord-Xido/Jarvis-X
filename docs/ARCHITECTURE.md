@@ -187,6 +187,7 @@ The research transform cannot make itself authoritative merely by computing a ca
 16. **Transform precision separation:** orthogonal transform/quantization error is measured against its own deterministic bound and is not absorbed into render, cycle or perceptual tolerances.
 17. **Normalize before inversion:** a backend may use `D^T` as the inverse only when the declared transform has passed its orthonormality contract within tolerance.
 18. **Diagnose before widening:** a precision-gate failure triggers transform/payload/precision diagnosis before any quantization threshold is relaxed.
+19. **Audited fixed-point claims:** convergence, cohomological audit scope, candidate-set optimality and invariant-class assumptions are reported separately; a TERMINUS receipt cannot promote itself above the normal candidate-first admission boundary.
 
 ## 5. Data contracts
 
@@ -378,6 +379,8 @@ ADR-004 extends ADR-003 by defining the Moagi-Helmholtz multimodal generative, g
 
 ADR-005 extends ADR-004 by defining the orthogonal transform normalization, quantization error envelope and precision-gate semantics used by eligible latent/archive backends.
 
+ADR-029 defines the bounded codec/Markov mixing, five-rate bottleneck, geometric cost, graph-nerve H^1 audit and Kleene/TERMINUS reference contract. It remains a Layer 5 research operator and does not redefine canonical VM authority.
+
 ## 8. Security boundary
 
 The policy layer is an application-level guard, not a complete security sandbox. Untrusted bytecode, native plugins, model files and browser content require dedicated threat models. See [`SECURITY.md`](../SECURITY.md).
@@ -523,3 +526,59 @@ E_anchor  drift from immutable source anchor
 A backend is not permitted to trade a failed `Lambda_Q` against a permissive `E_render` or `E_cycle`.  Numerical correctness at the transform boundary is a prerequisite for higher-level quality optimization.
 
 The reference implementation is `src/jarvisx/orthogonal_quantization.py`.  Optimized C++, CUDA, DMEB, FPGA, native SIMD or codec-specific implementations must reproduce the same declared transform, quantizer and receipt semantics before promotion.
+
+
+## 12. Audited codec TERMINUS permeation
+
+The ADR-029 research chain composes finite codec transport, rate bottlenecks,
+geometric metadata, a conservative graph-nerve cohomology audit and bounded
+fixed-point refinement:
+
+```text
+X --E--> Y --T--> Y --D--> X
+              |
+              v
+        R = D @ T @ E
+              |
+              v
+        p_(t+1) = R p_t
+              |
+              v
+nu_eff = min(nu_syn, nu_bw, nu_q, nu_th, nu_ch)
+              |
+              v
+(position, bitplane, stage)
+              |
+              v
+C(n) = c*n, c ~= 4
+              |
+              v
+overlap audit + graph-nerve H^1
+              |
+              v
+bounded Kleene refinement
+              |
+              v
+minimum-cost audited fixed point
+              |
+              v
+           TERMINUS
+```
+
+This layer is deliberately evidence-scoped:
+
+- observed Markov convergence is not promoted into a spectral mixing theorem
+  without irreducibility/aperiodicity/gap hypotheses;
+- the `H^1` implementation is the constant-coefficient 1D nerve-graph case,
+  not general sheaf cohomology;
+- `c ~= 4` is a normalized linear cost coefficient, while total cost remains
+  `Theta(n)`;
+- Kleene iteration checks the realized ascending chain but does not prove global
+  monotonicity or Scott continuity;
+- `P*` is optimal only over the supplied audited fixed-point candidates;
+- an invariant class `C` with `S(C) subseteq C` cannot be escaped by that
+  unchanged autonomous operator. External input/operator changes remain typed,
+  policy-gated transitions.
+
+The executable reference is `src/jarvisx/codec_terminus.py`, with conformance
+tests in `tests/test_codec_terminus.py`.
