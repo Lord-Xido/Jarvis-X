@@ -349,6 +349,7 @@ Every canonical subsystem should provide:
 
 ## Documentation
 
+- [Dr Moagi Multimodal ROM 3D — million-cubed sparse codec and kinetic visualizer](apps/multimodal-rom-3d/README.md)
 - [Hyperscale Geometric VM — standalone 64,000-particle browser demo](apps/hyperscale-geometric-vm/README.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
