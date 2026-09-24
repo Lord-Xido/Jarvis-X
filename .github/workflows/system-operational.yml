@@ -45,6 +45,8 @@ jobs:
         run: node --test apps/dr-moagi-cognitive/test_core.mjs
       - name: Geometry optimizer tests
         run: node --test apps/dr-moagi-geometry/test_core.mjs
+      - name: Multimodal 3D ROM tests
+        run: node --test apps/multimodal-rom-3d/test_core.mjs
 
   java-kernel:
     name: Java kernel
