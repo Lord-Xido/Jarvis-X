@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Auto-Executing Bytecode & 3D Geometry Pipeline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            900: '#020617',
+                            800: '#0f172a',
+                            700: '#1e293b',
+                            600: '#334155',
+                            accent: '#0ea5e9',
+                            glow: '#38bdf8',
+                            emerald: '#10b981',
+                            amber: '#f59e0b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #020617; font-family: ui-sans-serif, system-ui, sans-serif; }
+        .glass-panel { background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(16px); border: 1px solid rgba(14, 165, 233, 0.25); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 2px; }
+    </style>
+</head>
+<body class="text-slate-100 h-screen w-screen flex flex-col overflow-hidden">
+
+    <header class="glass-panel z-10 px-6 py-3 flex justify-between items-center border-b border-sky-500/20 shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+            <h1 class="text-xs font-bold tracking-widest text-cyan-400">AUTO-EXECUTING BYTECODE VIRTUAL MACHINE & GEOMETRY PIPELINE</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="text-[10px] text-slate-500 font-mono">VISUALIZATION / SIMULATION</span>
+            <span class="text-xs text-slate-400 font-mono">EXECUTION: <span id="exec-status" class="text-emerald-400 font-bold">AUTO-RUNNING</span></span>
+            <div id="pc-counter" class="text-xs bg-slate-900 px-3 py-1 rounded-md text-amber-400 font-mono border border-amber-500/30">PC: 0x7FF88</div>
+        </div>
+    </header>
+
+    <main class="flex-1 relative flex overflow-hidden">
+        <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+        <aside class="relative z-10 w-[440px] m-4 flex flex-col space-y-3 pointer-events-auto overflow-y-auto max-h-[calc(100vh-5rem)]">
+            <div class="glass-panel p-4 rounded-xl shadow-2xl space-y-2">
+                <div class="flex justify-between items-center border-b border-sky-500/20 pb-2">
+                    <h2 class="text-xs font-semibold tracking-wider text-cyan-300 uppercase">1. Auto-Executing Instruction Stream</h2>
+                    <span id="cycle-badge" class="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 px-2 py-0.5 rounded">CLK: 4.2 GHz</span>
+                </div>
+                <div id="bytecode-disassembly" class="bg-slate-950/95 rounded-lg p-3 font-mono text-[11px] space-y-1.5 border border-slate-900 text-slate-300 h-44 overflow-y-auto">
+                    <div id="inst-0" class="text-slate-500 transition-colors">[0x7FF80] LDX.V3    R1, [VBO_BASE_PTR]   ; Load vertex buffer offset</div>
+                    <div id="inst-1" class="text-slate-500 transition-colors">[0x7FF84] SHL.IMM   R2, R1, 0x03         ; Compute 2^3 scale shift</div>
+                    <div id="inst-2" class="text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded transition-colors">[0x7FF88] MAT4.MUL  R3, R4, TRANS_UNIFORM ; Multiply model matrix</div>
+                    <div id="inst-3" class="text-slate-500 transition-colors">[0x7FF8C] RAST.DIR  VOXEL_GRID, 81-OCT   ; Raymarch volumetric blocks</div>
+                    <div id="inst-4" class="text-slate-500 transition-colors">[0x7FF90] SYNC.FB   FRAMEBUFFER_FLUSH    ; Commit pixels to screen</div>
+                    <div id="inst-5" class="text-slate-500 transition-colors">[0x7FF94] JMP.RET   0x7FF80              ; Loop back instruction queue</div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                    <button id="btn-toggle-auto" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-lg py-1.5 font-medium transition text-xs">Pause Stream</button>
+                    <button id="btn-step" class="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg py-1.5 font-medium transition text-xs">Step Once</button>
+                    <button id="btn-reset" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg py-1.5 font-medium transition text-xs">Reset PC</button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-xl shadow-2xl space-y-2">
+                <h3 class="text-xs font-semibold tracking-wide text-amber-300 uppercase">2. Hardware Register Matrix (R0 - R7)</h3>
+                <div class="bg-slate-950/90 rounded-lg p-3 font-mono text-[11px] grid grid-cols-2 gap-2 border border-slate-900 text-slate-300">
+                    <div class="flex justify-between border-b border-slate-900 pb-1">
+                        <span class="text-slate-500">R0 (Base):</span>
+                        <span id="reg-r0" class="text-cyan-400">0x00000008</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-900 pb-1">
+                        <span class="text-slate-500">R1 (Depth):</span>
+                        <span id="reg-r1" class="text-cyan-400">0x00000003</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-900 pb-1">
+                        <span class="text-slate-500">R2 (Scale):</span>
+                        <span id="reg-r2" class="text-emerald-400">0x00000040</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-900 pb-1">
+                        <span class="text-slate-500">R3 (Matrix):</span>
+                        <span id="reg-r3" class="text-emerald-400">0x7FFF8A40</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">R4 (Flags):</span>
+                        <span id="reg-r4" class="text-amber-400">0x00000001</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">R5 (Clock):</span>
+                        <span id="reg-r5" class="text-amber-400">4.20 GHz</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-xl shadow-2xl space-y-3">
+                <h3 class="text-xs font-semibold tracking-wide text-cyan-300 uppercase">3. Operational Arithmetic Mapping</h3>
+                <div class="space-y-2 text-xs">
+                    <div>
+                        <div class="flex justify-between text-slate-400 mb-1">
+                            <span>Recursion Depth (2^N)</span>
+                            <span id="val-depth" class="text-cyan-400 font-mono">2^3 (8 Voxels)</span>
+                        </div>
+                        <input type="range" id="slider-depth" min="1" max="5" value="3" class="w-full accent-cyan-400 cursor-pointer">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-slate-400 mb-1">
+                            <span>Bytecode Execution Frequency</span>
+                            <span id="val-clock" class="text-emerald-400 font-mono">1.0x (4.2 GHz)</span>
+                        </div>
+                        <input type="range" id="slider-clock" min="0.2" max="3.0" step="0.2" value="1.0" class="w-full accent-emerald-400 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x020617, 0.025);
+
+        const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 3.5, 8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0x0f172a, 3.5);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0x38bdf8, 6.0);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+
+        const pointLight = new THREE.PointLight(0x10b981, 5, 30);
+        pointLight.position.set(-5, -5, -5);
+        scene.add(pointLight);
+
+        let geometryRoot = new THREE.Group();
+        scene.add(geometryRoot);
+
+        let currentDepth = 3;
+        let clockMultiplier = 1.0;
+        let isAutoRunning = true;
+        let currentPCIndex = 2;
+        let lastExecutionTime = 0;
+
+        const pcCounter = document.getElementById('pc-counter');
+        const execStatus = document.getElementById('exec-status');
+
+        const pcAddresses = ["0x7FF80", "0x7FF84", "0x7FF88", "0x7FF8C", "0x7FF90", "0x7FF94"];
+        const regR3Values = ["0x7FFF8A40", "0x7FFF8B20", "0x7FFF8C10", "0x7FFF8D00", "0x7FFF8E90", "0x7FFF8A40"];
+
+        function buildGeometryFromBytecode(depth) {
+            while (geometryRoot.children.length > 0) {
+                const child = geometryRoot.children[0];
+                geometryRoot.remove(child);
+                child.traverse((node) => {
+                    if (node.isMesh) {
+                        if (node.geometry) node.geometry.dispose();
+                        if (node.material) node.material.dispose();
+                    }
+                });
+            }
+
+            for (let i = 0; i < depth; i++) {
+                const scaleFactor = Math.pow(0.5, i);
+                const mat = new THREE.MeshPhysicalMaterial({
+                    color: new THREE.Color().setHSL(0.52 + (i * 0.08), 0.85, 0.52),
+                    metalness: 0.7,
+                    roughness: 0.12,
+                    transmission: 0.4,
+                    transparent: true,
+                    opacity: 0.9,
+                    wireframe: false
+                });
+
+                const subGroup = new THREE.Group();
+                const step = 1;
+                for (let x = -step; x <= step; x += step) {
+                    for (let y = -step; y <= step; y += step) {
+                        for (let z = -step; z <= step; z += step) {
+                            if (i > 0 && Math.abs(x) === step && Math.abs(y) === step && Math.abs(z) === step) continue;
+                            const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), mat.clone());
+                            mesh.position.set(x * scaleFactor * 2.2, y * scaleFactor * 2.2, z * scaleFactor * 2.2);
+                            mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                            subGroup.add(mesh);
+                        }
+                    }
+                }
+                geometryRoot.add(subGroup);
+            }
+        }
+
+        buildGeometryFromBytecode(currentDepth);
+
+        const sliderDepth = document.getElementById('slider-depth');
+        const valDepth = document.getElementById('val-depth');
+        sliderDepth.addEventListener('input', (e) => {
+            currentDepth = parseInt(e.target.value, 10);
+            buildGeometryFromBytecode(currentDepth);
+            const power = Math.pow(2, currentDepth);
+            valDepth.innerText = '2^' + currentDepth + ' (' + power + ' Voxels)';
+            document.getElementById('reg-r1').innerText = '0x' + currentDepth.toString(16).toUpperCase().padStart(8, '0');
+            document.getElementById('reg-r2').innerText = '0x' + (power * 8).toString(16).toUpperCase().padStart(8, '0');
+        });
+
+        const sliderClock = document.getElementById('slider-clock');
+        const valClock = document.getElementById('val-clock');
+        sliderClock.addEventListener('input', (e) => {
+            clockMultiplier = parseFloat(e.target.value);
+            const displayedGHz = clockMultiplier * 4.2;
+            valClock.innerText = clockMultiplier.toFixed(1) + 'x (' + displayedGHz.toFixed(1) + ' GHz)';
+            document.getElementById('reg-r5').innerText = displayedGHz.toFixed(2) + ' GHz';
+            document.getElementById('cycle-badge').innerText = 'CLK: ' + displayedGHz.toFixed(1) + ' GHz';
+        });
+
+        const btnToggleAuto = document.getElementById('btn-toggle-auto');
+        btnToggleAuto.addEventListener('click', () => {
+            isAutoRunning = !isAutoRunning;
+            execStatus.innerText = isAutoRunning ? "AUTO-RUNNING" : "PAUSED";
+            execStatus.className = isAutoRunning ? "text-emerald-400 font-bold" : "text-amber-400 font-bold";
+            btnToggleAuto.innerText = isAutoRunning ? "Pause Stream" : "Resume Stream";
+            btnToggleAuto.className = isAutoRunning ?
+                "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-lg py-1.5 font-medium transition text-xs" :
+                "bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg py-1.5 font-medium transition text-xs";
+        });
+
+        document.getElementById('btn-step').addEventListener('click', advanceBytecodeStep);
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            currentPCIndex = 0;
+            updateBytecodeView();
+        });
+
+        function advanceBytecodeStep() {
+            currentPCIndex = (currentPCIndex + 1) % pcAddresses.length;
+            updateBytecodeView();
+        }
+
+        function updateBytecodeView() {
+            pcCounter.innerText = 'PC: ' + pcAddresses[currentPCIndex];
+            document.getElementById('reg-r3').innerText = regR3Values[currentPCIndex];
+
+            for (let i = 0; i < 6; i++) {
+                const el = document.getElementById('inst-' + i);
+                if (i === currentPCIndex) {
+                    el.className = "text-cyan-400 font-bold bg-cyan-950/40 px-1 rounded transition-colors";
+                } else {
+                    el.className = "text-slate-500 transition-colors";
+                }
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+
+            const executionInterval = 350 / clockMultiplier;
+            if (isAutoRunning && time - lastExecutionTime > executionInterval) {
+                advanceBytecodeStep();
+                lastExecutionTime = time;
+            }
+
+            geometryRoot.rotation.x += 0.004 * clockMultiplier;
+            geometryRoot.rotation.y += 0.007 * clockMultiplier;
+
+            renderer.render(scene, camera);
+        }
+
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
