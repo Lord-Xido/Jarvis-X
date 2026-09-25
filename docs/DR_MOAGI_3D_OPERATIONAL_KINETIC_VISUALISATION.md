@@ -620,3 +620,45 @@ phase, core radius, deformation and displayed throughput should be driven by
 runtime measurements or explicitly labeled synthetic values. The central throat
 represents bounded latent/fixed-point refinement; it is not evidence of physical
 singularity, unlimited compression or unmeasured acceleration.
+\n## Intrinsic projection contract
+
+The intrinsic formulation replaces literal Cartesian "inwardness" with Riemannian
+descent on \((\mathcal Z,g_t)\). Let \(U_t:\mathcal Z\to\mathbb R\) be the
+latent potential. The runtime flow is
+
+\[
+\dot Z=-\operatorname{grad}_{g_t}U_t(Z),
+\]
+
+while the browser renders a chart or embedding of that intrinsic trajectory.
+
+The geometric core is denoted \(\mathcal C_t\subset\mathcal Z\), reserving
+\(\Omega_t\) for temporal / residual memory. A core may be represented by
+
+\[
+\mathcal C_t
+=
+\left\{
+z:
+\|\operatorname{grad}_{g_t}U_t(z)\|_{g_t}
+\le\varepsilon_{\rm core}
+\right\}.
+\]
+
+The observation-space discrepancy is intrinsically
+
+\[
+e_t=\log_{\hat X_t}(X_t)\in T_{\hat X_t}\mathcal X,
+\]
+
+and its latent correction can be visualized after pullback by
+
+\[
+\Pi_t=(dD_\phi)^\dagger e_t+C_\psi(Z_t^\star,\Omega_t,e_t).
+\]
+
+Accordingly, particle displacement should visualize a chart / embedding of a
+tangent correction, not be treated as the correction itself. When the metric is
+adaptive, local ellipsoids or geodesic traces may expose metric anisotropy and
+flow, while the authoritative state remains the numerical manifold state rather
+than the rendered coordinates.
