@@ -774,3 +774,28 @@ physical spacetime quantities.
 NEXUS-3D, defined by ADR-028, is the associated GUI/media projection surface.
 It may visualize multimodal outputs and measured browser/media telemetry, but it
 is not an alternate authoritative cognitive-state channel.
+
+## Recursive predictive state-space closure
+
+The compact state-space closure for the cognitive loop is specified in
+[`docs/architecture/recursive-predictive-3d-state-space.md`](./architecture/recursive-predictive-3d-state-space.md).
+
+Its observable recurrence is
+
+\[
+S_{t+1}=\mathcal M_\Theta(S_t,X_t),
+\qquad
+S_t=[X_t,Z_t,\Omega_t,\hat X_t,E_t,\Pi_t],
+\]
+
+with
+
+\[
+E_t=X_t-\hat X_t.
+\]
+
+This does not replace the richer cognitive state or CTR transaction law. It is the
+minimal interface joining encoder, bounded latent refinement, memory, decoder,
+residual contrast, corrective policy and verification-gated recurrence. Candidate
+memory, model and policy updates remain non-authoritative until admitted by the
+existing verification boundary.
