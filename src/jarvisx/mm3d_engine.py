@@ -35,6 +35,9 @@ class MM3DConfig:
     video_size: int = 48
     environment_channels: int = 4
     action_dim: int = 32
+    echo_weight: float = 0.5
+    echo_depth: int = 4
+    echo_mix: float = 0.25
     refinement_depth: int = 6
     attention_heads: int = 8
     diffusion_max: float = 0.12
@@ -52,6 +55,12 @@ class MM3DConfig:
             raise ValueError("environment_channels must be >= 1")
         if self.action_dim < 2:
             raise ValueError("action_dim must be >= 2")
+        if not 0.0 < self.echo_weight < 1.0:
+            raise ValueError("echo_weight must satisfy 0 < echo_weight < 1")
+        if self.echo_depth < 0:
+            raise ValueError("echo_depth must be >= 0")
+        if not 0.0 <= self.echo_mix <= 1.0:
+            raise ValueError("echo_mix must satisfy 0 <= echo_mix <= 1")
 
 
 def laplacian3d(x: torch.Tensor) -> torch.Tensor:
@@ -312,6 +321,46 @@ class VoxelAttention(nn.Module):
         return (tokens + attended).transpose(1, 2).reshape(b, c, d, h, w)
 
 
+class EchoResolver3D(nn.Module):
+    """Finite Neumann-series echo over a bounded 3D propagation operator.
+
+    The local transition is a convex blend of the identity and replicated
+    3x3x3 averaging. In the sup norm this operator is non-expansive, so the
+    infinite weighted series converges for 0 < echo_weight < 1. Runtime
+    execution uses the configured finite truncation and reports its tail
+    factor explicitly rather than pretending to evaluate an infinite sum.
+    """
+
+    def __init__(self, cfg: MM3DConfig):
+        super().__init__()
+        self.weight = float(cfg.echo_weight)
+        self.depth = int(cfg.echo_depth)
+        self.mix = float(cfg.echo_mix)
+
+    def transition(self, z: torch.Tensor) -> torch.Tensor:
+        padded = F.pad(z, (1, 1, 1, 1, 1, 1), mode="replicate")
+        averaged = F.avg_pool3d(padded, kernel_size=3, stride=1)
+        return (1.0 - self.mix) * z + self.mix * averaged
+
+    def forward(self, z: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        state = z
+        echoed = z
+        coefficient = 1.0
+        weight_sum = 1.0
+        for _ in range(self.depth):
+            state = self.transition(state)
+            coefficient *= self.weight
+            weight_sum += coefficient
+            echoed = echoed + coefficient * state
+
+        tail_factor = self.weight ** (self.depth + 1) / (1.0 - self.weight)
+        return (
+            echoed,
+            z.new_tensor(weight_sum),
+            z.new_tensor(tail_factor),
+        )
+
+
 class OmegaMemory(nn.Module):
     def __init__(self, cfg: MM3DConfig):
         super().__init__()
@@ -407,6 +456,7 @@ class MM3DEngine(nn.Module):
         )
         self.attention = VoxelAttention(cfg)
         self.memory = OmegaMemory(cfg)
+        self.echo = EchoResolver3D(cfg)
         self.decision = DecisionHead(cfg)
         self.renderer3d = VolumeRenderer3D(cfg)
         self.text_decoder = ByteDecoder(cfg)
@@ -452,6 +502,8 @@ class MM3DEngine(nn.Module):
             z = block(z)
         z = self.attention(z)
         z = self.memory(z, self._omega if stateful else None)
+        pre_echo = z
+        z, echo_weight_sum, echo_tail_factor = self.echo(z)
         if stateful:
             self._omega = z.detach()
         action_logits = self.decision(z)
@@ -459,6 +511,9 @@ class MM3DEngine(nn.Module):
         rendered_3d = self.renderer3d(z, action_probs)
         return {
             "latent": z,
+            "pre_echo_latent": pre_echo,
+            "echo_weight_sum": echo_weight_sum,
+            "echo_tail_factor": echo_tail_factor,
             "modality_weights": weights,
             "action_logits": action_logits,
             "action_probs": action_probs,
@@ -536,6 +591,7 @@ def save_outputs(outputs: Dict[str, torch.Tensor], out_dir: Path) -> Dict[str, s
     video_path = out_dir / "generated_video.gif"
     text_path = out_dir / "generated_text.txt"
     code_path = out_dir / "generated_code.txt"
+    rendered_path = out_dir / "rendered_3d.png"
 
     image = outputs["image"][0].detach().cpu().clamp(0, 1).permute(1, 2, 0).numpy()
     Image.fromarray((image * 255).astype(np.uint8), "RGB").save(image_path)
@@ -557,12 +613,24 @@ def save_outputs(outputs: Dict[str, torch.Tensor], out_dir: Path) -> Dict[str, s
 
     text_path.write_text(decode_byte_logits(outputs["text_logits"])[0], encoding="utf-8")
     code_path.write_text(decode_byte_logits(outputs["code_logits"])[0], encoding="utf-8")
+
+    rendered = (
+        outputs["rendered_3d"][0]
+        .detach()
+        .cpu()
+        .clamp(0, 1)
+        .permute(1, 2, 0)
+        .numpy()
+    )
+    Image.fromarray((rendered * 255).astype(np.uint8), "RGB").save(rendered_path)
+
     return {name: str(path) for name, path in {
         "image": image_path,
         "audio": audio_path,
         "video": video_path,
         "text": text_path,
         "code": code_path,
+        "rendered_3d": rendered_path,
     }.items()}
 
 
@@ -611,6 +679,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "latent_shape": list(outputs["latent"].shape),
         "latent_mean": float(outputs["latent"].mean()),
         "latent_std": float(outputs["latent"].std()),
+        "echo_weight_sum": float(outputs["echo_weight_sum"]),
+        "echo_tail_factor": float(outputs["echo_tail_factor"]),
         "modality_weights": outputs["modality_weights"].detach().cpu().tolist(),
         "outputs": files,
     }

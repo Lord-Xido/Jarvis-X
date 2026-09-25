@@ -8,7 +8,13 @@ torch = pytest.importorskip("torch")
 pytest.importorskip("numpy")
 pytest.importorskip("PIL")
 
-from jarvisx.mm3d_engine import MM3DConfig, MM3DEngine, demo_batch, laplacian3d
+from jarvisx.mm3d_engine import (
+    EchoResolver3D,
+    MM3DConfig,
+    MM3DEngine,
+    demo_batch,
+    laplacian3d,
+)
 
 
 def tiny_config() -> MM3DConfig:
@@ -30,6 +36,20 @@ def test_laplacian_preserves_constant_field() -> None:
     assert torch.allclose(laplacian3d(field), torch.zeros_like(field))
 
 
+def test_echo_resolvent_matches_geometric_series_on_constant_field() -> None:
+    cfg = tiny_config()
+    echo = EchoResolver3D(cfg)
+    field = torch.ones(1, cfg.latent_channels, cfg.grid, cfg.grid, cfg.grid)
+
+    echoed, weight_sum, tail_factor = echo(field)
+    expected_sum = sum(cfg.echo_weight**n for n in range(cfg.echo_depth + 1))
+    expected_tail = cfg.echo_weight ** (cfg.echo_depth + 1) / (1.0 - cfg.echo_weight)
+
+    assert torch.allclose(echoed, field * expected_sum, atol=1.0e-6)
+    assert torch.allclose(weight_sum, torch.tensor(expected_sum), atol=1.0e-6)
+    assert torch.allclose(tail_factor, torch.tensor(expected_tail), atol=1.0e-6)
+
+
 def test_mm3d_forward_and_backward() -> None:
     cfg = tiny_config()
     engine = MM3DEngine(cfg)
@@ -46,6 +66,9 @@ def test_mm3d_forward_and_backward() -> None:
     assert tuple(outputs["action_logits"].shape) == (1, cfg.action_dim)
     assert tuple(outputs["action_probs"].shape) == (1, cfg.action_dim)
     assert tuple(outputs["rendered_3d"].shape) == (1, 3, 16, 16)
+    assert tuple(outputs["pre_echo_latent"].shape) == (1, 16, 2, 2, 2)
+    assert outputs["echo_weight_sum"].item() > 1.0
+    assert outputs["echo_tail_factor"].item() > 0.0
     assert torch.allclose(
         outputs["action_probs"].sum(dim=1), torch.ones(1), atol=1.0e-6
     )
