@@ -30,11 +30,21 @@ jobs:
               'VISUAL DIAGNOSTIC SIMULATION',
               'EXECUTION_STREAM',
               'SYSTEM_LOAD',
-              'ECHO_RESONANCE',
-              'GEOMETRY_MATRIX',
+              'MIC_RESONANCE // SENSOR_LINK',
+              'MULTIMODAL_DECODER',
+              "let annState = 'IDLE'",
+              "state === 'ENCODING'",
+              "state === 'PROCESSING'",
+              "state === 'DECODING'",
+              'navigator.mediaDevices.getUserMedia',
+              'createAnalyser',
+              'UnrealBloomPass',
+              'EffectComposer',
               'buildFractal',
               'clearCoreGroup',
+              'composer.render()',
               'requestAnimationFrame(animate)',
+              'LOAD_METERS_SYNTHETIC',
               'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
           ]
 
@@ -44,15 +54,16 @@ jobs:
           required_ids = {
               'canvas-container',
               'sys-clock',
+              'command-input',
               'bytecode-stream',
               'pc-readout',
               'cpu-load',
               'gpu-load',
               'audio-visualizer',
-              'slider-depth',
-              'slider-rot',
-              'val-depth',
-              'val-rot',
+              'enable-mic-btn',
+              'mic-status-text',
+              'multimedia-output',
+              'ann-state-readout',
           }
 
           class IDs(HTMLParser):
@@ -68,4 +79,8 @@ jobs:
           parser = IDs()
           parser.feed(text)
           assert required_ids <= parser.ids
+
+          # Public-source safety boundary: no credential value is committed.
+          assert 'const API_KEY = "";' not in text
+          assert 'window.JARVIS_X_GEMINI_API_KEY || ""' in text
           PY
