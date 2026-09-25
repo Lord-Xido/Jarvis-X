@@ -37,8 +37,46 @@ The executable invariant is:
 
 ```text
 Encode -> Fuse -> Diffuse -> Refine -> Attend -> Remember
-       -> Decide -> Render3D -> Decode -> Train
+       -> Echo -> Decide -> Render3D -> Decode -> Train
 ```
+
+## Echo-through resolvent
+
+After recurrent memory, the runtime now permeates the latent field through a
+bounded echo resolver. The conceptual full-system operator is
+
+```text
+M = Pi o F o D o A_theta o E
+E_omega = sum_(n=0)^infinity omega^n M^n = (I - omega M)^(-1)
+```
+
+when the weighted operator is contractive. The executable MM3D backend does
+not claim to evaluate that infinite nonlinear whole-engine composition.
+Instead, it uses a finite, auditable latent surrogate:
+
+```text
+M_echo(Z) = (1 - beta) Z + beta Avg3D(Z)
+Z_echo    = sum_(n=0)^K omega^n M_echo^n(Z)
+```
+
+where replicated-boundary 3x3x3 averaging and a convex blend make
+`M_echo` non-expansive in the sup norm. Therefore the corresponding infinite
+weighted series is bounded for `0 < omega < 1`. Runtime execution truncates
+at `K = echo_depth` and reports both
+
+```text
+echo_weight_sum = sum_(n=0)^K omega^n
+echo_tail_factor = omega^(K+1) / (1 - omega)
+```
+
+so the unresolved geometric-series tail is explicit. The echoed field becomes
+the state used by the decision, renderer, and modality decoders, and when
+stateful execution is enabled Omega memory retains that echoed state for the
+next cycle.
+
+This is the operational meaning of "echo through": previous/refined spatial
+structure is not merely stored alongside the current field; it is propagated
+back through the shared latent geometry with diminishing weights.
 
 ## Permeated 3D output state
 
@@ -113,10 +151,12 @@ The command writes:
 - `generated_video.gif`
 - `generated_text.txt`
 - `generated_code.txt`
+- `rendered_3d.png`
 - `telemetry.json`
 
 Telemetry records the actual device, parameter count, latent shape, latent
-statistics, and learned modality weights for that run.
+statistics, echo-series weight sum and tail factor, and learned modality
+weights for that run.
 
 ## Default geometry
 
@@ -135,8 +175,10 @@ runtime because code or configuration changes can alter it.
 `tests/test_mm3d_engine.py` uses a reduced configuration to verify:
 
 - a constant field has zero six-neighbour Laplacian;
-- all five modalities reach the shared latent field;
+- all six modalities can reach the shared latent field;
+- the finite echo resolver matches the geometric series on a constant field;
 - generated output tensors have the declared shapes;
+- echo diagnostics are finite and positive under the default bounded config;
 - modality fusion weights sum to one;
 - the aggregate loss is finite;
 - gradients propagate through the engine.
