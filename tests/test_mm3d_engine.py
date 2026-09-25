@@ -35,15 +35,23 @@ def test_mm3d_forward_and_backward() -> None:
     engine = MM3DEngine(cfg)
     batch = demo_batch(cfg, torch.device("cpu"))
 
-    outputs = engine(stateful=False, **batch)
+    environment = torch.randn(1, cfg.environment_channels, 3, 3, 3)
+    outputs = engine(stateful=False, environment=environment, **batch)
     assert tuple(outputs["latent"].shape) == (1, 16, 2, 2, 2)
     assert tuple(outputs["image"].shape) == (1, 3, 16, 16)
     assert tuple(outputs["audio"].shape) == (1, 1, 64)
     assert tuple(outputs["video"].shape) == (1, 3, 2, 8, 8)
     assert tuple(outputs["text_logits"].shape) == (1, 16, 256)
     assert tuple(outputs["code_logits"].shape) == (1, 16, 256)
+    assert tuple(outputs["action_logits"].shape) == (1, cfg.action_dim)
+    assert tuple(outputs["action_probs"].shape) == (1, cfg.action_dim)
+    assert tuple(outputs["rendered_3d"].shape) == (1, 3, 16, 16)
+    assert torch.allclose(
+        outputs["action_probs"].sum(dim=1), torch.ones(1), atol=1.0e-6
+    )
 
     weights = outputs["modality_weights"]
+    assert weights.shape[1] == 6
     assert torch.allclose(weights.sum(dim=1), torch.ones(1), atol=1.0e-6)
 
     loss, metrics = engine.loss(outputs, **batch)
