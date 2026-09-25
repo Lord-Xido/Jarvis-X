@@ -1,0 +1,71 @@
+name: System Echo Diagnostics
+
+on:
+  push:
+    paths:
+      - 'apps/system-echo-diagnostics/**'
+      - '.github/workflows/system-echo-diagnostics.yml'
+  pull_request:
+    paths:
+      - 'apps/system-echo-diagnostics/**'
+      - '.github/workflows/system-echo-diagnostics.yml'
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate diagnostics app contract
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          path = Path('apps/system-echo-diagnostics/index.html')
+          text = path.read_text(encoding='utf-8')
+
+          required_tokens = [
+              'JARVIS',
+              'ECHO_THROUGH_ACTIVE',
+              'VISUAL DIAGNOSTIC SIMULATION',
+              'EXECUTION_STREAM',
+              'SYSTEM_LOAD',
+              'ECHO_RESONANCE',
+              'GEOMETRY_MATRIX',
+              'buildFractal',
+              'clearCoreGroup',
+              'requestAnimationFrame(animate)',
+              'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+          ]
+
+          for token in required_tokens:
+              assert token in text, token
+
+          required_ids = {
+              'canvas-container',
+              'sys-clock',
+              'bytecode-stream',
+              'pc-readout',
+              'cpu-load',
+              'gpu-load',
+              'audio-visualizer',
+              'slider-depth',
+              'slider-rot',
+              'val-depth',
+              'val-rot',
+          }
+
+          class IDs(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = set()
+
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key == 'id' and value:
+                          self.ids.add(value)
+
+          parser = IDs()
+          parser.feed(text)
+          assert required_ids <= parser.ids
+          PY
