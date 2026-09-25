@@ -598,3 +598,25 @@ Thus self-consistency is necessary but not sufficient: the loop remains external
 Geometrically: **a luminous toroidal/spiral recurrent field surrounding a self-verifying core, continuously folding observations inward and unfolding corrected representations outward.**
 
 Operationally: **a bounded sparse state machine with explicit error, memory, convergence, candidate evolution, and verification-gated commitment.**
+
+## Recursive predictive state-space permeation
+
+The canonical visualization now binds to the repository-wide recursive predictive
+state-space contract in
+[`docs/architecture/recursive-predictive-3d-state-space.md`](./architecture/recursive-predictive-3d-state-space.md).
+
+For visualization purposes, the compact observable state is
+
+\[
+S_t=[X_t,Z_t,\Omega_t,\hat X_t,E_t,\Pi_t],
+\qquad
+E_t=X_t-\hat X_t.
+\]
+
+The visualization must preserve the distinction between the information operator
+\(E_\theta:X\to Z\) and the geometric projection
+\(\Phi_{\mathrm{in}}:\mathbb R^3\to\mathbb R^3\). Particle motion, shell
+phase, core radius, deformation and displayed throughput should be driven by
+runtime measurements or explicitly labeled synthetic values. The central throat
+represents bounded latent/fixed-point refinement; it is not evidence of physical
+singularity, unlimited compression or unmeasured acceleration.
