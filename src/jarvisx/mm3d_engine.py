@@ -33,6 +33,8 @@ class MM3DConfig:
     audio_samples: int = 4096
     video_frames: int = 8
     video_size: int = 48
+    environment_channels: int = 4
+    action_dim: int = 32
     refinement_depth: int = 6
     attention_heads: int = 8
     diffusion_max: float = 0.12
@@ -46,6 +48,10 @@ class MM3DConfig:
             raise ValueError("latent_channels must be divisible by 8")
         if self.latent_channels % self.attention_heads:
             raise ValueError("latent_channels must be divisible by attention_heads")
+        if self.environment_channels < 1:
+            raise ValueError("environment_channels must be >= 1")
+        if self.action_dim < 2:
+            raise ValueError("action_dim must be >= 2")
 
 
 def laplacian3d(x: torch.Tensor) -> torch.Tensor:
@@ -171,8 +177,84 @@ class VideoEncoder(nn.Module):
         return F.adaptive_avg_pool3d(self.net(x), (g, g, g))
 
 
+class EnvironmentEncoder(nn.Module):
+    """Encode an explicit 3D environment tensor into the shared latent lattice."""
+
+    def __init__(self, cfg: MM3DConfig):
+        super().__init__()
+        c = cfg.latent_channels
+        self.cfg = cfg
+        self.net = nn.Sequential(
+            nn.Conv3d(cfg.environment_channels, c // 2, 3, padding=1),
+            nn.GELU(),
+            nn.Conv3d(c // 2, c, 3, padding=1),
+            nn.GELU(),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.ndim != 5:
+            raise ValueError("environment must have shape [B, C, D, H, W]")
+        if x.shape[1] != self.cfg.environment_channels:
+            raise ValueError(
+                f"environment has {x.shape[1]} channels; "
+                f"expected {self.cfg.environment_channels}"
+            )
+        g = self.cfg.grid
+        return F.adaptive_avg_pool3d(self.net(x), (g, g, g))
+
+
+class DecisionHead(nn.Module):
+    """Map the latent field to logits used by the explicit softmax decision head."""
+
+    def __init__(self, cfg: MM3DConfig):
+        super().__init__()
+        c = cfg.latent_channels
+        self.net = nn.Sequential(
+            nn.LayerNorm(c),
+            nn.Linear(c, 2 * c),
+            nn.GELU(),
+            nn.Linear(2 * c, cfg.action_dim),
+        )
+
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
+        pooled = z.mean(dim=(2, 3, 4))
+        return self.net(pooled)
+
+
+class VolumeRenderer3D(nn.Module):
+    """Differentiable orthographic volume renderer conditioned on action probabilities."""
+
+    def __init__(self, cfg: MM3DConfig):
+        super().__init__()
+        c = cfg.latent_channels
+        self.output_size = cfg.image_size
+        self.decision_projection = nn.Linear(cfg.action_dim, c)
+        self.rgba = nn.Conv3d(c, 4, 1)
+
+    def forward(self, z: torch.Tensor, action_probs: torch.Tensor) -> torch.Tensor:
+        b, c, depth, _, _ = z.shape
+        condition = self.decision_projection(action_probs).view(b, c, 1, 1, 1)
+        field = self.rgba(z + condition)
+        rgb = torch.sigmoid(field[:, :3])
+        density = F.softplus(field[:, 3:4])
+
+        alpha = 1.0 - torch.exp(-density / float(max(1, depth)))
+        prefix = torch.cat(
+            (torch.ones_like(alpha[:, :, :1]), 1.0 - alpha + 1.0e-6), dim=2
+        )
+        transmittance = torch.cumprod(prefix, dim=2)[:, :, :-1]
+        weights = alpha * transmittance
+        rendered = (weights * rgb).sum(dim=2)
+        return F.interpolate(
+            rendered,
+            size=(self.output_size, self.output_size),
+            mode="bilinear",
+            align_corners=False,
+        )
+
+
 class MultimodalFusion(nn.Module):
-    def __init__(self, cfg: MM3DConfig, modalities: int = 5):
+    def __init__(self, cfg: MM3DConfig, modalities: int = 6):
         super().__init__()
         c = cfg.latent_channels
         self.embedding = nn.Parameter(torch.randn(modalities, c) * 0.02)
@@ -307,7 +389,7 @@ class VideoDecoder(nn.Module):
 
 
 class MM3DEngine(nn.Module):
-    TEXT, CODE, IMAGE, AUDIO, VIDEO = range(5)
+    TEXT, CODE, IMAGE, AUDIO, VIDEO, ENVIRONMENT = range(6)
 
     def __init__(self, cfg: MM3DConfig = MM3DConfig()):
         super().__init__()
@@ -318,12 +400,15 @@ class MM3DEngine(nn.Module):
         self.image_encoder = ImageEncoder(cfg)
         self.audio_encoder = AudioEncoder(cfg)
         self.video_encoder = VideoEncoder(cfg)
+        self.environment_encoder = EnvironmentEncoder(cfg)
         self.fusion = MultimodalFusion(cfg)
         self.refinement = nn.ModuleList(
             GeometricResidualBlock(cfg) for _ in range(cfg.refinement_depth)
         )
         self.attention = VoxelAttention(cfg)
         self.memory = OmegaMemory(cfg)
+        self.decision = DecisionHead(cfg)
+        self.renderer3d = VolumeRenderer3D(cfg)
         self.text_decoder = ByteDecoder(cfg)
         self.code_decoder = ByteDecoder(cfg)
         self.image_decoder = ImageDecoder(cfg)
@@ -346,6 +431,7 @@ class MM3DEngine(nn.Module):
         image: torch.Tensor | None = None,
         audio: torch.Tensor | None = None,
         video: torch.Tensor | None = None,
+        environment: torch.Tensor | None = None,
         stateful: bool = True,
     ) -> Dict[str, torch.Tensor]:
         fields: List[Tuple[int, torch.Tensor]] = []
@@ -359,6 +445,8 @@ class MM3DEngine(nn.Module):
             fields.append((self.AUDIO, self.audio_encoder(audio)))
         if video is not None:
             fields.append((self.VIDEO, self.video_encoder(video)))
+        if environment is not None:
+            fields.append((self.ENVIRONMENT, self.environment_encoder(environment)))
         z, weights = self.fusion(fields)
         for block in self.refinement:
             z = block(z)
@@ -366,9 +454,15 @@ class MM3DEngine(nn.Module):
         z = self.memory(z, self._omega if stateful else None)
         if stateful:
             self._omega = z.detach()
+        action_logits = self.decision(z)
+        action_probs = torch.softmax(action_logits, dim=-1)
+        rendered_3d = self.renderer3d(z, action_probs)
         return {
             "latent": z,
             "modality_weights": weights,
+            "action_logits": action_logits,
+            "action_probs": action_probs,
+            "rendered_3d": rendered_3d,
             "text_logits": self.text_decoder(z),
             "code_logits": self.code_decoder(z),
             "image": self.image_decoder(z),
