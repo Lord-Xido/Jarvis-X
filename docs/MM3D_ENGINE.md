@@ -36,8 +36,47 @@ same final state is decoded through text, code, image, audio, and video heads.
 The executable invariant is:
 
 ```text
-Encode -> Fuse -> Diffuse -> Refine -> Attend -> Remember -> Decode -> Train
+Encode -> Fuse -> Diffuse -> Refine -> Attend -> Remember
+       -> Decide -> Render3D -> Decode -> Train
 ```
+
+## Permeated 3D output state
+
+The explicit end-to-end output equation is implemented as
+
+```text
+Psi_t = R_3D(D_phi(Z_t), softmax(W_o pool(Z_t)))
+
+Z_t = T_theta(X_in,t (+) E_env,t (+) Omega_t)
+```
+
+where `(+)` denotes learned multimodal fusion rather than arithmetic addition.
+The optional environment input is a tensor with shape
+
+```text
+[B, environment_channels, D, H, W]
+```
+
+and is encoded into the same `B x C x G x G x G` latent lattice as the
+text, code, image, audio, and video modalities.
+
+The decision branch computes
+
+```text
+a_t = W_o pool(Z_t)
+p_t = softmax(a_t)
+```
+
+and reports both `action_logits` and `action_probs`. The 3D render branch
+projects `p_t` back into latent-channel space, conditions the volumetric field,
+predicts RGB plus density, and performs front-to-back alpha compositing along
+the depth axis. The resulting differentiable projection is returned as
+`rendered_3d`.
+
+This keeps softmax in the action/probability branch instead of forcing the
+entire geometric latent state through a probability simplex. Geometry therefore
+remains available to the decoders and renderer while the decision head receives
+a normalized probability distribution.
 
 This is a trainable neural reference architecture. Random weights are not AGI,
 and conceptual scale is not measured physical performance.
