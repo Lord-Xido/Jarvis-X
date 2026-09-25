@@ -118,3 +118,21 @@ sparse 1000x1000 scheduler
         -> dense unified-field equilibrium engine
         -> project result back to sparse transactional state
 ```
+
+## State-space contract
+
+This backend is one executable specialization of the recursive predictive
+state-space architecture documented in
+[`docs/architecture/recursive-predictive-3d-state-space.md`](../../docs/architecture/recursive-predictive-3d-state-space.md).
+
+The dense field `U` remains the backend-specific equilibrium representation.
+At the system boundary, telemetry should project into the compact state
+
+\[
+[X_t,Z_t,\Omega_t,\hat X_t,E_t,\Pi_t]
+\]
+
+without claiming that geometric contraction alone is information compression.
+Fixed-point residual, reconstruction error, iteration count and resource use are
+measured backend outputs; visual speed multipliers and decorative vortex motion
+are not performance measurements.
