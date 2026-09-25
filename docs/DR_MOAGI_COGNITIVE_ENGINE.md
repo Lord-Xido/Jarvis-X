@@ -799,3 +799,37 @@ minimal interface joining encoder, bounded latent refinement, memory, decoder,
 residual contrast, corrective policy and verification-gated recurrence. Candidate
 memory, model and policy updates remain non-authoritative until admitted by the
 existing verification boundary.
+\n## Intrinsic geometric feedback interface
+
+The recursive predictive closure admits a coordinate-free specialization on
+Riemannian manifolds \((\mathcal X,g_{\mathcal X})\) and
+\((\mathcal Z,g_t)\). The bounded cognitive correction path is
+
+\[
+Z_t
+\xrightarrow{\varphi_T}
+Z_t^\star
+\xrightarrow{D_\phi}
+\hat X_t
+\xrightarrow{\log_{\hat X_t}(X_t)}
+e_t
+\xrightarrow{(dD_\phi)^\dagger}
+\Pi_t
+\xrightarrow{\operatorname{Exp}\ {\rm or}\ R}
+Z_{t+1}^{\rm cand}.
+\]
+
+This gives CTR a typed geometric residual rather than assuming that all
+observation errors are globally Euclidean vectors. If tangent-valued memory is
+combined across different base points, the implementation must declare parallel
+transport or another valid transport rule.
+
+Optional metric adaptation
+
+\[
+\partial_t g_t=-2\operatorname{Ric}(g_t)+\mathcal S_t
+\]
+
+is candidate state and therefore remains subject to the same candidate-first
+verification boundary as model, memory and policy updates. Geometric convergence
+does not replace external evidence correspondence.
