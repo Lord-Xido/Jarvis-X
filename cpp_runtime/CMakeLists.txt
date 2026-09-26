@@ -329,3 +329,30 @@ add_test(NAME dr-moagi-6400x1000-regressions COMMAND jarvisx-dr-moagi-6400x1000-
 set_tests_properties(dr-moagi-6400x1000-regressions PROPERTIES TIMEOUT 120)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/world_engine.cmake)
+
+
+# Streaming INR VM: virtual ultra-resolution field under a bounded managed-memory contract.
+add_executable(jarvisx-streaming-inr-vm
+    src/streaming_inr_vm_main.cpp
+)
+jarvisx_include_runtime(jarvisx-streaming-inr-vm)
+jarvisx_harden(jarvisx-streaming-inr-vm)
+
+add_executable(jarvisx-streaming-inr-vm-tests
+    tests/streaming_inr_vm_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-streaming-inr-vm-tests)
+jarvisx_harden(jarvisx-streaming-inr-vm-tests)
+
+add_test(NAME streaming-inr-vm-regressions COMMAND jarvisx-streaming-inr-vm-tests)
+set_tests_properties(streaming-inr-vm-regressions PROPERTIES TIMEOUT 120)
+
+add_test(
+    NAME streaming-inr-vm-smoke
+    COMMAND jarvisx-streaming-inr-vm
+        --queries 16
+        --axis 8000000
+        --cutoff 0.05
+        --quiet
+)
+set_tests_properties(streaming-inr-vm-smoke PROPERTIES TIMEOUT 120)
