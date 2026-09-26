@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
+import importlib
 import math
-from typing import Iterable
+from typing import Any, cast
 
-import numpy as np
+np: Any = importlib.import_module("numpy")
+Array = Any
 
 
 TAU = 2.0 * math.pi
 
 
-def _wrap_angle(values: np.ndarray) -> np.ndarray:
+def _wrap_angle(values: Array) -> Array:
     return np.mod(values, TAU)
 
 
@@ -42,8 +45,8 @@ class TorusConfig:
 
 @dataclass(frozen=True)
 class TorusState:
-    u: np.ndarray
-    v: np.ndarray
+    u: Array
+    v: Array
     sigma: float
 
     def __post_init__(self) -> None:
@@ -75,7 +78,7 @@ class SpectralModel:
     winding: int
     phase_u: float
     phase_v: float
-    singular_values: np.ndarray
+    singular_values: Array
 
 
 @dataclass(frozen=True)
@@ -92,7 +95,7 @@ class StepTelemetry:
 
 @dataclass(frozen=True)
 class RunResult:
-    trajectory: np.ndarray
+    trajectory: Array
     telemetry: tuple[StepTelemetry, ...]
     final_state: TorusState
 
@@ -119,18 +122,18 @@ class ToroidalFeedbackEngine:
         )
 
     @staticmethod
-    def encode_angles(u: np.ndarray, v: np.ndarray) -> np.ndarray:
+    def encode_angles(u: Array, v: Array) -> Array:
         """Encode e^(iu) and e^(iv) as four real channels."""
         return np.stack(
             (np.cos(u), np.sin(u), np.cos(v), np.sin(v)),
             axis=-1,
         )
 
-    def history_matrix(self) -> np.ndarray:
+    def history_matrix(self) -> Array:
         """Return the batch x (4 * window) self-representation matrix."""
         return self._history.reshape(self.state.batch, 4 * self.config.window).copy()
 
-    def embed(self, state: TorusState | None = None) -> np.ndarray:
+    def embed(self, state: TorusState | None = None) -> Array:
         """Embed (u, v, sigma) into Euclidean 3-space."""
         s = self.state if state is None else state
         r = s.sigma * self.config.minor_radius
@@ -185,10 +188,10 @@ class ToroidalFeedbackEngine:
 
     @staticmethod
     def _field(
-        u: np.ndarray,
-        v: np.ndarray,
+        u: Array,
+        v: Array,
         model: SpectralModel,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[Array, Array]:
         q = model.winding
         f = model.energy * np.cos(q * u + model.phase_u) * np.cos(v)
         g = model.energy * np.sin(q * v + model.phase_v) * np.cos(u)
@@ -196,11 +199,11 @@ class ToroidalFeedbackEngine:
 
     def angular_velocity(
         self,
-        u: np.ndarray,
-        v: np.ndarray,
+        u: Array,
+        v: Array,
         sigma: float,
         model: SpectralModel,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[Array, Array]:
         f, g = self._field(u, v, model)
         return sigma * f, sigma * g
 
@@ -277,9 +280,9 @@ def make_state(
     if batch < 1:
         raise ValueError("batch must be >= 1")
 
-    def _coerce(value: float | Iterable[float], name: str) -> np.ndarray:
-        if np.isscalar(value):
-            return np.full(batch, float(value), dtype=np.float64)
+    def _coerce(value: float | Iterable[float], name: str) -> Array:
+        if not isinstance(value, Iterable):
+            return np.full(batch, float(cast(Any, value)), dtype=np.float64)
         arr = np.asarray(tuple(value), dtype=np.float64)
         if arr.ndim != 1:
             raise ValueError(f"{name} must be scalar or one-dimensional")
