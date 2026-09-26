@@ -118,3 +118,41 @@ sparse 1000x1000 scheduler
         -> dense unified-field equilibrium engine
         -> project result back to sparse transactional state
 ```
+
+## State-space contract
+
+This backend is one executable specialization of the recursive predictive
+state-space architecture documented in
+[`docs/architecture/recursive-predictive-3d-state-space.md`](../../docs/architecture/recursive-predictive-3d-state-space.md).
+
+The dense field `U` remains the backend-specific equilibrium representation.
+At the system boundary, telemetry should project into the compact state
+
+\[
+[X_t,Z_t,\Omega_t,\hat X_t,E_t,\Pi_t]
+\]
+
+without claiming that geometric contraction alone is information compression.
+Fixed-point residual, reconstruction error, iteration count and resource use are
+measured backend outputs; visual speed multipliers and decorative vortex motion
+are not performance measurements.
+\n## Intrinsic geometry boundary
+
+The current dense unified-field backend remains a Euclidean / tensor-coordinate
+specialization of the architecture. It does not presently implement a general
+Riemannian exponential map, logarithm map, Levi-Civita connection, parallel
+transport, or adaptive Ricci-type metric flow.
+
+A future intrinsic backend must explicitly provide:
+
+- a positive-definite latent metric \(g_t\);
+- \(\operatorname{grad}_{g_t}U_t\);
+- \(\operatorname{Exp}_Z\) or a tested retraction;
+- \(\log_{\hat X}(X)\) on a declared valid domain;
+- the metric adjoint \((dD_\phi)^\dagger\);
+- transport for tangent-valued memory when base points differ;
+- metric conditioning / curvature telemetry and verification gates.
+
+Until those interfaces exist, the current tensor operations are the flat
+coordinate reference case rather than evidence that the full intrinsic system is
+already implemented.
