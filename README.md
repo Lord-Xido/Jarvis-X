@@ -353,6 +353,7 @@ Every canonical subsystem should provide:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
 - [Canonical Dr Moagi operational auto-encoding/decoding equation](docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md)
+- [Canonical 3D geometric autoencoding intelligence model](docs/CANONICAL_3D_GEOMETRIC_INTELLIGENCE.md)
 - [ADR-016: canonical typed state, transaction and geometry profiles](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md)
 - [ADR-017: canonical Dr Moagi operational auto-encoding/decoding equation](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md)
 - [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md)
