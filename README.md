@@ -147,6 +147,22 @@ The cross-language acceptance boundary is defined by
 [`system-operational.yml`](.github/workflows/system-operational.yml) and
 [System Operationalisation](docs/SYSTEM_OPERATIONALISATION.md).
 
+### Run the operational 3D toroidal feedback machine
+
+The toroidal feedback engine is an optional numerical surface and uses NumPy:
+
+```bash
+python -m pip install -e ".[graphics]"
+jarvisx torus3d --steps 256 --batch 64
+jarvisx-operationalize torus3d --steps 16 --batch 8 --json
+```
+
+The runtime maps ((u,v,\sigma)) into a shrinking torus volume, stores wrapped angular
+history as complex-phase channels, extracts SVD energy and FFT winding, converts that
+memory into a vector field, advances (u,v) by midpoint RK2, and applies exact
+exponential permeation to (sigma). See
+[Operational 3D Toroidal Feedback Machine](docs/operational_3d_toroidal_feedback.md).
+
 ### Install the Python package for development
 
 ```bash

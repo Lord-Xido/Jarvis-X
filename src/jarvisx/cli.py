@@ -174,6 +174,52 @@ def cmd_verify_equivalence(args):
         print(f"Refactored state: {state2}")
 
 
+def cmd_torus3d(args):
+    """Run the bounded 3D toroidal spectral-feedback machine."""
+    try:
+        from .toroidal_feedback import TorusConfig, ToroidalFeedbackEngine, make_state
+    except ModuleNotFoundError as exc:
+        if exc.name == "numpy":
+            raise SystemExit(
+                'torus3d requires NumPy; install Jarvis-X with: pip install -e ".[graphics]"'
+            ) from exc
+        raise
+
+    config = TorusConfig(
+        major_radius=args.major_radius,
+        minor_radius=args.minor_radius,
+        lambda_permeation=args.lambda_permeation,
+        window=args.window,
+        top_k=args.top_k,
+        dt=args.dt,
+    )
+    engine = ToroidalFeedbackEngine(
+        make_state(u=args.u, v=args.v, sigma=args.sigma, batch=args.batch),
+        config,
+    )
+    result = engine.run(args.steps)
+    last = result.telemetry[-1] if result.telemetry else None
+
+    payload = {
+        "steps": args.steps,
+        "batch": args.batch,
+        "sigma": result.final_state.sigma,
+        "core_distance": engine.core_distance(),
+        "trajectory_shape": list(result.trajectory.shape),
+        "energy": None if last is None else last.energy,
+        "winding": None if last is None else last.winding,
+        "mean_speed": None if last is None else last.mean_speed,
+    }
+
+    if args.json:
+        print(json.dumps(payload, sort_keys=True))
+        return
+
+    print("Jarvis-X torus3d")
+    for key, value in payload.items():
+        print(f"  {key}: {value}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="jarvisx",
@@ -269,6 +315,25 @@ def main():
     verify_parser.add_argument("--prove-bound", type=int, default=64, help="SMT prover unroll bound (default: 64)")
     verify_parser.add_argument("--prove-timeout", type=int, default=5000, help="SMT prover timeout in ms (default: 5000)")
     verify_parser.set_defaults(func=cmd_verify_equivalence)
+
+    # TORUS3D command
+    torus_parser = subparsers.add_parser(
+        "torus3d",
+        help="Run the operational 3D toroidal spectral-feedback machine",
+    )
+    torus_parser.add_argument("--steps", type=int, default=32)
+    torus_parser.add_argument("--batch", type=int, default=64)
+    torus_parser.add_argument("--u", type=float, default=1.4)
+    torus_parser.add_argument("--v", type=float, default=4.8)
+    torus_parser.add_argument("--sigma", type=float, default=1.0)
+    torus_parser.add_argument("--major-radius", type=float, default=18.0)
+    torus_parser.add_argument("--minor-radius", type=float, default=6.0)
+    torus_parser.add_argument("--lambda-permeation", type=float, default=0.9997)
+    torus_parser.add_argument("--window", type=int, default=32)
+    torus_parser.add_argument("--top-k", type=int, default=4)
+    torus_parser.add_argument("--dt", type=float, default=1.0)
+    torus_parser.add_argument("--json", action="store_true")
+    torus_parser.set_defaults(func=cmd_torus3d)
 
     # API command
     api_parser = subparsers.add_parser("api", help="Start API server")

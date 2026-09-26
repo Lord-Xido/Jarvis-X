@@ -144,6 +144,38 @@ def _os_smoke() -> str:
     )
 
 
+def _torus_smoke(*, steps: int = 16, batch: int = 8) -> str:
+    """Execute a bounded toroidal feedback cycle with invariant checks."""
+
+    if steps < 1:
+        raise ValueError("steps must be >= 1")
+    if batch < 1:
+        raise ValueError("batch must be >= 1")
+
+    from .toroidal_feedback import TorusConfig, ToroidalFeedbackEngine, make_state
+
+    config = TorusConfig()
+    engine = ToroidalFeedbackEngine(make_state(batch=batch), config)
+    initial_core_distance = engine.core_distance()
+    result = engine.run(steps)
+
+    if not result.telemetry:
+        raise RuntimeError("toroidal feedback produced no telemetry")
+    if engine.core_distance() >= initial_core_distance:
+        raise RuntimeError("toroidal permeation did not contract toward the core")
+
+    expected_sigma = config.lambda_permeation ** (config.dt * steps)
+    if abs(result.final_state.sigma - expected_sigma) > 1.0e-12:
+        raise RuntimeError("toroidal permeation diverged from its closed-form law")
+
+    last = result.telemetry[-1]
+    return (
+        f"steps={steps} batch={batch} sigma={last.sigma:.8f} "
+        f"energy={last.energy:.6f} q={last.winding} "
+        f"core_distance={last.core_distance:.6f}"
+    )
+
+
 def _api_smoke() -> str:
     from .dr_moagi_os_api import app
 
@@ -192,6 +224,14 @@ def _parser() -> argparse.ArgumentParser:
     smoke = sub.add_parser("smoke", help="run deterministic end-to-end smoke verification")
     smoke.add_argument("--json", action="store_true", dest="as_json")
 
+    torus = sub.add_parser(
+        "torus3d",
+        help="run the bounded 3D toroidal spectral-feedback permeation check",
+    )
+    torus.add_argument("--steps", type=int, default=16)
+    torus.add_argument("--batch", type=int, default=8)
+    torus.add_argument("--json", action="store_true", dest="as_json")
+
     serve = sub.add_parser("serve", help="serve the authoritative Dr Moagi OS control plane")
     serve.add_argument("--host", default="0.0.0.0")
     serve.add_argument("--port", type=int, default=10000)
@@ -212,6 +252,19 @@ def _print_report(report: OperationalReport, *, as_json: bool) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+
+    if args.command == "torus3d":
+        report = OperationalReport(
+            mode="torus3d",
+            checks=(
+                _capture(
+                    "toroidal-feedback",
+                    lambda: _torus_smoke(steps=args.steps, batch=args.batch),
+                ),
+            ),
+        )
+        _print_report(report, as_json=bool(args.as_json))
+        return 0 if report.healthy else 1
 
     if args.command == "serve":
         if args.port <= 0 or args.port > 65535:
