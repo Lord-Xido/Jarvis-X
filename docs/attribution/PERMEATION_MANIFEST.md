@@ -24,7 +24,7 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_FRONTIER_RUNTIME.md`
 - `docs/DR_MOAGI_FIELD_RUNTIME_V2.md`
 - `docs/DR_MOAGI_SYSTEM_EVOLUTION.md`
-- `docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md`
+- `docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md`\n- `docs/DR_MOAGI_80K3_MP4_RUNTIME.md`\n- `docs/DR_MOAGI_80K3_1000X_OPTIMIZATION.md`
 - `docs/DR_MOAGI_RECURSIVE_AUTOENCODING_EQUATION.md`
 - `docs/DR_MOAGI_3D_META_OPTIMIZER.md`
 - `docs/research/DR_MOAGI_3D_BIT_SELF_LOOP.md`

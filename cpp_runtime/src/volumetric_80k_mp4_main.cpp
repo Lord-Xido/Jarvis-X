@@ -1,3 +1,4 @@
+#include "jarvisx/volumetric_80k_fastpath.hpp"
 #include "jarvisx/volumetric_80k_mp4.hpp"
 
 #include <cstdint>
@@ -5,8 +6,10 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -28,7 +31,16 @@ void usage(const char* argv0) {
     std::cout
         << "Usage: " << argv0
         << " [--cycles N] [--active-bricks N] [--width N] [--height N]"
-           " [--frames DIR] [--fps N] [--quiet]\n";
+           " [--frames DIR] [--fps N] [--fast] [--candidates N]"
+           " [--select-ratio F] [--quiet]\n";
+}
+
+std::filesystem::path frame_path(
+    const std::filesystem::path& frame_dir,
+    std::uint32_t cycle) {
+    std::ostringstream name;
+    name << "frame_" << std::setfill('0') << std::setw(6) << cycle << ".ppm";
+    return frame_dir / name.str();
 }
 
 } // namespace
@@ -40,8 +52,10 @@ int main(int argc, char** argv) {
         std::uint32_t height = 256u;
         std::uint32_t fps = 30u;
         bool quiet = false;
+        bool fast_mode = false;
         std::filesystem::path frame_dir;
         jarvisx::volumetric_80k::RuntimePolicy policy{};
+        jarvisx::volumetric_80k_fast::FastPolicy fast_policy{};
 
         for (int i = 1; i < argc; ++i) {
             const std::string arg = argv[i];
@@ -75,6 +89,16 @@ int main(int argc, char** argv) {
                 }
             } else if (arg == "--frames") {
                 frame_dir = next();
+            } else if (arg == "--fast") {
+                fast_mode = true;
+            } else if (arg == "--candidates") {
+                const auto v = std::stoul(next());
+                if (v == 0ul || v > 4096ul) {
+                    throw std::invalid_argument("--candidates must be in [1,4096]");
+                }
+                fast_policy.candidates_per_tick = static_cast<std::uint32_t>(v);
+            } else if (arg == "--select-ratio") {
+                fast_policy.selection_ratio = std::stof(next());
             } else if (arg == "--quiet") {
                 quiet = true;
             } else if (arg == "--help" || arg == "-h") {
@@ -93,8 +117,6 @@ int main(int argc, char** argv) {
             std::filesystem::create_directories(frame_dir);
         }
 
-        jarvisx::volumetric_80k::Engine engine(policy);
-
         if (!quiet) {
             std::cout
                 << "Dr Moagi 80K^3 sparse AE/AD video compute runtime\n"
@@ -102,48 +124,96 @@ int main(int argc, char** argv) {
                 << jarvisx::volumetric_80k::kLogicalVoxels << " voxels\n"
                 << "brick         : 32^3\n"
                 << "active cap    : " << policy.max_active_bricks << "\n"
-                << "projection    : " << width << 'x' << height << " RGB\n";
+                << "projection    : " << width << 'x' << height << " RGB\n"
+                << "mode          : " << (fast_mode ? "FAST" : "REFERENCE") << "\n";
+            if (fast_mode) {
+                std::cout
+                    << "candidates    : " << fast_policy.candidates_per_tick << "\n"
+                    << "select ratio  : " << fast_policy.selection_ratio << "\n";
+            }
         }
 
-        for (std::uint32_t cycle = 0; cycle < cycles; ++cycle) {
-            const auto receipt = engine.step(cycle);
+        if (fast_mode) {
+            jarvisx::volumetric_80k_fast::Scheduler scheduler(
+                fast_policy, policy);
 
-            if (!frame_dir.empty()) {
-                const auto rgb = engine.render_rgb(width, height);
-                std::ostringstream name;
-                name << "frame_" << std::setfill('0') << std::setw(6) << cycle << ".ppm";
-                write_ppm(frame_dir / name.str(), rgb, width, height);
+            for (std::uint32_t cycle = 0; cycle < cycles; ++cycle) {
+                const auto receipt = scheduler.tick(cycle);
+
+                if (!frame_dir.empty()) {
+                    const auto rgb = scheduler.render_rgb(width, height);
+                    write_ppm(frame_path(frame_dir, cycle), rgb, width, height);
+                }
+
+                if (!quiet) {
+                    std::cout
+                        << "cycle=" << receipt.tick
+                        << " candidates=" << receipt.candidates
+                        << " selected=" << receipt.selected
+                        << " cache_hits=" << receipt.cache_hits
+                        << " processed=" << receipt.processed
+                        << " work_ratio=" << receipt.work_ratio
+                        << " mean_mse=" << receipt.mean_mse
+                        << '\n';
+                }
             }
 
+            const auto& fast_stats = scheduler.stats();
+            const auto& engine_stats = scheduler.engine_stats();
             if (!quiet) {
                 std::cout
-                    << "cycle=" << receipt.cycle
-                    << " mse_before=" << receipt.ctr.mse_before
-                    << " mse_after=" << receipt.ctr.mse_after
-                    << " fp=" << receipt.ctr.fixed_point_relative
-                    << " commit=" << (receipt.ctr.committed ? "yes" : "no")
-                    << '\n';
+                    << "\nfast ticks       : " << fast_stats.ticks
+                    << "\ncandidates seen  : " << fast_stats.candidates_seen
+                    << "\nselected         : " << fast_stats.selected
+                    << "\ncache hits       : " << fast_stats.cache_hits
+                    << "\nprocessed        : " << fast_stats.processed
+                    << "\nengine commits   : " << engine_stats.commits
+                    << "\nengine rollbacks : " << engine_stats.rollbacks
+                    << "\nresident bytes   : " << engine_stats.resident_bytes
+                    << "\n";
+            }
+        } else {
+            jarvisx::volumetric_80k::Engine engine(policy);
+
+            for (std::uint32_t cycle = 0; cycle < cycles; ++cycle) {
+                const auto receipt = engine.step(cycle);
+
+                if (!frame_dir.empty()) {
+                    const auto rgb = engine.render_rgb(width, height);
+                    write_ppm(frame_path(frame_dir, cycle), rgb, width, height);
+                }
+
+                if (!quiet) {
+                    std::cout
+                        << "cycle=" << receipt.cycle
+                        << " mse_before=" << receipt.ctr.mse_before
+                        << " mse_after=" << receipt.ctr.mse_after
+                        << " fp=" << receipt.ctr.fixed_point_relative
+                        << " commit=" << (receipt.ctr.committed ? "yes" : "no")
+                        << '\n';
+                }
+            }
+
+            const auto& stats = engine.stats();
+            if (!quiet) {
+                std::cout
+                    << "\ncycles         : " << stats.cycles
+                    << "\ncommits        : " << stats.commits
+                    << "\nrollbacks      : " << stats.rollbacks
+                    << "\nactive bricks  : " << stats.active_bricks
+                    << "\nresident bytes : " << stats.resident_bytes
+                    << "\nlast MSE       : " << stats.last_mse
+                    << "\nlast FP rel    : " << stats.last_fixed_point_relative
+                    << "\n";
             }
         }
 
-        const auto& stats = engine.stats();
-        if (!quiet) {
+        if (!quiet && !frame_dir.empty()) {
             std::cout
-                << "\ncycles         : " << stats.cycles
-                << "\ncommits        : " << stats.commits
-                << "\nrollbacks      : " << stats.rollbacks
-                << "\nactive bricks  : " << stats.active_bricks
-                << "\nresident bytes : " << stats.resident_bytes
-                << "\nlast MSE       : " << stats.last_mse
-                << "\nlast FP rel    : " << stats.last_fixed_point_relative
-                << "\n";
-            if (!frame_dir.empty()) {
-                std::cout
-                    << "\nMP4 adapter command:\n"
-                    << "ffmpeg -y -framerate " << fps
-                    << " -i " << (frame_dir / "frame_%06d.ppm").string()
-                    << " -c:v libx264 -pix_fmt yuv420p output.mp4\n";
-            }
+                << "\nMP4 adapter command:\n"
+                << "ffmpeg -y -framerate " << fps
+                << " -i " << (frame_dir / "frame_%06d.ppm").string()
+                << " -c:v libx264 -pix_fmt yuv420p output.mp4\n";
         }
 
         return 0;
