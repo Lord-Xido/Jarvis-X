@@ -117,6 +117,7 @@ Current opcode surface:
 0x14 CORRECT
 0x15 VERIFY
 0x16 DROP_TILE
+0x17 INWARD_LOOP_K
 0x20 JUMP
 0xFF HALT
 ```
@@ -139,6 +140,33 @@ Z_{j+1} = \operatorname{clip}_{[0,255]}
 \]
 
 The reference implementation bounds the refinement iteration count and never interprets unbounded recursion as literal infinite execution.
+
+### Fused inward-loop superinstruction
+
+`INWARD_LOOP_K` executes the same deterministic one-step refinement recurrence repeatedly inside one VM dispatch. Its operands are:
+
+```text
+p0  requested logical iteration count
+p1  maximum physical refinement steps permitted for this dispatch
+p2  valid logical lanes represented by this padded 64^3 tile
+p3  reserved
+```
+
+The runtime may cover more logical iterations than physical steps only after it observes an exact discrete fixed point,
+
+\[
+F(Z)=Z.
+\]
+
+At that point,
+
+\[
+F^n(Z)=Z \qquad \forall n\ge 1,
+\]
+
+so eliding the remaining applications is exact for this recurrence rather than an estimated acceleration. If strict mode is enabled and the physical budget expires before either the requested iteration count or an exact fixed point is reached, execution fails instead of claiming unexecuted logical work.
+
+The VM records physical refinement steps separately from logical iterations and logical voxel updates.
 
 ## Exact correction path
 
@@ -167,7 +195,8 @@ The focused test suite checks:
 3. sparse addressing at a far-edge tile coordinate;
 4. encode/refine/decode/residual/correct execution;
 5. strict byte-exact verification;
-6. rejection of corrupt ROM magic.
+6. rejection of corrupt ROM magic;
+7. exact fixed-point fast-forward accounting for the fused inward-loop opcode.
 
 Run:
 
@@ -187,8 +216,22 @@ Inspect it:
 python -m jarvisx.dm3d_rom inspect dr_moagi_3d_1gb3.rom
 ```
 
+Execute the exact logical \(1{,}000{,}000\times1{,}000{,}000\) lane/iteration profile:
+
+```bash
+python -m jarvisx.dm3d_rom million-loop --quiet
+```
+
+The million-lane axis is partitioned across four padded 64^3 tiles. The final tile carries only the remaining valid lane count in `p2`, so logical accounting is exactly
+
+\[
+1{,}000{,}000\times1{,}000{,}000=10^{12}
+\]
+
+updates even though the physical tile storage is padded. The command does not assert that \(10^{12}\) distinct physical refinement operations were executed: the statistics report how many physical steps were actually evaluated and how many later logical applications were proven redundant after fixed-point convergence.
+
 ## Capability boundary
 
 The profile demonstrates sparse virtual addressing, bounded 3D block autoencoding, residual-guided refinement, explicit exact residual correction, deterministic ROM serialization, and verification.
 
-It does not claim that a physically resident \(10^{27}\)-byte memory exists, that arbitrary data can be losslessly compressed into the 8³ latent alone, or that recursive refinement guarantees unlimited capability growth.
+It does not claim that a physically resident \(10^{27}\)-byte memory exists, that arbitrary data can be losslessly compressed into the 8³ latent alone, that \(10^{12}\) logical updates imply \(10^{12}\) physically executed scalar operations, or that recursive refinement guarantees unlimited capability growth.
