@@ -349,6 +349,7 @@ Every canonical subsystem should provide:
 
 ## Documentation
 
+- [Dr Moagi multimodal engine — operational equations, 3D geometry and measurement boundaries](docs/DR_MOAGI_MULTIMODAL_OPERATIONAL_MATHEMATICS.md)
 - [Hyperscale Geometric VM — standalone 64,000-particle browser demo](apps/hyperscale-geometric-vm/README.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)
