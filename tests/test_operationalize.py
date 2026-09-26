@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from jarvisx.operationalize import main, run_preflight, run_smoke
+from jarvisx.operationalize import _torus_smoke, main, run_preflight, run_smoke
 
 
 def test_operational_preflight_is_healthy() -> None:
@@ -26,4 +26,20 @@ def test_operational_cli_returns_zero_for_healthy_smoke(capsys) -> None:
     payload = capsys.readouterr().out
 
     assert exit_code == 0
+    assert '"healthy": true' in payload
+
+
+def test_toroidal_operational_smoke_contracts_to_core() -> None:
+    detail = _torus_smoke(steps=4, batch=4)
+
+    assert "steps=4" in detail
+    assert "core_distance=" in detail
+
+
+def test_toroidal_operational_cli_returns_zero(capsys) -> None:
+    exit_code = main(["torus3d", "--steps", "4", "--batch", "4", "--json"])
+    payload = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert '"mode": "torus3d"' in payload
     assert '"healthy": true' in payload
