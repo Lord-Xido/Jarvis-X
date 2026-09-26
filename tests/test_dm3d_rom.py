@@ -8,6 +8,7 @@ from jarvisx.dm3d_rom import (
     OP_ENCODE,
     OP_FILL_TILE,
     OP_HALT,
+    OP_INWARD_LOOP_K,
     OP_REFINE,
     OP_RESIDUAL,
     OP_VERIFY,
@@ -65,3 +66,36 @@ def test_invalid_magic_is_rejected() -> None:
         assert "magic" in str(exc)
     else:
         raise AssertionError("corrupt ROM magic was accepted")
+
+
+def test_fused_inward_loop_fast_forwards_only_after_exact_fixed_point() -> None:
+    key = (7, 0, 0)
+    x, y, z = key
+    logical_iterations = 1_000_000
+    logical_lanes = 1_000
+
+    program = [
+        pack_instruction(OP_FILL_TILE, x, y, z, p0=1),
+        pack_instruction(OP_ENCODE, x, y, z, p0=8),
+        pack_instruction(
+            OP_INWARD_LOOP_K,
+            x,
+            y,
+            z,
+            p0=logical_iterations,
+            p1=8,
+            p2=logical_lanes,
+            flags=0x01,
+        ),
+        pack_instruction(OP_HALT),
+    ]
+
+    stats = DM3DVM(trace=False).run(build_rom(program))
+
+    assert stats.logical_refine_iterations == logical_iterations
+    assert stats.logical_voxel_updates == logical_iterations * logical_lanes
+    assert 1 <= stats.physical_refine_steps <= 8
+    assert stats.elided_fixed_point_steps == logical_iterations - stats.physical_refine_steps
+    assert stats.elided_logical_updates == (
+        logical_iterations - stats.physical_refine_steps
+    ) * logical_lanes
