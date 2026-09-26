@@ -8,6 +8,7 @@ The project follows semantic versioning where practical during alpha development
 
 ### Added
 
+- 3D Virtual ROM browser demonstration with independent sparse 1 GiB addressing, bounded page edits, byte-exact window codec, corrected hex addresses, Shannon entropy and offline graphics fallback;
 - Hyperscale Geometric VM browser demonstration with a seeded 64,000-particle shell, elapsed-time contraction, measured local telemetry, touch/keyboard controls and offline Canvas fallback;
 - verifiable JSON-native Omega ledger entries;
 - atomic persistent-ledger writes;
