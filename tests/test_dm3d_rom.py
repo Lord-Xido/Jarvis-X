@@ -2,6 +2,7 @@ from jarvisx.dm3d_rom import (
     AXIS_BYTES,
     HEADER_SIZE,
     INSTR_SIZE,
+    INSTR_STRUCT,
     LATENT_BYTES,
     OP_CORRECT,
     OP_DECODE,
@@ -16,6 +17,7 @@ from jarvisx.dm3d_rom import (
     TILES_PER_AXIS,
     DM3DVM,
     build_rom,
+    million_by_million_program,
     pack_instruction,
     parse_header,
 )
@@ -99,3 +101,17 @@ def test_fused_inward_loop_fast_forwards_only_after_exact_fixed_point() -> None:
     assert stats.elided_logical_updates == (
         logical_iterations - stats.physical_refine_steps
     ) * logical_lanes
+
+
+def test_million_by_million_program_accounts_exact_lane_cardinality() -> None:
+    inward = []
+    for raw in million_by_million_program():
+        fields = INSTR_STRUCT.unpack(raw)
+        op, _flags, _reserved, _x, _y, _z, p0, _p1, p2, _p3 = fields
+        if op == OP_INWARD_LOOP_K:
+            inward.append((p0, p2))
+
+    assert len(inward) == 4
+    assert all(iterations == 1_000_000 for iterations, _lanes in inward)
+    assert sum(lanes for _iterations, lanes in inward) == 1_000_000
+    assert sum(iterations * lanes for iterations, lanes in inward) == 10**12
