@@ -361,3 +361,322 @@ Reality
 -> Verification
 -> Repeat.
 ```
+
+
+## 17. Radial inward geometry
+
+The computational field may be given an explicit radial organization without
+requiring the physical hardware to be spherical. Let the logical 3D domain be
+
+```text
+M = [0,Lx] x [0,Ly] x [0,Lz]
+```
+
+with center
+
+```text
+c = (Lx/2, Ly/2, Lz/2).
+```
+
+For `x in M`, define
+
+```text
+r(x)   = x - c
+rho(x) = ||r(x)|| / R,    0 <= rho <= 1
+```
+
+for a declared normalization radius `R`. The resulting nested support family is
+
+```text
+M_rho = { x : ||x-c|| <= rho R }.
+```
+
+A bounded radial profile may assign roles by depth, for example:
+
+```text
+0.80 < rho <= 1.00   perception / external I/O
+0.60 < rho <= 0.80   feature encoding
+0.40 < rho <= 0.60   memory / world representation
+0.20 < rho <= 0.40   reasoning / planning
+0.00 <= rho <= 0.20  recurrent latent core
+```
+
+These bands are a topology/scheduling convention, not a claim that storage
+capacity is a Euclidean length.
+
+The simplest inward contraction is
+
+```text
+C_lambda(x) = c + lambda (x-c),    0 < lambda < 1.
+```
+
+After `k` applications,
+
+```text
+x_k   = c + lambda^k (x_0-c)
+rho_k = lambda^k rho_0.
+```
+
+A regularized conformal inversion may also be used:
+
+```text
+Lambda_eps(x)
+  = c + [a^2 / (||x-c||^2 + eps^2)] (x-c).
+```
+
+Its radial form is
+
+```text
+r' = a^2 r / (r^2 + eps^2).
+```
+
+The regularizer `eps > 0` prevents the singularity at the center. If a symbolic
+name such as `hbar_semantic` is used, its units and numerical meaning must be
+declared; it is not the physical Planck constant by default.
+
+A combined inward geometric operator is
+
+```text
+Phi_in = C_lambda o Lambda_eps.
+```
+
+The corresponding semantic update is distinct:
+
+```text
+Z_(k+1) = F_(Theta,k)(Z_k, Omega_k, E_k, G_k).
+```
+
+The joint state transition is therefore
+
+```text
+(x_k, Z_k)
+  -> (Phi_in(x_k), F_(Theta,k)(Z_k, Omega_k, E_k, G_k)).
+```
+
+This distinction is canonical: spatial contraction controls logical support;
+semantic contraction transforms representation.
+
+## 18. Coupled 3D field dynamics
+
+Associate a local state vector with each active point:
+
+```text
+S(x,t) = [h, z, omega, e, q, p, v](x,t)
+```
+
+for feature, latent, memory, residual, reasoning, planning and verification
+state. Thus
+
+```text
+S : M x R_+ -> R^d.
+```
+
+A continuous specialization of the bounded inward loop is
+
+```text
+partial_t Z
+  + v_in . grad Z
+  = D Delta Z
+    - grad_g U(Z)
+    + J_D^dagger E
+    + M_Omega(Z)
+    + G_goal(Z,G),
+```
+
+with inward transport field
+
+```text
+v_in(x)
+  = -kappa (x-c) / (||x-c|| + eps).
+```
+
+The terms have separate meanings:
+
+```text
+D Delta Z          local spatial coupling / diffusion
+-v_in . grad Z     inward transport
+-grad_g U          latent geometric descent
+J_D^dagger E       reconstruction-residual pullback
+M_Omega             memory injection
+G_goal              goal conditioning
+```
+
+For the Riemannian latent manifold `(Z,g)`,
+
+```text
+grad_g U = g^-1 grad U.
+```
+
+The dependency-free reference may use `g = I`, sparse finite differences and
+a bounded local proxy for `J_D^dagger`.
+
+An equivalent energy functional is
+
+```text
+F[Z] = integral_M [
+          (alpha/2) ||grad Z||^2
+          + U(Z)
+          + (beta/2) ||X - D_phi(Z)||^2
+       ] dV.
+```
+
+Its Euclidean gradient-flow specialization is
+
+```text
+partial_t Z
+  = alpha Delta Z
+    - grad_Z U
+    + beta J_D^T (X - D_phi(Z)).
+```
+
+This provides a direct bridge between the discrete VM recurrence, the local
+field operator and the continuous geometric model.
+
+## 19. Geometric autoencoding closure
+
+The canonical geometric autoencoder is
+
+```text
+Z_0    = E_theta(X)
+Z_K    = Phi_in^K(Z_0)
+Z*     = Psi_Theta^N(Z_K, Omega, G, E)
+Xhat   = D_phi(Z*)
+E      = X - Xhat.
+```
+
+For heterogeneous modalities, subtraction is replaced by declared
+modality-specific discrepancy operators.
+
+The outward geometric map may be represented by
+
+```text
+Phi_out(x) = c + lambda^-1 (x-c)
+```
+
+on a domain where it is valid. The desired local closure is
+
+```text
+Phi_out o Phi_in ~= I
+D_phi o E_theta  ~= I
+```
+
+within declared tolerances. Neither relation implies a globally lossless
+codec without residual or side information.
+
+The residual correction may be represented in latent geometry as
+
+```text
+delta_Z = J_D^dagger E
+Z_plus  = Exp_Z(-eta delta_Z)
+```
+
+or with a declared retraction when a true exponential map is unavailable.
+
+## 20. Mapping to sparse 3D bytecode
+
+The geometric model maps onto the bounded DM3D ROM profile as follows:
+
+```text
+geometric object             bytecode/runtime realization
+---------------------------  ------------------------------------------
+logical point x              tile / voxel address
+active support M_active      materialized sparse tiles
+E_theta                      ENCODE
+Phi_in / inward recurrence   INWARD_LOOP_K
+Psi / local refinement       REFINE or fused recurrence body
+D_phi                        DECODE
+E = X - Xhat                RESIDUAL
+candidate correction         CORRECT
+admission evidence           VERIFY
+control trajectory           program counter + JUMP
+```
+
+The mapping is semantic, not a claim that ordinary host hardware physically
+moves instructions through three-dimensional space.
+
+For the fused inward superinstruction, if one recurrence step is `F`, exact
+logical fast-forward is permitted only after
+
+```text
+F(Z) = Z.
+```
+
+Then
+
+```text
+F^n(Z) = Z,    for all n >= 1,
+```
+
+so later recurrence applications are mathematically redundant. Physical
+refinement steps and logical iterations remain separate telemetry.
+
+The `1,000,000 x 1,000,000` profile therefore represents
+
+```text
+10^12 logical lane-iterations
+```
+
+without asserting `10^12` physically evaluated scalar operations.
+
+## 21. Joint convergence and termination
+
+The geometric engine has distinct convergence questions and must not collapse
+them into one claim.
+
+Latent convergence:
+
+```text
+||Z_(n+1) - Z_n|| <= eps_Z.
+```
+
+Reconstruction convergence:
+
+```text
+d(X, Xhat) <= eps_X.
+```
+
+Parameter stationarity:
+
+```text
+||grad_Theta L_total|| <= eps_Theta.
+```
+
+Task/world completion:
+
+```text
+d(W, G) <= eps_G.
+```
+
+Candidate admission:
+
+```text
+V = 1.
+```
+
+A bounded run stops when its declared subset of these conditions holds or when
+its hard iteration/resource ceiling is reached. Literal infinite recursion and
+zero-latency correction are not operational claims.
+
+The extended master transition is therefore
+
+```text
+S_(t+1)
+  = U_Theta o Verify o Residual o Execute o D_phi
+    o Psi_Theta^N o Phi_in^K o E_theta (S_t, X_t, G_t).
+```
+
+with the invariant
+
+```text
+observe
+-> encode
+-> contract inward
+-> refine
+-> decode outward
+-> act
+-> observe
+-> contrast
+-> verify
+-> correct
+-> recur.
+```
