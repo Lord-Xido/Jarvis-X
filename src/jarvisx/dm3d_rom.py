@@ -64,6 +64,7 @@ OP_RESIDUAL = 0x13
 OP_CORRECT = 0x14
 OP_VERIFY = 0x15
 OP_DROP_TILE = 0x16
+OP_INWARD_LOOP_K = 0x17
 OP_JUMP = 0x20
 OP_HALT = 0xFF
 
@@ -77,6 +78,7 @@ OP_NAMES = {
     OP_CORRECT: "CORRECT",
     OP_VERIFY: "VERIFY",
     OP_DROP_TILE: "DROP_TILE",
+    OP_INWARD_LOOP_K: "INWARD_LOOP_K",
     OP_JUMP: "JUMP",
     OP_HALT: "HALT",
 }
@@ -237,6 +239,38 @@ def refine_latent(
     return z
 
 
+def inward_loop_k(
+    src: bytearray,
+    latent: bytearray,
+    logical_iterations: int,
+    physical_budget: int = 256,
+) -> Tuple[bytearray, int, bool]:
+    """Execute a bounded fused recurrence and fast-forward only at an exact fixed point.
+
+    Each physical step applies the same deterministic one-step latent refinement.
+    If a step leaves the latent unchanged, all later applications of that recurrence
+    are identical, so the remaining logical iterations can be elided exactly.
+
+    Returns the latent state, physical step count, and fixed-point flag.
+    """
+    logical = max(0, int(logical_iterations))
+    if logical == 0:
+        return bytearray(latent), 0, True
+
+    budget = max(1, min(logical, int(physical_budget)))
+    z = bytearray(latent)
+    physical_steps = 0
+
+    for _ in range(budget):
+        next_z = refine_latent(src, z, iterations=1, alpha_num=1, alpha_den=1)
+        physical_steps += 1
+        if next_z == z:
+            return z, physical_steps, True
+        z = next_z
+
+    return z, physical_steps, False
+
+
 def correct_with_residual(recon: bytearray, resid: List[int]) -> bytearray:
     return bytearray(clamp_u8(int(v) + int(r)) for v, r in zip(recon, resid))
 
@@ -249,6 +283,11 @@ class VMStats:
     instructions: int = 0
     verifies: int = 0
     verified_exact: int = 0
+    logical_refine_iterations: int = 0
+    logical_voxel_updates: int = 0
+    physical_refine_steps: int = 0
+    elided_fixed_point_steps: int = 0
+    elided_logical_updates: int = 0
 
 
 class SparseVolume:
@@ -329,6 +368,50 @@ class DM3DVM:
                     alpha_num=p1 or 1,
                     alpha_den=p2 or 1,
                 )
+            elif op == OP_INWARD_LOOP_K:
+                self._check_tile_coord(key)
+                if key not in self.latent:
+                    raise RuntimeError("INWARD_LOOP_K before ENCODE")
+
+                logical_iterations = max(1, int(p0 or 1))
+                physical_budget = max(1, int(p1 or 256))
+                logical_lanes = int(p2 or TILE_BYTES)
+                if not (1 <= logical_lanes <= TILE_BYTES):
+                    raise RuntimeError(
+                        f"INWARD_LOOP_K logical lane span must be in [1,{TILE_BYTES}]"
+                    )
+
+                next_latent, physical_steps, fixed = inward_loop_k(
+                    self.volume.get(key),
+                    self.latent[key],
+                    logical_iterations=logical_iterations,
+                    physical_budget=physical_budget,
+                )
+                self.latent[key] = next_latent
+                covered_iterations = (
+                    logical_iterations if fixed else min(logical_iterations, physical_steps)
+                )
+                self.stats.logical_refine_iterations += covered_iterations
+                self.stats.logical_voxel_updates += covered_iterations * logical_lanes
+                self.stats.physical_refine_steps += physical_steps
+
+                if fixed and physical_steps < logical_iterations:
+                    elided = logical_iterations - physical_steps
+                    self.stats.elided_fixed_point_steps += elided
+                    self.stats.elided_logical_updates += elided * logical_lanes
+
+                if self.trace:
+                    print(
+                        "           inward-loop "
+                        f"logical={logical_iterations:,} lanes={logical_lanes:,} "
+                        f"physical={physical_steps:,} fixed={fixed}"
+                    )
+
+                if (flags & 0x01) and not fixed and physical_steps < logical_iterations:
+                    raise RuntimeError(
+                        "strict INWARD_LOOP_K budget ended before fixed point "
+                        "or requested logical iteration count"
+                    )
             elif op == OP_DECODE:
                 self._check_tile_coord(key)
                 if key not in self.latent:
@@ -464,6 +547,48 @@ def demo_program() -> List[bytes]:
     return program
 
 
+def million_by_million_program() -> List[bytes]:
+    """Build an exact 1,000,000-lane x 1,000,000-iteration logical workload.
+
+    Four padded 64^3 tiles cover the lane axis. p2 records the number of
+    valid logical lanes in each tile, so accounting excludes padding.
+    """
+    logical_lanes = 1_000_000
+    logical_iterations = 1_000_000
+    remaining = logical_lanes
+    program: List[bytes] = []
+    tile_id = 0
+
+    while remaining > 0:
+        lanes = min(TILE_BYTES, remaining)
+        x, y, z = (tile_id, 0, 0)
+        program.extend(
+            [
+                pack_instruction(OP_FILL_TILE, x, y, z, p0=1 + (tile_id % 2)),
+                pack_instruction(OP_ENCODE, x, y, z, p0=8),
+                pack_instruction(
+                    OP_INWARD_LOOP_K,
+                    x,
+                    y,
+                    z,
+                    p0=logical_iterations,
+                    p1=256,
+                    p2=lanes,
+                    flags=0x01,
+                ),
+                pack_instruction(OP_DECODE, x, y, z),
+                pack_instruction(OP_RESIDUAL, x, y, z),
+                pack_instruction(OP_CORRECT, x, y, z),
+                pack_instruction(OP_VERIFY, x, y, z, flags=0x01),
+            ]
+        )
+        remaining -= lanes
+        tile_id += 1
+
+    program.append(pack_instruction(OP_HALT))
+    return program
+
+
 def write_demo_rom(path: Path) -> bytes:
     rom = build_rom(demo_program())
     path.write_bytes(rom)
@@ -510,6 +635,12 @@ def main(argv: List[str] | None = None) -> int:
     p_demo.add_argument("path", nargs="?", default="dr_moagi_3d_1gb3.rom")
     p_demo.add_argument("--quiet", action="store_true")
 
+    p_million = sub.add_parser(
+        "million-loop",
+        help="execute the exact 1,000,000 x 1,000,000 logical inward-loop workload",
+    )
+    p_million.add_argument("--quiet", action="store_true")
+
     p_inspect = sub.add_parser("inspect", help="dump ROM header and bytecode")
     p_inspect.add_argument("path")
 
@@ -533,6 +664,11 @@ def main(argv: List[str] | None = None) -> int:
         print(f"wrote {path} ({len(rom)} bytes)")
         print_geometry()
         print(DM3DVM(trace=not args.quiet).run(rom))
+        return 0
+    if args.cmd == "million-loop":
+        vm = DM3DVM(trace=not args.quiet)
+        stats = vm.run(build_rom(million_by_million_program()))
+        print(stats)
         return 0
     if args.cmd == "inspect":
         inspect_rom(Path(args.path))
