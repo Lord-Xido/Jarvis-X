@@ -640,7 +640,7 @@ def train_demo(engine: MM3DEngine, batch: Dict[str, object], steps: int, lr: flo
     for step in range(1, steps + 1):
         engine.reset_memory()
         optimizer.zero_grad(set_to_none=True)
-        outputs = engine(stateful=False, **batch)  # type: ignore[arg-type]
+        outputs = engine(stateful=False, **batch)
         loss, metrics = engine.loss(outputs, **batch)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(engine.parameters(), 1.0)
@@ -670,7 +670,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     engine.eval()
     engine.reset_memory()
     with torch.no_grad():
-        outputs = engine(stateful=False, **batch)  # type: ignore[arg-type]
+        outputs = engine(stateful=False, **batch)
     files = save_outputs(outputs, args.out)
     telemetry = {
         "config": asdict(cfg),
