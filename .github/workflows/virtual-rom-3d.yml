@@ -1,0 +1,48 @@
+name: Virtual ROM 3D
+
+on:
+  pull_request:
+    paths:
+      - "apps/virtual-rom-3d/**"
+      - ".github/workflows/virtual-rom-3d.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/virtual-rom-3d/**"
+      - ".github/workflows/virtual-rom-3d.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: virtual-rom-3d-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify sparse memory, codec and geometry
+        run: node --test apps/virtual-rom-3d/test_core.cjs
+      - name: Install browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/rom-browser" --no-save --package-lock=false playwright@1.62.1 three@0.128.0
+          node "$RUNNER_TEMP/rom-browser/node_modules/playwright/cli.js" install chromium --only-shell --with-deps
+      - name: Verify browser behavior
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/rom-browser/node_modules/playwright
+          THREE_JS_PATH: ${{ runner.temp }}/rom-browser/node_modules/three/build/three.min.js
+          SCREENSHOT_DIR: ${{ runner.temp }}/rom-screenshots
+        run: node apps/virtual-rom-3d/test_browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: virtual-rom-browser-screenshots
+          path: ${{ runner.temp }}/rom-screenshots
+          if-no-files-found: ignore

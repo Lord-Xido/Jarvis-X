@@ -365,6 +365,7 @@ Every canonical subsystem should provide:
 
 ## Documentation
 
+- [3D Virtual ROM — sparse 1 GiB browser address space, verified window codec and measured telemetry](apps/virtual-rom-3d/README.md)
 - [Hyperscale Geometric VM — standalone 64,000-particle browser demo](apps/hyperscale-geometric-vm/README.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project status](docs/PROJECT_STATUS.md)

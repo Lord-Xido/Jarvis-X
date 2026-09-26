@@ -135,6 +135,14 @@ Responsibilities:
 
 A visualization is not an authoritative compute substrate unless the architecture and tests demonstrate that role.
 
+`apps/virtual-rom-3d/` is an isolated browser memory/codec demonstration. A
+procedural 1 GiB byte image and bounded sparse page overlay own its local data;
+sampled grid/nebula geometry only projects that data. Window restoration follows
+decode/CRC validation and capacity-checked staged-page commit. The read-only
+`jarvisx.virtual-rom.v1` telemetry snapshot does not promote browser state into
+the canonical VM, ledger or learned-state namespaces. See its README for the
+versioned VRM1 window format, quotas and executable checks.
+
 ## 3. Canonical VM cycle
 
 ```text
