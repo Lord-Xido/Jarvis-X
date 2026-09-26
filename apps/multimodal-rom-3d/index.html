@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Operational sparse million-cubed multimodal 3D ROM codec and kinetic fixed-point visualizer">
+  <title>Dr Moagi Multimodal ROM 3D</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">DR MOAGI · DM3R v2</p>
+        <h1>Multimodal ROM · 10¹⁸ Logical Voxels</h1>
+        <p class="subhead">Sparse resident state · Morton 3D addressing · multimodal encode · inward fixed point · Ω residual memory · transactional ROM</p>
+      </div>
+      <div class="status-stack">
+        <span id="runtime-status" class="pill good">AUTO RUNNING</span>
+        <span class="pill">LOGICAL 1,000,000³</span>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <div class="viewport-card">
+        <div id="viewport" aria-label="Kinetic 3D view of encode, latent contraction, decode, and residual correction"></div>
+        <div class="stage-ribbon">
+          <span>INGEST</span><b>→</b><span>ENCODE</span><b>→</b><span>INWARD</span><b>→</b><span>LATENT</span><b>→</b><span>DECODE</span><b>→</b><span>VERIFY</span>
+        </div>
+        <div class="commit-banner" id="commit-banner">Awaiting first transaction</div>
+        <div class="legend">
+          <span><i data-m="text"></i>text</span>
+          <span><i data-m="audio"></i>audio</span>
+          <span><i data-m="image"></i>image</span>
+          <span><i data-m="video"></i>video</span>
+          <span><i data-m="tensor"></i>tensor</span>
+          <span><i data-m="sensor"></i>sensor</span>
+        </div>
+      </div>
+
+      <aside class="control-column">
+        <section class="panel">
+          <div class="panel-title"><span>Measured Runtime</span><span id="frame-state">—</span></div>
+          <dl class="metrics">
+            <div><dt>Resident cells</dt><dd id="m-active">—</dd></div>
+            <div><dt>Logical cells</dt><dd>10¹⁸</dd></div>
+            <div><dt>Resident bytes</dt><dd id="m-bytes">—</dd></div>
+            <div><dt>Logical/resident ratio</dt><dd id="m-ratio">—</dd></div>
+            <div><dt>Reconstruction RMSE</dt><dd id="m-rmse">—</dd></div>
+            <div><dt>Fixed-point residual</dt><dd id="m-fixed">—</dd></div>
+            <div><dt>Codec latency</dt><dd id="m-latency">—</dd></div>
+            <div><dt>Throughput</dt><dd id="m-throughput">—</dd></div>
+            <div><dt>State version</dt><dd id="m-version">0</dd></div>
+            <div><dt>ROM bytes</dt><dd id="m-rom">—</dd></div>
+          </dl>
+        </section>
+
+        <section class="panel controls-panel">
+          <div class="panel-title"><span>Operator Bus</span><span>BOUNDED LOCAL RUNTIME</span></div>
+          <label for="drive">External drive <output id="drive-value">0.55</output></label>
+          <input id="drive" type="range" min="0" max="1" step="0.01" value="0.55">
+          <div class="button-grid">
+            <button id="step">Run full cycle</button>
+            <button id="toggle-auto">Pause auto</button>
+            <button id="inward">Contract support ×2</button>
+            <button id="demo">Ingest multimodal demo</button>
+            <button id="save-rom">Save ROM</button>
+            <button id="load-rom">Load ROM</button>
+            <button id="export-rom">Export .dm3r</button>
+            <button id="reset" class="danger">Reset</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title"><span>Transactional Receipts</span><span id="ledger-head">GENESIS</span></div>
+          <ol id="ledger" class="ledger"></ol>
+        </section>
+      </aside>
+    </section>
+
+    <footer>
+      <strong>Boundary:</strong> 10¹⁸ is the logical address-space cardinality, not resident RAM. The runtime materializes a bounded sparse working set and reports measured codec/fixed-point metrics only.
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" referrerpolicy="no-referrer"></script>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
