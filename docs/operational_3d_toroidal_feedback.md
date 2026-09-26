@@ -121,6 +121,8 @@ Install the NumPy-enabled extra used by the 3D numerical modules:
 
 ```bash
 pip install -e ".[graphics]"
+jarvisx torus3d --steps 256 --batch 64
+jarvisx-operationalize torus3d --steps 16 --batch 8 --json
 python -m jarvisx.toroidal_feedback
 ```
 
