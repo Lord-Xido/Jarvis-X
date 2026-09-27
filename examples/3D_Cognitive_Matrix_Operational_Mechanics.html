@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cognitive Matrix Operational Mechanics</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #030712;
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        #webgl-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+        .glow-purple {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.5);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="w-full h-full">
+
+    <!-- 3D WebGL Canvas -->
+    <div id="webgl-container"></div>
+
+    <!-- HUD Overlay -->
+    <div class="relative z-10 w-full h-full pointer-events-none flex flex-col justify-between p-4 md:p-6">
+        
+        <!-- Top Bar: Header & Global Metrics -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pointer-events-auto">
+            <div class="glass-panel p-4 rounded-xl border-l-4 border-cyan-500 glow-cyan">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid font-mono text-cyan-400 text-xl fa-microchip animate-pulse"></i>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-wider text-cyan-300 uppercase">3D 8×8 Data Bus Matrix</h1>
+                        <p class="text-xs text-gray-400">1GB³ Volumetric Cognitive Auto-Encoder | End-to-End Operational Mechanics</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Metrics Bar -->
+            <div class="glass-panel px-6 py-3 rounded-xl flex items-center gap-6 text-xs text-gray-300">
+                <div class="flex flex-col items-center">
+                    <span class="text-gray-400 uppercase text-[10px]">Processing Stage</span>
+                    <span id="stage-badge" class="font-mono font-bold text-cyan-400">Stage 1 / 5</span>
+                </div>
+                <div class="h-6 w-px bg-gray-700"></div>
+                <div class="flex flex-col items-center">
+                    <span class="text-gray-400 uppercase text-[10px]">Reconstruction MSE</span>
+                    <span id="metric-mse" class="font-mono font-bold text-emerald-400">0.0014</span>
+                </div>
+                <div class="h-6 w-px bg-gray-700"></div>
+                <div class="flex flex-col items-center">
+                    <span class="text-gray-400 uppercase text-[10px]">Conduit Latency</span>
+                    <span id="metric-latency" class="font-mono font-bold text-purple-400">1.24 ms</span>
+                </div>
+                <div class="h-6 w-px bg-gray-700"></div>
+                <div class="flex flex-col items-center">
+                    <span class="text-gray-400 uppercase text-[10px]">Cloud Sync</span>
+                    <span class="font-mono font-bold text-cyan-400 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span> ONLINE
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Left: Pipeline Stage Controller -->
+        <div class="flex justify-between items-end pointer-events-none">
+            <div class="pointer-events-auto glass-panel p-4 rounded-xl max-w-sm flex flex-col gap-3">
+                <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+                    <span class="text-xs font-semibold text-gray-300 uppercase tracking-wider">Operational Sequence</span>
+                    <span id="stage-title" class="text-xs font-mono text-cyan-400">Stage 1: Bus Injection</span>
+                </div>
+
+                <p id="stage-desc" class="text-xs text-gray-300 leading-relaxed min-h-[48px]">
+                    Continuous 8×8 spatio-temporal excitation array converts parallel discrete signals into vector beams at $Z = -25$.
+                </p>
+
+                <!-- Navigation Controls -->
+                <div class="flex gap-2 pt-2">
+                    <button id="btn-prev" class="flex-1 bg-gray-800 hover:bg-gray-700 text-cyan-400 text-xs py-2 rounded-lg font-mono transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-chevron-left"></i> PREV
+                    </button>
+                    <button id="btn-next" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xs py-2 rounded-lg font-mono font-bold transition flex items-center justify-center gap-1 glow-cyan">
+                        NEXT <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <!-- Auto Play Toggle -->
+                <button id="btn-auto" class="w-full bg-purple-900/40 hover:bg-purple-800/50 border border-purple-500/30 text-purple-300 text-xs py-1.5 rounded-lg font-mono transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play text-[10px]"></i> AUTO-CYCLE SEQUENCER
+                </button>
+            </div>
+
+            <!-- Middle Right: Signal Pattern Generator & Controls -->
+            <div class="pointer-events-auto glass-panel p-4 rounded-xl w-64 flex flex-col gap-3">
+                <span class="text-xs font-semibold text-gray-300 uppercase tracking-wider border-b border-gray-700 pb-2">Excitation Mode</span>
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <button class="pattern-btn bg-cyan-900/50 border border-cyan-500 text-cyan-300 text-xs py-1.5 rounded font-mono hover:bg-cyan-800 transition" data-mode="sine">SINE WAVE</button>
+                    <button class="pattern-btn bg-gray-800 border border-gray-700 text-gray-400 text-xs py-1.5 rounded font-mono hover:bg-gray-700 transition" data-mode="pulse">BINARY PULSE</button>
+                    <button class="pattern-btn bg-gray-800 border border-gray-700 text-gray-400 text-xs py-1.5 rounded font-mono hover:bg-gray-700 transition" data-mode="hadamard">HADAMARD</button>
+                    <button class="pattern-btn bg-gray-800 border border-gray-700 text-gray-400 text-xs py-1.5 rounded font-mono hover:bg-gray-700 transition" data-mode="noise">QUANTUM NOISE</button>
+                </div>
+
+                <!-- Latent Sparsity Slider -->
+                <div class="mt-2 flex flex-col gap-1">
+                    <div class="flex justify-between text-[11px] text-gray-400">
+                        <span>Latent Sparsity (τ)</span>
+                        <span id="val-sparsity" class="text-cyan-400 font-mono">0.65</span>
+                    </div>
+                    <input id="slider-sparsity" type="range" min="0.1" max="0.95" step="0.05" value="0.65" class="w-full accent-cyan-500 bg-gray-800 h-1.5 rounded cursor-pointer">
+                </div>
+
+                <!-- Particle Velocity Slider -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-[11px] text-gray-400">
+                        <span>Conduit Velocity (v)</span>
+                        <span id="val-speed" class="text-cyan-400 font-mono">1.0x</span>
+                    </div>
+                    <input id="slider-speed" type="range" min="0.2" max="3.0" step="0.1" value="1.0" class="w-full accent-purple-500 bg-gray-800 h-1.5 rounded cursor-pointer">
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Stage Indicator Timeline -->
+        <div class="pointer-events-auto glass-panel p-3 rounded-xl flex justify-between items-center max-w-2xl mx-auto w-full">
+            <div class="stage-step-btn flex items-center gap-2 cursor-pointer text-cyan-400" data-stage="1">
+                <span class="w-6 h-6 rounded-full bg-cyan-500 text-black font-bold flex items-center justify-center text-xs">1</span>
+                <span class="text-xs font-semibold hidden md:inline">Bus Injection</span>
+            </div>
+            <div class="h-0.5 w-8 bg-gray-700"></div>
+            <div class="stage-step-btn flex items-center gap-2 cursor-pointer text-gray-500" data-stage="2">
+                <span class="w-6 h-6 rounded-full bg-gray-800 text-gray-400 font-bold flex items-center justify-center text-xs">2</span>
+                <span class="text-xs font-semibold hidden md:inline">Encoder Transport</span>
+            </div>
+            <div class="h-0.5 w-8 bg-gray-700"></div>
+            <div class="stage-step-btn flex items-center gap-2 cursor-pointer text-gray-500" data-stage="3">
+                <span class="w-6 h-6 rounded-full bg-gray-800 text-gray-400 font-bold flex items-center justify-center text-xs">3</span>
+                <span class="text-xs font-semibold hidden md:inline">Cognitive Matrix</span>
+            </div>
+            <div class="h-0.5 w-8 bg-gray-700"></div>
+            <div class="stage-step-btn flex items-center gap-2 cursor-pointer text-gray-500" data-stage="4">
+                <span class="w-6 h-6 rounded-full bg-gray-800 text-gray-400 font-bold flex items-center justify-center text-xs">4</span>
+                <span class="text-xs font-semibold hidden md:inline">Decoder Transport</span>
+            </div>
+            <div class="h-0.5 w-8 bg-gray-700"></div>
+            <div class="stage-step-btn flex items-center gap-2 cursor-pointer text-gray-500" data-stage="5">
+                <span class="w-6 h-6 rounded-full bg-gray-800 text-gray-400 font-bold flex items-center justify-center text-xs">5</span>
+                <span class="text-xs font-semibold hidden md:inline">Target Output</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // --- Stage Definitions ---
+        const STAGES = [
+            {
+                id: 1,
+                title: "Stage 1: 8×8 Bus Injection",
+                desc: "Parallel excitation of 64 transceiver nodes on plane Z = -25. Signals encode discrete spatial voltage vectors v_i(t).",
+                camPos: { x: 0, y: 12, z: -38 },
+                camTarget: { x: 0, y: 0, z: -25 }
+            },
+            {
+                id: 2,
+                title: "Stage 2: Encoder Conduit Mechanics",
+                desc: "Signal vectors compress through parameterized 3D Bézier trajectories into high-density latent streams entering the core.",
+                camPos: { x: -18, y: 15, z: -15 },
+                camTarget: { x: 0, y: 0, z: -12 }
+            },
+            {
+                id: 3,
+                title: "Stage 3: 1GB³ Volumetric Cognitive Tensor",
+                desc: "Latent vectors undergo nonlinear activation within an 8×8×8 sparse tensor voxel core. Synaptic weights update iteratively.",
+                camPos: { x: 22, y: 18, z: 22 },
+                camTarget: { x: 0, y: 0, z: 0 }
+            },
+            {
+                id: 4,
+                title: "Stage 4: Decoder Conduit Mechanics",
+                desc: "Extracted sparse features depart the core, expanding outwards along divergence curves towards the reconstruction plane.",
+                camPos: { x: 18, y: 15, z: 15 },
+                camTarget: { x: 0, y: 0, z: 12 }
+            },
+            {
+                id: 5,
+                title: "Stage 5: Output Bus Reconstruction",
+                desc: "Target plane at Z = +25 decodes reconstructed vector signals, computing real-time MSE loss and bit error rates.",
+                camPos: { x: 0, y: 12, z: 38 },
+                camTarget: { x: 0, y: 0, z: 25 }
+            }
+        ];
+
+        // Global State
+        let currentStage = 1;
+        let isAutoCycling = false;
+        let autoCycleTimer = null;
+        let signalMode = 'sine';
+        let sparsityThreshold = 0.65;
+        let conduitSpeed = 1.0;
+        let globalTime = 0;
+
+        // Three.js Globals
+        let scene, camera, renderer, controls;
+        let inputBusNodes = [], outputBusNodes = [];
+        let encoderParticles, decoderParticles;
+        let matrixVoxels = [];
+        let matrixGroup;
+
+        // Initialize WebGL Application
+        function initScene() {
+            const container = document.getElementById('webgl-container');
+
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x030712, 0.012);
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(STAGES[0].camPos.x, STAGES[0].camPos.y, STAGES[0].camPos.z);
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.target.set(STAGES[0].camTarget.x, STAGES[0].camTarget.y, STAGES[0].camTarget.z);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x0f172a, 2.0);
+            scene.add(ambientLight);
+
+            const pointLight1 = new THREE.PointLight(0x06b6d4, 3, 50);
+            pointLight1.position.set(0, 10, -25);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0xa855f7, 3, 50);
+            pointLight2.position.set(0, 10, 25);
+            scene.add(pointLight2);
+
+            // Build Pipeline Geometry
+            createGridBus(-25, true);   // Input Bus (Z = -25)
+            createGridBus(25, false);   // Output Bus (Z = 25)
+            createCognitiveMatrix();    // Volumetric Core (Z = 0)
+            createConduitParticles();  // Encoder/Decoder Particle Systems
+            createCloudUplinkBeam();    // Visual cloud telemetry beam
+
+            // Resize listener
+            window.addEventListener('resize', onWindowResize);
+
+            // Start Animation Loop
+            animate();
+        }
+
+        // --- Create 8x8 Transceiver Bus Planes ---
+        function createGridBus(zPos, isInput) {
+            const group = new THREE.Group();
+            group.position.z = zPos;
+
+            const gridHelper = new THREE.GridHelper(16, 8, isInput ? 0x06b6d4 : 0xa855f7, 0x1e293b);
+            gridHelper.rotation.x = Math.PI / 2;
+            group.add(gridHelper);
+
+            // Frame accent
+            const frameGeo = new THREE.BoxGeometry(16.5, 16.5, 0.4);
+            const frameMat = new THREE.MeshBasicMaterial({ 
+                color: isInput ? 0x06b6d4 : 0xa855f7, 
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            const frame = new THREE.Mesh(frameGeo, frameMat);
+            group.add(frame);
+
+            // Create 64 discrete transceiver nodes
+            const nodeGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 16);
+            const nodesArr = isInput ? inputBusNodes : outputBusNodes;
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const x = (c - 3.5) * 2;
+                    const y = (r - 3.5) * 2;
+
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: isInput ? 0x06b6d4 : 0xa855f7,
+                        emissive: isInput ? 0x06b6d4 : 0xa855f7,
+                        emissiveIntensity: 0.5,
+                        roughness: 0.2
+                    });
+
+                    const node = new THREE.Mesh(nodeGeo, mat);
+                    node.position.set(x, y, 0);
+                    node.rotation.x = Math.PI / 2;
+                    group.add(node);
+
+                    nodesArr.push({
+                        mesh: node,
+                        row: r,
+                        col: c,
+                        basePos: new THREE.Vector3(x, y, zPos)
+                    });
+                }
+            }
+
+            scene.add(group);
+        }
+
+        // --- Create 8x8x8 Volumetric Cognitive Tensor Matrix ---
+        function createCognitiveMatrix() {
+            matrixGroup = new THREE.Group();
+            const cubeGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+
+            for (let x = 0; x < 8; x++) {
+                for (let y = 0; y < 8; y++) {
+                    for (let z = 0; z < 8; z++) {
+                        const px = (x - 3.5) * 1.6;
+                        const py = (y - 3.5) * 1.6;
+                        const pz = (z - 3.5) * 1.6;
+
+                        const mat = new THREE.MeshStandardMaterial({
+                            color: 0x3b82f6,
+                            emissive: 0x1d4ed8,
+                            emissiveIntensity: 0.1,
+                            transparent: true,
+                            opacity: 0.2,
+                            wireframe: false
+                        });
+
+                        const voxel = new THREE.Mesh(cubeGeo, mat);
+                        voxel.position.set(px, py, pz);
+
+                        // Structural wireframe wrapper for matrix voxels
+                        const wireGeo = new THREE.BoxGeometry(0.82, 0.82, 0.82);
+                        const wireMat = new THREE.MeshBasicMaterial({
+                            color: 0x60a5fa,
+                            wireframe: true,
+                            transparent: true,
+                            opacity: 0.15
+                        });
+                        const wire = new THREE.Mesh(wireGeo, wireMat);
+                        voxel.add(wire);
+
+                        matrixGroup.add(voxel);
+                        matrixVoxels.push({
+                            mesh: voxel,
+                            gridPos: { x, y, z },
+                            baseScale: 1.0,
+                            activation: 0.0
+                        });
+                    }
+                }
+            }
+
+            // Outer Bounding Tensor Box
+            const boundGeo = new THREE.BoxGeometry(14, 14, 14);
+            const boundMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.2 });
+            const bound = new THREE.Mesh(boundGeo, boundMat);
+            matrixGroup.add(bound);
+
+            scene.add(matrixGroup);
+        }
+
+        // --- Create Particle Conduit Streams ---
+        function createConduitParticles() {
+            const particleCount = 400;
+
+            // Encoder Particles (Bus -> Core)
+            const encGeo = new THREE.BufferGeometry();
+            const encPositions = new Float32Array(particleCount * 3);
+            const encProgress = new Float32Array(particleCount);
+            const encIndices = new Float32Array(particleCount);
+
+            for (let i = 0; i < particleCount; i++) {
+                encProgress[i] = Math.random();
+                encIndices[i] = Math.floor(Math.random() * 64);
+            }
+
+            encGeo.setAttribute('position', new THREE.BufferAttribute(encPositions, 3));
+            
+            const encMat = new THREE.PointsMaterial({
+                color: 0x06b6d4,
+                size: 0.35,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            encoderParticles = new THREE.Points(encGeo, encMat);
+            encoderParticles.userData = { progress: encProgress, indices: encIndices };
+            scene.add(encoderParticles);
+
+            // Decoder Particles (Core -> Target Bus)
+            const decGeo = new THREE.BufferGeometry();
+            const decPositions = new Float32Array(particleCount * 3);
+            const decProgress = new Float32Array(particleCount);
+            const decIndices = new Float32Array(particleCount);
+
+            for (let i = 0; i < particleCount; i++) {
+                decProgress[i] = Math.random();
+                decIndices[i] = Math.floor(Math.random() * 64);
+            }
+
+            decGeo.setAttribute('position', new THREE.BufferAttribute(decPositions, 3));
+
+            const decMat = new THREE.PointsMaterial({
+                color: 0xa855f7,
+                size: 0.35,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            decoderParticles = new THREE.Points(decGeo, decMat);
+            decoderParticles.userData = { progress: decProgress, indices: decIndices };
+            scene.add(decoderParticles);
+        }
+
+        // --- Create Cloud Satellite Uplink Beam ---
+        function createCloudUplinkBeam() {
+            const beamGeo = new THREE.CylinderGeometry(0.2, 2.5, 40, 16, 1, true);
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: 0x06b6d4,
+                transparent: true,
+                opacity: 0.15,
+                wireframe: true,
+                side: THREE.DoubleSide
+            });
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            beam.position.set(0, 25, 0);
+            scene.add(beam);
+
+            // Satellite Node Icon
+            const satGeo = new THREE.OctahedronGeometry(1.2, 0);
+            const satMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, wireframe: true });
+            const sat = new THREE.Mesh(satGeo, satMat);
+            sat.position.set(0, 42, 0);
+            scene.add(sat);
+        }
+
+        // --- Signal Calculation Functions ---
+        function getSignalValue(r, c, t) {
+            if (signalMode === 'sine') {
+                return 0.5 + 0.5 * Math.sin(t * 3.0 + r * 0.5 + c * 0.5);
+            } else if (signalMode === 'pulse') {
+                return (Math.sin(t * 5.0 + (r + c) * 0.8) > 0.2) ? 1.0 : 0.0;
+            } else if (signalMode === 'hadamard') {
+                const bitVal = ((r & c) % 2 === 0) ? 1.0 : 0.0;
+                return bitVal * (0.5 + 0.5 * Math.sin(t * 4.0));
+            } else { // Quantum Noise
+                return Math.random();
+            }
+        }
+
+        // --- Animation Loop & Kinetic Calculations ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            globalTime += 0.015 * conduitSpeed;
+
+            // 1. Update Input Bus Nodes (Excitation Dynamics)
+            inputBusNodes.forEach(node => {
+                const val = getSignalValue(node.row, node.col, globalTime);
+                node.mesh.material.emissiveIntensity = 0.2 + val * 1.5;
+                node.mesh.scale.set(1 + val * 0.3, 1 + val * 0.5, 1 + val * 0.3);
+            });
+
+            // 2. Update Volumetric Cognitive Matrix Latent Voxels
+            matrixVoxels.forEach(v => {
+                const { x, y, z } = v.gridPos;
+                // Calculate spatial activation wave
+                const distance = Math.sqrt(x*x + y*y + z*z);
+                const activationVal = 0.5 + 0.5 * Math.sin(globalTime * 2.5 - distance * 0.6);
+
+                if (activationVal > sparsityThreshold) {
+                    v.mesh.material.opacity = 0.8;
+                    v.mesh.material.emissiveIntensity = (activationVal - sparsityThreshold) * 3.0;
+                    v.mesh.scale.setScalar(0.8 + activationVal * 0.4);
+                    v.mesh.material.color.setHex(0x38bdf8); // Glowing cyan-blue
+                } else {
+                    v.mesh.material.opacity = 0.08;
+                    v.mesh.material.emissiveIntensity = 0.05;
+                    v.mesh.scale.setScalar(0.6);
+                    v.mesh.material.color.setHex(0x1e293b); // Subdued slate
+                }
+            });
+
+            // Rotate cognitive matrix slowly
+            if (matrixGroup) matrixGroup.rotation.y = globalTime * 0.15;
+
+            // 3. Update Encoder Particles (Bus -> Core)
+            const encPos = encoderParticles.geometry.attributes.position.array;
+            const encProg = encoderParticles.userData.progress;
+            const encInd = encoderParticles.userData.indices;
+
+            for (let i = 0; i < encProg.length; i++) {
+                encProg[i] += 0.008 * conduitSpeed;
+                if (encProg[i] > 1.0) encProg[i] = 0.0;
+
+                const t = encProg[i];
+                const startNode = inputBusNodes[encInd[i]];
+                const p0 = startNode.basePos;
+                const p3 = new THREE.Vector3(0, 0, 0); // Core center
+
+                // Bézier Control Points for curved transport
+                const p1 = new THREE.Vector3(p0.x * 0.8, p0.y * 0.8, -18);
+                const p2 = new THREE.Vector3(p0.x * 0.2, p0.y * 0.2, -6);
+
+                // Cubic Bezier Equation
+                const x = Math.pow(1-t, 3)*p0.x + 3*Math.pow(1-t, 2)*t*p1.x + 3*(1-t)*t*t*p2.x + t*t*t*p3.x;
+                const y = Math.pow(1-t, 3)*p0.y + 3*Math.pow(1-t, 2)*t*p1.y + 3*(1-t)*t*t*p2.y + t*t*t*p3.y;
+                const z = Math.pow(1-t, 3)*p0.z + 3*Math.pow(1-t, 2)*t*p1.z + 3*(1-t)*t*t*p2.z + t*t*t*p3.z;
+
+                encPos[i * 3] = x;
+                encPos[i * 3 + 1] = y;
+                encPos[i * 3 + 2] = z;
+            }
+            encoderParticles.geometry.attributes.position.needsUpdate = true;
+
+            // 4. Update Decoder Particles (Core -> Target Bus)
+            const decPos = decoderParticles.geometry.attributes.position.array;
+            const decProg = decoderParticles.userData.progress;
+            const decInd = decoderParticles.userData.indices;
+
+            for (let i = 0; i < decProg.length; i++) {
+                decProg[i] += 0.008 * conduitSpeed;
+                if (decProg[i] > 1.0) decProg[i] = 0.0;
+
+                const t = decProg[i];
+                const endNode = outputBusNodes[decInd[i]];
+                const p0 = new THREE.Vector3(0, 0, 0); // Core center
+                const p3 = endNode.basePos;
+
+                const p1 = new THREE.Vector3(p3.x * 0.2, p3.y * 0.2, 6);
+                const p2 = new THREE.Vector3(p3.x * 0.8, p3.y * 0.8, 18);
+
+                const x = Math.pow(1-t, 3)*p0.x + 3*Math.pow(1-t, 2)*t*p1.x + 3*(1-t)*t*t*p2.x + t*t*t*p3.x;
+                const y = Math.pow(1-t, 3)*p0.y + 3*Math.pow(1-t, 2)*t*p1.y + 3*(1-t)*t*t*p2.y + t*t*t*p3.y;
+                const z = Math.pow(1-t, 3)*p0.z + 3*Math.pow(1-t, 2)*t*p1.z + 3*(1-t)*t*t*p2.z + t*t*t*p3.z;
+
+                decPos[i * 3] = x;
+                decPos[i * 3 + 1] = y;
+                decPos[i * 3 + 2] = z;
+            }
+            decoderParticles.geometry.attributes.position.needsUpdate = true;
+
+            // 5. Update Output Bus Nodes (Reconstruction)
+            outputBusNodes.forEach(node => {
+                const inVal = getSignalValue(node.row, node.col, globalTime - 0.4);
+                const recVal = inVal + (Math.random() * 0.05 - 0.025); // Reconstruction with slight noise
+                node.mesh.material.emissiveIntensity = 0.2 + recVal * 1.5;
+                node.mesh.scale.set(1 + recVal * 0.3, 1 + recVal * 0.5, 1 + recVal * 0.3);
+            });
+
+            // 6. Update Telemetry Metrics dynamically
+            document.getElementById('metric-mse').innerText = (0.0008 + Math.random() * 0.0006).toFixed(4);
+            document.getElementById('metric-latency').innerText = (1.10 + (1 / conduitSpeed) * 0.2).toFixed(2) + " ms";
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- Camera Stage Transition ---
+        function goToStage(stageNum) {
+            currentStage = stageNum;
+            const config = STAGES[stageNum - 1];
+
+            // Smooth Camera Interpolation
+            const duration = 1200;
+            const startPos = { ...camera.position };
+            const startTarget = { ...controls.target };
+            const startTime = performance.now();
+
+            function animateCamera(now) {
+                const elapsed = now - startTime;
+                const p = Math.min(elapsed / duration, 1.0);
+                const ease = p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p; // Ease in-out
+
+                camera.position.x = startPos.x + (config.camPos.x - startPos.x) * ease;
+                camera.position.y = startPos.y + (config.camPos.y - startPos.y) * ease;
+                camera.position.z = startPos.z + (config.camPos.z - startPos.z) * ease;
+
+                controls.target.x = startTarget.x + (config.camTarget.x - startTarget.x) * ease;
+                controls.target.y = startTarget.y + (config.camTarget.y - startTarget.y) * ease;
+                controls.target.z = startTarget.z + (config.camTarget.z - startTarget.z) * ease;
+
+                if (p < 1.0) {
+                    requestAnimationFrame(animateCamera);
+                }
+            }
+            requestAnimationFrame(animateCamera);
+
+            // Update UI Elements
+            document.getElementById('stage-badge').innerText = `Stage ${config.id} / 5`;
+            document.getElementById('stage-title').innerText = config.title;
+            document.getElementById('stage-desc').innerText = config.desc;
+
+            // Highlight Step Indicator
+            document.querySelectorAll('.stage-step-btn').forEach(btn => {
+                const st = parseInt(btn.dataset.stage);
+                const circle = btn.querySelector('span:first-child');
+                if (st === stageNum) {
+                    btn.className = "stage-step-btn flex items-center gap-2 cursor-pointer text-cyan-400";
+                    circle.className = "w-6 h-6 rounded-full bg-cyan-500 text-black font-bold flex items-center justify-center text-xs glow-cyan";
+                } else {
+                    btn.className = "stage-step-btn flex items-center gap-2 cursor-pointer text-gray-500";
+                    circle.className = "w-6 h-6 rounded-full bg-gray-800 text-gray-400 font-bold flex items-center justify-center text-xs";
+                }
+            });
+        }
+
+        // --- Event Listeners & Handlers ---
+        document.getElementById('btn-next').addEventListener('click', () => {
+            const next = currentStage < 5 ? currentStage + 1 : 1;
+            goToStage(next);
+        });
+
+        document.getElementById('btn-prev').addEventListener('click', () => {
+            const prev = currentStage > 1 ? currentStage - 1 : 5;
+            goToStage(prev);
+        });
+
+        document.querySelectorAll('.stage-step-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const st = parseInt(btn.dataset.stage);
+                goToStage(st);
+            });
+        });
+
+        // Auto-cycle stage sequence
+        document.getElementById('btn-auto').addEventListener('click', (e) => {
+            isAutoCycling = !isAutoCycling;
+            const btn = document.getElementById('btn-auto');
+            if (isAutoCycling) {
+                btn.className = "w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs py-1.5 rounded-lg font-mono transition flex items-center justify-center gap-2 glow-cyan";
+                btn.innerHTML = `<i class="fa-solid fa-pause text-[10px]"></i> PAUSE SEQUENCER`;
+                autoCycleTimer = setInterval(() => {
+                    const next = currentStage < 5 ? currentStage + 1 : 1;
+                    goToStage(next);
+                }, 4000);
+            } else {
+                btn.className = "w-full bg-purple-900/40 hover:bg-purple-800/50 border border-purple-500/30 text-purple-300 text-xs py-1.5 rounded-lg font-mono transition flex items-center justify-center gap-2";
+                btn.innerHTML = `<i class="fa-solid fa-play text-[10px]"></i> AUTO-CYCLE SEQUENCER`;
+                clearInterval(autoCycleTimer);
+            }
+        });
+
+        // Pattern selection buttons
+        document.querySelectorAll('.pattern-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.pattern-btn').forEach(b => {
+                    b.className = "pattern-btn bg-gray-800 border border-gray-700 text-gray-400 text-xs py-1.5 rounded font-mono hover:bg-gray-700 transition";
+                });
+                btn.className = "pattern-btn bg-cyan-900/50 border border-cyan-500 text-cyan-300 text-xs py-1.5 rounded font-mono hover:bg-cyan-800 transition";
+                signalMode = btn.dataset.mode;
+            });
+        });
+
+        // Sliders
+        document.getElementById('slider-sparsity').addEventListener('input', (e) => {
+            sparsityThreshold = parseFloat(e.target.value);
+            document.getElementById('val-sparsity').innerText = sparsityThreshold.toFixed(2);
+        });
+
+        document.getElementById('slider-speed').addEventListener('input', (e) => {
+            conduitSpeed = parseFloat(e.target.value);
+            document.getElementById('val-speed').innerText = conduitSpeed.toFixed(1) + "x";
+        });
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Window Load Initialization
+        window.onload = function() {
+            initScene();
+        };
+    </script>
+</body>
+</html>
