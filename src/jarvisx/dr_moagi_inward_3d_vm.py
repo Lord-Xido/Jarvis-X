@@ -376,7 +376,8 @@ class InwardSelfOptimizing3DVM:
     def contraction_bound(config: ANNConfig) -> float:
         """Upper bound induced by the ANN's normalized latent row sum (0.72)."""
 
-        return (1.0 - config.latent_relaxation) + config.latent_relaxation * 0.72
+        relaxation = float(config.latent_relaxation)
+        return (1.0 - relaxation) + relaxation * 0.72
 
     def _state_hash(self) -> str:
         state = self.engine.state
@@ -409,7 +410,7 @@ class InwardSelfOptimizing3DVM:
         residual = self.engine.state.residual
         if not residual:
             return None
-        return sum(value * value for value in residual) / len(residual)
+        return float(sum(value * value for value in residual) / len(residual))
 
     def _append_trace(
         self,
