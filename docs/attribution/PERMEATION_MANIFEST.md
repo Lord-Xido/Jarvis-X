@@ -41,6 +41,10 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`
 - `cpp_runtime/src/volumetric_rom_ann_main.cpp`
 - the CMake target `DrMoagi-Volumetric-ROM-ANN`
+- `docs/DR_MOAGI_3D_BITS_ITERATION_LOOP.md`
+- `docs/adr/0029-recursive-3d-bits-symbolic-horizon.md`
+- `src/jarvisx/recursive_bits3d.py`
+- `tests/test_recursive_bits3d.py`
 - other present and future files whose own title or specification explicitly places them in the Dr Moagi family.
 
 This list is representative, not exhaustive; the inheritance condition is the explicit Dr Moagi designation plus the repository context.
@@ -245,3 +249,38 @@ state with physical spacetime. NEXUS-3D remains a non-authoritative
 observation/media adapter. Provider credentials stay server-side, and any
 future operational GUI mutation must remain subordinate to ADR-026,
 CTR and Pi_Lambda.
+
+
+## Recursive 3D bits symbolic-horizon extension
+
+ADR-029 and `src/jarvisx/recursive_bits3d.py` specialize the bounded
+volumetric bytecode runtime into an explicit bit/byte-to-3D addressing layer.
+
+The inherited execution law is:
+
+```text
+finite bit/byte input
+  -> linear lane index
+  -> (x,y,z,channel,bit)
+  -> sparse active 3D state
+  -> encode
+  -> inward/mirror fold
+  -> decode
+  -> XOR residual + Hamming evidence
+  -> CTR verification
+  -> commit OR rollback
+  -> permeation receipt
+  -> bounded recur
+```
+
+The symbolic iteration target
+
+```text
+a = 10^24
+T = a^(a^(a))
+```
+
+is carried as unevaluated metadata. It does not alter the finite physical
+iteration budget and does not constitute a claim of septillion-tower
+iterations-per-second, speedup, resident memory, or measured hardware
+performance.
