@@ -15,6 +15,8 @@ Any current or future repository artifact that explicitly identifies itself as a
 
 The inherited attribution applies to the Dr Moagi family, including principal surfaces such as:
 
+- `docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md`
+- `docs/adr/0030-nvx9-contractivity-provenance-permeation.md`
 - `docs/DR_MOAGI_E8.md`
 - `docs/DR_MOAGI_3D_OS.md`
 - `docs/DR_MOAGI_RUNTIME_FABRIC.md`
@@ -245,3 +247,45 @@ state with physical spacetime. NEXUS-3D remains a non-authoritative
 observation/media adapter. Provider credentials stay server-side, and any
 future operational GUI mutation must remain subordinate to ADR-026,
 CTR and Pi_Lambda.
+
+
+## NV-X9 / Dr. Moagi’s Beast contractive-Riemannian extension
+
+ADR-030 permeates the NV-X9 / Dr. Moagi’s Beast architecture into the canonical
+Dr Moagi provenance graph while preserving a strict distinction between
+project-specific synthesis and established mathematical primitives.
+
+The canonical project identity for this extension is:
+
+```text
+multimodal observation state
+  -> Riemannian geometric encoder
+  -> contractive fixed-point refinement
+  -> geometric decoder
+  -> spatial permeation
+  -> recursive inward fold
+  -> tangent-space residual / geodesic correction
+  -> verified recurrent state
+```
+
+with the project-level composite operator
+
+\[
+S_{t+1}=F\!\left(P\!\left(D\!\left(A_\omega(E(S_t))\right)\right)\right).
+\]
+
+The canonical provenance record is
+`docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md`, marker
+`NVX9-PROVENANCE-LOCK-2026-09-27`.
+
+The inherited claim boundary is mandatory: Riemannian manifolds, Christoffel
+connections, gradient flow, exponential/logarithmic maps, Ricci flow,
+contraction mappings, autoencoders, residual correction and fixed-point
+methods remain established prior mathematics. The repository claim concerns
+the named NV-X9 / Dr. Moagi’s Beast system-level arrangement, interpretation
+and operator composition.
+
+Benchmark tables and figures associated with the source technical report are
+project evidence, not independent reproduction. They must not be promoted into
+claims of external validation, production throughput, patentability or global
+scientific novelty without separate evidence.

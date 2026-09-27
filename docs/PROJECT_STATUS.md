@@ -31,6 +31,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Consolidated empirical validation | Stable reference | `empirical_validation.py`, focused tests, JSON artifact workflow | verifies bounded software invariants only; no AGI, safety or production-performance inference |
 | Canonical typed state / transaction closure | Specification | ADR-016 | defines one typed state, geometry profiles, verification split and atomic promotion law; full adapter migration remains incomplete |
 | Dr Moagi operational auto-encoding/decoding equation | Specification | `docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md`, ADR-017 | canonical Layer-5 systems equation; existing engines implement subsets/adapters and are not automatically fully conformant |
+| NV-X9 / Dr. Moagi’s Beast contractive 3D engine | Specification / provenance | `docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md`, ADR-030 | canonical named Riemannian/contractive synthesis; source-report benchmarks are not yet independently reproduced as a canonical runtime, and repository provenance is not a patentability or global-novelty determination |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
 | 1 MiB³ volumetric ROM ANN | Reference laboratory | `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`, `cpp_runtime/src/volumetric_rom_ann_main.cpp`, CTest, cross-platform C++ workflow | `2^60` logical voxel addresses / 1 EiB virtual byte capacity; only bounded `32^3` tiles are materialized; fixed-point and adaptive dynamics are software emulation, not physical 1 EiB memory or hardware-throughput evidence |
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
@@ -113,7 +114,8 @@ Jarvis-X does not currently claim:
 - convergence of arbitrary learned Dr Moagi codecs from the reference explicit-step guard alone;
 - universal convergence or compression from the same-width inward 4D graph autoencoder;
 - that an `R^4` feature coordinate establishes a physical fourth spatial dimension;
-- empirical superiority of fractal, residual-hierarchical or adaptive memory over transformer, state-space or retrieval baselines.
+- empirical superiority of fractal, residual-hierarchical or adaptive memory over transformer, state-space or retrieval baselines;
+- independent replication, production readiness, patentability, or global scientific novelty for NV-X9 / Dr. Moagi’s Beast merely from its provenance record or source-report benchmark tables.
 
 ## Canonical promotion checklist
 

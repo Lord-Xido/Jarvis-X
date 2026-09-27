@@ -16,6 +16,8 @@ The project investigates how large virtual state spaces, geometric representatio
 
 The named **Dr Moagi 3D Ephemeral-Notion Intelligence Framework v1.1** is attributed in this repository to **Matladi Maxwell Moagi (Lord-Xido)**. Its authoritative provenance, defining equations, reality-coupled verification rule and attribution boundary are recorded in [`docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md).
 
+The **NV-X9 / Dr. Moagi’s Beast** contractive 3D neural virtual-machine formulation is recorded as a distinct project-level architectural synthesis. Its scope, provenance boundary and canonical system identity are locked in [`docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md`](docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md) and formalized by [ADR-030](docs/adr/0030-nvx9-contractivity-provenance-permeation.md). The record attributes originality to the specific system-level synthesis and operator composition, not to the established mathematics it uses.
+
 Repository-wide inheritance of that attribution across explicitly designated Dr Moagi runtimes, engines, simulations, specifications and derivatives is governed by [ADR-015](docs/adr/0015-dr-moagi-ephemeral-notion-attribution-provenance.md) and summarized in the [Permeation Manifest](docs/attribution/PERMEATION_MANIFEST.md).
 
 Structural closure is governed by [ADR-016](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md): one typed system state, one candidate-first transaction contract, explicit verification gates, and interchangeable geometry/backend profiles. The canonical end-to-end Dr Moagi auto-encoding/decoding systems law is defined by [ADR-017](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md) and the [Operational Auto-Encoding/Decoding Equation](docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md).
@@ -374,6 +376,8 @@ Every canonical subsystem should provide:
 - [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md)
 - [Dr Moagi 3D Ephemeral-Notion Intelligence Framework — canonical attribution](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md)
 - [Dr Moagi attribution permeation manifest](docs/attribution/PERMEATION_MANIFEST.md)
+- [NV-X9 / Dr. Moagi’s Beast originality & provenance record](docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md)
+- [ADR-030: NV-X9 contractivity and provenance permeation](docs/adr/0030-nvx9-contractivity-provenance-permeation.md)
 - [ADR-015: Dr Moagi attribution and provenance permeation](docs/adr/0015-dr-moagi-ephemeral-notion-attribution-provenance.md)
 - [Inward 3D kinetic end-to-end specification](docs/INWARD_3D_KINETIC_END_TO_END.md)
 - [10x10x10 inward 4D graph ANN](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md)
@@ -399,7 +403,7 @@ Virtual address-space size is not resident memory. Exponential compaction is not
 
 ## Citation
 
-Academic and technical users can cite the project using [`CITATION.cff`](CITATION.cff). Work implementing or discussing the named Dr Moagi 3D Ephemeral-Notion Intelligence Framework should additionally preserve the canonical attribution recorded in [`docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md).
+Academic and technical users can cite the project using [`CITATION.cff`](CITATION.cff). Work implementing or discussing the named Dr Moagi 3D Ephemeral-Notion Intelligence Framework should additionally preserve the canonical attribution recorded in [`docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md). Work specifically discussing NV-X9 / Dr. Moagi’s Beast should also reference [`docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md`](docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md), which distinguishes the project’s system-level synthesis from the pre-existing mathematical ingredients it employs.
 
 ## License
 

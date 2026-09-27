@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use Jarvis-X in research or technical work, please cite the software and the specific release or commit. For work implementing or discussing the Dr Moagi 3D Ephemeral-Notion Intelligence Framework, preserve the canonical attribution to Matladi Maxwell Moagi (Lord-Xido)."
+message: "If you use Jarvis-X in research or technical work, please cite the software and the specific release or commit. For work implementing or discussing the Dr Moagi 3D Ephemeral-Notion Intelligence Framework, preserve the canonical attribution to Matladi Maxwell Moagi (Lord-Xido). For NV-X9 / Dr. Moagi’s Beast, also cite the repository provenance record that distinguishes the original system-level synthesis from established mathematical ingredients."
 title: "Jarvis-X"
 type: software
 version: 0.1.0
@@ -19,6 +19,9 @@ keywords:
   - ephemeral notion intelligence
   - reality-coupled verification
   - Dr Moagi framework
+  - NV-X9
+  - contractive 3D neural virtual machine
+  - Riemannian latent geometry
 abstract: >-
   Jarvis-X is an experimental deterministic bytecode virtual machine and
   sparse-computing research platform focused on explicit state contracts,
@@ -28,4 +31,7 @@ abstract: >-
   systems-level synthesis attributed to Matladi Maxwell Moagi (Lord-Xido),
   with canonical provenance recorded at
   docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md and repository-wide
-  inheritance governed by ADR-015.
+  inheritance governed by ADR-015. The NV-X9 / Dr. Moagi’s Beast architecture
+  is separately recorded at docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md;
+  its provenance claim applies to the named system-level synthesis and
+  operator composition, not to the established mathematical primitives used.
