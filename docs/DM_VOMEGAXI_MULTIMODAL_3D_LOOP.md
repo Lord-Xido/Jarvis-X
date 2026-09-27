@@ -1,5 +1,9 @@
 # DM-vOmegaXi+ Full 3D Multimodal Processing and Generation Loop
 
+For an implementation-linked derivation, proposed attention and display
+geometry, and explicit measurement boundaries, see the
+[end-to-end operational and mathematical breakdown](DR_MOAGI_MULTIMODAL_OPERATIONAL_MATHEMATICS.md).
+
 ## Status
 
 Bounded executable reference architecture. The implementation performs real
