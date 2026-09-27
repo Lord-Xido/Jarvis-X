@@ -37,6 +37,6 @@ jobs:
       - name: Compile spatial VM
         run: python -m py_compile src/jarvisx/dr_moagi_inward_3d_vm.py
       - name: Run targeted tests
-        run: pytest -q tests/test_dr_moagi_inward_3d_vm.py
+        run: pytest -q -o addopts="" tests/test_dr_moagi_inward_3d_vm.py
       - name: Run autonomic JSON smoke test
         run: jarvisx-inward3d-vm --cycles 2 --meta-interval 1 --json
