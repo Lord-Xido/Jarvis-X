@@ -1,0 +1,42 @@
+name: Inward 3D Spatial VM
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/dr_moagi_inward_3d_vm.py"
+      - "src/jarvisx/dr_moagi_geometric_bytecode_ann.py"
+      - "tests/test_dr_moagi_inward_3d_vm.py"
+      - "docs/DR_MOAGI_INWARD_3D_BYTECODE_VM.md"
+      - "pyproject.toml"
+      - ".github/workflows/inward-3d-vm.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/dr_moagi_inward_3d_vm.py"
+      - "src/jarvisx/dr_moagi_geometric_bytecode_ann.py"
+      - "tests/test_dr_moagi_inward_3d_vm.py"
+      - "docs/DR_MOAGI_INWARD_3D_BYTECODE_VM.md"
+      - "pyproject.toml"
+      - ".github/workflows/inward-3d-vm.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install test dependencies
+        run: python -m pip install -e ".[test]"
+      - name: Compile spatial VM
+        run: python -m py_compile src/jarvisx/dr_moagi_inward_3d_vm.py
+      - name: Run targeted tests
+        run: pytest -q tests/test_dr_moagi_inward_3d_vm.py
+      - name: Run autonomic JSON smoke test
+        run: jarvisx-inward3d-vm --cycles 2 --meta-interval 1 --json
