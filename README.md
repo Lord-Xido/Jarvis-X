@@ -380,6 +380,7 @@ Every canonical subsystem should provide:
 - [ADR-030: NV-X9 contractivity and provenance permeation](docs/adr/0030-nvx9-contractivity-provenance-permeation.md)
 - [ADR-015: Dr Moagi attribution and provenance permeation](docs/adr/0015-dr-moagi-ephemeral-notion-attribution-provenance.md)
 - [Inward 3D kinetic end-to-end specification](docs/INWARD_3D_KINETIC_END_TO_END.md)
+- [Inward 3D spatial bytecode VM](docs/DR_MOAGI_INWARD_3D_BYTECODE_VM.md)
 - [10x10x10 inward 4D graph ANN](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md)
 - [Dr. Moagi 4D quantum-inspired autoencoding equation](docs/DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md)
 - [Hierarchical 3D fractional smoothing](docs/HIERARCHICAL_3D_FRACTIONAL_SMOOTHING.md)

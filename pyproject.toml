@@ -99,6 +99,7 @@ jarvisx-dr-moagi-1b = "jarvisx.dr_moagi_1b_intelligence:main"
 jarvisx-nexus3d = "jarvisx.nexus3d_cli:main"
 jarvisx-mm3d = "jarvisx.mm3d_engine:main"
 jarvisx-operationalize = "jarvisx.operationalize:main"
+jarvisx-inward3d-vm = "jarvisx.dr_moagi_inward_3d_vm:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
