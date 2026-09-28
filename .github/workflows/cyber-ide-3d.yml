@@ -1,0 +1,28 @@
+name: 3D Cyber-IDE Pixel Engine
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/cyber-ide-3d/**"
+      - ".github/workflows/cyber-ide-3d.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cyber-ide-3d-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate 3D model arithmetic and scripts
+        run: node --test apps/cyber-ide-3d/test_model.cjs
