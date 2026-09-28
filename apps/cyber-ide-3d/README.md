@@ -8,13 +8,13 @@ Canonical provenance for named Dr Moagi research artifacts remains governed by t
 
 ## Run
 
-Open \`index.html\` directly, or serve the directory:
+Open `index.html` directly, or serve the directory:
 
 ~~~sh
 python -m http.server 8000 --directory apps/cyber-ide-3d
 ~~~
 
-Then open \`http://localhost:8000\`.
+Then open `http://localhost:8000`.
 
 The app is dependency-free. It uses Canvas 2D as the framebuffer but performs the world/camera/perspective calculations explicitly in 3D.
 
@@ -22,16 +22,16 @@ The app is dependency-free. It uses Canvas 2D as the framebuffer but performs th
 
 The emulator keeps these invariants exact:
 
-- \`L = 1,000,000\` source lines.
-- \`N = 2,500\` file towers.
-- \`50 × 50 = 2,500\` grid indexing.
-- Mean occupancy is \`400 LOC/tower\`.
-- Per-file variation is pair-balanced so \`sum(L_i) = 1,000,000\`.
-- Design target \`Φ = 10^12 LOC/s\`.
-- Arithmetic target pass latency \`L / Φ = 10^-6 s = 1 μs\`.
-- Tokenized state assumption \`32 B/LOC\` gives \`32 MB/pass\`.
-- The same design target therefore implies \`32 TB/s = 256 Tb/s\`.
-- At 40 characters/line and an 8 × 16 logical glyph field, the codebase represents \`5.12 × 10^9\` logical glyph pixels.
+- `L = 1,000,000` source lines.
+- `N = 2,500` file towers.
+- `50 × 50 = 2,500` grid indexing.
+- Mean occupancy is `400 LOC/tower`.
+- Per-file variation is pair-balanced so `sum(L_i) = 1,000,000`.
+- Design target `Φ = 10^12 LOC/s`.
+- Arithmetic target pass latency `L / Φ = 10^-6 s = 1 μs`.
+- Tokenized state assumption `32 B/LOC` gives `32 MB/pass`.
+- The same design target therefore implies `32 TB/s = 256 Tb/s`.
+- At 40 characters/line and an 8 × 16 logical glyph field, the codebase represents `5.12 × 10^9` logical glyph pixels.
 
 Those throughput and bandwidth quantities are declared design arithmetic. They are not measured browser, CPU, GPU, HBM, compiler, or AVX-512 performance.
 
@@ -41,7 +41,7 @@ The browser actually executes a bounded deterministic model:
 
 1. partition one million LOC across 2,500 towers;
 2. compute both grid and toroidal coordinates for every tower;
-3. relax the topology state with \`λ(t+dt)=λ*+(λ(t)-λ*)exp(-k dt)\`;
+3. relax the topology state with `λ(t+dt)=λ*+(λ(t)-λ*)exp(-k dt)`;
 4. generate bounded synthetic execution events and exponentially decaying heat;
 5. optionally apply a bounded harmonic tower-height pulse and synthetic objective decay;
 6. transform each tower from world coordinates into camera coordinates;
@@ -54,7 +54,7 @@ The browser actually executes a bounded deterministic model:
 
 The pixel-ID buffer makes the visual mapping bidirectional:
 
-\`source tower → 3D primitive → framebuffer pixel → source tower\`.
+`source tower → 3D primitive → framebuffer pixel → source tower`.
 
 ## Controls
 
@@ -67,9 +67,9 @@ The pixel-ID buffer makes the visual mapping bidirectional:
 
 ## Telemetry
 
-\`window.getCyberIDE3DTelemetry()\` returns a copied snapshot containing architectural constants, morph state, synthetic objective, measured render rate, bounded emulator activity, and selected tower.
+`window.getCyberIDE3DTelemetry()` returns a copied snapshot containing architectural constants, morph state, synthetic objective, measured render rate, bounded emulator activity, and selected tower.
 
-The measured render rate and emulator activity are observational browser measurements. They must not be conflated with the design target \`10^12 LOC/s\`.
+The measured render rate and emulator activity are observational browser measurements. They must not be conflated with the design target `10^12 LOC/s`.
 
 ## Validation
 
