@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#020617">
+  <title>Jarvis-X · 3D Cyber-IDE Pixel Engine</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100%; background: #020617; }
+    button, input { font: inherit; }
+    button {
+      min-height: 42px;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 9px 13px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    button:hover { background: #172554; }
+    button[aria-pressed="true"] { border-color: #38bdf8; background: #0c4a6e; }
+    button:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 3px; }
+    .app { position: relative; min-height: 760px; overflow: hidden; background: radial-gradient(circle at 55% 35%, #0b1f38, #020617 66%); }
+    .viewport { position: absolute; inset: 0; }
+    #scene { width: 100%; height: 100%; display: block; touch-action: none; }
+    .topbar {
+      position: relative; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 18px; padding: max(18px, env(safe-area-inset-top)) 22px 20px; pointer-events: none;
+      background: linear-gradient(#020617f2, #02061700);
+    }
+    .topbar > * { pointer-events: auto; }
+    .eyebrow { color: #94a3b8; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 4px 0 7px; font-size: clamp(20px, 2.8vw, 31px); letter-spacing: -.035em; color: #e0f2fe; }
+    .subtitle { margin: 0; max-width: 760px; color: #94a3b8; font-size: 12px; line-height: 1.55; }
+    .controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 520px; }
+    .panels {
+      position: absolute; z-index: 2; left: 18px; right: 18px; bottom: max(18px, env(safe-area-inset-bottom));
+      display: grid; grid-template-columns: minmax(270px, 360px) minmax(250px, 320px); gap: 12px;
+      align-items: end; pointer-events: none;
+    }
+    .panel {
+      pointer-events: auto; border: 1px solid #1e3a5f; border-radius: 14px; padding: 15px;
+      background: #07111ee8; backdrop-filter: blur(10px); box-shadow: 0 18px 60px #0007;
+    }
+    .panel h2 { margin: 0 0 11px; font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: #7dd3fc; }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; }
+    .metric { min-width: 0; padding: 8px 0; border-bottom: 1px solid #172033; }
+    .metric dt { color: #64748b; font-size: 10px; line-height: 1.35; }
+    .metric dd { margin: 3px 0 0; color: #e2e8f0; font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    .statusline { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .badge { border: 1px solid #1d4ed8; border-radius: 999px; padding: 3px 7px; color: #bae6fd; font-size: 10px; }
+    .selected { min-width: 0; }
+    .code {
+      margin: 9px 0 12px; padding: 9px; border: 1px solid #1e293b; border-radius: 8px;
+      background: #020617; color: #bfdbfe; font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere;
+    }
+    .glyphrow { display: flex; gap: 12px; align-items: center; }
+    #glyph { width: 72px; height: 144px; border: 1px solid #334155; border-radius: 6px; image-rendering: pixelated; background: #020617; }
+    .glyphmeta { min-width: 0; color: #94a3b8; font-size: 11px; line-height: 1.55; }
+    .glyphmeta strong { color: #e2e8f0; font-family: ui-monospace, monospace; }
+    .speed { display: flex; align-items: center; gap: 9px; margin-top: 10px; color: #94a3b8; font-size: 11px; }
+    .speed input { width: 130px; accent-color: #38bdf8; }
+    .legend { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 9px; color: #64748b; font-size: 10px; }
+    .legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; background: #475569; }
+    .legend .hot::before { background: #fb7185; }
+    .legend .active::before { background: #38bdf8; }
+    .note { margin: 10px 0 0; color: #64748b; font-size: 10px; line-height: 1.5; }
+    .hint { position: absolute; z-index: 2; right: 22px; top: 112px; color: #64748b; font-size: 10px; pointer-events: none; }
+    @media (max-width: 760px) {
+      .app { min-height: 980px; }
+      .topbar { display: block; padding: max(14px, env(safe-area-inset-top)) 14px 16px; }
+      .controls { justify-content: flex-start; margin-top: 12px; max-width: none; }
+      .panels { left: 12px; right: 12px; grid-template-columns: 1fr; bottom: 12px; }
+      .hint { display: none; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .subtitle::after { content: " · reduced-motion mode starts paused"; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <div class="viewport"><canvas id="scene" tabindex="0" aria-label="Interactive three-dimensional Cyber-IDE code manifold"></canvas></div>
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Jarvis-X · Dr Moagi 3D Cyber-IDE · bounded emulator</div>
+        <h1>Pixel-Wise 3D Code Manifold</h1>
+        <p class="subtitle">1,000,000 LOC → 2,500 file towers → grid/torus topology → semantic runtime heat → 3D projection → pixel framebuffer. Target arithmetic is displayed separately from measured browser activity.</p>
+      </div>
+      <div class="controls">
+        <button type="button" id="runBtn" aria-pressed="true">Pause execution</button>
+        <button type="button" id="topologyBtn">Morph to torus</button>
+        <button type="button" id="optimizerBtn" aria-pressed="false">Optimizer off</button>
+        <button type="button" id="resetBtn">Reset</button>
+      </div>
+    </header>
+
+    <div class="hint">Drag to orbit · wheel to zoom · click a tower for pixel-ID selection</div>
+
+    <section class="panels">
+      <article class="panel">
+        <div class="statusline">
+          <h2>Operational telemetry</h2>
+          <span class="badge" id="stateBadge">GRID · RUNNING</span>
+        </div>
+        <dl class="metrics">
+          <div class="metric"><dt>Architectural LOC</dt><dd id="locMetric">1,000,000</dd></div>
+          <div class="metric"><dt>File towers</dt><dd id="towerMetric">2,500</dd></div>
+          <div class="metric"><dt>Target throughput</dt><dd>1.000e12 LOC/s</dd></div>
+          <div class="metric"><dt>Target pass latency</dt><dd>1.000 μs</dd></div>
+          <div class="metric"><dt>Logical glyph pixels</dt><dd>5.120e9</dd></div>
+          <div class="metric"><dt>Logical AST bandwidth</dt><dd>32.0 TB/s</dd></div>
+          <div class="metric"><dt>Measured render rate</dt><dd id="fpsMetric">measuring…</dd></div>
+          <div class="metric"><dt>Emulator activity</dt><dd id="activityMetric">0 LOC/s</dd></div>
+          <div class="metric"><dt>Framebuffer pixels</dt><dd id="pixelMetric">—</dd></div>
+          <div class="metric"><dt>Active execution towers</dt><dd id="activeMetric">0</dd></div>
+          <div class="metric"><dt>Topology λ</dt><dd id="morphMetric">0.000</dd></div>
+          <div class="metric"><dt>Synthetic objective</dt><dd id="objectiveMetric">1.0000</dd></div>
+        </dl>
+        <label class="speed">Simulation rate
+          <input id="speedInput" type="range" min="0.25" max="4" step="0.25" value="1">
+          <output id="speedOut">1.00×</output>
+        </label>
+        <div class="legend"><span>cold source</span><span class="active">recent execution</span><span class="hot">hot path / selected</span></div>
+        <p class="note">The 10¹² LOC/s, 1 μs pass and 32 TB/s values are mathematical design targets, not measured browser or hardware performance. The renderer is a deterministic bounded visualization over 2,500 source-file instances.</p>
+      </article>
+
+      <article class="panel selected">
+        <div class="statusline">
+          <h2>Pixel → source decode</h2>
+          <span class="badge" id="selectionBadge">Tower 0</span>
+        </div>
+        <div class="code" id="sourceLine">AUTO_ENCODE(node_0000);</div>
+        <div class="glyphrow">
+          <canvas id="glyph" width="80" height="160" aria-label="Selected character pixel raster"></canvas>
+          <div class="glyphmeta">
+            File tower: <strong id="fileMeta">0</strong><br>
+            LOC range: <strong id="lineMeta">0–399</strong><br>
+            Tower LOC: <strong id="countMeta">400</strong><br>
+            Character: <strong id="charMeta">A</strong><br>
+            Glyph field: <strong>8 × 16 = 128 px</strong><br>
+            Pixel-ID: <strong id="pixelIdMeta">0x000001</strong><br>
+            Heat: <strong id="heatMeta">0.000</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script id="cyber-ide-model">
+  'use strict';
+  class CyberIDE3DModel {
+    constructor(seed = 0x5849444f) {
+      if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new RangeError('seed must be uint32');
+      this.totalLOC = 1000000;
+      this.towerCount = 2500;
+      this.gridSize = 50;
+      this.meanLOC = this.totalLOC / this.towerCount;
+      this.charactersPerLine = 40;
+      this.glyphWidth = 8;
+      this.glyphHeight = 16;
+      this.glyphPixelsPerCharacter = this.glyphWidth * this.glyphHeight;
+      this.logicalCharacters = this.totalLOC * this.charactersPerLine;
+      this.logicalGlyphPixels = this.logicalCharacters * this.glyphPixelsPerCharacter;
+      this.astBytesPerLOC = 32;
+      this.logicalBandwidthBytesPerSecond = 1e12 * this.astBytesPerLOC;
+      this.targetThroughputLOCs = 1e12;
+      this.targetPassSeconds = this.totalLOC / this.targetThroughputLOCs;
+      this.majorRadius = 32;
+      this.minorRadius = 12;
+      this.lineCounts = new Int32Array(this.towerCount);
+      this.lineStarts = new Int32Array(this.towerCount);
+      this.gridPositions = new Float64Array(this.towerCount * 3);
+      this.torusPositions = new Float64Array(this.towerCount * 3);
+      this.torusNormals = new Float64Array(this.towerCount * 3);
+      this.baseHeights = new Float64Array(this.towerCount);
+      this.heats = new Float64Array(this.towerCount);
+      let state = seed >>> 0;
+      const random = () => {
+        state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+        return state / 4294967296;
+      };
+      this.lineCounts.fill(this.meanLOC);
+      for (let i = 0; i < this.towerCount / 2; i++) {
+        const d = Math.floor(random() * 181) - 90;
+        this.lineCounts[i] += d;
+        this.lineCounts[this.towerCount - 1 - i] -= d;
+      }
+      let cursor = 0;
+      let maxLines = 1;
+      for (let i = 0; i < this.towerCount; i++) {
+        this.lineStarts[i] = cursor;
+        cursor += this.lineCounts[i];
+        maxLines = Math.max(maxLines, this.lineCounts[i]);
+      }
+      if (cursor !== this.totalLOC) throw new Error('line partition invariant failed');
+      for (let i = 0; i < this.towerCount; i++) {
+        const u = i % this.gridSize;
+        const v = Math.floor(i / this.gridSize);
+        const j = i * 3;
+        const spacing = 1.45;
+        this.gridPositions[j] = (u - (this.gridSize - 1) / 2) * spacing;
+        this.gridPositions[j + 1] = 0;
+        this.gridPositions[j + 2] = (v - (this.gridSize - 1) / 2) * spacing;
+        const theta = 2 * Math.PI * u / this.gridSize;
+        const phi = 2 * Math.PI * v / this.gridSize;
+        const cp = Math.cos(phi), sp = Math.sin(phi), ct = Math.cos(theta), st = Math.sin(theta);
+        this.torusPositions[j] = (this.majorRadius + this.minorRadius * cp) * ct;
+        this.torusPositions[j + 1] = this.minorRadius * sp;
+        this.torusPositions[j + 2] = (this.majorRadius + this.minorRadius * cp) * st;
+        this.torusNormals[j] = cp * ct;
+        this.torusNormals[j + 1] = sp;
+        this.torusNormals[j + 2] = cp * st;
+        this.baseHeights[i] = 2.2 + 8.8 * Math.log1p(this.lineCounts[i]) / Math.log1p(maxLines);
+      }
+      this.initialSeed = seed >>> 0;
+      this.reset();
+    }
+    reset() {
+      this.time = 0;
+      this.morph = 0;
+      this.morphTarget = 0;
+      this.running = true;
+      this.optimizer = false;
+      this.syntheticObjective = 1;
+      this.activationAccumulator = 0;
+      this.activityCursor = 0;
+      this.processedLines = 0;
+      this.heats.fill(0);
+    }
+    setTopology(target) {
+      if (target !== 0 && target !== 1) throw new RangeError('topology target must be 0 or 1');
+      this.morphTarget = target;
+    }
+    setRunning(value) { this.running = Boolean(value); }
+    setOptimizer(value) { this.optimizer = Boolean(value); }
+    advance(dt, speed = 1) {
+      if (!Number.isFinite(dt) || dt < 0) throw new RangeError('dt must be finite and nonnegative');
+      if (!Number.isFinite(speed) || speed <= 0 || speed > 16) throw new RangeError('speed must be in (0,16]');
+      if (dt === 0) return 0;
+      const scaled = dt * speed;
+      this.time += scaled;
+      const k = 3.2;
+      this.morph = this.morphTarget + (this.morph - this.morphTarget) * Math.exp(-k * scaled);
+      const decay = Math.exp(-2.4 * scaled);
+      for (let i = 0; i < this.heats.length; i++) this.heats[i] *= decay;
+      let touched = 0;
+      if (this.running) {
+        this.activationAccumulator += scaled * 420;
+        let events = Math.min(800, Math.floor(this.activationAccumulator));
+        this.activationAccumulator -= events;
+        while (events-- > 0) {
+          this.activityCursor = (this.activityCursor + 7919) % this.towerCount;
+          const i = this.activityCursor;
+          this.heats[i] = Math.min(1, this.heats[i] + 0.82);
+          this.processedLines += this.lineCounts[i];
+          touched++;
+        }
+      }
+      if (this.optimizer) {
+        this.syntheticObjective = Math.max(0.08, this.syntheticObjective * Math.exp(-0.045 * scaled));
+      }
+      return touched;
+    }
+    towerState(i) {
+      if (!Number.isInteger(i) || i < 0 || i >= this.towerCount) throw new RangeError('invalid tower index');
+      const j = i * 3;
+      const l = this.morph;
+      const base = [
+        this.gridPositions[j] * (1 - l) + this.torusPositions[j] * l,
+        this.gridPositions[j + 1] * (1 - l) + this.torusPositions[j + 1] * l,
+        this.gridPositions[j + 2] * (1 - l) + this.torusPositions[j + 2] * l
+      ];
+      let nx = this.torusNormals[j] * l;
+      let ny = 1 * (1 - l) + this.torusNormals[j + 1] * l;
+      let nz = this.torusNormals[j + 2] * l;
+      const nlen = Math.hypot(nx, ny, nz) || 1;
+      nx /= nlen; ny /= nlen; nz /= nlen;
+      const pulse = this.optimizer ? 0.55 * Math.sin(this.time * 4 + i * 0.071) : 0;
+      const height = Math.max(0.5, this.baseHeights[i] + pulse + 1.6 * this.heats[i]);
+      return {base, normal:[nx, ny, nz], height, heat:this.heats[i]};
+    }
+    lineRange(i) {
+      const start = this.lineStarts[i];
+      return [start, start + this.lineCounts[i] - 1];
+    }
+    activeTowerCount(threshold = 0.08) {
+      let n = 0;
+      for (let i = 0; i < this.heats.length; i++) if (this.heats[i] >= threshold) n++;
+      return n;
+    }
+  }
+  if (typeof window !== 'undefined') window.CyberIDE3DModel = CyberIDE3DModel;
+  </script>
+
+  <script id="cyber-ide-app">
+  'use strict';
+  (() => {
+    const model = new CyberIDE3DModel();
+    const root = document.getElementById('app');
+    const scene = document.getElementById('scene');
+    const ctx = scene.getContext('2d', {alpha:false});
+    const hit = document.createElement('canvas');
+    const hitCtx = hit.getContext('2d', {alpha:false, willReadFrequently:true});
+    const glyph = document.getElementById('glyph');
+    const glyphCtx = glyph.getContext('2d', {alpha:false});
+    const raster = document.createElement('canvas');
+    raster.width = 8; raster.height = 16;
+    const rasterCtx = raster.getContext('2d', {willReadFrequently:true});
+    const byId = id => document.getElementById(id);
+    const runBtn = byId('runBtn');
+    const topologyBtn = byId('topologyBtn');
+    const optimizerBtn = byId('optimizerBtn');
+    const resetBtn = byId('resetBtn');
+    const speedInput = byId('speedInput');
+    const speedOut = byId('speedOut');
+    const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) model.setRunning(false);
+
+    let width = 1, height = 1, dpr = 1;
+    let selected = 0;
+    let selectedPixel = 1;
+    let raf = 0, previous = performance.now();
+    let sampleTime = 0, sampleFrames = 0, sampleStartLines = 0;
+    let fps = 0, activity = 0;
+    let yaw = 0.72, pitch = 0.48, radius = 104;
+    const pointers = new Map();
+    let lastPointer = null;
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function vsub(a,b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+    function dot(a,b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+    function cross(a,b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+    function norm(a) { const l=Math.hypot(a[0],a[1],a[2])||1; return [a[0]/l,a[1]/l,a[2]/l]; }
+
+    function cameraBasis() {
+      const cp = Math.cos(pitch);
+      const position = [radius * cp * Math.sin(yaw), radius * Math.sin(pitch), radius * cp * Math.cos(yaw)];
+      const forward = norm([-position[0], -position[1], -position[2]]);
+      const right = norm(cross(forward, [0,1,0]));
+      const up = norm(cross(right, forward));
+      return {position, forward, right, up};
+    }
+
+    function project(p, camera) {
+      const q = vsub(p, camera.position);
+      const z = dot(q, camera.forward);
+      if (z <= 1) return null;
+      const f = height / (2 * Math.tan(Math.PI / 6));
+      return {x:width/2 + f*dot(q,camera.right)/z, y:height/2 - f*dot(q,camera.up)/z, z};
+    }
+
+    function encodeId(i) {
+      const n = i + 1;
+      return 'rgb(' + (n & 255) + ',' + ((n >> 8) & 255) + ',' + ((n >> 16) & 255) + ')';
+    }
+    function decodeId(data) {
+      const n = data[0] | (data[1] << 8) | (data[2] << 16);
+      return n ? n - 1 : -1;
+    }
+
+    function resize() {
+      const rect = root.getBoundingClientRect();
+      width = Math.max(320, Math.floor(rect.width));
+      height = Math.max(640, Math.floor(rect.height));
+      dpr = Math.min(2, Math.max(1, devicePixelRatio || 1));
+      scene.width = Math.floor(width*dpr); scene.height = Math.floor(height*dpr);
+      hit.width = scene.width; hit.height = scene.height;
+      scene.style.width = width + 'px'; scene.style.height = height + 'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      hitCtx.setTransform(dpr,0,0,dpr,0,0);
+      byId('pixelMetric').textContent = (width*height).toLocaleString();
+    }
+
+    function torusPoint(theta, phi) {
+      const R=model.majorRadius, r=model.minorRadius, cp=Math.cos(phi);
+      return [(R+r*cp)*Math.cos(theta), r*Math.sin(phi), (R+r*cp)*Math.sin(theta)];
+    }
+
+    function drawPolyline(points, camera, color, lineWidth) {
+      ctx.beginPath();
+      let started = false;
+      for (const p of points) {
+        const q = project(p, camera);
+        if (!q) { started = false; continue; }
+        if (!started) { ctx.moveTo(q.x,q.y); started=true; } else ctx.lineTo(q.x,q.y);
+      }
+      ctx.strokeStyle = color; ctx.lineWidth = lineWidth; ctx.stroke();
+    }
+
+    function drawReference(camera) {
+      const l = model.morph;
+      if (l < 0.72) {
+        ctx.save();
+        ctx.globalAlpha = (1-l) * 0.34;
+        for (let k=-25;k<=25;k+=5) {
+          drawPolyline([[k*1.45,0,-36],[k*1.45,0,36]],camera,'#1e3a5f',1);
+          drawPolyline([[-36,0,k*1.45],[36,0,k*1.45]],camera,'#1e3a5f',1);
+        }
+        ctx.restore();
+      }
+      if (l > 0.18) {
+        ctx.save(); ctx.globalAlpha = l * 0.27;
+        for (let row=0; row<10; row++) {
+          const phi = 2*Math.PI*row/10;
+          const pts=[]; for(let s=0;s<=72;s++) pts.push(torusPoint(2*Math.PI*s/72,phi));
+          drawPolyline(pts,camera,'#334155',1);
+        }
+        for (let col=0; col<12; col++) {
+          const theta=2*Math.PI*col/12;
+          const pts=[]; for(let s=0;s<=48;s++) pts.push(torusPoint(theta,2*Math.PI*s/48));
+          drawPolyline(pts,camera,'#1e40af',1);
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawTower(o) {
+      const dx=o.t.x-o.b.x, dy=o.t.y-o.b.y;
+      const dl=Math.hypot(dx,dy)||1;
+      const px=-dy/dl, py=dx/dl;
+      const half=clamp(88/o.depth,0.8,5.2);
+      const p1=[o.b.x+px*half,o.b.y+py*half], p2=[o.b.x-px*half,o.b.y-py*half];
+      const p3=[o.t.x-px*half,o.t.y-py*half], p4=[o.t.x+px*half,o.t.y+py*half];
+      const hue = 205 + (o.i % 7) * 8;
+      const light = 34 + o.heat*34;
+      const alpha = clamp(1.15 - o.depth/160,0.23,0.92);
+      ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.lineTo(...p3); ctx.lineTo(...p4); ctx.closePath();
+      ctx.fillStyle = o.i===selected ? 'rgba(251,113,133,.95)' : 'hsla('+hue+',78%,'+light+'%,'+alpha+')';
+      ctx.fill();
+      if (o.heat > 0.18 || o.i===selected) {
+        ctx.strokeStyle = o.i===selected ? '#fecdd3' : 'rgba(125,211,252,.72)';
+        ctx.lineWidth = o.i===selected ? 1.6 : 0.8; ctx.stroke();
+      }
+      hitCtx.beginPath(); hitCtx.moveTo(...p1); hitCtx.lineTo(...p2); hitCtx.lineTo(...p3); hitCtx.lineTo(...p4); hitCtx.closePath();
+      hitCtx.fillStyle=encodeId(o.i); hitCtx.fill();
+    }
+
+    function render() {
+      const camera=cameraBasis();
+      const bg=ctx.createRadialGradient(width*.53,height*.42,10,width*.53,height*.42,Math.max(width,height)*.68);
+      bg.addColorStop(0,'#0b1f38'); bg.addColorStop(1,'#020617');
+      ctx.fillStyle=bg; ctx.fillRect(0,0,width,height);
+      hitCtx.fillStyle='#000'; hitCtx.fillRect(0,0,width,height);
+      drawReference(camera);
+      const objects=[];
+      for(let i=0;i<model.towerCount;i++){
+        const s=model.towerState(i);
+        const top=[s.base[0]+s.normal[0]*s.height,s.base[1]+s.normal[1]*s.height,s.base[2]+s.normal[2]*s.height];
+        const b=project(s.base,camera), t=project(top,camera);
+        if(!b||!t) continue;
+        if(b.x<-20&&t.x<-20||b.x>width+20&&t.x>width+20||b.y<-20&&t.y<-20||b.y>height+20&&t.y>height+20) continue;
+        objects.push({i,b,t,depth:(b.z+t.z)/2,heat:s.heat});
+      }
+      objects.sort((a,b)=>b.depth-a.depth);
+      for(const o of objects) drawTower(o);
+      if(objects.length){
+        ctx.fillStyle='rgba(148,163,184,.78)';
+        ctx.font='11px ui-monospace, monospace';
+        ctx.fillText(objects.length.toLocaleString()+' visible tower projections',16,height-16);
+      }
+    }
+
+    function sourceFor(i) {
+      const ops=['AUTO_ENCODE','DECODE_MESH','FIX_POINT','REFINE_NORM','CTR_VERIFY','DMA_BURST','AST_FOLD','MORTON_MAP'];
+      const op=ops[i%ops.length];
+      return op + '(node_' + String(i).padStart(4,'0') + ');';
+    }
+
+    function drawGlyph(ch) {
+      rasterCtx.clearRect(0,0,8,16);
+      rasterCtx.fillStyle='#fff';
+      rasterCtx.font='14px ui-monospace, monospace';
+      rasterCtx.textBaseline='top';
+      rasterCtx.fillText(ch,0,0);
+      const data=rasterCtx.getImageData(0,0,8,16).data;
+      glyphCtx.fillStyle='#020617'; glyphCtx.fillRect(0,0,80,160);
+      let active=0;
+      for(let y=0;y<16;y++) for(let x=0;x<8;x++) {
+        const a=data[(y*8+x)*4+3];
+        if(a>64){ active++; glyphCtx.fillStyle='#7dd3fc'; glyphCtx.fillRect(x*10+1,y*10+1,8,8); }
+        else { glyphCtx.fillStyle='#0f172a'; glyphCtx.fillRect(x*10+3,y*10+3,4,4); }
+      }
+      return active;
+    }
+
+    function refreshSelection() {
+      const line=sourceFor(selected);
+      const charIndex=Math.floor(model.time*4)%line.length;
+      const ch=line[charIndex] || ' ';
+      const range=model.lineRange(selected);
+      byId('selectionBadge').textContent='Tower '+selected;
+      byId('sourceLine').textContent=line;
+      byId('fileMeta').textContent=String(selected);
+      byId('lineMeta').textContent=range[0].toLocaleString()+'–'+range[1].toLocaleString();
+      byId('countMeta').textContent=model.lineCounts[selected].toLocaleString();
+      byId('charMeta').textContent=ch===' ' ? 'SPACE' : ch;
+      byId('pixelIdMeta').textContent='0x'+selectedPixel.toString(16).padStart(6,'0').toUpperCase();
+      byId('heatMeta').textContent=model.heats[selected].toFixed(3);
+      drawGlyph(ch);
+    }
+
+    function refreshTelemetry() {
+      byId('activeMetric').textContent=model.activeTowerCount().toLocaleString();
+      byId('morphMetric').textContent=model.morph.toFixed(3);
+      byId('objectiveMetric').textContent=model.syntheticObjective.toFixed(4);
+      byId('fpsMetric').textContent=fps ? fps.toFixed(1)+' fps' : 'measuring…';
+      byId('activityMetric').textContent=Math.round(activity).toLocaleString()+' LOC/s';
+      const topology=model.morphTarget ? 'TORUS' : 'GRID';
+      const run=model.running ? 'RUNNING' : 'PAUSED';
+      byId('stateBadge').textContent=topology+' · '+run;
+      runBtn.textContent=model.running?'Pause execution':'Resume execution';
+      runBtn.setAttribute('aria-pressed',String(model.running));
+      topologyBtn.textContent=model.morphTarget?'Morph to grid':'Morph to torus';
+      optimizerBtn.textContent=model.optimizer?'Optimizer on':'Optimizer off';
+      optimizerBtn.setAttribute('aria-pressed',String(model.optimizer));
+      refreshSelection();
+    }
+
+    function frame(now) {
+      const wallDt=clamp((now-previous)/1000,0,0.05); previous=now;
+      const speed=Number(speedInput.value);
+      const before=model.processedLines;
+      model.advance(wallDt,speed);
+      sampleTime += wallDt; sampleFrames++;
+      if(sampleTime>=0.5){
+        fps=sampleFrames/sampleTime;
+        activity=(model.processedLines-sampleStartLines)/sampleTime;
+        sampleTime=0; sampleFrames=0; sampleStartLines=model.processedLines;
+        refreshTelemetry();
+      }
+      render();
+      raf=requestAnimationFrame(frame);
+    }
+
+    runBtn.addEventListener('click',()=>{ model.setRunning(!model.running); refreshTelemetry(); });
+    topologyBtn.addEventListener('click',()=>{ model.setTopology(model.morphTarget?0:1); refreshTelemetry(); });
+    optimizerBtn.addEventListener('click',()=>{ model.setOptimizer(!model.optimizer); refreshTelemetry(); });
+    resetBtn.addEventListener('click',()=>{ model.reset(); selected=0; selectedPixel=1; refreshTelemetry(); });
+    speedInput.addEventListener('input',()=>{ speedOut.textContent=Number(speedInput.value).toFixed(2)+'×'; });
+
+    scene.addEventListener('pointerdown',e=>{
+      scene.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); lastPointer={x:e.clientX,y:e.clientY,moved:false};
+    });
+    scene.addEventListener('pointermove',e=>{
+      const prev=pointers.get(e.pointerId); if(!prev) return;
+      const dx=e.clientX-prev.x, dy=e.clientY-prev.y;
+      pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(Math.abs(dx)+Math.abs(dy)>2) lastPointer.moved=true;
+      yaw -= dx*0.006; pitch=clamp(pitch+dy*0.006,-1.15,1.15);
+    });
+    scene.addEventListener('pointerup',e=>{
+      const was=lastPointer; pointers.delete(e.pointerId);
+      if(was && !was.moved){
+        const rect=scene.getBoundingClientRect();
+        const x=clamp(Math.floor((e.clientX-rect.left)*dpr),0,hit.width-1);
+        const y=clamp(Math.floor((e.clientY-rect.top)*dpr),0,hit.height-1);
+        const data=hitCtx.getImageData(x,y,1,1).data;
+        const id=decodeId(data);
+        if(id>=0&&id<model.towerCount){ selected=id; selectedPixel=id+1; refreshSelection(); }
+      }
+    });
+    scene.addEventListener('pointercancel',e=>pointers.delete(e.pointerId));
+    scene.addEventListener('wheel',e=>{ e.preventDefault(); radius=clamp(radius*Math.exp(e.deltaY*0.001),58,180); },{passive:false});
+    scene.addEventListener('keydown',e=>{
+      if(e.key==='ArrowLeft') yaw-=0.08;
+      else if(e.key==='ArrowRight') yaw+=0.08;
+      else if(e.key==='ArrowUp') pitch=clamp(pitch-0.08,-1.15,1.15);
+      else if(e.key==='ArrowDown') pitch=clamp(pitch+0.08,-1.15,1.15);
+      else return;
+      e.preventDefault();
+    });
+
+    const ro=new ResizeObserver(resize); ro.observe(root);
+    resize(); refreshTelemetry();
+    window.getCyberIDE3DTelemetry=()=>({
+      totalLOC:model.totalLOC,
+      towers:model.towerCount,
+      targetThroughputLOCs:model.targetThroughputLOCs,
+      targetPassSeconds:model.targetPassSeconds,
+      logicalGlyphPixels:model.logicalGlyphPixels,
+      morph:model.morph,
+      running:model.running,
+      optimizer:model.optimizer,
+      syntheticObjective:model.syntheticObjective,
+      measuredFPS:fps,
+      emulatorActivityLOCs:activity,
+      selectedTower:selected
+    });
+    raf=requestAnimationFrame(frame);
+    addEventListener('pagehide',()=>{ cancelAnimationFrame(raf); ro.disconnect(); },{once:true});
+  })();
+  </script>
+</body>
+</html>
