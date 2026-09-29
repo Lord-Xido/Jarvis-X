@@ -17,6 +17,8 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 
 - `docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md`
 - `docs/adr/0030-nvx9-contractivity-provenance-permeation.md`
+- `docs/DR_MOAGI_SELF_HOSTING_INWARD_RUNTIME.md`
+- `docs/adr/0031-self-hosting-inward-runtime-closure.md`
 - `docs/DR_MOAGI_E8.md`
 - `docs/DR_MOAGI_3D_OS.md`
 - `docs/DR_MOAGI_RUNTIME_FABRIC.md`
@@ -289,3 +291,30 @@ Benchmark tables and figures associated with the source technical report are
 project evidence, not independent reproduction. They must not be promoted into
 claims of external validation, production throughput, patentability or global
 scientific novelty without separate evidence.
+
+
+## Self-hosting inward runtime extension
+
+ADR-031 and docs/DR_MOAGI_SELF_HOSTING_INWARD_RUNTIME.md extend the Dr Moagi family from recursive data/latent processing to bounded whole-machine self-application.
+
+The inherited closure is:
+
+~~~text
+source / AST / bytecode / latent / graphics / sparse memory / model / policy
+  -> candidate transform
+  -> shadow compile / execute
+  -> measured receipts
+  -> contrast / CTR
+  -> Pi_Lambda verification
+  -> atomic COMMIT or complete ROLLBACK
+  -> re-encode verified authoritative state
+  -> recur
+~~~
+
+The mandatory invariant is:
+
+~~~text
+SELF-HOSTING != SELF-AUTHORIZING
+~~~
+
+This extension does not claim that Jarvis-X currently recompiles and replaces its own authoritative compiler, safely executes hostile generated native code, proves semantic equivalence of arbitrary program transformations, implements distributed consensus, or realizes symbolic throughput targets on physical hardware. Those remain implementation and evidence requirements.
