@@ -2,7 +2,7 @@
 
 **Status:** Canonical reconciliation / claim-boundary document  
 **Date:** 2026-09-29  
-**Source:** user-supplied `Dr_Moagi_Engine_Mechanistic_Breakdown.md`  
+**Source record:** `docs/source/DR_MOAGI_ENGINE_MECHANISTIC_BREAKDOWN_SOURCE.md`  
 **Extends:** ADR-016, ADR-017, ADR-031, ADR-032
 
 ## Purpose
