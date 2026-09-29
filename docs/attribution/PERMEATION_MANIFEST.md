@@ -21,6 +21,7 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/adr/0031-self-hosting-inward-runtime-closure.md`
 - `docs/DR_MOAGI_COGNITIVE_MATRIX_PERMEATION.md`
 - `docs/adr/0032-cognitive-matrix-permeation.md`
+- `docs/source/DR_MOAGI_ENGINE_MECHANISTIC_BREAKDOWN_SOURCE.md`
 - `docs/DR_MOAGI_ENGINE_MECHANISTIC_RECONCILIATION.md`
 - `docs/adr/0033-mechanistic-breakdown-evidence-contract.md`
 - `src/jarvisx/cognitive_matrix_permeation.py`
