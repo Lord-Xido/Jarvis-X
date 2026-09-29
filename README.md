@@ -389,6 +389,8 @@ Every canonical subsystem should provide:
 - [3D Cognitive Matrix operational mechanics WebGL demo](docs/3D_COGNITIVE_MATRIX_OPERATIONAL_MECHANICS.md)
 - [Cognitive Matrix permeation numerical reference](docs/DR_MOAGI_COGNITIVE_MATRIX_PERMEATION.md)
 - [ADR-032: bounded Cognitive Matrix permeation and stochastic active support](docs/adr/0032-cognitive-matrix-permeation.md)
+- [Dr Moagi Engine mechanistic reconciliation](docs/DR_MOAGI_ENGINE_MECHANISTIC_RECONCILIATION.md)
+- [ADR-033: mechanistic breakdown evidence contract](docs/adr/0033-mechanistic-breakdown-evidence-contract.md)
 - [1M³ Cognitive Swarm Auto-Encoder React/WebGL visualization](docs/1M3_COGNITIVE_SWARM_AUTOENCODER.md)
 - [10x10x10 inward 4D graph ANN](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md)
 - [Dr. Moagi 4D quantum-inspired autoencoding equation](docs/DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md)
