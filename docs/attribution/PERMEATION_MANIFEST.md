@@ -19,6 +19,9 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/adr/0030-nvx9-contractivity-provenance-permeation.md`
 - `docs/DR_MOAGI_SELF_HOSTING_INWARD_RUNTIME.md`
 - `docs/adr/0031-self-hosting-inward-runtime-closure.md`
+- `docs/DR_MOAGI_COGNITIVE_MATRIX_PERMEATION.md`
+- `docs/adr/0032-cognitive-matrix-permeation.md`
+- `src/jarvisx/cognitive_matrix_permeation.py`
 - `docs/DR_MOAGI_E8.md`
 - `docs/DR_MOAGI_3D_OS.md`
 - `docs/DR_MOAGI_RUNTIME_FABRIC.md`
@@ -318,3 +321,22 @@ SELF-HOSTING != SELF-AUTHORIZING
 ~~~
 
 This extension does not claim that Jarvis-X currently recompiles and replaces its own authoritative compiler, safely executes hostile generated native code, proves semantic equivalence of arbitrary program transformations, implements distributed consensus, or realizes symbolic throughput targets on physical hardware. Those remain implementation and evidence requirements.
+
+
+## Cognitive Matrix permeation extension
+
+ADR-032 and `docs/DR_MOAGI_COGNITIVE_MATRIX_PERMEATION.md` add a bounded stochastic/numerical profile beneath the existing Cognitive Matrix visualization.
+
+```text
+virtual 3D domain metadata
+  -> bounded sampled particle support
+  -> same-width encode/decode reference
+  -> toroidal latent projection
+  -> bounded radial reaction-diffusion field
+  -> Langevin particle response
+  -> reconstruction / histogram-entropy / boundary-flux receipts
+  -> CTR / Pi_Lambda
+  -> COMMIT or ROLLBACK
+```
+
+The `10^72` septillion-axis site count remains virtual metadata. Only configured active particles and radial field cells are resident. Permeation flux and entropy are software-defined computational receipts and are not physical energy, thermodynamic entropy, biological cognition, consciousness or AGI evidence.
