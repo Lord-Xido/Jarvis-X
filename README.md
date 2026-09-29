@@ -22,6 +22,8 @@ Repository-wide inheritance of that attribution across explicitly designated Dr 
 
 Structural closure is governed by [ADR-016](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md): one typed system state, one candidate-first transaction contract, explicit verification gates, and interchangeable geometry/backend profiles. The canonical end-to-end Dr Moagi auto-encoding/decoding systems law is defined by [ADR-017](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md) and the [Operational Auto-Encoding/Decoding Equation](docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md).
 
+Self-hosting closure is governed by [ADR-031](docs/adr/0031-self-hosting-inward-runtime-closure.md) and the [3D Self-Hosting Inward Runtime](docs/DR_MOAGI_SELF_HOSTING_INWARD_RUNTIME.md): source, AST/IR, bytecode, latent, graphics, memory, model and policy state may all participate in a recursive candidate transaction, but self-hosting never bypasses verification, measurement, atomic commit or rollback.
+
 The framework is designed to pursue capability beyond contemporary SOTA through inward 3D latent coordination, reality coupling, continuous correction and fixed-point verification. That phrase denotes a **design ambition**, not an unverified empirical, legal or patent-novelty claim; performance and scientific claims remain evidence-gated.
 
 ## Why Jarvis-X exists
@@ -110,6 +112,7 @@ This is a canonical integration contract. It does not imply that every current b
 | Runtime controls | policy check, cycle sandbox, tracing and verifiable ledger integration | Reference foundation |
 | Typed-state/transaction closure | ADR-016 state namespaces, geometry profiles and candidate-first promotion contract | Specification |
 | Operational AE/AD system equation | ADR-017 encode → compact → fixed point → decode → evidence → staged adaptation → verify/commit law | Specification |
+| Self-hosting inward runtime closure | ADR-031 whole-machine candidate state across compiler/runtime/graphics/memory with shadow execution and atomic promotion | Specification |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Volumetric ROM ANN | `2^60` logical 3D voxel addresses, bounded `32^3` demand tiles, `32^3 → 16^3 → 8^3 → 4^3 → 2^3 → 1` inward contraction, recursive Ω/Θ/runtime-policy feedback | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
