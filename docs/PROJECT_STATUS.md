@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-09-28
+**Last reviewed:** 2026-09-29
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -31,6 +31,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Consolidated empirical validation | Stable reference | `empirical_validation.py`, focused tests, JSON artifact workflow | verifies bounded software invariants only; no AGI, safety or production-performance inference |
 | Canonical typed state / transaction closure | Specification | ADR-016 | defines one typed state, geometry profiles, verification split and atomic promotion law; full adapter migration remains incomplete |
 | Dr Moagi operational auto-encoding/decoding equation | Specification | `docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md`, ADR-017 | canonical Layer-5 systems equation; existing engines implement subsets/adapters and are not automatically fully conformant |
+| 3D Self-Hosting Inward Runtime | Specification | `docs/DR_MOAGI_SELF_HOSTING_INWARD_RUNTIME.md`, ADR-031 | whole-machine self-hosting is an architectural target; Jarvis-X does not yet autonomously replace its compiler/runtime, and all future self-changes remain candidate transactions requiring shadow execution, verification and atomic commit/rollback |
 | NV-X9 / Dr. Moagi’s Beast contractive 3D engine | Specification / provenance | `docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md`, ADR-030 | canonical named Riemannian/contractive synthesis; source-report benchmarks are not yet independently reproduced as a canonical runtime, and repository provenance is not a patentability or global-novelty determination |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
 | 1 MiB³ volumetric ROM ANN | Reference laboratory | `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`, `cpp_runtime/src/volumetric_rom_ann_main.cpp`, CTest, cross-platform C++ workflow | `2^60` logical voxel addresses / 1 EiB virtual byte capacity; only bounded `32^3` tiles are materialized; fixed-point and adaptive dynamics are software emulation, not physical 1 EiB memory or hardware-throughput evidence |
@@ -97,6 +98,7 @@ Jarvis-X does not currently claim:
 - consciousness or subjective experience;
 - artificial general intelligence;
 - unrestricted autonomous source-code mutation;
+- that ADR-031 means the repository already implements an autonomous self-recompiling or self-authorizing runtime;
 - production-grade isolation of hostile bytecode;
 - lossless compression of arbitrary data into a smaller state without residual/side information;
 - that exponential compaction alone preserves all information;
@@ -136,6 +138,8 @@ A capability moves to `main` only when all applicable items are satisfied:
 - [ ] migration or compatibility note when replacing an existing subsystem.
 
 For ADR-016/017 conformance, an implementation additionally needs typed stage receipts, explicit residual/side-information accounting, bounded fixed-point termination, staged adaptive updates, a verification decision, and rollback across all touched authority namespaces.
+
+For ADR-031 conformance, a self-hosting implementation additionally needs source/AST/bytecode lineage, shadow compilation and execution, measured backend receipts, complete multi-domain rollback, atomic promotion, and re-encoding of the newly authoritative state.
 
 ## Release-readiness targets
 
