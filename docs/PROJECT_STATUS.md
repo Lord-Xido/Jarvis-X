@@ -37,6 +37,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | 1 MiB³ volumetric ROM ANN | Reference laboratory | `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`, `cpp_runtime/src/volumetric_rom_ann_main.cpp`, CTest, cross-platform C++ workflow | `2^60` logical voxel addresses / 1 EiB virtual byte capacity; only bounded `32^3` tiles are materialized; fixed-point and adaptive dynamics are software emulation, not physical 1 EiB memory or hardware-throughput evidence |
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
 | Cognitive Matrix permeation | Numerical reference | `src/jarvisx/cognitive_matrix_permeation.py`, `tests/test_cognitive_matrix_permeation.py`, ADR-032 | `10^72` septillion-axis site count is virtual metadata; only bounded particles and a bounded radial field are materialized; entropy/flux are computational receipts, not physical energy or consciousness claims |
+| Dr Moagi Engine mechanistic reconciliation | Specification / evidence contract | `docs/DR_MOAGI_ENGINE_MECHANISTIC_RECONCILIATION.md`, ADR-033 | preserves the uploaded mechanistic abstraction while reclassifying `1GB^3`, 0.00042-bit entropy, 14.82% precision gain, 4.6 Hz resonance and 100% fidelity as geometry/targets unless backed by explicit derivation or receipts; source fold equation contracts to 12% radius at peak rather than a point singularity |
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database or proof of long-memory quality |
 | Sparse billion-address field | Stable reference | `dr_moagi_billion_field.py`, transaction/digest/checkpoint tests | virtual `1000³` address space; active sparse coordinates alone are materialized |
 | Dr Moagi Field Runtime v2 | Reference laboratory | `dr_moagi_field_runtime.py`, `test_dr_moagi_field_runtime.py`, ADR-003 | same-space sparse field equation; codec-dependent stability beyond the conservative reference guard remains empirical |
@@ -113,6 +114,7 @@ Jarvis-X does not currently claim:
 - physical residency of the volumetric ROM ANN's 1 EiB logical address space;
 - trained model quality from deterministic initialized weights;
 - physical or thermodynamic interpretation of Cognitive Matrix permeation flux or sampled spatial entropy without an independently calibrated physical model;
+- exact lossless reconstruction, 0.00042-bit entropy, 14.82% per-cycle precision gain, 4.6 Hz fold resonance or 100% byte fidelity for the mechanistic source unless reproduced by the declared evidence contract;
 - safety certification from the presence of a policy or coherence gate;
 - bit-exact cross-platform floating-point results from the C++ research processor;
 - production-scale fractional PDE performance or physical validity from the numerical reference solver;
