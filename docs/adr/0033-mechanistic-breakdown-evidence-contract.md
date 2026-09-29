@@ -4,6 +4,7 @@
 **Date:** 2026-09-29  
 **Applies to:** Dr Moagi Engine mechanistic descriptions, Cognitive Matrix geometry, inward-fold telemetry, compression/fidelity claims and future self-hosting implementations  
 **Extends:** ADR-016, ADR-017, ADR-031, ADR-032  
+**Source record:** `docs/source/DR_MOAGI_ENGINE_MECHANISTIC_BREAKDOWN_SOURCE.md`  
 **Canonical reconciliation:** `docs/DR_MOAGI_ENGINE_MECHANISTIC_RECONCILIATION.md`
 
 ## Context
