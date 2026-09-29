@@ -21,6 +21,8 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/adr/0031-self-hosting-inward-runtime-closure.md`
 - `docs/DR_MOAGI_COGNITIVE_MATRIX_PERMEATION.md`
 - `docs/adr/0032-cognitive-matrix-permeation.md`
+- `docs/DR_MOAGI_ENGINE_MECHANISTIC_RECONCILIATION.md`
+- `docs/adr/0033-mechanistic-breakdown-evidence-contract.md`
 - `src/jarvisx/cognitive_matrix_permeation.py`
 - `docs/DR_MOAGI_E8.md`
 - `docs/DR_MOAGI_3D_OS.md`
@@ -340,3 +342,20 @@ virtual 3D domain metadata
 ```
 
 The `10^72` septillion-axis site count remains virtual metadata. Only configured active particles and radial field cells are resident. Permeation flux and entropy are software-defined computational receipts and are not physical energy, thermodynamic entropy, biological cognition, consciousness or AGI evidence.
+
+
+## Mechanistic breakdown evidence extension
+
+ADR-033 preserves the Dr Moagi Engine mechanistic formulation as design provenance while separating virtual scale, visualization geometry, configured targets, simulated telemetry, measured telemetry, mathematical guarantees and empirically verified properties.
+
+The evidence law is:
+
+```text
+symbolic / virtual formulation
+  -> bounded implementation
+  -> explicit metric / receipt
+  -> CTR / Pi_Lambda
+  -> COMMIT or ROLLBACK
+```
+
+The historical `1GB x 1GB x 1GB` expression is not resident-memory evidence; `10^9` coordinates on each of three axes would denote `10^27` logical positions. The source inward-fold equation leaves 12% radial magnitude at peak when its rotation preserves norm. Values such as 0.00042 bits entropy, 14.82% precision gain, 4.6 Hz resonance and 100% fidelity remain source targets until a reproducible receipt promotes them.
