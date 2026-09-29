@@ -116,6 +116,7 @@ This is a canonical integration contract. It does not imply that every current b
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Volumetric ROM ANN | `2^60` logical 3D voxel addresses, bounded `32^3` demand tiles, `32^3 → 16^3 → 8^3 → 4^3 → 2^3 → 1` inward contraction, recursive Ω/Θ/runtime-policy feedback | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
+| Cognitive Matrix permeation | bounded stochastic active support, radial reaction-diffusion field, entropy/flux/reconstruction receipts | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
 | Inward 4D graph ANN | deterministic 1,000-node folded graph autoencoder with exact gradients, guarded pruning and rollback | Reference laboratory |
 | Model packaging | Hugging Face-compatible configuration, model and safetensors exporter | Reference |
@@ -386,6 +387,8 @@ Every canonical subsystem should provide:
 - [Inward 3D kinetic end-to-end specification](docs/INWARD_3D_KINETIC_END_TO_END.md)
 - [Inward 3D spatial bytecode VM](docs/DR_MOAGI_INWARD_3D_BYTECODE_VM.md)
 - [3D Cognitive Matrix operational mechanics WebGL demo](docs/3D_COGNITIVE_MATRIX_OPERATIONAL_MECHANICS.md)
+- [Cognitive Matrix permeation numerical reference](docs/DR_MOAGI_COGNITIVE_MATRIX_PERMEATION.md)
+- [ADR-032: bounded Cognitive Matrix permeation and stochastic active support](docs/adr/0032-cognitive-matrix-permeation.md)
 - [1M³ Cognitive Swarm Auto-Encoder React/WebGL visualization](docs/1M3_COGNITIVE_SWARM_AUTOENCODER.md)
 - [10x10x10 inward 4D graph ANN](docs/DR_MOAGI_10X10X10_INWARD_4D_ANN.md)
 - [Dr. Moagi 4D quantum-inspired autoencoding equation](docs/DR_MOAGI_4D_QUANTUM_INSPIRED_AUTOENCODING.md)
