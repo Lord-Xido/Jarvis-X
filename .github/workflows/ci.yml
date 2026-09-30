@@ -58,6 +58,7 @@ jobs:
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           src/jarvisx/cloud_control_plane.py
+          src/jarvisx/bitwise_hyperscale_ann.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
@@ -67,6 +68,7 @@ jobs:
           tests/test_quantum_text.py
           tests/test_verification.py
           tests/test_cloud_control_plane.py
+          tests/test_bitwise_hyperscale_ann.py
 
       - name: Check canonical import order
         run: >-
@@ -82,6 +84,7 @@ jobs:
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
           src/jarvisx/cloud_control_plane.py
+          src/jarvisx/bitwise_hyperscale_ann.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
@@ -91,6 +94,7 @@ jobs:
           tests/test_quantum_text.py
           tests/test_verification.py
           tests/test_cloud_control_plane.py
+          tests/test_bitwise_hyperscale_ann.py
 
       - name: Type-check package
         run: mypy src/jarvisx --ignore-missing-imports
