@@ -1,0 +1,57 @@
+name: Multimodal Application Factory
+
+on:
+  push:
+    paths:
+      - "tools/moagi_multimodal_app_factory.py"
+      - "docs/MULTIMODAL_APP_FACTORY.md"
+      - ".github/workflows/multimodal-app-factory.yml"
+  pull_request:
+    paths:
+      - "tools/moagi_multimodal_app_factory.py"
+      - "docs/MULTIMODAL_APP_FACTORY.md"
+      - ".github/workflows/multimodal-app-factory.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-test-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Compile factory
+        run: python -m py_compile tools/moagi_multimodal_app_factory.py
+
+      - name: Generate application
+        run: |
+          python tools/moagi_multimodal_app_factory.py create jarvisx_factory_smoke \
+            --output .factory-smoke \
+            --title "Jarvis-X Factory Smoke"
+
+      - name: Install generated application dependencies
+        run: python -m pip install -r .factory-smoke/requirements.txt
+
+      - name: Test generated application
+        run: python -m pytest -q .factory-smoke/tests
+
+      - name: Package generated application
+        run: python .factory-smoke/manage.py package
+
+      - name: Upload generated release
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvisx-multimodal-factory-smoke
+          path: .factory-smoke/dist/*.zip
+          if-no-files-found: error
