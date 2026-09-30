@@ -115,6 +115,7 @@ This is a canonical integration contract. It does not imply that every current b
 | Self-hosting inward runtime closure | ADR-031 whole-machine candidate state across compiler/runtime/graphics/memory with shadow execution and atomic promotion | Specification |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Volumetric ROM ANN | `2^60` logical 3D voxel addresses, bounded `32^3` demand tiles, `32^3 → 16^3 → 8^3 → 4^3 → 2^3 → 1` inward contraction, recursive Ω/Θ/runtime-policy feedback | Reference laboratory |
+| Bitwise hyper-scale ANN layer | exact source-ordered 60-bit Morton addressing, 20-level octree/LOD prefixes, fixed-point inward step, structural FP32 top-byte truncation, and cloud-tile routing | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
 | Inward 4D graph ANN | deterministic 1,000-node folded graph autoencoder with exact gradients, guarded pruning and rollback | Reference laboratory |
@@ -378,6 +379,7 @@ Every canonical subsystem should provide:
 - [ADR-016: canonical typed state, transaction and geometry profiles](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md)
 - [ADR-017: canonical Dr Moagi operational auto-encoding/decoding equation](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md)
 - [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md)
+- [Dr Moagi Bitwise Hyper-Scale ANN Address and Inward-Loop Contract](docs/DR_MOAGI_BITWISE_HYPERSCALE_ANN.md)
 - [Dr Moagi 3D Ephemeral-Notion Intelligence Framework — canonical attribution](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md)
 - [Dr Moagi attribution permeation manifest](docs/attribution/PERMEATION_MANIFEST.md)
 - [NV-X9 / Dr. Moagi’s Beast originality & provenance record](docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md)
