@@ -4,6 +4,12 @@ A bounded browser demonstration derived from Matladi Maxwell Moagi's supplied
 64,000-particle inward-burst concept. It preserves the nested torus rings,
 wireframe core, particle shell and 5% contraction target.
 
+The repository's exact 60-bit coordinate/LOD contract is specified separately in
+[`DR_MOAGI_BITWISE_HYPERSCALE_ANN.md`](../../docs/DR_MOAGI_BITWISE_HYPERSCALE_ANN.md)
+and implemented by `src/jarvisx/bitwise_hyperscale_ann.py`. This browser surface
+remains a bounded projection: it does not materialize the logical `2^60` address
+space.
+
 Originator of the Dr Moagi 3D Ephemeral-Notion Intelligence Framework:
 Matladi Maxwell Moagi (Lord-Xido). [Canonical provenance](../../docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md).
 
