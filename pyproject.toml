@@ -67,6 +67,10 @@ mm3d = [
 graphics = [
     "numpy>=1.24,<2.3",
 ]
+dm-v3-prime = [
+    "numpy>=1.26",
+    "torch>=2.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/Lord-Xido/Jarvis-X"
