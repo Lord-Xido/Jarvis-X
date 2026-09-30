@@ -1,1 +1,193 @@
-# Coupled 3D -> 2D -> Latent Fixed-Point Runtime\n\n**Status:** executable bounded reference profile  \n**Implementation:** `src/jarvisx/dr_moagi_coupled_fixed_point.py`  \n**Tests:** `tests/test_dr_moagi_coupled_fixed_point.py`  \n**Architectural layer:** Layer 5 research system over Layer 4 geometry\n\n## 1. Purpose\n\nThis profile operationalizes a recursive map whose state is evaluated across three coupled spaces:\n\n1. a continuous 3D signed-distance geometry;\n2. a differentiable 2D projection surrogate;\n3. a latent feature/attention space updated by a bounded second-order step.\n\nThe convergence certificate is the idempotent residual\n\n```math\nr_\Phi(z) = \|\Phi(\Phi(z)) - \Phi(z)\|_2.\n```\n\nA small residual is evidence that one further application of the same update changes the candidate little. It is not, by itself, a proof of a unique global fixed point.\n\n## 2. Hairpin geometry\n\nFor the default copper-wire profile:\n\n```text\ntotal centerline length = 1000 mm\ndiameter                = 1.0 mm\ninner gap               = 2.0 mm\nwire radius             = 0.5 mm\ncenterline separation   = inner_gap + diameter = 3.0 mm\nU-bend centerline R     = 1.5 mm\nU-bend curvature        = 1/R = 2/3 mm^-1\ntorsion                 = 0 on the planar reference centerline\n```\n\nThe straight-leg length is therefore\n\n```math\nL_{leg} = \frac{1000 - \pi R}{2}.\n```\n\nThe centerline is parameterized by arc length with two straight segments and a semicircle. The wire SDF is\n\n```math\nf(x) = d(x, C) - r_w,\n```\n\nwhere `C` is the centerline and `r_w = 0.5 mm`. Hence:\n\n```math\nf(x) < 0 \Rightarrow x \text{ is inside the solid},\qquad\nf(x) = 0 \Rightarrow x \in \partial S,\qquad\nf(x) > 0 \Rightarrow x \text{ is outside}.\n```\n\n## 3. Eikonal contract\n\nFor an exact Euclidean distance field,\n\n```math\n\|\nabla f(x)\|_2 = 1\n```\n\nwhere the distance function is differentiable. The qualifier matters: SDFs are generally non-differentiable on medial-axis/seam loci. The implementation therefore exposes a sampled `eikonal_residual` audit rather than claiming the equation holds classically at every point.\n\nSurface normals are\n\n```math\nn(x) = \frac{\nabla f(x)}{\|\nabla f(x)\|_2}\n```\n\nwhen the gradient norm is non-zero.\n\n## 4. Hard solid versus differentiable renderer\n\nThe physical solid uses a hard occupancy:\n\n```math\n\sigma_{hard}(x) =\n\begin{cases}\n\sigma_{Cu}, & f(x) \le 0,\\\n0, & f(x) > 0.\n\end{cases}\n```\n\nThis step is discontinuous at `f=0`, so it cannot also provide an everywhere-defined exact pixel-to-geometry Jacobian.\n\nFor optimization only, the renderer uses the narrow smooth surrogate\n\n```math\n\sigma_{soft}(x)\n= \sigma_{Cu}\,\left(1 + e^{f(x)/\beta}\right)^{-1},\n```\n\nwith configurable transition width `beta`. The authoritative geometry remains the hard SDF.\n\n## 5. 2D projection\n\nThe dependency-free reference renderer uses orthographic rays through the bend crop and fixed quadrature:\n\n```math\n\tau(u,v) \approx \sum_i \sigma_{soft}(r_i)\,\Delta z,\n```\n\n```math\nI(u,v) = 1 - e^{-\alpha\tau(u,v)}.\n```\n\nThis is a differentiable silhouette/opacity reference, not a production copper BRDF. A production backend may replace it with Fresnel + microfacet shading provided the same state boundaries and validation gates are preserved.\n\n## 6. Visual tokens and attention\n\nThe reference image is partitioned into patches. Each patch is represented by a compact token\n\n```math\np_i = [\mu_i,\operatorname{Var}_i,E_i].\n```\n\nA bounded single-head reference attention layer uses `Q=K=V=P`:\n\n```math\nA(P) = \operatorname{softmax}\left(\frac{PP^T}{\sqrt d}\right)P.\n```\n\nThis preserves the algebraic attention mechanism without requiring a heavyweight Transformer dependency. Learned projection matrices can be supplied by a future backend.\n\n## 7. Coupled objective\n\nThe executable loss is\n\n```math\n\mathcal L_{total}\n= \lambda_f \|F(I(z)) - F(I^*)\|_2^2\n+ \lambda_p\left[(d-1)^2 + (g-2)^2\right],\n```\n\nwhere `z=(d,g)` contains wire diameter and inner gap, and `F` is the rendered-patch attention feature map.\n\nThe implementation keeps Eikonal auditing separate from the default optimization term because the analytic centerline-distance construction is already an SDF away from non-smooth loci. Neural SDF backends should add an explicit sampled Eikonal penalty.\n\n## 8. Second-order update\n\nThe unguarded Newton step\n\n```math\nz_{k+1}=z_k-H^{-1}\nabla\mathcal L\n```\n\nis numerically fragile when the Hessian is singular or indefinite. The reference implementation uses a two-dimensional finite-difference Hessian, positive diagonal damping, and a trust radius:\n\n```math\n(H+\lambda I)\,\Delta z=-\nabla\mathcal L,\n```\n\n```math\nz_{k+1}=z_k+\operatorname{clip}_{\rho}(\Delta z).\n```\n\nThis is the executable `Phi` used by `coupled_iteration`.\n\n## 9. Execution graph\n\n```text\nz_k = (diameter, gap)\n  -> construct hairpin centerline\n  -> evaluate hard SDF\n  -> smooth occupancy surrogate\n  -> orthographic volume quadrature\n  -> 2D bend crop\n  -> patch tokenization\n  -> self-attention\n  -> coupled feature + physical loss\n  -> numerical gradient/Hessian\n  -> damped trust-region Newton update\n  -> z_(k+1)\n  -> evaluate ||Phi(Phi(z_k)) - Phi(z_k)||\n```\n\n## 10. Validation boundary\n\nThe profile deliberately does not claim:\n\n- exact BRDF realism;\n- an exact analytic Jacobian through the hard occupancy step;\n- global convexity of the coupled objective;\n- uniqueness of the fixed point;\n- that sampled Eikonal residuals prove a globally smooth SDF;\n- production-scale Transformer behavior.\n\nThose properties require separate mathematical assumptions, backend implementations, and empirical tests.
+# Coupled 3D -> 2D -> Latent Fixed-Point Runtime
+
+**Status:** executable bounded reference profile  
+**Implementation:** `src/jarvisx/dr_moagi_coupled_fixed_point.py`  
+**Tests:** `tests/test_dr_moagi_coupled_fixed_point.py`  
+**Architectural layer:** Layer 5 research system over Layer 4 geometry
+
+## 1. Purpose
+
+This profile operationalizes a recursive map whose state is evaluated across three coupled spaces:
+
+1. a continuous 3D signed-distance geometry;
+2. a differentiable 2D projection surrogate;
+3. a latent feature/attention space updated by a bounded second-order step.
+
+The convergence certificate is the idempotent residual
+
+```math
+r_\Phi(z) = \|\Phi(\Phi(z)) - \Phi(z)\|_2.
+```
+
+A small residual is evidence that one further application of the same update changes the candidate little. It is not, by itself, a proof of a unique global fixed point.
+
+## 2. Hairpin geometry
+
+For the default copper-wire profile:
+
+```text
+total centerline length = 1000 mm
+diameter                = 1.0 mm
+inner gap               = 2.0 mm
+wire radius             = 0.5 mm
+centerline separation   = inner_gap + diameter = 3.0 mm
+U-bend centerline R     = 1.5 mm
+U-bend curvature        = 1/R = 2/3 mm^-1
+torsion                 = 0 on the planar reference centerline
+```
+
+The straight-leg length is therefore
+
+```math
+L_{leg} = \frac{1000 - \pi R}{2}.
+```
+
+The centerline is parameterized by arc length with two straight segments and a semicircle. The wire SDF is
+
+```math
+f(x) = d(x, C) - r_w,
+```
+
+where `C` is the centerline and `r_w = 0.5 mm`. Hence:
+
+```math
+f(x) < 0 \Rightarrow x \text{ is inside the solid},\qquad
+f(x) = 0 \Rightarrow x \in \partial S,\qquad
+f(x) > 0 \Rightarrow x \text{ is outside}.
+```
+
+## 3. Eikonal contract
+
+For an exact Euclidean distance field,
+
+```math
+\|\nabla f(x)\|_2 = 1
+```
+
+where the distance function is differentiable. The qualifier matters: SDFs are generally non-differentiable on medial-axis/seam loci. The implementation therefore exposes a sampled `eikonal_residual` audit rather than claiming the equation holds classically at every point.
+
+Surface normals are
+
+```math
+n(x) = \frac{\nabla f(x)}{\|\nabla f(x)\|_2}
+```
+
+when the gradient norm is non-zero.
+
+## 4. Hard solid versus differentiable renderer
+
+The physical solid uses a hard occupancy:
+
+```math
+\sigma_{hard}(x) =
+\begin{cases}
+\sigma_{Cu}, & f(x) \le 0,\\
+0, & f(x) > 0.
+\end{cases}
+```
+
+This step is discontinuous at `f=0`, so it cannot also provide an everywhere-defined exact pixel-to-geometry Jacobian.
+
+For optimization only, the renderer uses the narrow smooth surrogate
+
+```math
+\sigma_{soft}(x)
+= \sigma_{Cu}\,\left(1 + e^{f(x)/\beta}\right)^{-1},
+```
+
+with configurable transition width `beta`. The authoritative geometry remains the hard SDF.
+
+## 5. 2D projection
+
+The dependency-free reference renderer uses orthographic rays through the bend crop and fixed quadrature:
+
+```math
+\tau(u,v) \approx \sum_i \sigma_{soft}(r_i)\,\Delta z,
+```
+
+```math
+I(u,v) = 1 - e^{-\alpha\tau(u,v)}.
+```
+
+This is a differentiable silhouette/opacity reference, not a production copper BRDF. A production backend may replace it with Fresnel + microfacet shading provided the same state boundaries and validation gates are preserved.
+
+## 6. Visual tokens and attention
+
+The reference image is partitioned into patches. Each patch is represented by a compact token
+
+```math
+p_i = [\mu_i,\operatorname{Var}_i,E_i].
+```
+
+A bounded single-head reference attention layer uses `Q=K=V=P`:
+
+```math
+A(P) = \operatorname{softmax}\left(\frac{PP^T}{\sqrt d}\right)P.
+```
+
+This preserves the algebraic attention mechanism without requiring a heavyweight Transformer dependency. Learned projection matrices can be supplied by a future backend.
+
+## 7. Coupled objective
+
+The executable loss is
+
+```math
+\mathcal L_{total}
+= \lambda_f \|F(I(z)) - F(I^*)\|_2^2
++ \lambda_p\left[(d-1)^2 + (g-2)^2\right],
+```
+
+where `z=(d,g)` contains wire diameter and inner gap, and `F` is the rendered-patch attention feature map.
+
+The implementation keeps Eikonal auditing separate from the default optimization term because the analytic centerline-distance construction is already an SDF away from non-smooth loci. Neural SDF backends should add an explicit sampled Eikonal penalty.
+
+## 8. Second-order update
+
+The unguarded Newton step
+
+```math
+z_{k+1}=z_k-H^{-1}\nabla\mathcal L
+```
+
+is numerically fragile when the Hessian is singular or indefinite. The reference implementation uses a two-dimensional finite-difference Hessian, positive diagonal damping, and a trust radius:
+
+```math
+(H+\lambda I)\,\Delta z=-\nabla\mathcal L,
+```
+
+```math
+z_{k+1}=z_k+\operatorname{clip}_{\rho}(\Delta z).
+```
+
+This is the executable `Phi` used by `coupled_iteration`.
+
+## 9. Execution graph
+
+```text
+z_k = (diameter, gap)
+  -> construct hairpin centerline
+  -> evaluate hard SDF
+  -> smooth occupancy surrogate
+  -> orthographic volume quadrature
+  -> 2D bend crop
+  -> patch tokenization
+  -> self-attention
+  -> coupled feature + physical loss
+  -> numerical gradient/Hessian
+  -> damped trust-region Newton update
+  -> z_(k+1)
+  -> evaluate ||Phi(Phi(z_k)) - Phi(z_k)||
+```
+
+## 10. Validation boundary
+
+The profile deliberately does not claim:
+
+- exact BRDF realism;
+- an exact analytic Jacobian through the hard occupancy step;
+- global convexity of the coupled objective;
+- uniqueness of the fixed point;
+- that sampled Eikonal residuals prove a globally smooth SDF;
+- production-scale Transformer behavior.
+
+Those properties require separate mathematical assumptions, backend implementations, and empirical tests.
