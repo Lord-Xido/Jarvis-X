@@ -329,6 +329,77 @@ def _with_latent(base: WireSpec, z: Sequence[float]) -> WireSpec:
     )
 
 
+class _CachedLoss:
+    """Memoize deterministic loss evaluations within one optimization transaction."""
+
+    def __init__(self, loss_fn: Callable[[Vec], float]) -> None:
+        self._loss_fn = loss_fn
+        self._cache: dict[Vec, float] = {}
+        self.evaluations = 0
+
+    def __call__(self, z: Vec) -> float:
+        key = tuple(float(value) for value in z)
+        if key not in self._cache:
+            self._cache[key] = float(self._loss_fn(key))
+            self.evaluations += 1
+        return self._cache[key]
+
+
+def numerical_gradient_hessian(
+    loss_fn: Callable[[Vec], float],
+    z: Vec,
+    eps: float = 2.0e-3,
+) -> tuple[Vec, tuple[Vec, ...], float]:
+    """Compute central-difference gradient and Hessian from one shared stencil.
+
+    For a two-dimensional latent state this needs nine unique loss evaluations
+    instead of separately evaluating the gradient and Hessian stencils.
+    """
+
+    if eps <= 0.0 or not math.isfinite(eps):
+        raise ValueError("eps must be finite and positive")
+    n = len(z)
+    if n == 0:
+        raise ValueError("z cannot be empty")
+
+    f0 = loss_fn(z)
+    plus_values = [0.0] * n
+    minus_values = [0.0] * n
+    gradient = [0.0] * n
+    hessian = [[0.0] * n for _ in range(n)]
+
+    for i in range(n):
+        plus = list(z)
+        minus = list(z)
+        plus[i] += eps
+        minus[i] -= eps
+        plus_values[i] = loss_fn(tuple(plus))
+        minus_values[i] = loss_fn(tuple(minus))
+        gradient[i] = (plus_values[i] - minus_values[i]) / (2.0 * eps)
+        hessian[i][i] = (plus_values[i] - 2.0 * f0 + minus_values[i]) / (eps * eps)
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            pp, pm, mp, mm = [list(z) for _ in range(4)]
+            pp[i] += eps
+            pp[j] += eps
+            pm[i] += eps
+            pm[j] -= eps
+            mp[i] -= eps
+            mp[j] += eps
+            mm[i] -= eps
+            mm[j] -= eps
+            value = (
+                loss_fn(tuple(pp))
+                - loss_fn(tuple(pm))
+                - loss_fn(tuple(mp))
+                + loss_fn(tuple(mm))
+            ) / (4.0 * eps * eps)
+            hessian[i][j] = hessian[j][i] = value
+
+    return tuple(gradient), tuple(tuple(row) for row in hessian), f0
+
+
 def numerical_gradient(loss_fn: Callable[[Vec], float], z: Vec, eps: float = 1.0e-3) -> Vec:
     if eps <= 0.0:
         raise ValueError("eps must be positive")
@@ -382,39 +453,64 @@ def damped_newton_step(
     *,
     damping: float = 1.0e-2,
     trust_radius: float = 0.25,
+    derivative_eps: float = 2.0e-3,
+    max_backtracks: int = 6,
+    backtrack_factor: float = 0.5,
 ) -> Vec:
-    """Bounded two-dimensional Newton step with Levenberg-style damping."""
+    """Bounded two-dimensional Newton step with monotonic backtracking.
+
+    The gradient and Hessian share one finite-difference stencil. A trust radius
+    bounds the proposal and a short backtracking line search rejects any step
+    that increases the measured objective.
+    """
 
     if len(z) != 2:
         raise ValueError("reference Newton solver expects a two-dimensional latent state")
     if damping <= 0.0 or trust_radius <= 0.0:
         raise ValueError("damping and trust_radius must be positive")
-    g = numerical_gradient(loss_fn, z)
-    h = numerical_hessian(loss_fn, z)
+    if max_backtracks < 0:
+        raise ValueError("max_backtracks must be non-negative")
+    if not 0.0 < backtrack_factor < 1.0:
+        raise ValueError("backtrack_factor must lie in (0, 1)")
+
+    g, h, f0 = numerical_gradient_hessian(loss_fn, z, eps=derivative_eps)
     a = h[0][0] + damping
     b = h[0][1]
-    c = h[1][0]
+    cc = h[1][0]
     d = h[1][1] + damping
-    det = a * d - b * c
+    det = a * d - b * cc
+
     if abs(det) <= 1.0e-12:
         step = (
             -g[0] / a if abs(a) > 1.0e-12 else 0.0,
             -g[1] / d if abs(d) > 1.0e-12 else 0.0,
         )
     else:
-        step = ((-d * g[0] + b * g[1]) / det, (c * g[0] - a * g[1]) / det)
+        step = ((-d * g[0] + b * g[1]) / det, (cc * g[0] - a * g[1]) / det)
 
     norm = math.hypot(step[0], step[1])
     if norm > trust_radius:
         scale = trust_radius / norm
         step = (step[0] * scale, step[1] * scale)
-    return (z[0] + step[0], z[1] + step[1])
+
+    scale = 1.0
+    for _ in range(max_backtracks + 1):
+        candidate = (z[0] + scale * step[0], z[1] + scale * step[1])
+        if loss_fn(candidate) <= f0:
+            return candidate
+        scale *= backtrack_factor
+    return z
 
 
-def fixed_point_residual(phi: Callable[[Vec], Vec], z: Vec) -> float:
+def fixed_point_residual(
+    phi: Callable[[Vec], Vec],
+    z: Vec,
+    *,
+    first: Vec | None = None,
+) -> float:
     """||Phi(Phi(z)) - Phi(z)||_2, the idempotent fixed-point certificate."""
 
-    first = phi(z)
+    first = phi(z) if first is None else first
     second = phi(first)
     if len(first) != len(second):
         raise ValueError("Phi changed latent dimensionality")
@@ -428,6 +524,20 @@ class CoupledIteration:
     loss_before: float
     loss_after: float
     fixed_point_residual: float
+    step_norm: float
+    loss_evaluations: int
+
+
+@dataclass(frozen=True)
+class CoupledOptimization:
+    z_initial: Vec
+    z_final: Vec
+    loss_initial: float
+    loss_final: float
+    iterations: int
+    total_loss_evaluations: int
+    converged: bool
+    history: tuple[CoupledIteration, ...]
 
 
 def coupled_iteration(
@@ -439,14 +549,16 @@ def coupled_iteration(
     trust_radius: float = 0.20,
     render_samples: int = 24,
 ) -> CoupledIteration:
-    """Run one 3D -> 2D -> attention -> Newton latent update."""
+    """Run one memoized 3D -> 2D -> attention -> Newton latent update."""
 
-    def loss_fn(latent: Vec) -> float:
+    def raw_loss(latent: Vec) -> float:
         return total_loss(
             _with_latent(base, latent),
             target_features,
             render_samples=render_samples,
         )
+
+    loss_fn = _CachedLoss(raw_loss)
 
     def phi(latent: Vec) -> Vec:
         return damped_newton_step(
@@ -456,13 +568,98 @@ def coupled_iteration(
             trust_radius=trust_radius,
         )
 
+    loss_before = loss_fn(z)
     after = phi(z)
+    loss_after = loss_fn(after)
+    residual = fixed_point_residual(phi, z, first=after)
+    step_norm = math.hypot(after[0] - z[0], after[1] - z[1])
     return CoupledIteration(
         z_before=z,
         z_after=after,
-        loss_before=loss_fn(z),
-        loss_after=loss_fn(after),
-        fixed_point_residual=fixed_point_residual(phi, z),
+        loss_before=loss_before,
+        loss_after=loss_after,
+        fixed_point_residual=residual,
+        step_norm=step_norm,
+        loss_evaluations=loss_fn.evaluations,
+    )
+
+
+def optimize_coupled(
+    base: WireSpec,
+    initial_z: Vec,
+    target_features: Vec,
+    *,
+    max_iterations: int = 8,
+    tolerance: float = 1.0e-4,
+    loss_tolerance: float = 1.0e-6,
+    initial_damping: float = 1.0e-2,
+    initial_trust_radius: float = 0.30,
+    min_trust_radius: float = 0.02,
+    max_trust_radius: float = 0.60,
+    render_samples: int = 24,
+) -> CoupledOptimization:
+    """Auto-optimize the coupled latent state with adaptive trust and damping.
+
+    Internal fixed-point stability and external objective error are both required
+    before the result is marked converged.
+    """
+
+    if max_iterations <= 0:
+        raise ValueError("max_iterations must be positive")
+    if tolerance <= 0.0 or loss_tolerance < 0.0:
+        raise ValueError("tolerances must be valid")
+    if not 0.0 < min_trust_radius <= initial_trust_radius <= max_trust_radius:
+        raise ValueError("trust radii must satisfy min <= initial <= max")
+
+    current = tuple(float(value) for value in initial_z)
+    if len(current) != 2:
+        raise ValueError("initial_z must be (diameter_mm, inner_gap_mm)")
+
+    damping = float(initial_damping)
+    trust_radius = float(initial_trust_radius)
+    history: list[CoupledIteration] = []
+    total_evaluations = 0
+    converged = False
+
+    for _ in range(max_iterations):
+        iteration = coupled_iteration(
+            base,
+            current,
+            target_features,
+            damping=damping,
+            trust_radius=trust_radius,
+            render_samples=render_samples,
+        )
+        history.append(iteration)
+        total_evaluations += iteration.loss_evaluations
+        current = iteration.z_after
+
+        if iteration.loss_after < iteration.loss_before:
+            damping = max(1.0e-6, damping * 0.7)
+            trust_radius = min(max_trust_radius, trust_radius * 1.2)
+        else:
+            damping = min(1.0e4, damping * 4.0)
+            trust_radius = max(min_trust_radius, trust_radius * 0.5)
+
+        converged = (
+            iteration.step_norm <= tolerance
+            and iteration.fixed_point_residual <= tolerance
+            and iteration.loss_after <= loss_tolerance
+        )
+        if converged:
+            break
+
+    first = history[0]
+    last = history[-1]
+    return CoupledOptimization(
+        z_initial=tuple(float(value) for value in initial_z),
+        z_final=current,
+        loss_initial=first.loss_before,
+        loss_final=last.loss_after,
+        iterations=len(history),
+        total_loss_evaluations=total_evaluations,
+        converged=converged,
+        history=tuple(history),
     )
 
 
