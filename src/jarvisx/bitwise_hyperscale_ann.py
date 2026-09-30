@@ -204,7 +204,7 @@ def inside_singularity_core(
 def fp32_top_byte(value: float) -> int:
     """Return bits 31..24 of an IEEE-754 binary32 representation."""
 
-    raw = struct.unpack(">I", struct.pack(">f", float(value)))[0]
+    raw = int(struct.unpack(">I", struct.pack(">f", float(value)))[0])
     return (raw >> 24) & 0xFF
 
 
