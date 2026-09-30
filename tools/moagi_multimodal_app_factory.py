@@ -122,7 +122,8 @@ def main():
         if args.ai:
             run([sys.executable, "-m", "pip", "install", "-r", "requirements-ai.txt"])
     elif args.cmd == "test":
-        run([sys.executable, "-m", "pytest", "-q"])
+        # Keep generated-project tests independent of parent pytest addopts.
+        run([sys.executable, "-m", "pytest", "-q", "-o", "addopts=", "tests"])
     elif args.cmd == "package":
         package_release()
     elif args.cmd == "run":

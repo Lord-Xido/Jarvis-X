@@ -44,7 +44,7 @@ jobs:
         run: python -m pip install -r .factory-smoke/requirements.txt
 
       - name: Test generated application
-        run: python -m pytest -q .factory-smoke/tests
+        run: python .factory-smoke/manage.py test
 
       - name: Package generated application
         run: python .factory-smoke/manage.py package
