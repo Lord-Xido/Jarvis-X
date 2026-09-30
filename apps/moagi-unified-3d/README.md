@@ -28,6 +28,29 @@ Its invariant is:
 
 The existing `runtime.py` and `terabyte_3d_engine.py` are concrete software substrates for progressively operationalizing that architecture.
 
+## Cloud control-plane permeation
+
+The distributed control path is operationalized by:
+
+- [`src/jarvisx/cloud_control_plane.py`](../../src/jarvisx/cloud_control_plane.py) — deterministic worker routing, versioned tile tasks, candidate execution, CTR-gated commit, stale-state rejection, idempotent replay, and hashed receipts.
+- [`docs/DR_MOAGI_CLOUD_CONTROL_PLANE.md`](../../docs/DR_MOAGI_CLOUD_CONTROL_PLANE.md) — routing cost model, state-transition contract, concurrency semantics, and capability boundary.
+- [`tests/test_cloud_control_plane.py`](../../tests/test_cloud_control_plane.py) — placement and transaction verification.
+
+The concrete distributed transition is:
+
+```text
+versioned tile state
+  -> route by latency/load/memory/locality
+  -> shadow candidate on selected worker
+  -> CTR verify
+  -> re-check parent version/hash
+  -> commit | reject
+  -> deterministic receipt
+  -> recur
+```
+
+Cloud workers remain non-authoritative: they propose candidate state, while the control plane owns verified state reconciliation.
+
 ## VOXEL3D ROM permeation layer
 
 The unified runtime now has a reference boundary for the structured `\x7FVOXEL3D` ROM image:
