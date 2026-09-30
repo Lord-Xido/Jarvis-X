@@ -57,6 +57,7 @@ jobs:
           src/jarvisx/dr_moagi_kinetic_system.py
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
+          src/jarvisx/cloud_control_plane.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
@@ -65,6 +66,7 @@ jobs:
           tests/test_dr_moagi_kinetic_system.py
           tests/test_quantum_text.py
           tests/test_verification.py
+          tests/test_cloud_control_plane.py
 
       - name: Check canonical import order
         run: >-
@@ -79,6 +81,7 @@ jobs:
           src/jarvisx/dr_moagi_kinetic_system.py
           src/jarvisx/quantum_text.py
           src/jarvisx/verification.py
+          src/jarvisx/cloud_control_plane.py
           tests/test_vm.py
           tests/test_ledger.py
           tests/test_fractional_smoothing_3d.py
@@ -87,6 +90,7 @@ jobs:
           tests/test_dr_moagi_kinetic_system.py
           tests/test_quantum_text.py
           tests/test_verification.py
+          tests/test_cloud_control_plane.py
 
       - name: Type-check package
         run: mypy src/jarvisx --ignore-missing-imports

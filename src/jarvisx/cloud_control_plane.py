@@ -173,9 +173,7 @@ class CloudScheduler:
                 0.0 if task.tile_id in worker.resident_tiles else task.bytes_estimate / 1e9
             )
             kind_cost = (
-                0.0
-                if not task.preferred_kind or worker.kind == task.preferred_kind
-                else 1.0
+                0.0 if not task.preferred_kind or worker.kind == task.preferred_kind else 1.0
             )
             score = (
                 self.weights.latency * latency_cost
@@ -335,12 +333,14 @@ class CloudControlPlane:
 
     @staticmethod
     def _state_hash(state: TileState) -> str:
-        return canonical_hash(
-            {
-                "tile_id": state.tile_id,
-                "version": state.version,
-                "value_hash": state.value_hash,
-            }
+        return str(
+            canonical_hash(
+                {
+                    "tile_id": state.tile_id,
+                    "version": state.version,
+                    "value_hash": state.value_hash,
+                }
+            )
         )
 
     def _receipt(
