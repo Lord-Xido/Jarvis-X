@@ -137,8 +137,10 @@ def lod_cluster(key: int, depth: int) -> LODCluster:
     masked = lod_key(key, depth)
     minimum = morton60_decode(masked)
     edge = 1 << (AXIS_BITS - depth)
-    maximum = tuple(axis + edge - 1 for axis in minimum)
-    centroid = tuple(axis + (edge - 1) / 2.0 for axis in minimum)
+    min_x, min_y, min_z = minimum
+    maximum = (min_x + edge - 1, min_y + edge - 1, min_z + edge - 1)
+    half = (edge - 1) / 2.0
+    centroid = (min_x + half, min_y + half, min_z + half)
     return LODCluster(
         depth=depth,
         prefix=lod_prefix(key, depth),
