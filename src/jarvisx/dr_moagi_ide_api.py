@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from .dr_moagi_ide import ANNRegistry, EventJournal, ProjectStore, execute_program, refactor_program
 from .dr_moagi_os_api import app as os_control_plane
+from .unified_runtime_api import app as unified_runtime_plane
 
 ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = Path(os.getenv("JARVISX_IDE_STATIC_DIR", str(ROOT / "apps/dr-moagi-ide/static")))
@@ -24,6 +25,7 @@ projects, events, ann = ProjectStore(DB_PATH), EventJournal(500), ANNRegistry(16
 if STATIC_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/os", os_control_plane)
+app.mount("/runtime", unified_runtime_plane)
 
 class VMRunRequest(BaseModel):
     source: str = Field(min_length=1, max_length=262_144)
@@ -71,11 +73,11 @@ def index() -> Response:
 
 @app.get("/healthz")
 def healthz() -> dict[str, Any]:
-    return {"status":"ok","service":"dr-moagi-ann-ide","version":app.version,"time":time.time(),"static_bundle":STATIC_DIR.is_dir(),"telemetry_sequence":events.sequence,"os_control_plane":"/os"}
+    return {"status":"ok","service":"dr-moagi-ann-ide","version":app.version,"time":time.time(),"static_bundle":STATIC_DIR.is_dir(),"telemetry_sequence":events.sequence,"os_control_plane":"/os","unified_runtime_plane":"/runtime"}
 
 @app.get("/v1/capabilities")
 def capabilities() -> dict[str, Any]:
-    return {"vm":{"engine":"CodexVM","opcodes":["SET","ADD","SUB","HALT"],"transactional":True,"cycle_bounded":True,"arbitrary_shell":False},"refactorer":{"deterministic":True,"unsafe_mutation":False},"ann":{"engine":"Inward4DANN","side_range":[3,10],"max_epochs_per_request":50,"max_sessions":16},"persistence":{"engine":"sqlite","projects":True},"telemetry":{"http":"/v1/telemetry","websocket":"/ws/telemetry"},"dr_moagi_os":{"mounted":True,"base_path":"/os"}}
+    return {"vm":{"engine":"CodexVM","opcodes":["SET","ADD","SUB","HALT"],"transactional":True,"cycle_bounded":True,"arbitrary_shell":False},"refactorer":{"deterministic":True,"unsafe_mutation":False},"ann":{"engine":"Inward4DANN","side_range":[3,10],"max_epochs_per_request":50,"max_sessions":16},"persistence":{"engine":"sqlite","projects":True},"telemetry":{"http":"/v1/telemetry","websocket":"/ws/telemetry"},"dr_moagi_os":{"mounted":True,"base_path":"/os"},"unified_runtime":{"mounted":True,"base_path":"/runtime","contract":"S[t+1] = M(S[t], X[t])"}}
 
 @app.post("/v1/vm/run")
 def vm_run(req: VMRunRequest) -> dict[str, Any]:
