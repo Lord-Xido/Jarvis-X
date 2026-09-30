@@ -45,9 +45,7 @@ def test_morton60_roundtrip_and_source_bit_order() -> None:
         456_789,
         12_345,
     )
-    assert morton60_encode(AXIS_LIMIT - 1, AXIS_LIMIT - 1, AXIS_LIMIT - 1) == (
-        MORTON_LIMIT - 1
-    )
+    assert morton60_encode(AXIS_LIMIT - 1, AXIS_LIMIT - 1, AXIS_LIMIT - 1) == (MORTON_LIMIT - 1)
 
     assert morton60_encode(1 << 19, 0, 0) == 1 << 59
     assert morton60_encode(0, 1 << 19, 0) == 1 << 58
