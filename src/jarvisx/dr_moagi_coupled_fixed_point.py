@@ -480,15 +480,18 @@ def damped_newton_step(
     d = h[1][1] + damping
     det = a * d - b * cc
 
-    if abs(det) <= 1.0e-12:
-        step = (
-            -g[0] / a if abs(a) > 1.0e-12 else 0.0,
-            -g[1] / d if abs(d) > 1.0e-12 else 0.0,
-        )
-    else:
+    # For a symmetric 2x2 matrix, positive definiteness requires a > 0 and det > 0.
+    # An indefinite local Hessian can point Newton uphill, so fall back immediately
+    # to the guaranteed descent direction -gradient in that case.
+    positive_definite = a > 0.0 and det > 1.0e-12
+    if positive_definite:
         step = ((-d * g[0] + b * g[1]) / det, (cc * g[0] - a * g[1]) / det)
+    else:
+        step = (-g[0], -g[1])
 
     norm = math.hypot(step[0], step[1])
+    if norm <= 1.0e-15:
+        return z
     if norm > trust_radius:
         scale = trust_radius / norm
         step = (step[0] * scale, step[1] * scale)
@@ -499,6 +502,21 @@ def damped_newton_step(
         if loss_fn(candidate) <= f0:
             return candidate
         scale *= backtrack_factor
+
+    # A positive-definite Newton model can still be poor outside its local
+    # quadratic regime. Retry along steepest descent before declaring a stall.
+    if positive_definite:
+        step = (-g[0], -g[1])
+        norm = math.hypot(step[0], step[1])
+        if norm > trust_radius:
+            scale = trust_radius / norm
+            step = (step[0] * scale, step[1] * scale)
+        scale = 1.0
+        for _ in range(max_backtracks + 1):
+            candidate = (z[0] + scale * step[0], z[1] + scale * step[1])
+            if loss_fn(candidate) <= f0:
+                return candidate
+            scale *= backtrack_factor
     return z
 
 
