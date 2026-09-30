@@ -148,7 +148,9 @@ def sdf_gradient(point: Vec3, spec: WireSpec = WireSpec(), eps: float = 1.0e-4) 
         minus = p.copy()
         plus[axis] += eps
         minus[axis] -= eps
-        grad.append((sdf(tuple(plus), spec) - sdf(tuple(minus), spec)) / (2.0 * eps))
+        plus_point: Vec3 = (plus[0], plus[1], plus[2])
+        minus_point: Vec3 = (minus[0], minus[1], minus[2])
+        grad.append((sdf(plus_point, spec) - sdf(minus_point, spec)) / (2.0 * eps))
     return (grad[0], grad[1], grad[2])
 
 
