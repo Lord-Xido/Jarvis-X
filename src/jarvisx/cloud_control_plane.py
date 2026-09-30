@@ -335,12 +335,14 @@ class CloudControlPlane:
 
     @staticmethod
     def _state_hash(state: TileState) -> str:
-        return canonical_hash(
-            {
-                "tile_id": state.tile_id,
-                "version": state.version,
-                "value_hash": state.value_hash,
-            }
+        return str(
+            canonical_hash(
+                {
+                    "tile_id": state.tile_id,
+                    "version": state.version,
+                    "value_hash": state.value_hash,
+                }
+            )
         )
 
     def _receipt(
