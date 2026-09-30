@@ -1,0 +1,133 @@
+name: EM-Sig 3D Operational Runtime
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/em_sig_3d_runtime.py"
+      - "src/jarvisx/em_sig_emulation.py"
+      - "tests/test_em_sig_3d_runtime.py"
+      - "docs/research/EM_SIG_3D_OPERATIONAL_RUNTIME.md"
+      - ".github/workflows/em-sig-3d-runtime.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/jarvisx/em_sig_3d_runtime.py"
+      - "src/jarvisx/em_sig_emulation.py"
+      - "tests/test_em_sig_3d_runtime.py"
+      - "docs/research/EM_SIG_3D_OPERATIONAL_RUNTIME.md"
+      - ".github/workflows/em-sig-3d-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: em-sig-3d-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  operational-3d:
+    name: Encode field logic decode verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install test dependencies
+        run: python -m pip install -e ".[test]"
+
+      - name: Compile runtime
+        run: python -m py_compile src/jarvisx/em_sig_3d_runtime.py
+
+      - name: Test operational 3D runtime
+        run: pytest tests/test_em_sig_3d_runtime.py -q --no-cov
+
+      - name: Execute end-to-end 3D signalling path
+        run: >-
+          python -m jarvisx.em_sig_3d_runtime
+          --bit-count 65536
+          --materialized-extent 12
+          --field-sources 16
+          --logic-deadband 0.20
+          --sensor-stride 2
+          --seed 42
+          --output artifacts/em-sig-3d-runtime.json
+
+      - name: Validate execution receipt
+        run: python -m json.tool artifacts/em-sig-3d-runtime.json > /dev/null
+
+      - name: Verify runtime invariants
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(
+              Path("artifacts/em-sig-3d-runtime.json").read_text(encoding="utf-8")
+          )
+          verification = report["verification"]
+          required = {
+              "latent_fixed_point": True,
+              "decoder_fixed_point": True,
+              "source_recovered": True,
+              "logic_volume_accounted": True,
+          }
+          if verification != required:
+              raise SystemExit(
+                  f"3D runtime invariant failure: {verification!r} != {required!r}"
+              )
+          if report["provenance"] != "simulated":
+              raise SystemExit("execution receipt lost simulated provenance boundary")
+          PY
+
+      - name: Publish 3D runtime summary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads(
+              Path("artifacts/em-sig-3d-runtime.json").read_text(encoding="utf-8")
+          )
+          layers = report["layers"]
+          logic = layers["L3_logic_volume_3d"]["stats"]
+          latent = layers["L5_spatial_latent"]
+          decoder = layers["L6_residual_decoder"]
+
+          lines = [
+              "## EM-Sig 3D operational runtime",
+              "",
+              "**Provenance:** simulated",
+              f"**Materialized voxels:** {layers['L2_field_volume_3d']['voxels']}",
+              f"**Active logic voxels:** {logic['active']}",
+              f"**Sparse sensors:** {layers['L4_sparse_sensors']['count']}",
+              f"**Spatial latent:** {latent['final_state_6bit']}/63",
+              f"**Latent fixed point:** {latent['fixed_point']}",
+              f"**Decoder fixed point:** {decoder['fixed_point']}",
+              f"**Source recovered:** {decoder['source_recovered']}",
+              "",
+              "This is deterministic 3D software signalling evidence, not RF hardware telemetry.",
+          ]
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(
+              "\n".join(lines) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload 3D execution receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvisx-em-sig-3d-runtime-${{ github.sha }}
+          path: artifacts/em-sig-3d-runtime.json
+          if-no-files-found: error
+          retention-days: 90
