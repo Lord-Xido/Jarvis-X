@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dr Moagi 3D Intelligence Fabric — Terabyte Stream Visualizer</title>
+<style>
+:root{
+  --bg:#020611;--panel:#07111f;--panel2:#0a1728;--line:#2d6f94;--grid:#17344a;
+  --text:#e8f7ff;--muted:#83a9bd;--enc:#4ec5ff;--fold:#66e0b1;--core:#ffd166;
+  --dec:#a984ff;--err:#ff7f91;--ok:#74f0c1
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% 18%,#0a2140 0,#030914 42%,#01040a 100%);color:var(--text);font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+body{padding:14px}
+#app{max-width:1500px;margin:0 auto;display:grid;gap:12px}
+header,.panel,.metric{border:1px solid #215a7b;background:linear-gradient(180deg,#07172ad9,#030b16e8);border-radius:12px;box-shadow:inset 0 0 25px #0f416522}
+header{padding:12px 14px;display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.brand{font-size:20px;font-weight:700;letter-spacing:.1em}.sub{color:var(--muted);font-size:11px;letter-spacing:.08em}
+.pills{display:flex;gap:8px;flex-wrap:wrap}.pill{padding:6px 9px;border:1px solid #286f96;border-radius:999px;font-size:11px;color:#bcecff}.pill strong{color:var(--ok)}
+.controls{display:flex;gap:9px;flex-wrap:wrap;align-items:end}.control{display:grid;gap:4px;color:var(--muted);font-size:11px}
+select,button{font:inherit;color:var(--text);background:#071a2c;border:1px solid #2b789f;border-radius:8px;min-height:38px;padding:7px 9px}
+button{cursor:pointer}button:hover{background:#0b2942}
+.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.metric{padding:10px 12px}.metric small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.metric b{display:block;font-size:18px;margin-top:3px}.metric span{font-size:10px;color:var(--muted)}
+main{display:grid;grid-template-columns:minmax(0,2.3fr) minmax(250px,.75fr);gap:12px;min-height:610px}
+.panel{min-width:0;position:relative;overflow:hidden}
+.scene{padding:0}.sceneTop{position:absolute;z-index:3;left:12px;top:12px;right:12px;display:flex;justify-content:space-between;gap:10px;pointer-events:none}
+.sceneTag{padding:6px 8px;border:1px solid #245f82;background:#04101dcc;border-radius:7px;font-size:10px;color:#a9d9ef}
+canvas{display:block;width:100%;height:610px}
+.side{padding:12px;display:grid;align-content:start;gap:12px}.title{font-size:11px;letter-spacing:.12em;color:#9edcff}.section{border-top:1px solid #19425c;padding-top:10px}.flow{display:grid;gap:6px;font-size:11px}.flow div{padding:7px 8px;border:1px solid #173e57;border-radius:7px;background:#04101d}.flow b{float:right}
+.bar{height:7px;background:#06121f;border:1px solid #173d57;border-radius:999px;overflow:hidden;margin-top:5px}.fill{height:100%;width:0;background:linear-gradient(90deg,var(--enc),var(--fold),var(--core),var(--dec));transition:width .25s ease}
+.math{font-size:11px;color:#bedae7;white-space:pre-line}.note{font-size:10px;color:var(--muted)}
+.legend{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:9px;text-align:center}.legend span{padding:6px 2px;border-radius:6px;border:1px solid #1f536f}
+.l1{color:var(--enc)}.l2{color:var(--fold)}.l3{color:var(--core)}.l4{color:var(--dec)}.l5{color:var(--err)}
+footer{color:var(--muted);font-size:10px;text-align:center;padding:4px 8px}
+@media(max-width:980px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}main{grid-template-columns:1fr}.side{grid-template-columns:repeat(2,minmax(0,1fr))}canvas{height:520px}}
+@media(max-width:620px){body{padding:8px}.metrics{grid-template-columns:1fr 1fr}.metric b{font-size:15px}.side{grid-template-columns:1fr}.brand{font-size:17px}canvas{height:470px}.legend{grid-template-columns:1fr 1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div>
+    <div class="brand">DR MOAGI 3D INTELLIGENCE FABRIC</div>
+    <div class="sub">STREAM → TILE → ENCODE → Φin → Z* → DECODE → RESIDUAL → Ω → RECUR</div>
+  </div>
+  <div class="controls">
+    <label class="control">Target ingress
+      <select id="rate">
+        <option value="1">1 GB/s</option>
+        <option value="100">100 GB/s</option>
+        <option value="1000" selected>1000 GB/s</option>
+      </select>
+    </label>
+    <label class="control">Workers
+      <select id="workers">
+        <option value="64">64</option>
+        <option value="256">256</option>
+        <option value="1024" selected>1024</option>
+        <option value="4096">4096</option>
+      </select>
+    </label>
+    <label class="control">Tile
+      <select id="tile">
+        <option value="1000000" selected>1 MB / 100³ bytes</option>
+        <option value="16000000">16 MB / 100³×4 f32</option>
+        <option value="100000000">100 MB</option>
+      </select>
+    </label>
+    <button id="pause" type="button">PAUSE</button>
+  </div>
+  <div class="pills"><span class="pill">MODE <strong>MODEL TARGET</strong></span><span class="pill">LOGICAL FIELD <strong>10¹⁸ CELLS</strong></span></div>
+</header>
+
+<section class="metrics">
+  <div class="metric"><small>Ingress</small><b id="mRate">1.00 TB/s</b><span id="mBits">8.00 Tb/s</span></div>
+  <div class="metric"><small>Tiles / second</small><b id="mTiles">1,000,000</b><span id="mInterval">1.00 µs arrival interval</span></div>
+  <div class="metric"><small>Per worker</small><b id="mWorker">976.6 MB/s</b><span id="mWorkerTiles">976.6 tiles/s</span></div>
+  <div class="metric"><small>Logical state</small><b>10¹⁸ cells</b><span>10⁶ × 10⁶ × 10⁶ address space</span></div>
+  <div class="metric"><small>Explicit pair graph avoided</small><b>≈5×10³⁵</b><span>unique all-to-all pairs represented implicitly</span></div>
+</section>
+
+<main>
+  <section class="panel scene">
+    <div class="sceneTop">
+      <div class="sceneTag" id="phaseTag">PHASE: INGEST / ACTIVE TILE FIELD</div>
+      <div class="sceneTag">visual model · not measured hardware throughput</div>
+    </div>
+    <canvas id="scene" aria-label="Animated visualization of a three-dimensional hierarchical auto-encoding and decoding architecture"></canvas>
+  </section>
+
+  <aside class="panel side">
+    <div>
+      <div class="title">HIERARCHICAL CONTRACTION</div>
+      <div class="flow">
+        <div>Logical cells <b>10¹⁸</b></div>
+        <div>Level 1 <b>10¹⁵</b></div>
+        <div>Level 2 <b>10¹²</b></div>
+        <div>Level 3 <b>10⁹</b></div>
+        <div>Level 4 <b>10⁶</b></div>
+        <div>Level 5 <b>10³</b></div>
+        <div>Fixed-point core <b>Z*</b></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="title">PIPELINE OCCUPANCY</div>
+      <div class="note" id="occupancyText">Streaming pipeline active</div>
+      <div class="bar"><div class="fill" id="occupancy"></div></div>
+    </div>
+    <div class="section">
+      <div class="title">CORE RECURRENCE</div>
+      <div class="math">Xₜ → Eθ(Xₜ) → Zₜ
+Zₜ → Φinᵏ → Z*
+Z* → Dφ → X̂ₜ
+eₜ = Xₜ − X̂ₜ
+Ωₜ₊₁ = ρΩₜ + (1−ρ)G(Z*)</div>
+    </div>
+    <div class="section">
+      <div class="title">INTERACTION MODEL</div>
+      <div class="math">local(i) + regional(i,Zᵣ) + global(i,Z*)
+instead of
+Σⱼ F(xᵢ,xⱼ), j=1…10¹⁸</div>
+      <div class="note">The visualizer models hierarchical implicit interaction. It does not materialize the ≈5×10³⁵ complete-graph edges.</div>
+    </div>
+    <div class="section">
+      <div class="legend">
+        <span class="l1">ENCODE</span><span class="l2">Φin</span><span class="l3">Z*</span><span class="l4">DECODE</span><span class="l5">ERROR/Ω</span>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer>Reference visualization only. Throughput selections are target/model parameters; actual Jarvis-X runtime performance remains host-measured and must be reported separately.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var root=document.getElementById("app");
+  var canvas=document.getElementById("scene");
+  var ctx=canvas.getContext("2d");
+  var rateEl=document.getElementById("rate");
+  var workerEl=document.getElementById("workers");
+  var tileEl=document.getElementById("tile");
+  var pause=document.getElementById("pause");
+  var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var running=!reduced, raf=0, start=performance.now(), W=0,H=0,dpr=1;
+
+  function fmtRate(gb){
+    return gb>=1000 ? (gb/1000).toFixed(2)+" TB/s" : gb.toLocaleString()+" GB/s";
+  }
+  function fmtBytesPerSecond(v){
+    if(v>=1e12)return (v/1e12).toFixed(3)+" TB/s";
+    if(v>=1e9)return (v/1e9).toFixed(3)+" GB/s";
+    return (v/1e6).toFixed(1)+" MB/s";
+  }
+  function fmtTime(sec){
+    if(sec<1e-6)return (sec*1e9).toFixed(2)+" ns";
+    if(sec<1e-3)return (sec*1e6).toFixed(2)+" µs";
+    if(sec<1)return (sec*1e3).toFixed(2)+" ms";
+    return sec.toFixed(2)+" s";
+  }
+  function updateMetrics(){
+    var gb=Math.max(1,Number(rateEl.value)||1);
+    var workers=Math.max(1,Number(workerEl.value)||1);
+    var tile=Math.max(1,Number(tileEl.value)||1);
+    var bytes=gb*1e9, tiles=bytes/tile, interval=1/tiles, workerBytes=bytes/workers, workerTiles=tiles/workers;
+    document.getElementById("mRate").textContent=fmtRate(gb);
+    document.getElementById("mBits").textContent=(bytes*8>=1e12?(bytes*8/1e12).toFixed(2)+" Tb/s":(bytes*8/1e9).toFixed(2)+" Gb/s");
+    document.getElementById("mTiles").textContent=Math.round(tiles).toLocaleString();
+    document.getElementById("mInterval").textContent=fmtTime(interval)+" arrival interval";
+    document.getElementById("mWorker").textContent=fmtBytesPerSecond(workerBytes);
+    document.getElementById("mWorkerTiles").textContent=workerTiles.toLocaleString(undefined,{maximumFractionDigits:1})+" tiles/s";
+  }
+
+  function resize(){
+    var r=canvas.getBoundingClientRect();
+    dpr=Math.min(2,window.devicePixelRatio||1);
+    W=Math.max(320,r.width); H=Math.max(420,r.height);
+    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function line(a,b,color,alpha,width){
+    ctx.globalAlpha=alpha==null?1:alpha;
+    ctx.strokeStyle=color; ctx.lineWidth=width||1;
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  function cube(x,y,s,d,color,alpha){
+    var p=[
+      {x:x-s/2,y:y-s/2},{x:x+s/2,y:y-s/2},{x:x+s/2,y:y+s/2},{x:x-s/2,y:y+s/2},
+      {x:x-s/2+d,y:y-s/2-d},{x:x+s/2+d,y:y-s/2-d},{x:x+s/2+d,y:y+s/2-d},{x:x-s/2+d,y:y+s/2-d}
+    ];
+    var e=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+    for(var i=0;i<e.length;i++)line(p[e[i][0]],p[e[i][1]],color,alpha,1);
+  }
+  function lerp(a,b,t){return a+(b-a)*t}
+  function pathPoint(points,t){
+    t=Math.max(0,Math.min(.999999,t));
+    var q=t*(points.length-1),i=Math.floor(q),f=q-i;
+    return {x:lerp(points[i].x,points[i+1].x,f),y:lerp(points[i].y,points[i+1].y,f)};
+  }
+
+  function draw(now){
+    ctx.clearRect(0,0,W,H);
+    var t=(now-start)/1000;
+    var mid={x:W*.50,y:H*.49};
+    var left={x:Math.max(78,W*.08),y:H*.49};
+    var right={x:W-Math.max(85,W*.08),y:H*.49};
+    var inPath=[
+      left,
+      {x:lerp(left.x,mid.x,.25),y:H*.25},
+      {x:lerp(left.x,mid.x,.50),y:H*.31},
+      {x:lerp(left.x,mid.x,.72),y:H*.39},
+      {x:lerp(left.x,mid.x,.88),y:H*.45},
+      mid
+    ];
+    var outPath=[
+      mid,
+      {x:lerp(mid.x,right.x,.14),y:H*.55},
+      {x:lerp(mid.x,right.x,.34),y:H*.63},
+      {x:lerp(mid.x,right.x,.58),y:H*.70},
+      {x:lerp(mid.x,right.x,.80),y:H*.73},
+      right
+    ];
+    var bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,"rgba(8,24,42,.15)");bg.addColorStop(1,"rgba(1,5,10,.2)");ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle="#102e43";ctx.lineWidth=1;
+    for(var gx=0;gx<W;gx+=36){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke()}
+    for(var gy=0;gy<H;gy+=36){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke()}
+
+    for(var i=0;i<inPath.length-1;i++)line(inPath[i],inPath[i+1],"#4ec5ff",.35,1.3);
+    for(var j=0;j<outPath.length-1;j++)line(outPath[j],outPath[j+1],"#a984ff",.35,1.3);
+
+    var levelsIn=[
+      {p:inPath[0],s:100,l:"10¹⁸"},{p:inPath[1],s:76,l:"10¹⁵"},{p:inPath[2],s:58,l:"10¹²"},
+      {p:inPath[3],s:43,l:"10⁹"},{p:inPath[4],s:30,l:"10³"}
+    ];
+    for(var a=0;a<levelsIn.length;a++){
+      cube(levelsIn[a].p.x,levelsIn[a].p.y,levelsIn[a].s,levelsIn[a].s*.18,a<2?"#4ec5ff":"#66e0b1",.68);
+      ctx.fillStyle="#d9f3ff";ctx.font="11px ui-monospace,monospace";ctx.textAlign="center";
+      ctx.fillText(levelsIn[a].l,levelsIn[a].p.x,levelsIn[a].p.y+levelsIn[a].s*.65);
+    }
+    var levelsOut=[
+      {p:outPath[1],s:30,l:"10³"},{p:outPath[2],s:43,l:"10⁹"},{p:outPath[3],s:58,l:"10¹²"},
+      {p:outPath[4],s:76,l:"10¹⁵"},{p:outPath[5],s:100,l:"X̂ₜ"}
+    ];
+    for(var b=0;b<levelsOut.length;b++){
+      cube(levelsOut[b].p.x,levelsOut[b].p.y,levelsOut[b].s,levelsOut[b].s*.18,"#a984ff",.62);
+      ctx.fillStyle="#e7ddff";ctx.font="11px ui-monospace,monospace";ctx.textAlign="center";
+      ctx.fillText(levelsOut[b].l,levelsOut[b].p.x,levelsOut[b].p.y+levelsOut[b].s*.65);
+    }
+
+    var pulse=.5+.5*Math.sin(t*4.2);
+    var rg=ctx.createRadialGradient(mid.x,mid.y,1,mid.x,mid.y,52+12*pulse);
+    rg.addColorStop(0,"rgba(255,255,255,.96)");rg.addColorStop(.15,"rgba(255,209,102,.8)");rg.addColorStop(.5,"rgba(102,224,177,.18)");rg.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=rg;ctx.fillRect(mid.x-80,mid.y-80,160,160);
+    ctx.fillStyle="#ffd166";ctx.font="700 17px ui-monospace,monospace";ctx.textAlign="center";ctx.fillText("Z*",mid.x,mid.y+5);
+    ctx.font="10px ui-monospace,monospace";ctx.fillStyle="#b8d7e7";ctx.fillText("FIXED-POINT LATENT CORE",mid.x,mid.y+23);
+
+    var rate=Number(rateEl.value)||1;
+    var count=rate>=1000?72:rate>=100?42:20;
+    for(var k=0;k<count;k++){
+      var p=(t*(rate>=1000?.33:rate>=100?.25:.18)+k/count)%1;
+      var q=pathPoint(inPath,p);
+      ctx.globalAlpha=.2+.8*(1-p);ctx.fillStyle="#4ec5ff";ctx.beginPath();ctx.arc(q.x,q.y,1.8+(k%3)*.4,0,Math.PI*2);ctx.fill();
+      var r=pathPoint(outPath,p);
+      ctx.globalAlpha=.25+.65*p;ctx.fillStyle="#a984ff";ctx.beginPath();ctx.arc(r.x,r.y,1.7+(k%2)*.5,0,Math.PI*2);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    var fbY=H*.89;
+    ctx.setLineDash([6,6]);ctx.strokeStyle="#ff7f91";ctx.globalAlpha=.65;ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(right.x,right.y+62);ctx.bezierCurveTo(right.x-20,fbY,mid.x+115,fbY,mid.x+35,mid.y+25);ctx.stroke();
+    ctx.setLineDash([]);ctx.globalAlpha=1;ctx.fillStyle="#ff9bab";ctx.font="10px ui-monospace,monospace";ctx.textAlign="center";
+    ctx.fillText("eₜ = Xₜ − X̂ₜ  →  Ω  →  next latent update",mid.x+115,fbY+18);
+
+    ctx.fillStyle="#83a9bd";ctx.font="10px ui-monospace,monospace";ctx.textAlign="center";
+    ctx.fillText("PARALLEL TILED ENCODER Eθ",W*.27,H*.12);
+    ctx.fillText("Φin HIERARCHICAL REDUCTION",W*.43,H*.18);
+    ctx.fillText("MULTIRESOLUTION DECODER Dφ",W*.72,H*.84);
+
+    var phase=Math.floor(t*1.2)%5;
+    var labels=["INGEST / ACTIVE TILE FIELD","3D ENCODE / LOCAL LATENTS","Φin / HIERARCHICAL CONTRACTION","Z* / FIXED-POINT UPDATE","DECODE / RESIDUAL / Ω"];
+    document.getElementById("phaseTag").textContent="PHASE: "+labels[phase];
+    var occ=30+55*(.5+.5*Math.sin(t*.8));
+    document.getElementById("occupancy").style.width=occ.toFixed(1)+"%";
+    document.getElementById("occupancyText").textContent="Model occupancy "+occ.toFixed(0)+"% · pipeline overlapped";
+
+    if(running)raf=requestAnimationFrame(draw);
+  }
+
+  function setRun(v){
+    running=v;pause.textContent=running?"PAUSE":"RESUME";
+    cancelAnimationFrame(raf);
+    if(running){start=performance.now();raf=requestAnimationFrame(draw)}else{draw(performance.now())}
+  }
+  rateEl.addEventListener("change",function(){updateMetrics();if(!running)draw(performance.now())});
+  workerEl.addEventListener("change",function(){updateMetrics();if(!running)draw(performance.now())});
+  tileEl.addEventListener("change",function(){updateMetrics();if(!running)draw(performance.now())});
+  pause.addEventListener("click",function(){setRun(!running)});
+  window.addEventListener("resize",function(){resize();if(!running)draw(performance.now())});
+
+  updateMetrics();resize();
+  if(reduced){running=false;pause.textContent="RESUME";draw(performance.now())}else{raf=requestAnimationFrame(draw)}
+})();
+</script>
+</body>
+</html>

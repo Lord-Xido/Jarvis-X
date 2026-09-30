@@ -133,3 +133,30 @@ Tests cover 3D addressing, exact residual round-trip, bounded lossy reconstructi
 ## Throughput semantics
 
 The runtime prints measured GB/s for the blocks actually executed and an extrapolated time for the logical 1000 GB dataset. That projection is explicitly host-dependent. The implementation makes no claim that C++, GPU, optical, or EM hardware automatically reaches a specific throughput without measurement.
+
+
+## Browser visualization
+
+The dependency-free browser model is available at:
+
+```text
+apps/moagi-unified-3d/terabyte_stream_visualizer.html
+```
+
+It visualizes the same streaming contract at selectable target ingress rates of `1 GB/s`, `100 GB/s`, and `1000 GB/s`, including:
+
+```text
+stream
+  -> tile dispatcher
+  -> parallel 3D encoder E_theta
+  -> hierarchical Phi_in contraction
+  -> fixed-point latent core Z*
+  -> multiresolution decoder D_phi
+  -> residual e_t
+  -> Omega memory
+  -> recurrent update
+```
+
+For the `10^6 x 10^6 x 10^6 = 10^18` logical address-space thought experiment, the visualization treats the approximately `5 x 10^35` complete-graph pair relationships as an implicit hierarchical field. It does not allocate or execute those edges explicitly.
+
+The displayed throughput is a **model target**, not a benchmark result. Actual runtime throughput remains the measured host rate reported by `terabyte_3d_engine.py`.

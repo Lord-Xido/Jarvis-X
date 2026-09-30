@@ -36,6 +36,7 @@ The unified runtime now has a reference boundary for the structured `\x7FVOXEL3D
 - [`voxel3d_rom_runtime.py`](./voxel3d_rom_runtime.py) — strict ROM parser plus reference orchestration bridge.
 - [`test_voxel3d_rom_runtime.py`](./test_voxel3d_rom_runtime.py) — validation, anchor, raw-word, and CTR commit-gate tests.
 - [`voxel3d_visualizer.html`](./voxel3d_visualizer.html) — dependency-free live browser visualization of the inward recursive runtime.
+- [`terabyte_stream_visualizer.html`](./terabyte_stream_visualizer.html) — dependency-free 3D visualization of the 1/100/1000 GB/s streaming fabric, tiled parallel encoding, hierarchical inward contraction, fixed-point latent core, decoding, and residual/Omega recurrence.
 
 The ROM layer follows:
 
@@ -145,6 +146,12 @@ Open the live architecture visualization directly in a browser:
 
 ```text
 apps/moagi-unified-3d/voxel3d_visualizer.html
+```
+
+Open the terabyte streaming visualization:
+
+```text
+apps/moagi-unified-3d/terabyte_stream_visualizer.html
 ```
 
 For the hierarchical streaming implementation, see [`TERABYTE_ENGINE.md`](./TERABYTE_ENGINE.md).
