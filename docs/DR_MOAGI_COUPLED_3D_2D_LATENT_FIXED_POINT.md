@@ -159,9 +159,35 @@ is numerically fragile when the Hessian is singular or indefinite. The reference
 z_{k+1}=z_k+\operatorname{clip}_{\rho}(\Delta z).
 ```
 
+The implementation now computes the gradient and Hessian from one shared central-difference stencil. In the two-parameter reference state this requires nine unique objective evaluations rather than independently re-rendering overlapping gradient and Hessian states. Each optimization transaction memoizes deterministic loss evaluations.
+
+The proposed Newton direction is accepted only when it is monotonic:
+
+```math
+\mathcal L(z_k + \alpha\Delta z) \le \mathcal L(z_k),
+\qquad
+\alpha\in\{1,\beta,\beta^2,\ldots\},\quad 0<\beta<1.
+```
+
+If necessary, a bounded backtracking search reduces the step. The multi-iteration `optimize_coupled` driver then adapts damping and trust radius: successful updates reduce damping and expand the local trust region; stalled updates increase damping and contract the trust region.
+
 This is the executable `Phi` used by `coupled_iteration`.
 
-## 9. Execution graph
+## 9. Auto-optimization and stopping rule
+
+The optimizer requires both local fixed-point stability and sufficiently small external objective error:
+
+```math
+\|z_{k+1}-z_k\| \le \varepsilon_z,
+\qquad
+r_\Phi(z_k) \le \varepsilon_\Phi,
+\qquad
+\mathcal L_{total}(z_{k+1}) \le \varepsilon_L.
+```
+
+This prevents a stationary but incorrect geometry from being reported as converged merely because its update has collapsed to zero.
+
+## 10. Execution graph
 
 ```text
 z_k = (diameter, gap)
@@ -173,13 +199,17 @@ z_k = (diameter, gap)
   -> patch tokenization
   -> self-attention
   -> coupled feature + physical loss
-  -> numerical gradient/Hessian
-  -> damped trust-region Newton update
+  -> memoized shared gradient/Hessian stencil
+  -> damped trust-region Newton direction
+  -> monotonic backtracking acceptance
   -> z_(k+1)
   -> evaluate ||Phi(Phi(z_k)) - Phi(z_k)||
+  -> adapt damping/trust radius
+  -> require internal + external convergence
+  -> recur or stop
 ```
 
-## 10. Validation boundary
+## 11. Validation boundary
 
 The profile deliberately does not claim:
 
