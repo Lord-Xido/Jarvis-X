@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Bounded Dr Moagi ANN Cognitive Matrix with sparse 1 GiB virtual memory, 32-bit VM, fixed-point recurrence and CTR verification.">
+  <title>Dr Moagi ANN Cognitive Matrix</title>
+  <style>
+    :root{color-scheme:dark;--bg:#030610;--panel:#091120e8;--line:#1f3b5c;--text:#eaf6ff;--muted:#86a3c0;--cyan:#5eead4;--blue:#60a5fa;--pink:#fb7185;--amber:#fbbf24;--good:#34d399;--bad:#fb7185;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:radial-gradient(circle at 50% 30%,#0d1b36,#030610 58%);color:var(--text)}
+    button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:#0e1a2d;color:var(--text);border-radius:8px;padding:8px 10px}button:hover{border-color:var(--cyan)}
+    #scene{position:absolute;inset:0;width:100%;height:100%}.panel{position:absolute;background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:12px;z-index:5}
+    header{left:12px;right:12px;top:12px;padding:11px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center}h1{margin:0;font-size:13px;letter-spacing:.1em;text-transform:uppercase}.sub{font-size:10px;color:var(--muted)}
+    #controls{left:12px;top:82px;width:300px;padding:12px;display:grid;gap:10px}.section{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--blue);text-transform:uppercase;border-left:3px solid var(--cyan);padding-left:7px}.row{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted)}input[type=range]{width:100%}
+    #telemetry{right:12px;top:82px;width:320px;padding:12px;display:grid;gap:7px}.metric{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff10;padding-bottom:4px;font-size:11px}.metric span:first-child{color:var(--muted)}.metric b{font-family:ui-monospace,monospace;color:var(--cyan)}
+    #inspector{right:12px;bottom:12px;width:320px;padding:12px}.eq{font:10px/1.5 ui-monospace,monospace;color:#d8e8ff;background:#ffffff08;border-radius:8px;padding:8px}
+    #log{left:12px;right:344px;bottom:12px;height:118px;padding:10px;overflow:auto;font:10px/1.45 ui-monospace,monospace;color:#cfeaff}
+    .pill{font:700 10px ui-monospace,monospace;border:1px solid var(--line);border-radius:999px;padding:5px 8px}.good{color:var(--good)}.bad{color:var(--bad)}
+    @media(max-width:800px){#controls{width:250px}#telemetry{width:260px}#inspector{display:none}#log{right:12px}.sub{display:none}}
+  </style>
+</head>
+<body>
+<canvas id="scene" aria-label="3D projection of the Dr Moagi ANN Cognitive Matrix"></canvas>
+<header class="panel">
+  <div><h1>Dr Moagi ANN Cognitive Matrix</h1><div class="sub">1,200,000 logical nodes · bounded active set · 32-bit VM · sparse 1 GiB virtual ring · fixed-point + CTR</div></div>
+  <span id="state" class="pill good">REFERENCE RUNNING</span>
+</header>
+
+<aside id="controls" class="panel">
+  <div class="section">Execution</div>
+  <button id="step">Run macrocycle</button>
+  <button id="auto">Pause auto</button>
+  <div class="row"><span>Input drive</span><output id="driveOut">0.50</output></div>
+  <input id="drive" type="range" min="-1" max="1" step="0.01" value="0.50">
+  <div class="section">Recurrence</div>
+  <div class="row"><span>γ contraction</span><output id="gammaOut">0.72</output></div>
+  <input id="gamma" type="range" min="0.05" max="0.95" step="0.01" value="0.72">
+  <div class="row"><span>ρ memory</span><output id="rhoOut">0.86</output></div>
+  <input id="rho" type="range" min="0" max="0.99" step="0.01" value="0.86">
+  <div class="row"><span>η adaptation</span><output id="etaOut">0.045</output></div>
+  <input id="eta" type="range" min="0.005" max="0.10" step="0.005" value="0.045">
+  <div class="section">Boundary</div>
+  <div class="sub">Virtual scale is not physical residency. Latency below is measured in this browser; no synthetic FPS, Gbps, MIPS or SIMD claim is emitted.</div>
+</aside>
+
+<aside id="telemetry" class="panel">
+  <div class="section">Measured / authoritative local telemetry</div>
+  <div class="metric"><span>Logical ANN nodes</span><b>1,200,000</b></div>
+  <div class="metric"><span>Resident active nodes</span><b id="active">—</b></div>
+  <div class="metric"><span>Virtual bytes</span><b>1,073,741,824</b></div>
+  <div class="metric"><span>Resident pages</span><b id="pages">—</b></div>
+  <div class="metric"><span>Resident bytes</span><b id="bytes">—</b></div>
+  <div class="metric"><span>Macrocycle latency</span><b id="latency">—</b></div>
+  <div class="metric"><span>Fixed-point residual</span><b id="fixed">—</b></div>
+  <div class="metric"><span>Reconstruction residual</span><b id="residual">—</b></div>
+  <div class="metric"><span>CTR energy</span><b id="ctr">—</b></div>
+  <div class="metric"><span>Ω memory</span><b id="omega">—</b></div>
+  <div class="metric"><span>Version</span><b id="version">0</b></div>
+  <div class="metric"><span>Decision</span><b id="decision">—</b></div>
+</aside>
+
+<section id="inspector" class="panel">
+  <div class="section">Selected operator</div>
+  <h2 id="opTitle" style="font-size:13px;margin:8px 0">INWARD_FOLD · 0x50</h2>
+  <div id="opDesc" class="sub">Damped recurrent contraction of the resident latent field.</div>
+  <div id="opEq" class="eq">Z(k+1) = (1−γ)Z(k) + γ Φin(Z(k))</div>
+</section>
+
+<section id="log" class="panel"></section>
+<script type="module" src="./app.mjs"></script>
+</body>
+</html>
