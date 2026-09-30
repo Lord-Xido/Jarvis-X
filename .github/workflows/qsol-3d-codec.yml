@@ -1,0 +1,47 @@
+name: QSOL 3D Codec Bytecode
+
+on:
+  push:
+    paths:
+      - "reference/qsol_3d_codec/**"
+      - "docs/adr/0010-qsol-3d-autoencoding-bytecode-profile.md"
+      - ".github/workflows/qsol-3d-codec.yml"
+  pull_request:
+    paths:
+      - "reference/qsol_3d_codec/**"
+      - "docs/adr/0010-qsol-3d-autoencoding-bytecode-profile.md"
+      - ".github/workflows/qsol-3d-codec.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Compile reference VM
+        run: python -m compileall -q reference/qsol_3d_codec
+
+      - name: Run bytecode conformance tests
+        working-directory: reference/qsol_3d_codec
+        run: python -m unittest -v test_reference_vm.py
+
+      - name: Verify canonical fixed-point receipt
+        run: |
+          python reference/qsol_3d_codec/reference_vm.py > /tmp/qsol-3d-codec.txt
+          grep -F "[CYCLE 010] PC 0x0024 HALT_LOOP" /tmp/qsol-3d-codec.txt
+          grep -F "max_commit_drift_q16=0" /tmp/qsol-3d-codec.txt
+          grep -F "fixed_point=True" /tmp/qsol-3d-codec.txt
