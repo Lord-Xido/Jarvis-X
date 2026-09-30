@@ -21,7 +21,7 @@ import json
 import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Sequence, cast
 
 from jarvisx.em_sig_emulation import (
     EMSigConfig,
@@ -439,7 +439,7 @@ def main() -> None:
     )
     report = run_3d_runtime(config)
     write_report(report, args.output)
-    verification = report["verification"]
+    verification = cast(dict[str, bool], report["verification"])
     print(
         "EM-Sig 3D runtime:",
         f"latent={verification['latent_fixed_point']}",
