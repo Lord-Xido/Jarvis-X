@@ -13,6 +13,8 @@ from jarvisx.dr_moagi_coupled_fixed_point import (
     fixed_point_residual,
     hard_density,
     image_feature_vector,
+    numerical_gradient_hessian,
+    optimize_coupled,
     patch_tokens,
     render_pixel,
     sdf,
@@ -115,3 +117,54 @@ def test_coupled_iteration_moves_bad_geometry_toward_target():
     assert result.loss_after <= result.loss_before
     assert result.z_after != result.z_before
     assert math.isfinite(result.fixed_point_residual)
+
+
+
+def test_shared_gradient_hessian_stencil_uses_nine_unique_evaluations():
+    calls = 0
+
+    def loss(z):
+        nonlocal calls
+        calls += 1
+        return (z[0] - 1.0) ** 2 + (z[1] - 2.0) ** 2
+
+    gradient, hessian, f0 = numerical_gradient_hessian(loss, (1.4, 1.6))
+    assert calls == 9
+    assert f0 > 0.0
+    assert gradient[0] > 0.0
+    assert gradient[1] < 0.0
+    assert hessian[0][0] == pytest.approx(2.0, rel=1.0e-5)
+    assert hessian[1][1] == pytest.approx(2.0, rel=1.0e-5)
+
+
+def test_coupled_iteration_reuses_loss_evaluations():
+    target = WireSpec()
+    target_features = image_feature_vector(target, width=16, height=16, samples=6)
+    result = coupled_iteration(
+        WireSpec(),
+        (1.25, 2.35),
+        target_features,
+        trust_radius=0.25,
+        render_samples=6,
+    )
+
+    assert result.loss_after <= result.loss_before
+    assert result.loss_evaluations <= 24
+    assert result.step_norm >= 0.0
+
+
+def test_auto_optimizer_reduces_external_objective():
+    target = WireSpec()
+    target_features = image_feature_vector(target, width=16, height=16, samples=6)
+    result = optimize_coupled(
+        WireSpec(),
+        (1.4, 2.5),
+        target_features,
+        max_iterations=4,
+        render_samples=6,
+    )
+
+    assert result.iterations <= 4
+    assert result.loss_final < result.loss_initial
+    assert result.total_loss_evaluations > 0
+    assert math.dist(result.z_final, (1.0, 2.0)) < math.dist(result.z_initial, (1.0, 2.0))
