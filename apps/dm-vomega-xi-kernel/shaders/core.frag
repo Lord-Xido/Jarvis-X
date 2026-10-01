@@ -14,7 +14,7 @@ void main() {
     float r2 = dot(d, d);
     if (r2 > 1.0) discard;
 
-    vec3 spectrum = 0.5 + 0.5 * tanh(2.25 * v_cognitiveState);
+    vec3 shaped = (2.25 * v_cognitiveState) /\n                  (1.0 + abs(2.25 * v_cognitiveState));\n    vec3 spectrum = 0.5 + 0.5 * shaped;
     float pulse = 0.82 + 0.18 * sin(
         u_time * 2.0 + v_iterationEnergy * 18.0 +
         dot(v_cognitiveState, vec3(3.1, 4.7, 5.9)));
