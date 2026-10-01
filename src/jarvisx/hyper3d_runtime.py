@@ -1,0 +1,221 @@
+from __future__ import annotations
+
+import base64, hashlib, math
+from dataclasses import asdict, dataclass, field
+from enum import Enum, IntEnum
+from typing import Sequence
+
+BASE=6400; AXIS=BASE**3; ABITS=(AXIS-1).bit_length(); LOGICAL=AXIS**3
+MASK64=(1<<64)-1; BE=4; BV=64; CH=8; SCALE=1/8
+DEFAULT_NODES=512; MAX_NODES=4096; MAX_PAYLOAD=1_048_576
+
+class Modality(str,Enum):
+    TEXT='text'; IMAGE='image'; AUDIO='audio'; VIDEO='video'; CODE='code'; GENERIC='generic'
+
+class Opcode(IntEnum):
+    NOP=0; INGEST=1; ENCODE=0x10; BITMIX=0x11; FUSE=0x12; FOLD=0x20; DECODE=0x30; RENDER=0x40; FEEDBACK=0x50; HALT=0xff
+
+@dataclass(frozen=True)
+class Address128:
+    x:int; y:int; z:int
+    def __post_init__(self):
+        if any(v<0 or v>=AXIS for v in (self.x,self.y,self.z)): raise ValueError('address out of range')
+    @staticmethod
+    def _d(v): return (v//(BASE*BASE), (v//BASE)%BASE, v%BASE)
+    @staticmethod
+    def _c(a,b,c):
+        if any(v<0 or v>=BASE for v in (a,b,c)): raise ValueError('hierarchy digit out of range')
+        return (a*BASE+b)*BASE+c
+    @classmethod
+    def from_hierarchy(cls,*d):
+        if len(d)!=9: raise ValueError('need 9 hierarchy digits')
+        return cls(cls._c(*d[:3]),cls._c(*d[3:6]),cls._c(*d[6:9]))
+    def hierarchy(self): return {'x':self._d(self.x),'y':self._d(self.y),'z':self._d(self.z)}
+    def pack(self): return self.x|(self.y<<ABITS)|(self.z<<(2*ABITS))
+    @classmethod
+    def unpack(cls,w):
+        if w<0 or w>=1<<128: raise ValueError('address must fit 128 bits')
+        m=(1<<ABITS)-1; return cls(w&m,(w>>ABITS)&m,(w>>(2*ABITS))&m)
+    def moved(self,dx,dy,dz): return Address128((self.x+dx)%AXIS,(self.y+dy)%AXIS,(self.z+dz)%AXIS)
+    def norm(self):
+        s=2/(AXIS-1); return (self.x*s-1,self.y*s-1,self.z*s-1)
+    def hex(self): return '0x%032X'%self.pack()
+
+@dataclass(frozen=True)
+class Instruction64:
+    mode:int; opcode:Opcode; flags:int=0; value:int=0; dx:int=0; dy:int=0; dz:int=1
+    @staticmethod
+    def _e(v):
+        if v<-128 or v>127: raise ValueError('route out of range')
+        return v&255
+    @staticmethod
+    def _d(v): return v-256 if v&128 else v
+    def encode(self):
+        if not 0<=self.mode<=15 or not 0<=self.flags<=0xfff or not 0<=self.value<=0xffff: raise ValueError('instruction field out of range')
+        return (self.mode<<60)|(int(self.opcode)<<52)|(self.flags<<40)|(self.value<<24)|(self._e(self.dx)<<16)|(self._e(self.dy)<<8)|self._e(self.dz)
+    @classmethod
+    def decode(cls,w):
+        if w<0 or w>MASK64: raise ValueError('word must fit 64 bits')
+        return cls((w>>60)&15,Opcode((w>>52)&255),(w>>40)&0xfff,(w>>24)&0xffff,cls._d((w>>16)&255),cls._d((w>>8)&255),cls._d(w&255))
+    def hex(self): return '0x%016X'%self.encode()
+
+SPEC={'NOP':(Opcode.NOP,0),'INGEST':(Opcode.INGEST,0),'ENCODE':(Opcode.ENCODE,0),'BITMIX':(Opcode.BITMIX,0),'FUSE':(Opcode.FUSE,150),'FOLD':(Opcode.FOLD,12),'DECODE':(Opcode.DECODE,0),'RENDER':(Opcode.RENDER,0),'FEEDBACK':(Opcode.FEEDBACK,250),'HALT':(Opcode.HALT,0)}
+DEFAULT_PROGRAM='''INGEST
+ENCODE
+BITMIX
+FUSE 150
+FOLD 12
+DECODE
+RENDER
+FEEDBACK 250
+BITMIX
+FOLD 6
+DECODE
+RENDER
+HALT
+'''
+
+def compile_program(src):
+    out=[]
+    for n,raw in enumerate(str(src).splitlines(),1):
+        line=raw.split('#',1)[0].strip()
+        if not line: continue
+        p=line.replace(',',' ').split(); name=p[0].upper()
+        if name not in SPEC or len(p)>2: raise ValueError('line %d: invalid instruction'%n)
+        op,d=SPEC[name]; v=d if len(p)==1 else int(p[1],0)
+        if v<0 or v>0xffff: raise ValueError('line %d: value out of range'%n)
+        out.append(Instruction64(0,op,value=v))
+    if not out or len(out)>256: raise ValueError('program size invalid')
+    return tuple(out)
+
+def _phi(c,x,y,z):
+    sx=-1 if x<2 else 1; sy=-1 if y<2 else 1; sz=-1 if z<2 else 1
+    signs=(1,sx,sy,sz,sx*sy,sx*sz,sy*sz,sx*sy*sz)
+    return signs[c]*SCALE
+
+def encode_block(b):
+    if len(b)!=BV: raise ValueError('block must have 64 values')
+    o=[0.0]*CH
+    for z in range(4):
+      for y in range(4):
+       for x in range(4):
+        v=float(b[x+4*y+16*z])
+        for c in range(CH): o[c]+=v*_phi(c,x,y,z)
+    return o
+
+def decode_block(zv):
+    if len(zv)!=CH: raise ValueError('latent must have 8 values')
+    return [sum(float(zv[c])*_phi(c,x,y,z) for c in range(CH)) for z in range(4) for y in range(4) for x in range(4)]
+
+def _mse(a,b): return sum((x-y)**2 for x,y in zip(a,b))/len(a)
+def _rot(v,s): s%=64; return v&MASK64 if s==0 else ((v<<s)|(v>>(64-s)))&MASK64
+def _pack(z):
+    w=0
+    for i,v in enumerate(z): w|=max(0,min(255,round((max(-8,min(8,v))+8)*255/16)))<<(8*i)
+    return w&MASK64
+
+@dataclass
+class Node:
+    address:Address128; modality:Modality; name:str; source:list[float]
+    target:list[float]=field(default_factory=lambda:[0.0]*CH); latent:list[float]=field(default_factory=lambda:[0.0]*CH); memory:list[float]=field(default_factory=lambda:[0.0]*CH)
+    decoded:list[float]=field(default_factory=lambda:[0.0]*BV); residual:list[float]=field(default_factory=lambda:[0.0]*BV)
+    residual_energy:float=0; attention:float=1; control:int=0
+    def public(self):
+        return {'address':self.address.hex(),'hierarchy':{k:list(v) for k,v in self.address.hierarchy().items()},'position':list(self.address.norm()),'modality':self.modality.value,'name':self.name,'latent_energy':sum(v*v for v in self.latent)/CH,'residual_energy':self.residual_energy,'attention':self.attention,'control_word':'0x%016X'%self.control}
+
+class Hyper3DRuntime:
+    def __init__(self,max_active_nodes=DEFAULT_NODES,lr=.58,beta=.08,gamma=.04,tol=1e-6):
+        if not 1<=max_active_nodes<=MAX_NODES: raise ValueError('invalid node budget')
+        self.max_active_nodes=max_active_nodes; self.lr=lr; self.beta=beta; self.gamma=gamma; self.tol=tol
+        self.nodes=[]; self.payloads=[]; self.trace=[]; self.points=[]; self.ip=Address128(0,0,0); self.fold_iterations=0; self.last_delta=math.inf; self.converged=False; self.fusions=0; self.feedbacks=0
+    def _addr(self,m,name,i,chunk):
+        h=int.from_bytes(hashlib.sha256(m.value.encode()+b'\0'+name.encode(errors='replace')+i.to_bytes(8,'big')+chunk).digest(),'big')
+        x=h%AXIS; h//=AXIS; y=h%AXIS; h//=AXIS; return Address128(x,y,h%AXIS)
+    def ingest(self,modality,payload,name='payload'):
+        m=modality if isinstance(modality,Modality) else Modality(str(modality).lower()); raw=payload.encode() if isinstance(payload,str) else bytes(payload)
+        if len(raw)>MAX_PAYLOAD: raise ValueError('payload too large')
+        raw=raw or b'\0'; rem=self.max_active_nodes-len(self.nodes); total=(len(raw)+63)//64; take=min(total,rem)
+        if take<1: raise ValueError('active-node budget exhausted')
+        ids=list(range(total)) if total<=take else [min(total-1,i*total//take) for i in range(take)]
+        self.payloads.append({'modality':m.value,'name':name,'byte_length':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'node_count':len(ids)})
+        for j in ids:
+            ch=raw[j*64:j*64+64] or raw[-min(len(raw),64):]; pad=(ch*((64+len(ch)-1)//len(ch)))[:64]
+            self.nodes.append(Node(self._addr(m,name,j,ch),m,name,[(q/127.5)-1 for q in pad]))
+    def encode(self):
+        for n in self.nodes:
+            n.target=encode_block(n.source); p=decode_block(n.target); n.residual_energy=_mse(n.source,p); n.attention=1+min(1.25,2.5*math.sqrt(n.residual_energy)); n.control=_pack(n.target)
+    def bitmix(self):
+        for i,n in enumerate(self.nodes): n.control=_rot(n.control^(n.address.pack()&MASK64)^(((i+1)*0x9E3779B97F4A7C15)&MASK64),(i*7+13)%64)
+    def fuse(self,p=150):
+        if not self.nodes:return
+        mix=max(0,min(1,p/1000)); mods={}
+        for n in self.nodes: mods.setdefault(n.modality,[]).append(n)
+        means={m:[sum(n.target[c] for n in ns)/len(ns) for c in range(CH)] for m,ns in mods.items()}; fused=[sum(v[c] for v in means.values())/len(means) for c in range(CH)]
+        for n in self.nodes:
+            cross=[(means[n.modality][c]+fused[c])/2 for c in range(CH)]; n.target=[(1-mix)*n.target[c]+mix*cross[c] for c in range(CH)]
+        self.fusions+=1
+    def _region(self,n):
+        h=n.address.hierarchy(); s=BASE//16; return (h['x'][0]//s,h['y'][0]//s,h['z'][0]//s)
+    def fold(self,it=12):
+        it=max(1,min(128,int(it))); d=math.inf; conv=False
+        for k in range(it):
+            sums={}; counts={}
+            for n in self.nodes:
+                r=self._region(n); sums.setdefault(r,[0.0]*CH); counts[r]=counts.get(r,0)+1
+                for c in range(CH): sums[r][c]+=n.latent[c]
+            means={r:[v/counts[r] for v in a] for r,a in sums.items()}; d=0
+            for n in self.nodes:
+                g=means[self._region(n)]; gate=.9+.2*n.control.bit_count()/64; lr=min(.78,self.lr*min(1.35,n.attention)*gate)
+                for c in range(CH):
+                    prev=n.latent[c]; nxt=prev+lr*(n.target[c]-prev)+self.beta*(n.memory[c]-prev)+self.gamma*(g[c]-prev); n.latent[c]=nxt; d=max(d,abs(nxt-prev))
+            self.fold_iterations+=1; scale=max(1,max(abs(v) for n in self.nodes for v in n.latent)) if self.nodes else 1
+            if d<=self.tol*scale: conv=True; break
+        for n in self.nodes:
+            n.memory=[.97*m+.03*z for m,z in zip(n.memory,n.latent)]; n.control=_pack(n.latent)
+        self.last_delta=d; self.converged=conv; return d,conv
+    def decode(self):
+        for n in self.nodes:
+            n.decoded=decode_block(n.latent); n.residual=[a-b for a,b in zip(n.source,n.decoded)]; n.residual_energy=sum(v*v for v in n.residual)/64; n.attention=1+min(1.25,2.5*math.sqrt(n.residual_energy))
+    def feedback(self,p=250):
+        gain=max(0,min(1,p/1000))
+        for n in self.nodes:
+            corr=encode_block(n.residual); n.latent=[z+gain*c for z,c in zip(n.latent,corr)]; n.control=_pack(n.latent)
+        self.feedbacks+=1
+    def render(self,limit=1024):
+        ids=range(len(self.nodes)) if len(self.nodes)<=limit else [min(len(self.nodes)-1,i*len(self.nodes)//limit) for i in range(limit)]; self.points=[self.nodes[i].public() for i in ids]; return self.points
+    def execute(self,program=DEFAULT_PROGRAM):
+        ins=compile_program(program) if isinstance(program,str) else tuple(program); self.trace=[]; self.ip=Address128(0,0,0); d=0; conv=False
+        for pc,x in enumerate(ins):
+            if x.opcode is Opcode.ENCODE:self.encode()
+            elif x.opcode is Opcode.BITMIX:self.bitmix()
+            elif x.opcode is Opcode.FUSE:self.fuse(x.value)
+            elif x.opcode is Opcode.FOLD:d,conv=self.fold(x.value or 1)
+            elif x.opcode is Opcode.DECODE:self.decode()
+            elif x.opcode is Opcode.RENDER:self.render()
+            elif x.opcode is Opcode.FEEDBACK:self.feedback(x.value)
+            self.trace.append({'index':pc,'ip':self.ip.hex(),'word':x.hex(),'opcode':x.opcode.name,'value':x.value,'active_nodes':len(self.nodes),'max_delta':d,'converged':conv})
+            if x.opcode is Opcode.HALT:break
+            self.ip=self.ip.moved(x.dx,x.dy,x.dz)
+        if self.nodes:self.decode(); self.render()
+        return self.snapshot()
+    def _digest(self):
+        h=hashlib.sha256()
+        for n in self.nodes:
+            h.update(n.address.pack().to_bytes(16,'big')); h.update(n.control.to_bytes(8,'big'))
+            for v in n.latent:h.update(('%.9e;'%v).encode())
+        return h.hexdigest()
+    def reconstructed(self):
+        g={}
+        for n in self.nodes:
+            out=g.setdefault((n.modality.value,n.name),bytearray())
+            for v in n.decoded:
+                if len(out)>=65536:break
+                out.append(max(0,min(255,round((max(-1,min(1,v))+1)*127.5))))
+        return [{'modality':m,'name':name,'byte_length':len(b),'sha256':hashlib.sha256(b).hexdigest(),'base64':base64.b64encode(bytes(b)).decode()} for (m,name),b in g.items()]
+    def snapshot(self):
+        rs=[n.residual_energy for n in self.nodes]; es=[sum(v*v for v in n.latent)/CH for n in self.nodes]; mods={}
+        for n in self.nodes:mods[n.modality.value]=mods.get(n.modality.value,0)+1
+        return {'architecture':{'base_edge':BASE,'axis_levels':3,'axis_length':str(AXIS),'logical_cells':str(LOGICAL),'address_bits_used':ABITS*3,'address_container_bits':128,'instruction_bits':64,'block_edge':4,'basis_channels':8,'block_compression_ratio':8.0,'execution_model':'sparse-active-set'},'telemetry':{'active_nodes':len(self.nodes),'max_active_nodes':self.max_active_nodes,'fold_iterations':self.fold_iterations,'last_max_delta':self.last_delta,'converged':self.converged,'fusion_passes':self.fusions,'feedback_passes':self.feedbacks,'mean_residual_energy':sum(rs)/len(rs) if rs else 0,'max_residual_energy':max(rs,default=0),'mean_latent_energy':sum(es)/len(es) if es else 0,'state_sha256':self._digest(),'modalities':mods},'payloads':self.payloads,'trace':self.trace,'points':self.points,'reconstructed':self.reconstructed()}
+
+def capabilities():
+    return {'modalities':[m.value for m in Modality],'dsl':list(SPEC),'default_program':DEFAULT_PROGRAM,'axis_length':str(AXIS),'logical_cells':str(LOGICAL),'address_bits_used':ABITS*3,'instruction_bits':64,'max_active_nodes':MAX_NODES,'max_payload_bytes':MAX_PAYLOAD,'notes':['virtual sparse universe; no dense allocation','media adapters are byte-level, semantic codecs belong upstream','local 4x4x4 codec uses eight orthonormal Haar channels']}
