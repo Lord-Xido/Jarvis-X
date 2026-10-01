@@ -118,6 +118,14 @@ Adaptive systems must optimize constrained representations, not rewrite arbitrar
 
 For volumetric autoencoding systems, additive evolution terms must inhabit the same authoritative field space. Latent tensors are transformed through an explicit decoder before they participate in a field residual.
 
+The canonical 3D geometric profile additionally separates three roles that must not be conflated:
+
+- logical geometry: coordinates, neighborhoods, radial shells and sparse support;
+- semantic state: latent, memory, residual, planning and verification tensors attached to that support;
+- physical execution: the host CPU/GPU/accelerator operations that evaluate the bounded transform.
+
+An inward geometric map may shrink logical support or change topology without implying physical motion through 3D hardware or a reduction in wall-clock latency. See `docs/CANONICAL_3D_GEOMETRIC_INTELLIGENCE.md`.
+
 The Moagi-Helmholtz functional is the canonical Layer 5 orchestration contract for multimodal-conditioned geometry generation, refinement, archival coding and reverse inference. It does not require the canonical VM to depend on a neural, renderer or codec backend.
 
 The EEIITL Permeation Layer is an optional Layer 5 physical-field research subsystem. It models transient electromagnetic propagation, induced response, spatial thresholding, sparse sensing, and candidate-first edge/cloud control through typed field/logical/control states. It does not make the physical field authoritative over the canonical VM and must preserve the same projection, policy, verification, commit/rollback, and evidence boundaries. See `docs/EEIITL_PERMEATION_LAYER.md` and ADR-023.
@@ -188,6 +196,8 @@ The research transform cannot make itself authoritative merely by computing a ca
 17. **Normalize before inversion:** a backend may use `D^T` as the inverse only when the declared transform has passed its orthonormality contract within tolerance.
 18. **Diagnose before widening:** a precision-gate failure triggers transform/payload/precision diagnosis before any quantization threshold is relaxed.
 19. **Audited fixed-point claims:** convergence, cohomological audit scope, candidate-set optimality and invariant-class assumptions are reported separately; a TERMINUS receipt cannot promote itself above the normal candidate-first admission boundary.
+20. **Geometric role separation:** logical 3D coordinates, semantic latent state, and physical hardware execution are separate contracts; no geometric visualization or radial mapping is evidence of physical 3D execution or zero-latency compute.
+21. **Exact recurrence elision:** a fused runtime may count skipped logical iterations only after proving that the deterministic recurrence has reached an exact fixed point, or under another separately declared equivalence proof.
 
 ## 5. Data contracts
 

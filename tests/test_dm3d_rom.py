@@ -2,12 +2,14 @@ from jarvisx.dm3d_rom import (
     AXIS_BYTES,
     HEADER_SIZE,
     INSTR_SIZE,
+    INSTR_STRUCT,
     LATENT_BYTES,
     OP_CORRECT,
     OP_DECODE,
     OP_ENCODE,
     OP_FILL_TILE,
     OP_HALT,
+    OP_INWARD_LOOP_K,
     OP_REFINE,
     OP_RESIDUAL,
     OP_VERIFY,
@@ -15,6 +17,7 @@ from jarvisx.dm3d_rom import (
     TILES_PER_AXIS,
     DM3DVM,
     build_rom,
+    million_by_million_program,
     pack_instruction,
     parse_header,
 )
@@ -65,3 +68,50 @@ def test_invalid_magic_is_rejected() -> None:
         assert "magic" in str(exc)
     else:
         raise AssertionError("corrupt ROM magic was accepted")
+
+
+def test_fused_inward_loop_fast_forwards_only_after_exact_fixed_point() -> None:
+    key = (7, 0, 0)
+    x, y, z = key
+    logical_iterations = 1_000_000
+    logical_lanes = 1_000
+
+    program = [
+        pack_instruction(OP_FILL_TILE, x, y, z, p0=1),
+        pack_instruction(OP_ENCODE, x, y, z, p0=8),
+        pack_instruction(
+            OP_INWARD_LOOP_K,
+            x,
+            y,
+            z,
+            p0=logical_iterations,
+            p1=8,
+            p2=logical_lanes,
+            flags=0x01,
+        ),
+        pack_instruction(OP_HALT),
+    ]
+
+    stats = DM3DVM(trace=False).run(build_rom(program))
+
+    assert stats.logical_refine_iterations == logical_iterations
+    assert stats.logical_voxel_updates == logical_iterations * logical_lanes
+    assert 1 <= stats.physical_refine_steps <= 8
+    assert stats.elided_fixed_point_steps == logical_iterations - stats.physical_refine_steps
+    assert stats.elided_logical_updates == (
+        logical_iterations - stats.physical_refine_steps
+    ) * logical_lanes
+
+
+def test_million_by_million_program_accounts_exact_lane_cardinality() -> None:
+    inward = []
+    for raw in million_by_million_program():
+        fields = INSTR_STRUCT.unpack(raw)
+        op, _flags, _reserved, _x, _y, _z, p0, _p1, p2, _p3 = fields
+        if op == OP_INWARD_LOOP_K:
+            inward.append((p0, p2))
+
+    assert len(inward) == 4
+    assert all(iterations == 1_000_000 for iterations, _lanes in inward)
+    assert sum(lanes for _iterations, lanes in inward) == 1_000_000
+    assert sum(iterations * lanes for iterations, lanes in inward) == 10**12
