@@ -74,7 +74,7 @@ def test_api_surface_and_cli_parser():
     assert result['telemetry']['active_nodes']>0
     assert get_capabilities()['instruction_bits']==64
     assert healthz()=={'status':'ok'}
-    assert index().path.endswith('index.html')
+    assert str(index().path).endswith('index.html')
     args=cli_parser().parse_args(['--host','127.0.0.1','--port','9001'])
     assert args.port==9001
 
