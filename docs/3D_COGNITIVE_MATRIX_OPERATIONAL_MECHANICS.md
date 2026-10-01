@@ -39,6 +39,10 @@ telemetry:
 Accordingly, the browser HUD must be interpreted as simulated visualization telemetry unless it is
 later bound to measured runtime reports.
 
+## Numerical permeation companion
+
+The bounded numerical companion introduced by ADR-032 is implemented in `src/jarvisx/cognitive_matrix_permeation.py` with focused tests in `tests/test_cognitive_matrix_permeation.py`. It materializes only a bounded particle ensemble and radial reaction-diffusion field while retaining septillion-scale logical extent as metadata. The reference emits measured reconstruction, histogram-entropy and boundary-flux receipts. The present WebGL page is not yet wired to those receipts, so its existing HUD values remain simulated until an explicit adapter is added.
+
 ## Executable-runtime correspondence
 
 The browser stages correspond conceptually to the executable spatial VM in
