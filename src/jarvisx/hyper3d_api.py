@@ -20,7 +20,7 @@ class Attachment(BaseModel):
 class ExecuteRequest(BaseModel):
     program: str = Field(default=DEFAULT_PROGRAM, min_length=1, max_length=32000)
     text: Optional[str] = Field(default=None, max_length=262144)
-    attachments: list[Attachment] = Field(default_factory=list, max_length=16)
+    attachments: list[Attachment] = Field(default_factory=list)
     max_active_nodes: int = Field(default=DEFAULT_NODES, ge=1, le=MAX_NODES)
 
 app = FastAPI(title="Jarvis-X Hyper3D", version="0.1.0")
@@ -41,6 +41,7 @@ def _decode(a):
 
 @app.post("/api/hyper3d/execute")
 def execute(req:ExecuteRequest):
+    if len(req.attachments)>16: raise HTTPException(400,"at most 16 attachments are allowed")
     r=Hyper3DRuntime(req.max_active_nodes)
     try:
         if req.text: r.ingest(Modality.TEXT,req.text,"prompt.txt")
