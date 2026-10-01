@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import base64
 import math
 
+import pytest
+from fastapi import HTTPException
+
+from jarvisx.hyper3d_api import Attachment, ExecuteRequest, execute as api_execute, get_capabilities, healthz, index
+from jarvisx.hyper3d_cli import parser as cli_parser
 from jarvisx.hyper3d_runtime import (
     ABITS, AXIS, CH, DEFAULT_PROGRAM, Address128, Hyper3DRuntime,
     Instruction64, Modality, Opcode, compile_program, decode_block, encode_block,
@@ -56,3 +62,23 @@ def test_bitwise_and_geometric_telemetry():
     assert len(p['address'])==34
     assert any(x['opcode']=='BITMIX' for x in r['trace'])
     assert all(x['word'].startswith('0x') for x in r['trace'])
+
+
+def test_api_surface_and_cli_parser():
+    req=ExecuteRequest(
+        text='api-text',
+        attachments=[Attachment(modality=Modality.AUDIO,name='audio.raw',data_base64=base64.b64encode(b'abc'*20).decode())],
+        max_active_nodes=32,
+    )
+    result=api_execute(req)
+    assert result['telemetry']['active_nodes']>0
+    assert get_capabilities()['instruction_bits']==64
+    assert healthz()=={'status':'ok'}
+    assert index().path.endswith('index.html')
+    args=cli_parser().parse_args(['--host','127.0.0.1','--port','9001'])
+    assert args.port==9001
+
+def test_api_rejects_bad_base64():
+    req=ExecuteRequest(attachments=[Attachment(modality=Modality.GENERIC,name='bad.bin',data_base64='***')])
+    with pytest.raises(HTTPException):
+        api_execute(req)
