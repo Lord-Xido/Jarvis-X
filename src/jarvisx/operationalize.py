@@ -60,6 +60,7 @@ def run_preflight() -> OperationalReport:
         "jarvisx.dr_moagi_system_evolution",
         "jarvisx.dr_moagi_os_api",
         "jarvisx.nexus3d_api",
+        "jarvisx.hyper3d_api",
     )
 
     checks: list[OperationalCheck] = []
@@ -196,6 +197,25 @@ def _api_smoke() -> str:
     return f"{len(required)} required control-plane routes present"
 
 
+def _hyper3d_smoke() -> str:
+    from .hyper3d_runtime import DEFAULT_PROGRAM, Hyper3DRuntime, Modality
+
+    runtime = Hyper3DRuntime(max_active_nodes=32)
+    runtime.ingest(Modality.TEXT, "Jarvis X operational Hyper3D smoke", "smoke.txt")
+    runtime.ingest(Modality.GENERIC, bytes(range(64)), "smoke.bin")
+    result = runtime.execute(DEFAULT_PROGRAM)
+    telemetry = result["telemetry"]
+    if telemetry["active_nodes"] < 2:
+        raise RuntimeError("Hyper3D did not materialize the expected active set")
+    if not result["trace"] or result["architecture"]["instruction_bits"] != 64:
+        raise RuntimeError("Hyper3D bytecode execution trace is incomplete")
+    return (
+        f"nodes={telemetry['active_nodes']} folds={telemetry['fold_iterations']} "
+        f"residual={telemetry['mean_residual_energy']:.6g} "
+        f"state={telemetry['state_sha256'][:16]}"
+    )
+
+
 def run_smoke() -> OperationalReport:
     """Execute bounded end-to-end checks without external network dependencies."""
 
@@ -206,6 +226,7 @@ def run_smoke() -> OperationalReport:
             _capture("transactional-runtime", _transaction_smoke),
             _capture("dr-moagi-os-cycle", _os_smoke),
             _capture("control-plane-api", _api_smoke),
+            _capture("hyper3d-runtime", _hyper3d_smoke),
         )
     )
     return OperationalReport(mode="smoke", checks=tuple(checks))
