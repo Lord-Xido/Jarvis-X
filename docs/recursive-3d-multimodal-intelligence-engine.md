@@ -219,3 +219,43 @@ g++ -std=c++17 -O3 -pthread \
 The CMake smoke test executes two recursive cycles and verifies that the latent fixed-point solver
 returns a finite converged state. Larger logical voxel spaces remain a virtualization/tiling
 problem; this executable does not claim to densely allocate them.
+
+
+## WebGL2 Ψ-Φ-Λ operator kernel
+
+The browser-side geometric kernel is in:
+
+```text
+apps/dm-vomega-xi-kernel/
+```
+
+The submitted shader concept is operationalised as a valid WebGL2 vertex/fragment pair. The vertex
+stage receives the spatial coordinate and quaternion token, applies the descriptive operator
+
+```text
+Phi_q(p) = w p + v x p
+```
+
+for normalized `q=(v,w)`, and then recurs through the affine inward map
+
+```text
+Lambda_Delta(p) = c + exp(-Delta) (Phi_q(p) - c).
+```
+
+For a unit quaternion token, `Phi_q` is non-expansive. Therefore `Delta > 0` gives the bound
+
+```text
+||D Lambda_Delta|| <= exp(-Delta) < 1,
+```
+
+so each frozen-frame operator has a unique inward fixed point. Twelve GPU iterations are executed
+per resident vertex in the reference visualizer. The fragment stage maps the resulting signed
+cognitive-state vector into a visible spectrum without discarding negative coordinates.
+
+Run from the repository root with a static server:
+
+```bash
+python -m http.server 8080
+```
+
+and open `http://localhost:8080/apps/dm-vomega-xi-kernel/`.
