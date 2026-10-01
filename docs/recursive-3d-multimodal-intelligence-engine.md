@@ -164,3 +164,58 @@ work-reduction ceiling such as `1e6` is not evidence of equivalent physical hard
 Promoting any modeled quantity to an empirical performance claim requires same-hardware wall-clock
 benchmarks at matched output quality, including memory bandwidth, interconnect, synchronization,
 kernel time, power, and profiler evidence.
+
+
+## Native C++17 recursive multimodal baseline
+
+The native bounded implementation is:
+
+```text
+cpp_runtime/src/recursive_multimodal_engine.cpp
+```
+
+Its measured execution path is:
+
+```text
+resident N^3 multimodal field
+-> 2x2x2 spatial downsample Q(X)
+-> dense encoder E_theta
+-> inward contraction/permutation Phi_in
+-> contractive recurrent latent fixed-point solve
+-> decoder D_phi
+-> reconstruction X_hat
+-> residual gradient update
+-> recur
+```
+
+The resident reference configuration uses `N=16`, six channels (four geometric plus two
+spatial-audio amplitudes), a 256-dimensional encoded state, and a 128-dimensional latent core.
+The recurrent matrix is row-L1 bounded before execution and the fixed-point loop reports its actual
+numerical residual. The program returns a non-zero status if the latent fixed point fails to
+converge or reconstruction becomes non-finite.
+
+The target field is immutable during optimization. Residual learning updates network parameters
+rather than moving the target away from its reconstruction. The recurrent core is held fixed in
+this baseline to preserve the contraction bound; encoder and latent-projection updates use a
+truncated fixed-point gradient, while the decoder receives the full reconstruction gradient.
+
+Build through CMake:
+
+```bash
+cmake -S cpp_runtime -B build/cpp-runtime
+cmake --build build/cpp-runtime --target jarvisx-recursive-multimodal -j
+./build/cpp-runtime/DrMoagi-Recursive-Multimodal-3D --cycles 64
+```
+
+Or compile the file directly:
+
+```bash
+g++ -std=c++17 -O3 -pthread \
+  cpp_runtime/src/recursive_multimodal_engine.cpp \
+  -o recursive_engine
+./recursive_engine --cycles 64
+```
+
+The CMake smoke test executes two recursive cycles and verifies that the latent fixed-point solver
+returns a finite converged state. Larger logical voxel spaces remain a virtualization/tiling
+problem; this executable does not claim to densely allocate them.
