@@ -91,6 +91,13 @@ set_target_properties(jarvisx-dr-moagi-1gib-bit-engine PROPERTIES OUTPUT_NAME "D
 jarvisx_include_runtime(jarvisx-dr-moagi-1gib-bit-engine)
 jarvisx_harden(jarvisx-dr-moagi-1gib-bit-engine)
 
+add_executable(jarvisx-inward-meta-q16
+    src/inward_meta_q16_main.cpp
+)
+set_target_properties(jarvisx-inward-meta-q16 PROPERTIES OUTPUT_NAME "DrMoagi-Inward-Meta-Q16")
+jarvisx_include_runtime(jarvisx-inward-meta-q16)
+jarvisx_harden(jarvisx-inward-meta-q16)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -238,6 +245,15 @@ add_test(
 )
 set_tests_properties(dr-moagi-1gib-bit-engine-runtime-smoke PROPERTIES TIMEOUT 120)
 
+add_test(
+    NAME inward-meta-q16-runtime-smoke
+    COMMAND jarvisx-inward-meta-q16
+        --steps 3
+        --no-noise
+        --quiet
+)
+set_tests_properties(inward-meta-q16-runtime-smoke PROPERTIES TIMEOUT 120)
+
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
 )
@@ -327,5 +343,15 @@ jarvisx_harden(jarvisx-dr-moagi-6400x1000-tests)
 
 add_test(NAME dr-moagi-6400x1000-regressions COMMAND jarvisx-dr-moagi-6400x1000-tests)
 set_tests_properties(dr-moagi-6400x1000-regressions PROPERTIES TIMEOUT 120)
+
+
+add_executable(jarvisx-inward-meta-q16-tests
+    tests/inward_meta_q16_tests.cpp
+)
+jarvisx_include_runtime(jarvisx-inward-meta-q16-tests)
+jarvisx_harden(jarvisx-inward-meta-q16-tests)
+
+add_test(NAME inward-meta-q16-regressions COMMAND jarvisx-inward-meta-q16-tests)
+set_tests_properties(inward-meta-q16-regressions PROPERTIES TIMEOUT 120)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/world_engine.cmake)
