@@ -222,6 +222,16 @@ A production-facing realization of this diagram should be decomposed in this ord
 4. **Elegant:** one versioned VCN request/result envelope across local, GPU and remote workers.
 5. **Advanced:** WebGPU acceleration, distributed tile scheduling, multimedia adapters and measured rate-distortion optimization.
 
+
+
+## Volumetric codec mathematical contract
+
+The end-to-end mathematical and operational definition for the inward volumetric branch is specified in:
+
+- `docs/architecture/DR_MOAGI_3D_INWARD_VOLUMETRIC_CODEC.md`
+
+That document closes the visualization into an explicit sequence of spatial normalization, hierarchical encoding, temporal latent prediction, QP-scaled quantization, entropy coding, container budgeting, decoder-space quantization error propagation, reconstruction metrics, recursive residual correction, fixed-point evidence and `Pi_Lambda` admission.
+
 ## Relationship to existing repository contracts
 
 This specification is subordinate to:
