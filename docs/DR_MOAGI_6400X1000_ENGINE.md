@@ -2,6 +2,8 @@
 
 This C++17 runtime is the executable reference for the 6400-panel / 1000-programmable-iteration Dr Moagi architecture.
 
+> **Profile distinction:** this document defines the older `20 x 20 x 16 = 6400` persistent-panel engine from ADR-022. ADR-032 defines a separate `6400 x 6400 x 6400` logical worker-address fabric. The two profiles may interoperate through scheduling adapters, but they are not the same geometry and must not be conflated.
+
 ## Geometry
 
     20 x 20 x 16 = 6400 logical panels

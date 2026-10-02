@@ -30,6 +30,8 @@ The existing `runtime.py` and `terabyte_3d_engine.py` are concrete software subs
 
 ## Cloud control-plane permeation
 
+ADR-032 also defines a reusable `6400³` logical worker profile for distributed/sparse scheduling. The profile is orthogonal to this app's `1024³` cloud-organ geometry: adapters may route cloud-organ tiles onto ADR-032 logical workers, but they must preserve independent logical, active, resident and physical counts.
+
 The distributed control path is operationalized by:
 
 - [`src/jarvisx/cloud_control_plane.py`](../../src/jarvisx/cloud_control_plane.py) — deterministic worker routing, versioned tile tasks, candidate execution, CTR-gated commit, stale-state rejection, idempotent replay, and hashed receipts.

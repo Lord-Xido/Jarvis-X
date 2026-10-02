@@ -4,7 +4,7 @@
 **Applies to:** Jarvis-X sparse 3D runtimes, 1K³ cloud-organ architecture, streamed block engines, future CPU/GPU/accelerator workers.
 
 This layer turns the canonical cloud-organ scheduling model into an executable
-control protocol. It does not claim that a logical `1024³` body is physically
+control protocol. ADR-032 provides an optional `6400³` logical worker-address profile beneath this scheduler: a cloud tile/shard may be assigned to a worker coordinate or `64³`-worker brick without changing the cloud-organ's own geometry. Routing receipts must keep logical workers, active work, resident bricks and physical executors separate. It does not claim that a logical `1024³` body is physically
 resident or that the Python reference runtime is connected to a production
 cloud provider.
 

@@ -222,6 +222,8 @@ A production-facing realization of this diagram should be decomposed in this ord
 4. **Elegant:** one versioned VCN request/result envelope across local, GPU and remote workers.
 5. **Advanced:** WebGPU acceleration, distributed tile scheduling, multimedia adapters and measured rate-distortion optimization.
 
+ADR-032 supplies the canonical large-work-domain scheduling geometry for this advanced path: `6400³` logical workers partitioned into `100³` bricks of `64³` workers. VCN renderers consume only bounded worker samples/receipts; the visualization never treats the full logical cardinality as resident GPU state.
+
 
 
 ## Volumetric codec mathematical contract

@@ -93,6 +93,8 @@ A large virtual extent never implies dense allocation. Every implementation must
 
 The Dr Moagi Field Runtime v2 is the canonical reference for a same-space sparse volumetric transition. Its default logical extent may be `1000^3`, while its physical state remains an explicitly bounded active support with deterministic background semantics.
 
+ADR-032 adds the canonical `6400^3` logical worker-fabric profile. It provides exact 3D worker addressing over 262,144,000,000 logical coordinates, partitions them into `64^3`-worker bricks, and executes only a bounded active set through a bounded physical worker pool. Its mandatory accounting invariant is `logical address space != active work != resident state != physical parallelism`.
+
 ### Layer 5 — Adaptive and generative research systems
 
 Responsibilities may include:
@@ -188,6 +190,7 @@ The research transform cannot make itself authoritative merely by computing a ca
 17. **Normalize before inversion:** a backend may use `D^T` as the inverse only when the declared transform has passed its orthonormality contract within tolerance.
 18. **Diagnose before widening:** a precision-gate failure triggers transform/payload/precision diagnosis before any quantization threshold is relaxed.
 19. **Audited fixed-point claims:** convergence, cohomological audit scope, candidate-set optimality and invariant-class assumptions are reported separately; a TERMINUS receipt cannot promote itself above the normal candidate-first admission boundary.
+20. **Worker-scale separation:** logical worker cardinality, active work, resident working set and physical execution width are distinct measured quantities; none may be substituted for another in capability or performance claims.
 
 ## 5. Data contracts
 
@@ -381,6 +384,8 @@ ADR-005 extends ADR-004 by defining the orthogonal transform normalization, quan
 
 ADR-029 defines the bounded codec/Markov mixing, five-rate bottleneck, geometric cost, graph-nerve H^1 audit and Kleene/TERMINUS reference contract. It remains a Layer 5 research operator and does not redefine canonical VM authority.
 
+ADR-032 promotes the 6400³ logical worker fabric into a canonical Layer-4 scheduling/addressing profile while preserving bounded residency, bounded physical execution and ADR-016 promotion authority.
+
 ## 8. Security boundary
 
 The policy layer is an application-level guard, not a complete security sandbox. Untrusted bytecode, native plugins, model files and browser content require dedicated threat models. See [`SECURITY.md`](../SECURITY.md).
@@ -443,7 +448,7 @@ Psi_n
   -> next inward cycle
 ```
 
-This architecture is backend-neutral. Pure Python, C++, PyTorch/CUDA, distributed sparse workers, FPGA soft cores, and experimental tensor bytecodes may implement the transform, provided they preserve the same state, resource, and transaction semantics.
+This architecture is backend-neutral. Pure Python, C++, PyTorch/CUDA, distributed sparse workers, FPGA soft cores, and experimental tensor bytecodes may implement the transform, provided they preserve the same state, resource, and transaction semantics. When using the ADR-032 worker profile, those backends must also preserve the exact 6400³ coordinate contract and separate logical, active, resident and physical execution counts.
 
 ## 10. Moagi-Helmholtz system-wide permeation
 

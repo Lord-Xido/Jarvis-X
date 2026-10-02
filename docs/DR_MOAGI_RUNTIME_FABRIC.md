@@ -27,6 +27,18 @@ user / application ----> | Dr Moagi Java 17 kernel  |
 
 The machine-readable contract is `apps/dr-moagi-platform-java/runtime-fabric.json`. `tools/verify-dr-moagi-runtime-fabric.mjs` fails CI if a registered runtime disappears, declares an unsafe repository path, duplicates an identifier/capability, omits an authority boundary, or attempts to grant implicit host execution.
 
+## Canonical 6400³ worker-fabric profile
+
+ADR-032 permeates the Dr Moagi ANN IDE worker fabric into this orchestration contract. The manifest now carries the exact topology `6400³ = 262,144,000,000` logical workers, `64³` workers per brick, and `100³ = 1,000,000` logical bricks, together with the implementation/specification paths and authority boundary.
+
+The runtime fabric treats this as a scheduling/addressing profile, not as a claim of dense physical execution. Every backend must preserve:
+
+```text
+logical address space != active work != resident state != physical parallelism
+```
+
+The registered `dr-moagi-ann-ide` specialist runtime exposes the profile through `/v1/fabric` and `/v1/fabric/step`. Future native, CUDA/WebGPU or distributed adapters may consume the same manifest geometry while keeping authoritative promotion behind the normal candidate-first verification boundary.
+
 ## Authority model
 
 The fabric is an **orchestration contract**, not a superuser process.
