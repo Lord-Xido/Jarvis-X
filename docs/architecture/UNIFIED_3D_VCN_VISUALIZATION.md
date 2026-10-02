@@ -243,3 +243,20 @@ This specification is subordinate to:
 - the invariant that visualization is not authority unless separately proven and tested.
 
 The diagram is therefore best understood as a unified **operational visualization of the research compute envelope**, not as a replacement for the canonical deterministic execution core.
+
+## C++ system-wide reference runtime
+
+The bounded C++ mapping of this topology is implemented by:
+
+- `cpp_runtime/src/systemwide_3d_map_main.cpp`
+- `docs/DR_MOAGI_SYSTEMWIDE_3D_RUNTIME.md`
+- CMake target `jarvisx-systemwide-3d-map`
+
+The executable maps Reality -> multimodal ingest -> sparse virtual 3D addressing ->
+active tiles -> encoder -> distributed latents -> orchestrator/fusion -> memory and
+possibility fields -> inward refinement -> decoder -> residual -> codec boundary ->
+CTR -> commit/serve, and exports OBJ, Graphviz and JSON receipts. Its
+1000-MB-per-axis extent is virtual addressing semantics; only the bounded active
+tile set is resident. The dependency-free block codec is a reference adapter,
+not a trained ANN or production multimedia codec.
+
