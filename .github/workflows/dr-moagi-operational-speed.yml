@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Record host
         run: |
@@ -109,7 +109,7 @@ jobs:
           } | tee benchmark-results/SUMMARY.md
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dr-moagi-operational-speed-${{ github.sha }}
           path: benchmark-results
