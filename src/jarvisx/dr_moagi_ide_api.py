@@ -178,7 +178,7 @@ def ann_delete(session_id:str)->dict[str,Any]:
 
 @app.get("/v1/fabric")
 def fabric_status() -> dict[str, Any]:
-    return fabric.status()
+    return response_dict(fabric.status())
 
 @app.post("/v1/fabric/step")
 def fabric_step(req: FabricStepRequest) -> dict[str, Any]:
