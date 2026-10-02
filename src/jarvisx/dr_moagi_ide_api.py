@@ -14,13 +14,15 @@ from pydantic import BaseModel, Field
 
 from .dr_moagi_ide import ANNRegistry, EventJournal, ProjectStore, execute_program, refactor_program
 from .dr_moagi_os_api import app as os_control_plane
+from .dr_moagi_worker_fabric import LogicalWorkerFabric
 
 ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = Path(os.getenv("JARVISX_IDE_STATIC_DIR", str(ROOT / "apps/dr-moagi-ide/static")))
 DB_PATH = Path(os.getenv("JARVISX_IDE_DB", str(ROOT / "state/dr-moagi-ide/ide.sqlite3")))
 
-app = FastAPI(title="Dr Moagi ANN IDE", version="1.0.0", description="Bounded Jarvis-X VM, ANN and 3D OS engineering surface.")
+app = FastAPI(title="Dr Moagi ANN IDE", version="1.1.0", description="Bounded Jarvis-X VM, ANN, 3D OS and sparse 6400-cube worker engineering surface.")
 projects, events, ann = ProjectStore(DB_PATH), EventJournal(500), ANNRegistry(16)
+fabric = LogicalWorkerFabric()
 if STATIC_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/os", os_control_plane)
@@ -55,6 +57,10 @@ class ANNOptimizeRequest(ANNValuesRequest):
     max_epochs: int = Field(20, ge=1, le=50)
     tolerance: float | None = Field(None, gt=0.0, le=1.0)
 
+class FabricStepRequest(BaseModel):
+    active_workers: int = Field(4_096, ge=1, le=100_000)
+    sample_size: int = Field(256, ge=0, le=2_048)
+
 def fail(exc: Exception) -> HTTPException:
     if isinstance(exc, KeyError): return HTTPException(404, "resource not found")
     if isinstance(exc, (TypeError, ValueError)): return HTTPException(422, str(exc))
@@ -71,11 +77,39 @@ def index() -> Response:
 
 @app.get("/healthz")
 def healthz() -> dict[str, Any]:
-    return {"status":"ok","service":"dr-moagi-ann-ide","version":app.version,"time":time.time(),"static_bundle":STATIC_DIR.is_dir(),"telemetry_sequence":events.sequence,"os_control_plane":"/os"}
+    return {"status":"ok","service":"dr-moagi-ann-ide","version":app.version,"time":time.time(),"static_bundle":STATIC_DIR.is_dir(),"telemetry_sequence":events.sequence,"os_control_plane":"/os","logical_worker_fabric":fabric.logical_workers}
 
 @app.get("/v1/capabilities")
 def capabilities() -> dict[str, Any]:
-    return {"vm":{"engine":"CodexVM","opcodes":["SET","ADD","SUB","HALT"],"transactional":True,"cycle_bounded":True,"arbitrary_shell":False},"refactorer":{"deterministic":True,"unsafe_mutation":False},"ann":{"engine":"Inward4DANN","side_range":[3,10],"max_epochs_per_request":50,"max_sessions":16},"persistence":{"engine":"sqlite","projects":True},"telemetry":{"http":"/v1/telemetry","websocket":"/ws/telemetry"},"dr_moagi_os":{"mounted":True,"base_path":"/os"}}
+    return {
+        "vm": {
+            "engine": "CodexVM",
+            "opcodes": ["SET", "ADD", "SUB", "HALT"],
+            "transactional": True,
+            "cycle_bounded": True,
+            "arbitrary_shell": False,
+        },
+        "refactorer": {"deterministic": True, "unsafe_mutation": False},
+        "ann": {
+            "engine": "Inward4DANN",
+            "side_range": [3, 10],
+            "max_epochs_per_request": 50,
+            "max_sessions": 16,
+        },
+        "worker_fabric": {
+            "engine": "LogicalWorkerFabric",
+            "logical_dimensions": [6400, 6400, 6400],
+            "logical_workers": fabric.logical_workers,
+            "brick_side": fabric.config.brick_side,
+            "logical_bricks": fabric.logical_bricks,
+            "physical_workers": fabric.config.physical_workers,
+            "active_worker_budget": fabric.config.active_worker_budget,
+            "virtualized": True,
+        },
+        "persistence": {"engine": "sqlite", "projects": True},
+        "telemetry": {"http": "/v1/telemetry", "websocket": "/ws/telemetry"},
+        "dr_moagi_os": {"mounted": True, "base_path": "/os"},
+    }
 
 @app.post("/v1/vm/run")
 def vm_run(req: VMRunRequest) -> dict[str, Any]:
@@ -141,6 +175,31 @@ def ann_optimize(session_id:str,req:ANNOptimizeRequest)->dict[str,Any]:
 def ann_delete(session_id:str)->dict[str,Any]:
     if not ann.delete(session_id): raise HTTPException(404,"resource not found")
     events.emit("ann.deleted",{"session_id":session_id}); return {"deleted":True,"session_id":session_id}
+
+@app.get("/v1/fabric")
+def fabric_status() -> dict[str, Any]:
+    return fabric.status()
+
+@app.post("/v1/fabric/step")
+def fabric_step(req: FabricStepRequest) -> dict[str, Any]:
+    try:
+        out = fabric.step(active_workers=req.active_workers, sample_size=req.sample_size)
+        events.emit(
+            "fabric.step",
+            {
+                "cycle": out["cycle"],
+                "logical_workers": out["logical_workers"],
+                "active_workers_executed": out["active_workers_executed"],
+                "physical_workers": out["physical_workers"],
+                "resident_bricks": out["resident_bricks"],
+                "residual_rms": out["residual_rms"],
+                "elapsed_ms": out["elapsed_ms"],
+            },
+        )
+        return response_dict(out)
+    except Exception as exc:
+        events.emit("fabric.error", {"error": str(exc)})
+        raise fail(exc) from exc
 
 @app.get("/v1/telemetry")
 def telemetry(since:int=Query(0,ge=0))->dict[str,Any]: return {"sequence":events.sequence,"events":events.since(since)}
