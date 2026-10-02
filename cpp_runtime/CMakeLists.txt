@@ -91,6 +91,14 @@ set_target_properties(jarvisx-dr-moagi-1gib-bit-engine PROPERTIES OUTPUT_NAME "D
 jarvisx_include_runtime(jarvisx-dr-moagi-1gib-bit-engine)
 jarvisx_harden(jarvisx-dr-moagi-1gib-bit-engine)
 
+
+add_executable(jarvisx-systemwide-3d-map
+    src/systemwide_3d_map_main.cpp
+)
+set_target_properties(jarvisx-systemwide-3d-map PROPERTIES OUTPUT_NAME "DrMoagi-Systemwide-3D-Map")
+jarvisx_include_runtime(jarvisx-systemwide-3d-map)
+jarvisx_harden(jarvisx-systemwide-3d-map)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -237,6 +245,18 @@ add_test(
         --quiet
 )
 set_tests_properties(dr-moagi-1gib-bit-engine-runtime-smoke PROPERTIES TIMEOUT 120)
+
+
+add_test(
+    NAME systemwide-3d-map-runtime-smoke
+    COMMAND jarvisx-systemwide-3d-map
+        --tile-side 8
+        --block 4
+        --max-tiles 2
+        --iterations 2
+        --out ${CMAKE_CURRENT_BINARY_DIR}/systemwide-3d-map-smoke
+)
+set_tests_properties(systemwide-3d-map-runtime-smoke PROPERTIES TIMEOUT 120)
 
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
