@@ -118,7 +118,7 @@ This is a canonical integration contract. It does not imply that every current b
 | Bitwise hyper-scale ANN layer | exact source-ordered 60-bit Morton addressing, 20-level octree/LOD prefixes, fixed-point inward step, structural FP32 top-byte truncation, and cloud-tile routing | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
-| Inward 4D graph ANN | deterministic 1,000-node folded graph autoencoder with exact gradients, guarded pruning and rollback | Reference laboratory |
+| Inward 4D graph ANN | deterministic 1,000-node folded graph autoencoder with exact gradients, guarded pruning and rollback | Reference laboratory |\n| 6400³ logical worker fabric | exact 262.144B-worker address space, 64³-worker bricks, bounded active/resident execution, ANN IDE telemetry | Reference laboratory / canonical Layer-4 profile |
 | Model packaging | Hugging Face-compatible configuration, model and safetensors exporter | Reference |
 | Research specifications | reality-grounded observer dynamics, spatial bytecode and bounded optimization documents | Proposed / reference |
 
@@ -377,7 +377,7 @@ Every canonical subsystem should provide:
 - [Project status](docs/PROJECT_STATUS.md)
 - [Canonical Dr Moagi operational auto-encoding/decoding equation](docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md)
 - [ADR-016: canonical typed state, transaction and geometry profiles](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md)
-- [ADR-017: canonical Dr Moagi operational auto-encoding/decoding equation](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md)
+- [ADR-017: canonical Dr Moagi operational auto-encoding/decoding equation](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md)\n- [ADR-032: canonical 6400³ logical worker-fabric permeation](docs/adr/0032-canonical-6400-cube-worker-fabric-permeation.md)\n- [Dr Moagi 6400³ Logical Worker Fabric](docs/DR_MOAGI_6400_CUBE_WORKER_FABRIC.md)
 - [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md)
 - [Dr Moagi Bitwise Hyper-Scale ANN Address and Inward-Loop Contract](docs/DR_MOAGI_BITWISE_HYPERSCALE_ANN.md)
 - [Dr Moagi 3D Ephemeral-Notion Intelligence Framework — canonical attribution](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md)
