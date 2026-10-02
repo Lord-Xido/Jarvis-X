@@ -318,3 +318,15 @@ SELF-HOSTING != SELF-AUTHORIZING
 ~~~
 
 This extension does not claim that Jarvis-X currently recompiles and replaces its own authoritative compiler, safely executes hostile generated native code, proves semantic equivalence of arbitrary program transformations, implements distributed consensus, or realizes symbolic throughput targets on physical hardware. Those remain implementation and evidence requirements.
+
+## 6400³ logical worker-fabric permeation
+
+ADR-032 and `docs/DR_MOAGI_6400_CUBE_WORKER_FABRIC.md` extend the Dr Moagi family into an exact `6400 x 6400 x 6400` logical scheduling/addressing profile. The executable reference is `src/jarvisx/dr_moagi_worker_fabric.py`, surfaced through the Dr Moagi ANN IDE and registered in `apps/dr-moagi-platform-java/runtime-fabric.json`.
+
+This inheritance does not turn 262,144,000,000 logical workers into physical threads. The canonical boundary remains:
+
+```text
+logical address space != active work != resident state != physical parallelism
+```
+
+Future Dr Moagi distributed, CUDA/WebGPU, native or hardware adapters that claim ADR-032 conformance inherit the same attribution/provenance policy and must preserve its measured execution/accounting contract.
