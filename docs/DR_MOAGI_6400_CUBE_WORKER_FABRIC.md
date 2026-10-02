@@ -6,36 +6,23 @@
 
 ## Geometry
 
-The worker address space is exactly
+The worker address space is exactly:
 
-[
-Lambda_W = \{0,\ldots,6399\}^3,
-qquad
-|\Lambda_W| = 6400^3 = 262{,}144{,}000{,}000.
-]
+```text
+Λ_W = {0, ..., 6399}³
+|Λ_W| = 6400³ = 262,144,000,000
+```
 
 A logical worker is an addressable work-domain coordinate. It is **not** a
 native operating-system thread and it is not assumed to be physically resident.
 
 The lattice is partitioned into 64³-worker bricks:
 
-[
-6400 / 64 = 100
-]
-
-bricks per axis, therefore
-
-[
-100^3 = 1{,}000{,}000
-]
-
-logical bricks, with
-
-[
-64^3 = 262{,}144
-]
-
-logical workers per brick.
+```text
+6400 / 64 = 100 bricks per axis
+100³ = 1,000,000 logical bricks
+64³ = 262,144 logical workers per brick
+```
 
 ## Execution model
 
@@ -60,34 +47,28 @@ The default reference profile is:
 | Physical worker threads | host CPU count, capped at 64 |
 | Maximum active workers / request | 100,000 |
 
-The execution fraction for one step is therefore measured as
+The execution fraction for one step is measured as:
 
-[
-f_{exec} =
-\frac{N_{active}}{262{,}144{,}000{,}000}.
-]
+```text
+f_exec = N_active / 262,144,000,000
+```
 
 No part of the implementation labels that fraction as simultaneous physical
 parallelism.
 
 ## Addressing
 
-The canonical row-major worker ID is
+The canonical row-major worker ID is:
 
-[
-id(x,y,z)=x+6400y+6400^2z.
-]
+```text
+id(x, y, z) = x + 6400*y + 6400²*z
+```
 
-The inverse mapping is exact and tested at domain boundaries. Brick ownership is
+The inverse mapping is exact and tested at domain boundaries. Brick ownership is:
 
-[
-b(x,y,z)=
-left(
-\left\lfloor\frac{x}{64}\right\rfloor,
-\left\lfloor\frac{y}{64}\right\rfloor,
-\left\lfloor\frac{z}{64}\right\rfloor
-ight).
-]
+```text
+b(x, y, z) = (floor(x/64), floor(y/64), floor(z/64))
+```
 
 This gives a stable bridge between 3D geometry, sparse scheduling, telemetry and
 future distributed placement.
