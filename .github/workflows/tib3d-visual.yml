@@ -1,0 +1,25 @@
+name: TiB3D Visual Emulator
+
+on:
+  push:
+    paths:
+      - "apps/tib3d-processor/**"
+      - ".github/workflows/tib3d-visual.yml"
+  pull_request:
+    paths:
+      - "apps/tib3d-processor/**"
+      - ".github/workflows/tib3d-visual.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  model-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate TiB3D model arithmetic and scripts
+        run: node --test apps/tib3d-processor/test_model.cjs
