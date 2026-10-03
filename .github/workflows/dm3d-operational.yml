@@ -1,0 +1,58 @@
+name: DM3D Operational Engine
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/src/dm3d_operational_main.cpp"
+      - "cpp_runtime/dm3d_operational.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "deploy/dm3d-operational/**"
+      - "docs/DR_MOAGI_DM3D_OPERATIONAL_ENGINE.md"
+      - ".github/workflows/dm3d-operational.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/src/dm3d_operational_main.cpp"
+      - "cpp_runtime/dm3d_operational.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "deploy/dm3d-operational/**"
+      - "docs/DR_MOAGI_DM3D_OPERATIONAL_ENGINE.md"
+      - ".github/workflows/dm3d-operational.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dm3d-operational-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: >-
+          cmake -S cpp_runtime -B build/dm3d
+          -DCMAKE_BUILD_TYPE=Release
+          -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          -DJARVISX_DM3D_ENABLE_OPENMP=ON
+      - name: Build
+        run: cmake --build build/dm3d --parallel 2 --target jarvisx-dm3d-operational
+      - name: Self-test
+        run: ./build/dm3d/DrMoagi-DM3D-Operational --self-test
+      - name: Bounded operational sweep
+        run: >-
+          ./build/dm3d/DrMoagi-DM3D-Operational
+          --side 64 --brick 16 --iterations 2 --bricks 8 --threads 2
+          --out dm3d-ci.json
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: docker build -f deploy/dm3d-operational/Dockerfile -t jarvisx-dm3d-operational:test .
+      - name: Container self-test
+        run: docker run --rm jarvisx-dm3d-operational:test --self-test
+      - name: Health probe
+        run: docker run --rm jarvisx-dm3d-operational:test --health
