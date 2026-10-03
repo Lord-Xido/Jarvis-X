@@ -1,0 +1,27 @@
+name: Fixed-Point 10e81 Emulator
+
+on:
+  push:
+    paths:
+      - "apps/fixed-point-10e81/**"
+      - "docs/DR_MOAGI_10E81_FIXED_POINT_3D.md"
+      - ".github/workflows/fixed-point-10e81.yml"
+  pull_request:
+    paths:
+      - "apps/fixed-point-10e81/**"
+      - "docs/DR_MOAGI_10E81_FIXED_POINT_3D.md"
+      - ".github/workflows/fixed-point-10e81.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify exact virtual geometry and CTR recurrence
+        run: node --test apps/fixed-point-10e81/test_model.mjs
