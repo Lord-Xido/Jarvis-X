@@ -99,6 +99,21 @@ set_target_properties(jarvisx-systemwide-3d-map PROPERTIES OUTPUT_NAME "DrMoagi-
 jarvisx_include_runtime(jarvisx-systemwide-3d-map)
 jarvisx_harden(jarvisx-systemwide-3d-map)
 
+add_executable(jarvisx-adaptive-multigrid-3d
+    src/adaptive_multigrid_3d_main.cpp
+)
+set_target_properties(jarvisx-adaptive-multigrid-3d PROPERTIES
+    OUTPUT_NAME "DrMoagi-Adaptive-Multigrid-3D"
+)
+jarvisx_include_runtime(jarvisx-adaptive-multigrid-3d)
+jarvisx_harden(jarvisx-adaptive-multigrid-3d)
+
+find_package(OpenMP QUIET COMPONENTS CXX)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(jarvisx-adaptive-multigrid-3d PRIVATE OpenMP::OpenMP_CXX)
+    target_compile_definitions(jarvisx-adaptive-multigrid-3d PRIVATE JARVISX_HAVE_OPENMP=1)
+endif()
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -257,6 +272,12 @@ add_test(
         --out ${CMAKE_CURRENT_BINARY_DIR}/systemwide-3d-map-smoke
 )
 set_tests_properties(systemwide-3d-map-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_test(
+    NAME adaptive-multigrid-3d-self-test
+    COMMAND jarvisx-adaptive-multigrid-3d --self-test
+)
+set_tests_properties(adaptive-multigrid-3d-self-test PROPERTIES TIMEOUT 120)
 
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
