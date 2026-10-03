@@ -58,3 +58,21 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build/cpp-runtime -C Release --output-on-failure
+
+      - name: Configure serial inward-engine fallback
+        if: matrix.compiler == 'gcc'
+        run: >-
+          cmake -S cpp_runtime -B build/omni-serial
+          -DCMAKE_BUILD_TYPE=Release
+          -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          -DJARVISX_OMNI_ENABLE_OPENMP=OFF
+
+      - name: Build serial inward-engine fallback
+        if: matrix.compiler == 'gcc'
+        run: >-
+          cmake --build build/omni-serial --parallel 2
+          --target jarvisx-self-verifying-omni jarvisx-self-verifying-omni-tests
+
+      - name: Test serial inward-engine fallback
+        if: matrix.compiler == 'gcc'
+        run: ctest --test-dir build/omni-serial --output-on-failure -R self-verifying-omni

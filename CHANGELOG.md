@@ -8,6 +8,10 @@ The project follows semantic versioning where practical during alpha development
 
 ### Added
 
+- bounded C++17 million-pathway self-verifying inward reference with aligned heap
+  SoA storage, optional OpenMP, independent numerical audits, convergence-gated
+  pruning, JSON receipts and regression/CLI checks;
+
 - Hyperscale Geometric VM browser demonstration with a seeded 64,000-particle shell, elapsed-time contraction, measured local telemetry, touch/keyboard controls and offline Canvas fallback;
 - verifiable JSON-native Omega ledger entries;
 - atomic persistent-ledger writes;

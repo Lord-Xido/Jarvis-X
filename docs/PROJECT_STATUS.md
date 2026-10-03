@@ -52,6 +52,15 @@ This document is the authoritative implemented-versus-experimental capability ma
 
 ## Empirical evidence gate
 
+The C++ [Self-Verifying Omni Engine](SELF_VERIFYING_OMNI_ENGINE.md) is a separate
+numerical reference / integration candidate. It supports one million resident
+pathways by default, eight scalar state lanes, inward coordinate contraction,
+double-precision rotation-token audits and convergence-gated pruning. Its CTest
+suite covers the default workload, actual long-run convergence, invalid input and
+serial/OpenMP replay. Verification does not imply full convergence; neither a
+trained codec nor a canonical worker-fabric adapter is implemented by this surface.
+
+
 The canonical evidence command is:
 
 ```bash

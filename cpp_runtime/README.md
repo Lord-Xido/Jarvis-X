@@ -31,6 +31,22 @@ ctest --test-dir build/cpp-runtime -C Release --output-on-failure
 
 OpenGL and GLUT/freeglut are detected automatically. When either dependency is absent, CMake skips only the graphics targets; the headless runtimes and regression suite still build. Use `-DJARVISX_BUILD_GL_VISUALIZER=OFF` to disable detection explicitly.
 
+## Run the self-verifying million-pathway inward engine
+
+```bash
+./build/cpp-runtime/jarvisx-self-verifying-omni --threads 2 --json
+./build/cpp-runtime/jarvisx-self-verifying-omni \
+  --pathways 257 --depth 1024 --threads 2 --require-convergence --json
+```
+
+This bounded numerical reference stores eight channel-major state lanes on the
+heap, contracts actual 3D coordinates, audits double-precision rotation tokens,
+and prunes only after both residual and spatial convergence. OpenMP is optional;
+use `-DJARVISX_OMNI_ENABLE_OPENMP=OFF` for the serial fallback. Verification and
+full convergence are separate outcomes; the default 16-step run reports no
+pruning. See [Self-Verifying Omni Engine](../docs/SELF_VERIFYING_OMNI_ENGINE.md)
+for equations, memory bounds, CLI options and verification tolerances.
+
 Direct GCC/Clang build for the sparse processor:
 
 ```bash
