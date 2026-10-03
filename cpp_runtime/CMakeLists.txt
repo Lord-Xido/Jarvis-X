@@ -56,6 +56,13 @@ add_executable(jarvisx-multimedia4d
 jarvisx_include_runtime(jarvisx-multimedia4d)
 jarvisx_harden(jarvisx-multimedia4d)
 
+add_executable(jarvisx-recursive-multimodal
+    src/recursive_multimodal_engine.cpp
+)
+set_target_properties(jarvisx-recursive-multimodal PROPERTIES OUTPUT_NAME "DrMoagi-Recursive-Multimodal-3D")
+jarvisx_include_runtime(jarvisx-recursive-multimodal)
+jarvisx_harden(jarvisx-recursive-multimodal)
+
 add_executable(jarvisx-intelligence3d
     src/intelligence3d_main.cpp
 )
@@ -188,6 +195,14 @@ add_test(
         --quiet
 )
 set_tests_properties(multimedia4d-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_test(
+    NAME recursive-multimodal-runtime-smoke
+    COMMAND jarvisx-recursive-multimodal
+        --cycles 2
+        --quiet
+)
+set_tests_properties(recursive-multimodal-runtime-smoke PROPERTIES TIMEOUT 120)
 
 add_test(
     NAME intelligence3d-runtime-smoke
