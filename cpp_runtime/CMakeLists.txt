@@ -351,3 +351,4 @@ set_tests_properties(dr-moagi-6400x1000-regressions PROPERTIES TIMEOUT 120)
 include(${CMAKE_CURRENT_SOURCE_DIR}/world_engine.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/self_verifying_omni.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/dm3d_operational.cmake)
