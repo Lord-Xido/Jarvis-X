@@ -102,6 +102,7 @@ jarvisx-operationalize = "jarvisx.operationalize:main"
 jarvisx-inward3d-vm = "jarvisx.dr_moagi_inward_3d_vm:main"
 jarvisx-hyper3d = "jarvisx.hyper3d_cli:main"
 jarvisx-multimodal-evidence = "jarvisx.multimodal_evidence_runtime:main"
+jarvisx-evidence-grounded-operational = "jarvisx.evidence_grounded_operational:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
