@@ -31,6 +31,27 @@ ctest --test-dir build/cpp-runtime -C Release --output-on-failure
 
 OpenGL and GLUT/freeglut are detected automatically. When either dependency is absent, CMake skips only the graphics targets; the headless runtimes and regression suite still build. Use `-DJARVISX_BUILD_GL_VISUALIZER=OFF` to disable detection explicitly.
 
+## Run the verified adaptive multigrid 3D engine
+
+```bash
+./build/cpp-runtime/DrMoagi-Adaptive-Multigrid-3D --self-test
+./build/cpp-runtime/DrMoagi-Adaptive-Multigrid-3D \
+  --dim 128 \
+  --outer 4 \
+  --cycles 30 \
+  --tol 1e-5
+```
+
+This runtime implements a true recursive 3D V-cycle over a periodic
+`128^3 -> 64^3 -> 32^3 -> 16^3 -> 8^3 -> 4^3` hierarchy.
+The weighted-Jacobi smoother consumes the same `A_k u=b` right-hand side
+measured by the residual; 27-point full weighting pushes residuals inward,
+trilinear interpolation returns coarse corrections outward, and permeability
+updates are candidate transactions that commit only when relative residual and
+manufactured-truth MSE do not regress.
+
+OpenMP is optional and affects throughput only, not numerical acceptance.
+See [Adaptive Multigrid 3D](../docs/DR_MOAGI_ADAPTIVE_MULTIGRID_3D.md).
 ## Run the self-verifying million-pathway inward engine
 
 ```bash
