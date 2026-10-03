@@ -138,6 +138,21 @@ R_s=X_s-\hat X_s
 
 The same plane scheduler can carry that operator, but any compression or reconstruction claim must remain evidence-gated. A geometrically smaller latent tensor is not automatically lossless compression; discarded information must be represented by quantized latent symbols, residuals, side information, or explicitly accepted loss.
 
+## Visual emulator
+
+The end-to-end browser surface lives at `apps/tib3d-processor/index.html`.
+
+It visualizes the same logical TiB geometry as a bounded 3D state machine:
+
+`INPUT -> SHARD -> ENCODE -> LATENT -> DECODE -> RESIDUAL -> VERIFY -> RECUR`.
+
+The browser model preserves the exact address arithmetic and verification semantics while deliberately downsampling the rendered geometry. It is an emulator, not a throughput benchmark or a 1 TiB allocation.
+
+Validate it independently with:
+
+~~~bash
+node --test apps/tib3d-processor/test_model.cjs
+~~~
 ## Build
 
 The target requires C++20 for std::barrier and std::jthread; this requirement is target-local and does not move the rest of the C++ runtime off its existing C++17 baseline.
