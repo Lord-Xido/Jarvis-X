@@ -567,7 +567,31 @@ def result_to_json(result: RetrievalResult) -> dict[str, object]:
         "latent": list(result.latent),
         "evidence": [
             {
-                "segment": asdict(row.segment),
+                "segment": {
+                    "evidence_id": row.segment.evidence_id,
+                    "object_id": row.segment.object_id,
+                    "modality": row.segment.modality.value,
+                    "summary": row.segment.summary,
+                    "provenance": row.segment.provenance,
+                    "confidence": row.segment.confidence,
+                    "time_span": (
+                        asdict(row.segment.time_span)
+                        if row.segment.time_span is not None
+                        else None
+                    ),
+                    "region_2d": (
+                        asdict(row.segment.region_2d)
+                        if row.segment.region_2d is not None
+                        else None
+                    ),
+                    "region_3d": (
+                        asdict(row.segment.region_3d)
+                        if row.segment.region_3d is not None
+                        else None
+                    ),
+                    "tags": list(row.segment.tags),
+                    "native_feature": list(row.segment.native_feature),
+                },
                 "similarity": row.similarity,
                 "score": row.score,
             }
