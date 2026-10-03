@@ -947,3 +947,59 @@ This proposal is not that reality is literally a computer, nor that every physic
 > Computation exists when lawful physical evolution can be stably mapped to an abstract transition system, and intelligence exists when such physically realized transitions participate in a constrained, adaptive, causally reality-coupled observer-action loop.
 
 That definition places the electromagnetic substrate, the mathematical abstraction, and the intelligence architecture in one formal chain without treating any one descriptive layer as the whole of reality.
+
+
+---
+
+## 26. Active multimodal evidence acquisition
+
+Reality grounding is strengthened by treating missing observation as an
+acquisition problem rather than an invitation to infer unavailable data.
+
+For an evidence request q, define the bounded acquisition state:
+
+```text
+E_t = {source, modality, temporal span, spatial region, confidence, provenance}
+```
+
+and uncertainty U(E_t). If a task declares a set of required modalities M_req,
+the observation gate passes only when:
+
+```text
+coverage(E_t, M_req) = 1
+AND U(E_t) <= U_max
+```
+
+Otherwise the next correction operator is an evidence action:
+
+```text
+Correct(E_t) = acquire(missing_or_low_confidence_modality)
+```
+
+rather than a fabricated completion.
+
+This yields the grounded observer recurrence:
+
+```text
+Reality
+ -> observation / retrieval
+ -> temporal-spatial localization
+ -> encode
+ -> inward evidence refinement
+ -> CTR
+ -> evidence gate
+ -> model / action candidate
+ -> operational verification
+ -> commit or rollback
+ -> Reality
+```
+
+The two gates answer different questions. The evidence gate asks whether the
+system has sufficient grounded observation. The operational gate asks whether a
+candidate transition is valid and admissible. Both must pass before a grounded
+external operation becomes authoritative.
+
+This extension is implemented by
+`jarvisx.multimodal_evidence_runtime` and
+`jarvisx.evidence_grounded_operational`, with ADR-024 defining the authority
+boundary.
