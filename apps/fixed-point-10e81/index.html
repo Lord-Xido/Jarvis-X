@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#020617">
+<title>Jarvis-X 10^81 Fixed-Point 3D Emulator</title>
+<style>
+:root{color-scheme:dark;--bg:#020617;--panel:#07111f;--line:#29415f;--text:#e5eef9;--muted:#94a3b8;--cyan:#38bdf8;--violet:#a78bfa;--rose:#fb7185}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,sans-serif}
+main{padding:16px;max-width:1440px;margin:auto;background:radial-gradient(circle at 50% 34%,#10243c,#020617 68%);min-height:100vh}
+h1{font-size:clamp(22px,3vw,34px);margin:4px 0}.eyebrow{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+p{color:var(--muted);font-size:12px;line-height:1.55;max-width:1050px}
+.controls{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+button{min-height:40px;border:1px solid #334155;border-radius:9px;padding:8px 12px;background:#0f172a;color:var(--text);font-weight:650;cursor:pointer}
+button[aria-pressed="true"]{border-color:var(--cyan);background:#0c4a6e}
+.grid{display:grid;grid-template-columns:1.48fr .78fr;gap:12px}.panel{border:1px solid var(--line);border-radius:14px;background:#07111fea;padding:12px}
+canvas{display:block;width:100%;height:590px;border-radius:10px;background:#020617}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.metric{border-bottom:1px solid #172033;padding:7px 0}
+.metric small{display:block;color:#64748b;font-size:9px}.metric strong{font:600 11px ui-monospace,monospace;overflow-wrap:anywhere}
+.stage{border:1px solid #263247;border-radius:7px;padding:7px;margin-top:5px;font-size:10px;color:var(--muted)}.stage.active{border-color:var(--cyan);background:#0c4a6e;color:#fff}
+pre{font-size:10px;white-space:pre-wrap;color:#bfd1e5;background:#030b15;border:1px solid #1c3049;border-radius:8px;padding:9px}
+.note{font-size:10px;color:#71869d}
+@media(max-width:850px){.grid{grid-template-columns:1fr}canvas{height:460px}}
+</style>
+</head>
+<body>
+<main>
+<div class="eyebrow">Jarvis-X · sparse virtual cognition · verified fixed-point recurrence</div>
+<h1>10<sup>81</sup>-site 3D Fixed-Point Cognitive Field</h1>
+<p>
+Each logical axis has length (10<sup>9</sup>)<sup>3</sup> = 10<sup>27</sup>; the full 3D address domain therefore contains 10<sup>81</sup> sites.
+This browser materializes only 1,024 deterministic support coordinates. The scale is virtual addressing, not resident memory.
+</p>
+<div class="controls">
+<button id="run" aria-pressed="true">Pause</button>
+<button id="step">Single iteration</button>
+<button id="reset">Reset</button>
+<button id="remap">Remap active support</button>
+</div>
+<div class="grid">
+<section class="panel">
+<canvas id="scene" aria-label="3D sparse fixed-point emulator"></canvas>
+<p class="note">Blue particles are low-residual support points; rose particles carry larger residuals. The visual cube is a projection of active support, not a dense rendering of 10^81 sites.</p>
+</section>
+<aside class="panel">
+<div class="metrics">
+<div class="metric"><small>Axis extent</small><strong>10^27</strong></div>
+<div class="metric"><small>Logical cardinality</small><strong>10^81</strong></div>
+<div class="metric"><small>Bits / axis</small><strong>90</strong></div>
+<div class="metric"><small>Logical address width</small><strong>270 bits</strong></div>
+<div class="metric"><small>Active support</small><strong id="support">1024</strong></div>
+<div class="metric"><small>Iteration</small><strong id="iteration">0</strong></div>
+<div class="metric"><small>MSE</small><strong id="mse">—</strong></div>
+<div class="metric"><small>Residual L2</small><strong id="residual">—</strong></div>
+<div class="metric"><small>η</small><strong id="eta">0.2400</strong></div>
+<div class="metric"><small>CTR decision</small><strong id="decision">INIT</strong></div>
+<div class="metric"><small>Commits</small><strong id="commits">0</strong></div>
+<div class="metric"><small>Rollbacks</small><strong id="rollbacks">0</strong></div>
+</div>
+<div id="pipeline">
+<div class="stage active">INGEST — virtual coordinates</div>
+<div class="stage">ENCODE — X → Z</div>
+<div class="stage">INWARD — residual candidate</div>
+<div class="stage">DECODE — Z → X-hat</div>
+<div class="stage">CONTRAST — R = X − X-hat</div>
+<div class="stage">RECKON — candidate loss</div>
+<div class="stage">VERIFY — COMMIT / ROLLBACK</div>
+<div class="stage">MEMORY — Ω update + recur</div>
+</div>
+<pre>Zcand = Z + η(0.80R + 0.20Ω)
+Xhat_cand = tanh(Zcand)
+Lcand = mean((X - Xhat_cand)^2)
+
+COMMIT iff Lcand <= L
+ROLLBACK otherwise
+
+Ω <- rho Ω + (1-rho) R</pre>
+</aside>
+</div>
+</main>
+<script type="module">
+import {FixedPoint10E81} from "./core.mjs";
+
+const engine = new FixedPoint10E81();
+window.getFixedPoint10E81Telemetry = () => engine.telemetry();
+
+const canvas = document.getElementById("scene");
+const ctx = canvas.getContext("2d");
+const run = document.getElementById("run");
+let running = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+let yaw = 0.58;
+let pitch = 0.48;
+let last = performance.now();
+let accumulator = 0;
+
+function resize(){
+  const r=canvas.getBoundingClientRect();
+  const dpr=Math.min(2,devicePixelRatio||1);
+  canvas.width=Math.max(640,Math.floor(r.width*dpr));
+  canvas.height=Math.max(420,Math.floor(r.height*dpr));
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+new ResizeObserver(resize).observe(canvas);
+resize();
+
+function project(x,y,z,w,h){
+  const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  const X=cy*x-sy*z;
+  let Z=sy*x+cy*z;
+  const Y=cp*y-sp*Z;
+  Z=sp*y+cp*Z;
+  const scale=Math.min(w,h)*0.32;
+  const q=1/(1.9+0.65*Z);
+  return [w/2+X*scale*q,h/2+Y*scale*q,q];
+}
+
+function drawCube(w,h){
+  const v=[];
+  for(const z of [-1,1])for(const y of [-1,1])for(const x of [-1,1])v.push(project(x,y,z,w,h));
+  const edges=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
+  for(const [a,b] of edges){
+    ctx.strokeStyle="rgba(56,189,248,.35)";
+    ctx.beginPath();ctx.moveTo(v[a][0],v[a][1]);ctx.lineTo(v[b][0],v[b][1]);ctx.stroke();
+  }
+}
+
+function draw(){
+  const r=canvas.getBoundingClientRect(),w=r.width,h=r.height;
+  ctx.clearRect(0,0,w,h);
+  const bg=ctx.createRadialGradient(w/2,h*.46,10,w/2,h*.46,Math.max(w,h)*.7);
+  bg.addColorStop(0,"#10243d");bg.addColorStop(1,"#020617");ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  drawCube(w,h);
+
+  const m=engine.metrics();
+  const contraction=.60+.40*Math.min(1,Math.sqrt(m.mse/.35));
+
+  for(let i=0;i<engine.activeSupport;i++){
+    const c=engine.coordinates[i];
+    const x=Number(c[0]%1000000n)/500000-1;
+    const y=Number(c[1]%1000000n)/500000-1;
+    const z=Number(c[2]%1000000n)/500000-1;
+    const p=project(x*contraction,y*contraction,z*contraction,w,h);
+    const a=Math.min(1,Math.abs(engine.residual[i])*1.8);
+    ctx.fillStyle=a>.35
+      ? "rgba(251,113,133,"+(.25+.6*a)+")"
+      : "rgba(56,189,248,"+(.30+.5*(1-a))+")";
+    ctx.beginPath();ctx.arc(p[0],p[1],Math.max(1,2.2*p[2]),0,Math.PI*2);ctx.fill();
+  }
+
+  const center=project(0,0,0,w,h);
+  for(let k=5;k>=1;k--){
+    ctx.strokeStyle="rgba(167,139,250,"+(.08+k*.055)+")";
+    ctx.beginPath();ctx.arc(center[0],center[1],12+k*9,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.fillStyle="#e5eef9";ctx.textAlign="center";ctx.font="600 13px system-ui";
+  ctx.fillText("FIXED-POINT LATENT CORE",center[0],center[1]+78);
+  ctx.textAlign="left";ctx.font="11px ui-monospace,monospace";ctx.fillStyle="#94a3b8";
+  ctx.fillText("virtual field: 10^81 sites",16,20);
+  ctx.fillText("materialized support: "+engine.activeSupport.toLocaleString(),16,37);
+  ctx.fillText("logical coordinate width: 270 bits",16,54);
+}
+
+function refresh(){
+  const t=engine.telemetry();
+  document.getElementById("support").textContent=t.activeSupport.toLocaleString();
+  document.getElementById("iteration").textContent=t.iteration;
+  document.getElementById("mse").textContent=t.mse.toExponential(6);
+  document.getElementById("residual").textContent=t.residualL2.toExponential(6);
+  document.getElementById("eta").textContent=t.eta.toFixed(4);
+  document.getElementById("decision").textContent=t.decision;
+  document.getElementById("commits").textContent=t.commits;
+  document.getElementById("rollbacks").textContent=t.rollbacks;
+  const stage=t.iteration%8;
+  document.querySelectorAll(".stage").forEach((el,i)=>el.classList.toggle("active",i===stage));
+  run.textContent=running?"Pause":"Resume";
+  run.setAttribute("aria-pressed",String(running));
+}
+
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;accumulator+=dt;
+  if(running && accumulator>=.22){engine.step();accumulator=0;yaw+=.012}
+  refresh();draw();requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+run.addEventListener("click",()=>{running=!running;refresh()});
+document.getElementById("step").addEventListener("click",()=>{running=false;engine.step();refresh();draw()});
+document.getElementById("reset").addEventListener("click",()=>{engine.reset();refresh();draw()});
+document.getElementById("remap").addEventListener("click",()=>{engine.remap();refresh();draw()});
+</script>
+</body>
+</html>
