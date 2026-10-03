@@ -366,9 +366,10 @@ def inward_fixed_point(
 
     for iteration in range(1, max_iterations + 1):
         echo = latent_echo(latent, evidence, hasher)
-        candidate = tuple(
-            (1.0 - damping) * latent[axis] + damping * echo[axis]
-            for axis in range(3)
+        candidate = (
+            (1.0 - damping) * latent[0] + damping * echo[0],
+            (1.0 - damping) * latent[1] + damping * echo[1],
+            (1.0 - damping) * latent[2] + damping * echo[2],
         )
         residual = math.sqrt(
             sum((candidate[axis] - latent[axis]) ** 2 for axis in range(3))
