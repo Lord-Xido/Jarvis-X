@@ -143,6 +143,34 @@ and recursive application gives the geometric hierarchy
 
 matching the existing volumetric ROM pyramid.
 
+For the **spatial side length**, the dyadic contraction is explicitly
+saturating:
+
+```text
+N_(k+1) = max(1, N_k >> 1)
+```
+
+so `1 -> 1` is the terminal spatial fixed point. Plain unsigned right shift
+would instead map `1 -> 0`; Jarvis-X therefore treats the spatial fold as a
+saturating operator rather than equating all right shifts with fixed-point
+convergence.
+
+For a power-of-two side length `N = 2^b`, each axis uses `b` address bits.
+The canonical cascade therefore removes one address bit **per axis** at each
+level:
+
+```text
+32^3 : 5 + 5 + 5 coordinate bits
+16^3 : 4 + 4 + 4
+ 8^3 : 3 + 3 + 3
+ 4^3 : 2 + 2 + 2
+ 2^3 : 1 + 1 + 1
+ 1^3 : 0 + 0 + 0
+```
+
+This is a reduction in spatial address resolution, not automatically a
+one-bit reduction in Shannon uncertainty.
+
 The majority operator is intentionally simple and deterministic. Learned or quantized contraction kernels may replace it only behind the same tested interface and evidence boundary.
 
 ## 6. Residual-preserving shells
@@ -194,6 +222,33 @@ or the configured iteration budget is exhausted.
 
 The reference implementation flips a bounded number of differing bits per step. It exists to make monotone self-correction testable; it is not presented as a learned intelligence mechanism.
 
+### 7.1 Exact machine-state fixed-point residual
+
+For a deterministic finite binary transition `F`, define
+
+```text
+D_t = F(B_t) XOR B_t
+E_bit = popcount(D_t)
+e_bit = E_bit / N
+```
+
+where `N` is the declared logical bit width. Exact binary closure is
+
+```text
+E_bit == 0
+```
+
+which is equivalent to
+
+```text
+F(B*) == B*
+F(B*) XOR B* == 0
+```
+
+The C++ reference exposes this as `fixed_point_residual` and
+`is_exact_fixed_point`. This is an exact digital equality test; it is
+separate from floating-point convergence tolerances.
+
 ## 8. 3D error field and compute allocation
 
 For each active voxel,
@@ -226,6 +281,51 @@ Canonical systems principle:
 
 Stable regions may remain sparse or compressed. High-error regions may be refined more deeply, subject to `Pi_runtime` and `Pi_Lambda`.
 
+To prevent activation chatter, the reference bit substrate uses hysteretic
+thresholds:
+
+```text
+inactive -> active  only when error > epsilon_on
+active   -> inactive only when error < epsilon_off
+
+epsilon_on > epsilon_off
+```
+
+The gap between `epsilon_off` and `epsilon_on` preserves the previous activity
+state, avoiding rapid activate/deactivate oscillation near a single threshold.
+
+### 8.1 Million-pathway verification bitmap
+
+For the one-million-pathway verification profile, the canonical evidence mask is
+
+```text
+V in {0,1}^1,000,000
+V[i] = 1 -> pathway i passed
+V[i] = 0 -> pathway i failed
+```
+
+The mask occupies exactly
+
+```text
+1,000,000 bits = 125,000 bytes
+```
+
+and packs into exactly
+
+```text
+1,000,000 / 64 = 15,625 uint64 words.
+```
+
+Global pass is therefore
+
+```text
+popcount(V) == 1,000,000
+```
+
+rather than a prose-only statement that all pathways were verified. The
+reference `VerificationBitmap1M` exposes per-pathway mutation, total pass count
+and `all_pass()`.
+
 ## 9. Omega, Theta and Pi at bit level
 
 The high-level states remain typed concepts even when serialized to bits.
@@ -235,6 +335,18 @@ B_Omega <- MemoryUpdate(B_Omega, B_E)
 B_Pi'   <- Schedule(B_Pi, B_E, B_C)
 B_Theta'<- Adapt(B_Theta, B_Z, B_E)
 ```
+
+A masked memory write is represented exactly as
+
+```text
+Omega_new =
+    (Omega_old AND NOT write_mask)
+    OR
+    (new_information AND write_mask)
+```
+
+so zero mask bits preserve committed memory and one mask bits admit candidate
+information.
 
 A binary representation does not justify arbitrary bit flipping in live model state. Candidate updates remain transactional.
 
@@ -264,6 +376,16 @@ M_(t+1) = M_t  otherwise
 ```
 
 At the binary selection boundary this is a multiplexer:
+
+```text
+select = 0 - V_t
+B_(t+1) =
+    (B_baseline AND NOT select)
+    OR
+    (B_candidate AND select)
+```
+
+which is the bitwise realization of
 
 ```text
 B_(t+1) = MUX(V_t, B_candidate, B_baseline)
@@ -342,12 +464,16 @@ The current floating-point reference runtime remains valid. The bit-level layer 
 2. `unpack(pack(fields)) == fields` for every valid field tuple.
 3. `W_i == Z XOR (W_i XOR Z)` for every residual-preserving child.
 4. Hamming refinement never increases declared target distance.
-5. Candidate promotion is impossible when verification fails.
-6. Candidate promotion is impossible without the configured objective improvement.
-7. Spatial address width and voxel-state width remain distinct.
-8. Iteration, memory and active-tile budgets are explicit.
-9. Virtual geometry is never reported as physically resident memory.
-10. Internal improvement is never reported as external SOTA evidence without matched benchmarking.
+5. `popcount(F(B) XOR B) == 0` iff the declared binary state is an exact fixed point.
+6. The million-pathway evidence bitmap reports exact per-pathway pass/fail state.
+7. Hysteretic activity gating requires `epsilon_on > epsilon_off`.
+8. Masked memory writes preserve every bit outside the declared write mask.
+9. Candidate promotion is impossible when verification fails.
+10. Candidate promotion is impossible without the configured objective improvement.
+11. Spatial address width and voxel-state width remain distinct.
+12. Iteration, memory and active-tile budgets are explicit.
+13. Virtual geometry is never reported as physically resident memory.
+14. Internal improvement is never reported as external SOTA evidence without matched benchmarking.
 
 ## 14. Reference implementation
 
@@ -358,7 +484,7 @@ cpp_runtime/include/jarvisx/bit_self_loop3d.hpp
 cpp_runtime/tests/bit_self_loop3d_tests.cpp
 ```
 
-CTest exercises packing, contraction, exact residual reconstruction, monotone Hamming refinement and commit/rollback gating.
+CTest exercises packing, contraction, exact residual reconstruction, monotone Hamming refinement, exact XOR/popcount fixed-point residuals, masked memory writes, saturating dyadic contraction, hysteretic pruning, the exact 1,000,000-bit verification bitmap, and commit/rollback gating.
 
 ## 15. Evidence boundary
 
