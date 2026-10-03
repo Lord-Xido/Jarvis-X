@@ -99,6 +99,14 @@ set_target_properties(jarvisx-systemwide-3d-map PROPERTIES OUTPUT_NAME "DrMoagi-
 jarvisx_include_runtime(jarvisx-systemwide-3d-map)
 jarvisx_harden(jarvisx-systemwide-3d-map)
 
+add_executable(jarvisx-tib3d-stream
+    src/tib3d_stream_processor_main.cpp
+)
+set_target_properties(jarvisx-tib3d-stream PROPERTIES OUTPUT_NAME "DrMoagi-TiB3D-1000GBs")
+target_compile_features(jarvisx-tib3d-stream PRIVATE cxx_std_20)
+jarvisx_include_runtime(jarvisx-tib3d-stream)
+jarvisx_harden(jarvisx-tib3d-stream)
+
 if(JARVISX_BUILD_GL_VISUALIZER)
     find_package(OpenGL QUIET)
     find_package(GLUT QUIET)
@@ -257,6 +265,12 @@ add_test(
         --out ${CMAKE_CURRENT_BINARY_DIR}/systemwide-3d-map-smoke
 )
 set_tests_properties(systemwide-3d-map-runtime-smoke PROPERTIES TIMEOUT 120)
+
+add_test(
+    NAME tib3d-stream-self-test
+    COMMAND jarvisx-tib3d-stream --self-test
+)
+set_tests_properties(tib3d-stream-self-test PROPERTIES TIMEOUT 30)
 
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
