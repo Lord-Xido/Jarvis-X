@@ -351,8 +351,12 @@ public:
         std::uint64_t rejected = 0;
         const auto count = static_cast<std::int64_t>(config_.pathways);
 #ifdef _OPENMP
-        const int workers = std::min({config_.requested_threads, omp_get_max_threads(),
-            omp_get_thread_limit(), omp_get_num_procs(), static_cast<int>(config_.pathways)});
+        int workers = std::min({config_.requested_threads, omp_get_max_threads(),
+            omp_get_num_procs(), static_cast<int>(config_.pathways)});
+#if _OPENMP >= 200805
+        // MSVC's default OpenMP 2.0 runtime does not expose this 3.0 API.
+        workers = std::min(workers, omp_get_thread_limit());
+#endif
 #pragma omp parallel num_threads(workers) reduction(+:executed,rejected)
 #endif
         {
