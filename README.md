@@ -24,6 +24,8 @@ Structural closure is governed by [ADR-016](docs/adr/0016-canonical-typed-state-
 
 Self-hosting closure is governed by [ADR-031](docs/adr/0031-self-hosting-inward-runtime-closure.md) and the [3D Self-Hosting Inward Runtime](docs/DR_MOAGI_SELF_HOSTING_INWARD_RUNTIME.md): source, AST/IR, bytecode, latent, graphics, memory, model and policy state may all participate in a recursive candidate transaction, but self-hosting never bypasses verification, measurement, atomic commit or rollback.
 
+Exact binary closure is governed by [ADR-034](docs/adr/0034-exact-bitwise-fixed-point-verification.md): deterministic machine-state convergence is measured as `popcount(F(B) XOR B)`, one-million-pathway verification is represented by an exact 1,000,000-bit evidence bitmap, masked writes preserve non-selected memory, spatial dyadic contraction saturates at `1`, and sparse activity uses hysteresis.
+
 The framework is designed to pursue capability beyond contemporary SOTA through inward 3D latent coordination, reality coupling, continuous correction and fixed-point verification. That phrase denotes a **design ambition**, not an unverified empirical, legal or patent-novelty claim; performance and scientific claims remain evidence-gated.
 
 ## Why Jarvis-X exists
@@ -115,7 +117,7 @@ This is a canonical integration contract. It does not imply that every current b
 | Self-hosting inward runtime closure | ADR-031 whole-machine candidate state across compiler/runtime/graphics/memory with shadow execution and atomic promotion | Specification |
 | C++ processor laboratory | sparse virtual `8192³` lattice, signed 3-bit latent cycle, deterministic bounded genome/schedule search | Reference laboratory |
 | Volumetric ROM ANN | `2^60` logical 3D voxel addresses, bounded `32^3` demand tiles, `32^3 → 16^3 → 8^3 → 4^3 → 2^3 → 1` inward contraction, recursive Ω/Θ/runtime-policy feedback | Reference laboratory |
-| Bitwise hyper-scale ANN layer | exact source-ordered 60-bit Morton addressing, 20-level octree/LOD prefixes, fixed-point inward step, structural FP32 top-byte truncation, and cloud-tile routing | Reference laboratory |
+| Bitwise hyper-scale ANN layer | exact source-ordered 60-bit Morton addressing, 20-level octree/LOD prefixes, fixed-point inward step, exact XOR/popcount machine-state residuals, 1,000,000-bit pathway verification bitmap, masked memory writes, hysteretic activity gating, structural FP32 top-byte truncation, and cloud-tile routing | Reference laboratory |
 | Fractional 3D smoothing | periodic spectral fractional diffusion, analytic forcing and multiresolution fusion | Numerical reference |
 | Sparse geometry | deterministic inward-folding fractal octree with closed-form invariants | Reference |
 | Inward 4D graph ANN | deterministic 1,000-node folded graph autoencoder with exact gradients, guarded pruning and rollback | Reference laboratory |\n| 6400³ logical worker fabric | exact 262.144B-worker address space, 64³-worker bricks, bounded active/resident execution, ANN IDE telemetry | Reference laboratory / canonical Layer-4 profile |
@@ -377,7 +379,9 @@ Every canonical subsystem should provide:
 - [Project status](docs/PROJECT_STATUS.md)
 - [Canonical Dr Moagi operational auto-encoding/decoding equation](docs/DR_MOAGI_OPERATIONAL_AUTOENCODING_EQUATION.md)
 - [ADR-016: canonical typed state, transaction and geometry profiles](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md)
-- [ADR-017: canonical Dr Moagi operational auto-encoding/decoding equation](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md)\n- [ADR-032: canonical 6400³ logical worker-fabric permeation](docs/adr/0032-canonical-6400-cube-worker-fabric-permeation.md)\n- [Dr Moagi 6400³ Logical Worker Fabric](docs/DR_MOAGI_6400_CUBE_WORKER_FABRIC.md)
+- [ADR-017: canonical Dr Moagi operational auto-encoding/decoding equation](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md)\n- [ADR-032: canonical 6400³ logical worker-fabric permeation](docs/adr/0032-canonical-6400-cube-worker-fabric-permeation.md)
+- [ADR-034: exact bitwise fixed-point verification](docs/adr/0034-exact-bitwise-fixed-point-verification.md)
+- [Dr Moagi 3D Bit-Level Inward Self-Loop](docs/research/DR_MOAGI_3D_BIT_SELF_LOOP.md)\n- [Dr Moagi 6400³ Logical Worker Fabric](docs/DR_MOAGI_6400_CUBE_WORKER_FABRIC.md)
 - [1 MiB × 1 MiB × 1 MiB Volumetric ROM ANN](docs/volumetric-rom-ann.md)
 - [Dr Moagi Bitwise Hyper-Scale ANN Address and Inward-Loop Contract](docs/DR_MOAGI_BITWISE_HYPERSCALE_ANN.md)
 - [Dr Moagi 3D Ephemeral-Notion Intelligence Framework — canonical attribution](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md)
