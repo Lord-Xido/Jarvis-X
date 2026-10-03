@@ -46,7 +46,7 @@ jobs:
       - name: Build benchmark targets
         run: |
           cmake --build build/bench --config Release --parallel \
-            --target jarvisx-dr-moagi-6400x1000 jarvisx-bitmatrix1gib jarvisx-dr-moagi-1gib-bit-engine
+            --target jarvisx-dr-moagi-6400x1000 jarvisx-bitmatrix1gib jarvisx-dr-moagi-1gib-bit-engine jarvisx-volumetric-80k-fast-bench
 
       - name: Benchmark 6400x1000 engine
         shell: bash
@@ -59,6 +59,18 @@ jobs:
             "$exe" --cycles 5 --iterations 1000 --workers "$workers" \
               | tee -a benchmark-results/engine.txt
           done
+
+      - name: Benchmark DM80K portable fast path
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/time -v -o benchmark-results/dm80k-fast-time.txt \
+            build/bench/DrMoagi-80K3-Fast-Bench \
+              --ticks 2 \
+              --candidates 16 \
+              --select-ratio 0.10 \
+              --active-bricks 32 \
+            | tee benchmark-results/dm80k-fast.txt
 
       - name: Benchmark full 1 GiB sparse3d stream
         shell: bash
@@ -100,6 +112,9 @@ jobs:
             echo
             echo "## 6400x1000 engine"
             cat benchmark-results/engine.txt
+            echo
+            echo "## DM80K portable fast path"
+            cat benchmark-results/dm80k-fast.txt
             echo
             echo "## Full 1 GiB bit stream"
             cat benchmark-results/bit-sparse3d/report.txt
