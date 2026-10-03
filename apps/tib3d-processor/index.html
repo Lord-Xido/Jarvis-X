@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020617">
+<title>Jarvis-X · TiB3D End-to-End Emulator</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#020617;color:#e2e8f0}
+*{box-sizing:border-box}body{margin:0;background:#020617}button,input{font:inherit}
+.app{min-height:760px;background:radial-gradient(circle at 50% 34%,#10243d,#020617 68%);position:relative;overflow:hidden}
+header{position:relative;z-index:2;padding:18px 20px 10px;background:linear-gradient(#020617f5,#02061700)}
+.eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8}
+h1{margin:4px 0 6px;font-size:clamp(22px,3vw,34px);letter-spacing:-.035em;color:#e0f2fe}.sub{margin:0;max-width:920px;color:#94a3b8;font-size:12px;line-height:1.55}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}button{min-height:42px;border:1px solid #334155;border-radius:10px;padding:9px 13px;background:#0f172a;color:#e2e8f0;font-weight:650;cursor:pointer}button:hover{background:#172554}button[aria-pressed="true"]{border-color:#38bdf8;background:#0c4a6e}button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid #7dd3fc;outline-offset:3px}
+.scene-wrap{padding:0 16px 250px}#scene{display:block;width:100%;height:520px;border:1px solid #1e3a5f;border-radius:14px;background:#020617;touch-action:none}
+.panels{position:absolute;z-index:2;left:16px;right:16px;bottom:16px;display:grid;grid-template-columns:1.1fr .9fr;gap:12px;pointer-events:none}
+.panel{pointer-events:auto;border:1px solid #1e3a5f;border-radius:14px;background:#07111eea;backdrop-filter:blur(10px);padding:14px}.panel h2{margin:0 0 10px;color:#7dd3fc;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.metric{border-bottom:1px solid #172033;padding:6px 0}.metric small{display:block;color:#64748b;font-size:9px}.metric strong{display:block;margin-top:3px;font:600 11px ui-monospace,monospace;overflow-wrap:anywhere}
+.pipeline{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px}.stage{border:1px solid #263247;border-radius:8px;padding:8px 5px;text-align:center;font-size:9px;color:#94a3b8}.stage b{display:block;color:#e2e8f0;font-size:9px}.stage.active{border-color:#38bdf8;background:#0c4a6e;color:#bae6fd}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;color:#94a3b8;font-size:11px}.row input{accent-color:#38bdf8}
+.note{margin:9px 0 0;color:#64748b;font-size:10px;line-height:1.45}
+@media(max-width:780px){.app{min-height:1040px}.scene-wrap{padding:0 10px 455px}#scene{height:460px}.panels{grid-template-columns:1fr;left:10px;right:10px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.pipeline{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.sub::after{content:" · reduced-motion mode starts paused"}}
+</style>
+</head>
+<body>
+<main class="app" id="app">
+<header>
+<div class="eyebrow">Jarvis-X · Dr Moagi TiB3D · bounded visual emulator</div>
+<h1>1 TiB 3D encode → latent → decode → verify loop</h1>
+<p class="sub">Exact logical geometry: 8192 × 8192 × 16384 bytes = 2⁴⁰ bytes. The visual scene is a bounded projection of the streaming runtime; 1000 GB/s remains a target unless measured on real hardware.</p>
+<div class="controls">
+<button id="runBtn" type="button" aria-pressed="true">Pause</button>
+<button id="stepBtn" type="button">Single stage</button>
+<button id="loopBtn" type="button" aria-pressed="true">Recurrence on</button>
+<button id="resetBtn" type="button">Reset</button>
+</div>
+</header>
+<section class="scene-wrap"><canvas id="scene" tabindex="0" aria-label="Animated three-dimensional TiB data volume with encoder, latent core, decoder, residual feedback and verification gate"></canvas></section>
+<section class="panels">
+<article class="panel">
+<h2>Execution receipts</h2>
+<div class="metrics">
+<div class="metric"><small>Logical volume</small><strong>1 TiB</strong></div>
+<div class="metric"><small>XY plane</small><strong>64 MiB</strong></div>
+<div class="metric"><small>Plane index</small><strong id="planeMetric">0 / 16,383</strong></div>
+<div class="metric"><small>Stage</small><strong id="stageMetric">INPUT</strong></div>
+<div class="metric"><small>Iteration</small><strong id="iterMetric">0</strong></div>
+<div class="metric"><small>Residual</small><strong id="resMetric">1.000000</strong></div>
+<div class="metric"><small>CTR decision</small><strong id="decisionMetric">PENDING</strong></div>
+<div class="metric"><small>Target sweep</small><strong>1.099512 s</strong></div>
+</div>
+<div class="row"><label>Simulation rate <input id="speedInput" type="range" min="0.25" max="4" step="0.25" value="1"></label><output id="speedOut">1.00×</output></div>
+<p class="note">A(x,y,z)=x+8192(y+8192z). In-place XOR at 1000 GB/s payload can imply roughly 2000 GB/s aggregate read/write memory traffic. Visual timing is not a hardware benchmark.</p>
+</article>
+<article class="panel">
+<h2>Operational path</h2>
+<div class="pipeline" id="pipeline">
+<div class="stage active" data-s="0"><b>INPUT</b>X</div>
+<div class="stage" data-s="1"><b>SHARD</b>64 MiB</div>
+<div class="stage" data-s="2"><b>ENCODE</b>Eθ</div>
+<div class="stage" data-s="3"><b>LATENT</b>Φin</div>
+<div class="stage" data-s="4"><b>DECODE</b>Dφ</div>
+<div class="stage" data-s="5"><b>RESIDUAL</b>X−X̂</div>
+<div class="stage" data-s="6"><b>VERIFY</b>CTR</div>
+<div class="stage" data-s="7"><b>RECUR</b>Zₖ₊₁</div>
+</div>
+<p class="note">Candidate state is committed only when the emulated residual decreases. Otherwise the model rolls back and dampens the next correction.</p>
+</article>
+</section>
+</main>
+
+<script id="tib3d-model">
+'use strict';
+class TiB3DModel{
+ constructor(){
+  this.NX=8192;this.NY=8192;this.NZ=16384;
+  this.planeBytes=this.NX*this.NY;
+  this.totalBytes=this.NX*this.NY*this.NZ;
+  this.targetGBps=1000;
+  this.targetSweepSeconds=this.totalBytes/(this.targetGBps*1e9);
+  this.stages=['INPUT','SHARD','ENCODE','LATENT','DECODE','RESIDUAL','VERIFY','RECUR'];
+  this.reset();
+ }
+ reset(){this.running=true;this.recurrence=true;this.stage=0;this.plane=0;this.iteration=0;this.residual=1;this.candidateResidual=1;this.decision='PENDING';this.accumulator=0;this.damping=.72;}
+ address(x,y,z){
+  for(const [v,max,name] of [[x,this.NX,'x'],[y,this.NY,'y'],[z,this.NZ,'z']]){
+   if(!Number.isInteger(v)||v<0||v>=max)throw new RangeError(name+' out of range');
+  }
+  return x+this.NX*(y+this.NY*z);
+ }
+ coord(address){
+  if(!Number.isInteger(address)||address<0||address>=this.totalBytes)throw new RangeError('address out of range');
+  const z=Math.floor(address/(this.NX*this.NY));address%=this.NX*this.NY;
+  const y=Math.floor(address/this.NX),x=address%this.NX;return{x,y,z};
+ }
+ setRunning(v){this.running=Boolean(v)}
+ setRecurrence(v){this.recurrence=Boolean(v)}
+ step(){
+  this.stage=(this.stage+1)%this.stages.length;
+  if(this.stage===1)this.plane=(this.plane+64)%this.NZ;
+  if(this.stage===5)this.candidateResidual=Math.max(.000001,this.residual*this.damping);
+  if(this.stage===6)this.decision=this.candidateResidual<=this.residual?'COMMIT':'ROLLBACK';
+  if(this.stage===7){
+   if(this.decision==='COMMIT')this.residual=this.candidateResidual;
+   else this.damping=Math.max(.25,this.damping*.9);
+   this.iteration++;
+   if(!this.recurrence){this.stage=0;this.running=false;}
+  }
+ }
+ advance(dt,speed=1){
+  if(!Number.isFinite(dt)||dt<0)throw new RangeError('dt');
+  if(!Number.isFinite(speed)||speed<=0||speed>16)throw new RangeError('speed');
+  if(!this.running)return 0;
+  this.accumulator+=dt*speed;let n=0;
+  while(this.accumulator>=.42&&n<32){this.accumulator-=.42;this.step();n++;}
+  return n;
+ }
+}
+if(typeof window!=='undefined')window.TiB3DModel=TiB3DModel;
+</script>
+
+<script id="tib3d-app">
+'use strict';
+(()=>{
+ const model=new TiB3DModel(),root=document.getElementById('app'),canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
+ const by=id=>document.getElementById(id),runBtn=by('runBtn'),stepBtn=by('stepBtn'),loopBtn=by('loopBtn'),resetBtn=by('resetBtn'),speed=by('speedInput'),speedOut=by('speedOut');
+ const panels=[...document.querySelectorAll('.stage')];let w=1,h=1,dpr=1,raf=0,last=performance.now(),yaw=.18,pitch=.05;
+ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduce)model.setRunning(false);
+ function resize(){const r=canvas.getBoundingClientRect();w=Math.max(320,Math.floor(r.width));h=Math.max(360,Math.floor(r.height));dpr=Math.min(2,devicePixelRatio||1);canvas.width=Math.floor(w*dpr);canvas.height=Math.floor(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
+ function proj(x,y,z,cx,cy,s){const X=(x-y)*s,Y=(x+y)*s*.48-z*s;return[cx+X*Math.cos(yaw)-Y*Math.sin(pitch)*.08,cy+Y]}
+ function line(a,b,c,l=1,A=1){ctx.globalAlpha=A;ctx.strokeStyle=c;ctx.lineWidth=l;ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.stroke();ctx.globalAlpha=1}
+ function poly(p,fill,stroke,A=.15){ctx.globalAlpha=A;ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.beginPath();ctx.moveTo(...p[0]);for(let i=1;i<p.length;i++)ctx.lineTo(...p[i]);ctx.closePath();ctx.fill();ctx.stroke();ctx.globalAlpha=1}
+ function cube(cx,cy,size,zf,color,label){
+  const H=size*1.15,s=3.05,p=(x,y,z)=>proj(x,y,z,cx,cy,s);
+  const a=p(0,0,0),b=p(size,0,0),c=p(size,size,0),d=p(0,size,0),A=p(0,0,H),B=p(size,0,H),C=p(size,size,H),D=p(0,size,H);
+  poly([A,B,C,D],color,color,.08);poly([a,b,B,A],color,color,.035);poly([a,d,D,A],color,color,.025);
+  [[a,b],[b,c],[c,d],[d,a],[A,B],[B,C],[C,D],[D,A],[a,A],[b,B],[c,C],[d,D]].forEach(e=>line(e[0],e[1],color,1.2,.9));
+  for(let i=1;i<8;i++){let q=size*i/8;line(p(q,0,0),p(q,0,H),color,.5,.2);line(p(0,q,0),p(0,q,H),color,.5,.2)}
+  const z=H*zf;poly([p(0,0,z),p(size,0,z),p(size,size,z),p(0,size,z)],color,color,.28);
+  ctx.fillStyle='#e2e8f0';ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillText(label,cx,cy+H*s+28);
+ }
+ function latent(cx,cy,t){for(let r=7;r>=1;r--){ctx.strokeStyle=r%2?'#a78bfa':'#22d3ee';ctx.globalAlpha=.1+r*.055;ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(cx,cy,14+r*8,(14+r*8)*.47,Math.sin(t*.3+r)*.25,0,Math.PI*2);ctx.stroke()}ctx.globalAlpha=1;for(let i=0;i<24;i++){let a=i/24*Math.PI*2+t*.5,rr=18+(i%6)*7;ctx.fillStyle=i%2?'#a78bfa':'#22d3ee';ctx.beginPath();ctx.arc(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr*.48,2.2,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#e2e8f0';ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillText('LATENT Z',cx,cy+82)}
+ function arrow(x1,y1,x2,y2,c,label){line([x1,y1],[x2,y2],c,2,.9);const a=Math.atan2(y2-y1,x2-x1),L=9;ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-Math.cos(a-.45)*L,y2-Math.sin(a-.45)*L);ctx.lineTo(x2-Math.cos(a+.45)*L,y2-Math.sin(a+.45)*L);ctx.closePath();ctx.fill();ctx.fillStyle='#94a3b8';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(label,(x1+x2)/2,(y1+y2)/2-7)}
+ function draw(){
+  ctx.clearRect(0,0,w,h);const bg=ctx.createRadialGradient(w*.5,h*.45,10,w*.5,h*.45,Math.max(w,h)*.65);bg.addColorStop(0,'#10243d');bg.addColorStop(1,'#020617');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  const zf=model.plane/(model.NZ-1),left=w*.19,mid=w*.5,right=w*.81,cy=h*.52,size=Math.max(28,Math.min(43,w/22)),t=performance.now()/1000;
+  cube(left,cy,size,zf,'#38bdf8','INPUT X');latent(mid,cy-38,t);cube(right,cy,size,zf,'#f59e0b','RECONSTRUCTION X̂');
+  arrow(left+size*2.6,cy-60,mid-75,cy-60,'#22d3ee','encode Eθ');arrow(mid+75,cy-60,right-size*2.6,cy-60,'#f59e0b','decode Dφ');
+  arrow(right-30,cy+120,mid+45,cy+145,'#fb7185','residual');arrow(mid-45,cy+145,left+35,cy+120,'#a78bfa','feedback');
+  ctx.fillStyle='#64748b';ctx.fillRect(24,28,w-48,8);ctx.fillStyle='#38bdf8';ctx.fillRect(24,28,(w-48)*zf,8);ctx.fillStyle='#94a3b8';ctx.font='11px ui-monospace,monospace';ctx.textAlign='left';ctx.fillText('Z-plane stream '+model.plane.toLocaleString()+' / 16,383',24,20);
+  const packetPhase=(model.stage+.35)/8;ctx.fillStyle='#e0f2fe';ctx.beginPath();ctx.arc(40+(w-80)*packetPhase,h*.18,5,0,Math.PI*2);ctx.fill();
+ }
+ function refresh(){by('planeMetric').textContent=model.plane.toLocaleString()+' / 16,383';by('stageMetric').textContent=model.stages[model.stage];by('iterMetric').textContent=String(model.iteration);by('resMetric').textContent=model.residual.toFixed(6);by('decisionMetric').textContent=model.decision;panels.forEach((p,i)=>p.classList.toggle('active',i===model.stage));runBtn.textContent=model.running?'Pause':'Resume';runBtn.setAttribute('aria-pressed',String(model.running));loopBtn.textContent=model.recurrence?'Recurrence on':'Recurrence off';loopBtn.setAttribute('aria-pressed',String(model.recurrence))}
+ function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;model.advance(dt,Number(speed.value));refresh();draw();raf=requestAnimationFrame(frame)}
+ runBtn.addEventListener('click',()=>{model.setRunning(!model.running);refresh()});stepBtn.addEventListener('click',()=>{model.setRunning(false);model.step();refresh();draw()});loopBtn.addEventListener('click',()=>{model.setRecurrence(!model.recurrence);refresh()});resetBtn.addEventListener('click',()=>{model.reset();if(reduce)model.setRunning(false);refresh();draw()});speed.addEventListener('input',()=>speedOut.textContent=Number(speed.value).toFixed(2)+'×');
+ canvas.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')yaw-=.05;else if(e.key==='ArrowRight')yaw+=.05;else if(e.key==='ArrowUp')pitch-=.03;else if(e.key==='ArrowDown')pitch+=.03;else return;e.preventDefault();draw()});
+ const ro=new ResizeObserver(()=>{resize();draw()});ro.observe(canvas);resize();refresh();draw();raf=requestAnimationFrame(frame);addEventListener('pagehide',()=>{cancelAnimationFrame(raf);ro.disconnect()},{once:true});
+ window.getTiB3DTelemetry=()=>({NX:model.NX,NY:model.NY,NZ:model.NZ,planeBytes:model.planeBytes,totalBytes:model.totalBytes,targetGBps:model.targetGBps,targetSweepSeconds:model.targetSweepSeconds,stage:model.stages[model.stage],plane:model.plane,iteration:model.iteration,residual:model.residual,decision:model.decision});
+})();
+</script>
+</body>
+</html>
