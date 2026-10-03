@@ -32,6 +32,7 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_RECURSIVE_AUTOENCODING_EQUATION.md`
 - `docs/DR_MOAGI_3D_META_OPTIMIZER.md`
 - `docs/research/DR_MOAGI_3D_BIT_SELF_LOOP.md`
+- `docs/adr/0034-exact-bitwise-fixed-point-verification.md`
 - `cpp_runtime/include/jarvisx/bit_self_loop3d.hpp`
 - `cpp_runtime/tests/bit_self_loop3d_tests.cpp`
 - `docs/DR_MOAGI_MONADIC_RESONATOR.md`
@@ -132,13 +133,16 @@ The bit-level inward self-loop is the binary specialization of the same family c
   -> bounded Hamming refinement
   -> exact reference reconstruction
   -> XOR/Hamming error field
+  -> exact popcount(F(B) XOR B) fixed-point residual
+  -> 1,000,000-bit pathway verification bitmap where applicable
+  -> masked Omega writes + hysteretic activity gating
   -> staged Omega / Theta / Pi candidates
   -> Pi_Lambda verification
   -> commit OR rollback
   -> re-encode verified state and recur
 ```
 
-The XOR shell is lossless only when its residual words are retained. Learned, quantized or pruned implementations must report the distortion introduced by any discarded information.
+The XOR shell is lossless only when its residual words are retained. Learned, quantized or pruned implementations must report the distortion introduced by any discarded information. ADR-034 further requires the bit-level implementation to distinguish exact binary closure from floating-point tolerance, mathematical invariants from parity/checksum integrity, and saturating spatial contraction from ordinary right-shift semantics.
 
 ## Attribution inheritance rule
 
