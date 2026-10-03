@@ -774,3 +774,54 @@ physical spacetime quantities.
 NEXUS-3D, defined by ADR-028, is the associated GUI/media projection surface.
 It may visualize multimodal outputs and measured browser/media telemetry, but it
 is not an alternate authoritative cognitive-state channel.
+
+
+---
+
+# 15. Active Multimodal Evidence Permeation
+
+ADR-024 elevates retrieval from optional context augmentation to an explicit
+epistemic precondition whenever an operation declares externally grounded
+evidence requirements.
+
+The cognitive path becomes:
+
+```text
+query / world-state need
+ -> retrieve multimodal evidence
+ -> localize time / 2D / 3D region
+ -> preserve modality + provenance + confidence
+ -> shared evidence encoding
+ -> inward evidence fixed point
+ -> CTR evidence gate
+ -> re-acquire missing modality when uncertain
+ -> cognitive candidate generation
+ -> operational verification
+ -> COMMIT / ROLLBACK
+```
+
+The authoritative gate is therefore conjunctive:
+
+```text
+V_total =
+    V_evidence
+    AND V_type
+    AND V_resource
+    AND V_fixed_point
+    AND V_reconstruction
+    AND V_policy
+    AND V_integrity
+```
+
+When a required modality is unavailable, uncertainty remains explicit and the
+system must preserve the current authoritative state or acquire more evidence.
+Internal convergence is not permitted to compensate for missing external
+observation.
+
+A media evidence record remains distinct from native media bytes. Audio
+metadata, for example, may identify a time interval and provenance without
+containing the waveform. Native adapters must materialize the actual bytes when
+downstream reasoning requires acoustic evidence.
+
+Reference integration:
+`jarvisx.evidence_grounded_operational.EvidenceGroundedOperationalController`.

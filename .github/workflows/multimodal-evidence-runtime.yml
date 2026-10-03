@@ -4,15 +4,21 @@ on:
   push:
     paths:
       - "src/jarvisx/multimodal_evidence_runtime.py"
+      - "src/jarvisx/evidence_grounded_operational.py"
       - "tests/test_multimodal_evidence_runtime.py"
+      - "tests/test_evidence_grounded_operational.py"
       - "docs/research/MULTIMODAL_EVIDENCE_RUNTIME.md"
+      - "docs/adr/0024-active-multimodal-evidence-permeation.md"
       - ".github/workflows/multimodal-evidence-runtime.yml"
       - "pyproject.toml"
   pull_request:
     paths:
       - "src/jarvisx/multimodal_evidence_runtime.py"
+      - "src/jarvisx/evidence_grounded_operational.py"
       - "tests/test_multimodal_evidence_runtime.py"
+      - "tests/test_evidence_grounded_operational.py"
       - "docs/research/MULTIMODAL_EVIDENCE_RUNTIME.md"
+      - "docs/adr/0024-active-multimodal-evidence-permeation.md"
       - ".github/workflows/multimodal-evidence-runtime.yml"
       - "pyproject.toml"
   workflow_dispatch:
@@ -33,37 +39,67 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install -e ".[test]"
 
-      - name: Compile runtime
-        run: python -m py_compile src/jarvisx/multimodal_evidence_runtime.py
+      - name: Compile runtimes
+        run: |
+          python -m py_compile src/jarvisx/multimodal_evidence_runtime.py
+          python -m py_compile src/jarvisx/evidence_grounded_operational.py
 
-      - name: Test runtime
-        run: pytest tests/test_multimodal_evidence_runtime.py -q --no-cov
+      - name: Test runtime and operational bridge
+        run: |
+          pytest tests/test_multimodal_evidence_runtime.py -q --no-cov
+          pytest tests/test_evidence_grounded_operational.py -q --no-cov
 
-      - name: Execute deterministic reference run
+      - name: Execute deterministic retrieval reference run
         run: |
           python -m jarvisx.multimodal_evidence_runtime \
             --output artifacts/multimodal-evidence-runtime.json
           python -m json.tool artifacts/multimodal-evidence-runtime.json >/dev/null
 
-      - name: Verify receipt boundary
+      - name: Execute evidence-grounded operational bridge
+        run: |
+          python -m jarvisx.evidence_grounded_operational \
+            --out artifacts/evidence-grounded
+          python -m json.tool artifacts/evidence-grounded/evidence-grounded-summary.json >/dev/null
+
+      - name: Verify receipts and claim boundary
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          path = Path("artifacts/multimodal-evidence-runtime.json")
-          report = json.loads(path.read_text())
-          assert report["schema_version"] == "jarvisx.multimodal-evidence-runtime.v1"
-          assert "production media decoding" in report["claim_boundary"]["adapter_boundary"]
+          retrieval = json.loads(
+              Path("artifacts/multimodal-evidence-runtime.json").read_text()
+          )
+          grounded = json.loads(
+              Path(
+                  "artifacts/evidence-grounded/evidence-grounded-summary.json"
+              ).read_text()
+          )
+
+          assert retrieval["schema_version"] == "jarvisx.multimodal-evidence-runtime.v1"
+          assert "production media decoding" in (
+              retrieval["claim_boundary"]["adapter_boundary"]
+          )
           assert any(
               row["segment"]["modality"] == "audio"
               and row["segment"]["time_span"] is not None
-              for row in report["evidence"]
+              for row in retrieval["evidence"]
+          )
+
+          assert grounded["schema_version"] == (
+              "jarvisx.evidence-grounded-operational.v1"
+          )
+          assert grounded["evidence_gate"]["accepted"] is True
+          assert grounded["selected_verification"]["valid"] is True
+          assert "metadata is not substituted" in (
+              grounded["claim_boundary"]["not_implied"]
           )
           PY
 
       - uses: actions/upload-artifact@v4
         with:
           name: multimodal-evidence-runtime
-          path: artifacts/multimodal-evidence-runtime.json
+          path: |
+            artifacts/multimodal-evidence-runtime.json
+            artifacts/evidence-grounded/
           retention-days: 90
