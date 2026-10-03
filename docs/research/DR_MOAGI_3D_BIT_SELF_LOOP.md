@@ -281,6 +281,19 @@ Canonical systems principle:
 
 Stable regions may remain sparse or compressed. High-error regions may be refined more deeply, subject to `Pi_runtime` and `Pi_Lambda`.
 
+To prevent activation chatter, the reference bit substrate uses hysteretic
+thresholds:
+
+```text
+inactive -> active  only when error > epsilon_on
+active   -> inactive only when error < epsilon_off
+
+epsilon_on > epsilon_off
+```
+
+The gap between `epsilon_off` and `epsilon_on` preserves the previous activity
+state, avoiding rapid activate/deactivate oscillation near a single threshold.
+
 ### 8.1 Million-pathway verification bitmap
 
 For the one-million-pathway verification profile, the canonical evidence mask is
