@@ -1,0 +1,45 @@
+name: DM3D Bytecode Runtime
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "cpp_runtime/dm3d_bytecode/**"
+      - ".github/workflows/dm3d-bytecode-runtime.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "cpp_runtime/dm3d_bytecode/**"
+      - ".github/workflows/dm3d-bytecode-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Configure
+        run: cmake -S cpp_runtime/dm3d_bytecode -B build/dm3d-bytecode -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build bytecode and VM
+        run: cmake --build build/dm3d-bytecode --parallel
+
+      - name: Verify bytecode size
+        run: |
+          test "$(stat -c%s build/dm3d-bytecode/dm3d_system.bc)" -eq 136
+
+      - name: Execute recursive VM
+        run: |
+          build/dm3d-bytecode/dm3d_vm build/dm3d-bytecode/dm3d_system.bc | tee dm3d.log
+          test "$(grep -c '^\[EMIT\]' dm3d.log)" -eq 4
+          grep -q '^\[EOS\]' dm3d.log
+
+      - name: CTest
+        run: ctest --test-dir build/dm3d-bytecode --output-on-failure
