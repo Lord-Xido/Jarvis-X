@@ -12,7 +12,7 @@ const palettes={
  light:{background:'rgb(255, 255, 255)',foreground:'rgb(26, 28, 31)',card:'rgb(244, 244, 244)',border:'rgba(26, 28, 31, 0.15)','muted-foreground':'rgb(98, 99, 102)','viz-series-1':'rgb(51, 156, 255)','viz-series-2':'rgb(243, 136, 59)','viz-series-3':'rgb(93, 201, 119)','viz-series-4':'rgb(235, 119, 177)'},
  dark:{background:'rgb(24, 24, 24)',foreground:'rgb(255, 255, 255)',card:'rgb(38, 38, 38)',border:'rgba(255, 255, 255, 0.18)','muted-foreground':'rgb(162, 162, 162)','viz-series-1':'rgb(131, 195, 255)','viz-series-2':'rgb(245, 154, 86)','viz-series-3':'rgb(116, 213, 139)','viz-series-4':'rgb(240, 143, 192)'}
 };
-function mount({theme='light',width=736,faultEdge=0,blockedStorage=false,persisted=null}={}){
+function mount({theme='light',width=736,faultEdge=0,roundCopies=false,blockedStorage=false,persisted=null}={}){
  let virtualTime=0,timerID=0,rafID=0;const timers=new Map(),rafs=new Map(),resizeCallbacks=[],storage=new Map();
  if(persisted)storage.set('chromium-3d-inward-policy-v1',persisted);
  class E{
@@ -22,7 +22,15 @@ function mount({theme='light',width=736,faultEdge=0,blockedStorage=false,persist
    children.forEach(c=>this.append(c));
    if(tag==='canvas'){
     this.canvas=createCanvas(Number(attrs.width)||1,Number(attrs.height)||1);const context=this.canvas.getContext('2d');
-    this.proxy=new Proxy(context,{get:(target,key)=>{const v=target[key];if(typeof v!=='function')return v;if(key==='drawImage')return(image,...args)=>{const native=image.canvas||image;if(faultEdge && native.width===faultEdge && native.height<=faultEdge)return;return target.drawImage(native,...args);};return v.bind(target);},set:(target,key,value)=>{target[key]=value;return true;}});
+    this.proxy=new Proxy(context,{get:(target,key)=>{const v=target[key];if(typeof v!=='function')return v;if(key==='drawImage')return(image,...args)=>{
+      const native=image.canvas||image;if(faultEdge && native.width===faultEdge && native.height<=faultEdge)return;
+      const result=target.drawImage(native,...args);
+      if(roundCopies && native.width<=128 && native.height<=128 && this.canvas.width===320 && this.canvas.height===226){
+       const x=Math.max(0,Math.min(319,args[0])),y=Math.max(26,Math.min(225,args[1])),pixel=target.getImageData(x,y,1,1);
+       pixel.data[0]^=1;target.putImageData(pixel,x,y);
+      }
+      return result;
+     };if(key==='putImageData')return(pixels,...args)=>{if(faultEdge && pixels.width===faultEdge && pixels.height<=faultEdge)return;return target.putImageData(pixels,...args);};return v.bind(target);},set:(target,key,value)=>{target[key]=value;return true;}});
    }
   }
   append(c){this.childNodes.push(c);c.parent=this;}
@@ -79,8 +87,15 @@ function mount({theme='light',width=736,faultEdge=0,blockedStorage=false,persist
  const faulty=mount({faultEdge:128});faulty.flush();const failure=faulty.api.feedback();assert.ok(failure.history.some(r=>r.policy.tile===128 && r.mismatchedPixels>0 && !r.accepted),'A candidate that drops tile pixels is rejected.');assert.notEqual(failure.policy.tile,128);assert.equal(faulty.api.snapshot().pixelDiff,0);assert.equal(faulty.api.snapshot().frameHash,originalHash);
  const poisoned=mount({faultEdge:128,persisted:JSON.stringify({tile:128,tightBounds:true,visibleOnly:true,reuseDocument:true,omega:[0,0,0,0]})});assert.equal(poisoned.api.snapshot().pixelDiff,0);assert.equal(poisoned.api.snapshot().policy.tile,64);assert.equal(poisoned.api.feedback().rollbacks,1);poisoned.auto(false);
  const blocked=mount({blockedStorage:true});blocked.flush();assert.equal(blocked.api.snapshot().pixelDiff,0);assert.ok(blocked.api.feedback().converged,'Blocked device storage does not stop the renderer.');
+ const rounded=mount({roundCopies:true,faultEdge:128});const roundedInitial=rounded.api.snapshot();
+ assert.equal(roundedInitial.compositionBackend,'rgba-copy');assert.equal(roundedInitial.pixelDiff,0);assert.equal(roundedInitial.frameHash,originalHash,'Byte-copy fallback preserves every reference pixel without tolerances.');
+ assert.ok(rounded.api.inspect(9).data.tileCopyFallback.mismatchedPixels>0);rounded.flush();
+ assert.ok(rounded.api.feedback().history.some(r=>r.policy.tile===128 && r.mismatchedPixels>0 && !r.accepted),'Byte-copy fallback still rejects dropped candidate tiles.');
+ assert.equal(rounded.api.snapshot().pixelDiff,0);assert.equal(rounded.api.snapshot().frameHash,originalHash);
+ rounded.auto(false);rounded.click('mutate');rounded.flush();rounded.click('scroll');const roundedScroll=rounded.flush();
+ assert.equal(roundedScroll.frameHash,reference.api.snapshot().frameHash,'Byte-copy dirty rows preserve viewport clipping and browser chrome on scroll.');
  const cancellation=mount();cancellation.click('optimise');assert.equal(cancellation.api.snapshot().optimising,true);cancellation.click('optimise');assert.equal(cancellation.api.snapshot().optimising,false);assert.equal(cancellation.api.snapshot().pixelDiff,0);cancellation.auto(false);
- const report={schemaVersion:1,status:'PASS',environment:{node:process.version,canvas:require('@napi-rs/canvas/package.json').version},initial,settled,feedback:f,replay,mutation,scroll,faultRejection:failure.history.filter(r=>r.mismatchedPixels>0),blockedStorage:true,policyPersistence:true,corruptStorage:true,livePolicyRollback:true,pause:true,isolatedProbes:true,scope:'Native software Canvas with HTMLParser-backed DOM adapter; native browser behavior is reported by the separate browser suite.'};
+ const report={schemaVersion:1,status:'PASS',environment:{node:process.version,canvas:require('@napi-rs/canvas/package.json').version},initial,settled,feedback:f,replay,mutation,scroll,faultRejection:failure.history.filter(r=>r.mismatchedPixels>0),byteCopyFallback:roundedInitial,byteCopyFaultRejection:true,byteCopyScroll:true,blockedStorage:true,policyPersistence:true,corruptStorage:true,livePolicyRollback:true,pause:true,isolatedProbes:true,scope:'Native software Canvas with HTMLParser-backed DOM adapter; native browser behavior is reported by the separate browser suite.'};
  fs.writeFileSync(OUT+'/inward-validation.json',JSON.stringify(report,null,2));
  console.log(JSON.stringify({status:'PASS',drawingCalls:[f.baseline.work.drawCalls,f.best.work.drawCalls],stageExecutions:[f.baseline.work.stageExecutions,f.best.work.stageExecutions],accepted:f.accepted,rejected:f.rejected,policy:f.policy,pixelsPerProbe:f.best.checkedPixels,livePixelDiff:settled.pixelDiff,contraction:[f.initialRadius,f.radius],faultsRejected:true,rollback:true,storage:true,nativeBrowser:false},null,2));
 })().catch(error=>{console.error(error);process.exitCode=1;});

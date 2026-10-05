@@ -1411,7 +1411,7 @@ body{margin:0;padding:16px}main{max-width:1000px;margin:0 auto}</style></head><b
       trace:[], records:[], skipped:[], rasterized:0,reused:0,pixelDiff:null,contentH:0,
       plan:stages.map((_,i)=>i),planIndex:0, playing:false,lastStageTime:0,stageDuration:850,
       yaw:-0.66,pitch:0.48,exploded:true,hit:[],width:0,height:0, raf:0, visible:true,
-      selectedTile:null, themeSignature:JSON.stringify(colors),policy:loadPolicy(),work:newWork(),lastDocumentKey:null,
+      selectedTile:null, themeSignature:JSON.stringify(colors),policy:loadPolicy(),work:newWork(),lastDocumentKey:null,exactTileCopy:false,
       feedback:{auto:true,busy:false,queued:0,timer:0,token:0,pass:0,iterations:0,accepted:0,rejected:0,depth:0,omega:loadOmega(),history:[],observations:[],baseline:null,best:null,tested:new Set(),state:'Ready',lastKey:null,probeMs:0,started:0,converged:false,rollbacks:0}
     };
     function hashString(text) { let h=2166136261; for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);} return (h>>>0).toString(16).padStart(8,'0'); }
@@ -1529,7 +1529,17 @@ body{margin:0;padding:16px}main{max-width:1000px;margin:0 auto}</style></head><b
       if(reference){c.translate(0,CH-scroll);executeList(c,commands);}
       else for(const q of quads){
         if(policy.visibleOnly && (q.y+q.h<=scroll || q.y>=scroll+VH))continue;
-        c.drawImage(q.canvas,q.x,CH+q.y-scroll);if(counters){counters.drawCalls++;counters.quadsDrawn++;}
+        const targetY=CH+q.y-scroll;
+        if(model.exactTileCopy){
+          // Some engines round text-edge colors during canvas drawImage copies.
+          // Copy the candidate tile's own RGBA bytes, never reference pixels.
+          // putImageData ignores clipping, so explicitly constrain dirty rows
+          // to the document viewport before the browser chrome is drawn.
+          const pixels=q.canvas.getContext('2d').getImageData(0,0,q.w,q.h);
+          const top=Math.max(0,CH-targetY),bottom=Math.min(q.h,CH+VH-targetY);
+          c.putImageData(pixels,q.x,targetY,0,Math.min(q.h,top),q.w,Math.max(0,bottom-top));
+        }else c.drawImage(q.canvas,q.x,targetY);
+        if(counters){counters.drawCalls++;counters.quadsDrawn++;}
       }
       c.restore();browserChrome(c,counters);
     }
@@ -1567,7 +1577,9 @@ body{margin:0;padding:16px}main{max-width:1000px;margin:0 auto}</style></head><b
           job(()=>rasterTiles(tiles,cache,work));
           const quads=job(()=>tiles.map(t=>({id:t.id,x:t.x,y:t.y,w:t.w,h:t.h,canvas:t.canvas})));
           documentState={key:s.key,committed,quads};maxTiles=Math.max(maxTiles,tiles.length);
-          peakPixelBytes=Math.max(peakPixelBytes,tiles.reduce((sum,t)=>sum+t.w*t.h*4,0)+2*W*(VH+CH)*4);
+          // Conservatively count one frame's temporary tile byte arrays when
+          // the verified composition transport requires exact RGBA copies.
+          peakPixelBytes=Math.max(peakPixelBytes,tiles.reduce((sum,t)=>sum+t.w*t.h*4,0)*(model.exactTileCopy?2:1)+2*W*(VH+CH)*4);
         }
         job(()=>drawFrame(output,documentState.committed,documentState.quads,request.scroll,false,policy,work));
         // Independent full-list rendering never uses the candidate's tile selection.
@@ -1683,10 +1695,15 @@ body{margin:0;padding:16px}main{max-width:1000px;margin:0 auto}</style></head><b
           data={surfaces:['browser chrome','page tiles'],target:'back buffer',scroll:model.pendingScroll,backBuffer:[W,VH+CH],bytes:W*(VH+CH)*4};break;
         case 9:{
           assemble(true);
-          let checked=comparePixels(model.back,model.reference),rollback=null;
+          let checked=comparePixels(model.back,model.reference),rollback=null,tileCopyFallback=null;
           if(checked.diff && JSON.stringify(model.policy)!==JSON.stringify(DEFAULT_POLICY)){
             rollback={rejectedPolicy:{...model.policy},mismatchedPixels:checked.diff};model.feedback.rollbacks++;
             model.policy={...DEFAULT_POLICY};model.cache.clear();for(const stage of [5,6,7,8])executeStage(stage);
+            checked=comparePixels(model.back,model.reference);
+          }
+          if(checked.diff && !model.exactTileCopy){
+            tileCopyFallback={mismatchedPixels:checked.diff,transport:'exact RGBA tile bytes'};
+            model.exactTileCopy=true;executeStage(8);
             checked=comparePixels(model.back,model.reference);
           }
           model.pixelDiff=checked.diff;
@@ -1694,7 +1711,7 @@ body{margin:0;padding:16px}main{max-width:1000px;margin:0 auto}</style></head><b
             model.frameHash=pixelHash(checked.actual);const previous=model.front;model.front=model.back;model.back=previous;model.scroll=model.pendingScroll;model.frameNo++;
             model.lastDocumentKey=documentKey();
           }
-          data={frame:model.frameNo,frontBufferHash:model.frameHash,pixelsChecked:W*(VH+CH),mismatchedPixels:checked.diff,presented:checked.diff===0,rollback,swap:checked.diff?'held previous verified frame':'back → front',skipped:model.skipped.map(n=>stages[n].name),work:{...model.work}};break;
+          data={frame:model.frameNo,frontBufferHash:model.frameHash,pixelsChecked:W*(VH+CH),mismatchedPixels:checked.diff,presented:checked.diff===0,rollback,tileCopyFallback,swap:checked.diff?'held previous verified frame':'back → front',skipped:model.skipped.map(n=>stages[n].name),work:{...model.work}};break;
         }
       }
       const ms=performance.now()-start;
@@ -1923,7 +1940,7 @@ body{margin:0;padding:16px}main{max-width:1000px;margin:0 auto}</style></head><b
     resize();
     // Read-only diagnostics also make the actual emulator data inspectable.
     root.crEmulator={
-      snapshot:()=>({stage:model.selected,stageName:stages[model.selected]?.name,frame:model.frameNo,revision:model.revision,scroll:model.scroll,contentHeight:model.contentH,nodes:model.dom?.count||0,boxes:model.boxes.length,commands:model.committed.length,tiles:model.tiles.length,rasterized:model.rasterized,reused:model.reused,pixelDiff:model.pixelDiff,frameHash:model.frameHash,playing:model.playing,skipped:model.skipped.slice(),yaw:model.yaw,pitch:model.pitch,exploded:model.exploded,plan:model.plan.slice(),policy:{...model.policy},work:{...model.work},optimising:model.feedback.busy,feedbackQueued:!!model.feedback.queued,execution:model.records.filter(Boolean).map(r=>({stage:r.stage,ms:r.executionMs})),corePixelBytes:model.tiles.reduce((s,t)=>s+t.w*t.h*4,0)+3*W*(VH+CH)*4,viewPixelBytes:scene.width*scene.height*4+W*(VH+CH)*4,logicalCells:1024**3}),
+      snapshot:()=>({stage:model.selected,stageName:stages[model.selected]?.name,frame:model.frameNo,revision:model.revision,scroll:model.scroll,contentHeight:model.contentH,nodes:model.dom?.count||0,boxes:model.boxes.length,commands:model.committed.length,tiles:model.tiles.length,rasterized:model.rasterized,reused:model.reused,pixelDiff:model.pixelDiff,frameHash:model.frameHash,playing:model.playing,skipped:model.skipped.slice(),yaw:model.yaw,pitch:model.pitch,exploded:model.exploded,plan:model.plan.slice(),policy:{...model.policy},work:{...model.work},compositionBackend:model.exactTileCopy?'rgba-copy':'canvas-copy',optimising:model.feedback.busy,feedbackQueued:!!model.feedback.queued,execution:model.records.filter(Boolean).map(r=>({stage:r.stage,ms:r.executionMs})),corePixelBytes:model.tiles.reduce((s,t)=>s+t.w*t.h*4,0)+3*W*(VH+CH)*4,viewPixelBytes:scene.width*scene.height*4+W*(VH+CH)*4,logicalCells:1024**3}),
       inspect:i=>JSON.parse(JSON.stringify(model.records[i] || null)),
       pixels:()=>Array.from(model.front.getContext('2d').getImageData(0,0,W,VH+CH).data),
       trace:()=>model.trace.map(t=>({...t})),

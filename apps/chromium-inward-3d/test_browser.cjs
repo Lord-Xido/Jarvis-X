@@ -60,6 +60,11 @@ async function newPage(browser, profile = {}, seed = {}) {
         if (image instanceof HTMLCanvasElement && image.width === 128 && image.height <= 128) return;
         return drawImage.call(this, image, ...args);
       };
+      const putImageData = CanvasRenderingContext2D.prototype.putImageData;
+      CanvasRenderingContext2D.prototype.putImageData = function (pixels, ...args) {
+        if (pixels.width === 128 && pixels.height <= 128) return;
+        return putImageData.call(this, pixels, ...args);
+      };
     }
   }, {policyKey, ...seed});
   return {page, context, errors, externalRequests};
@@ -131,8 +136,8 @@ async function run() {
         const click = action => profile.options.hasTouch ? page.locator(`[data-action="${action}"]`).tap() : page.locator(`[data-action="${action}"]`).click();
         await click('run'); await completeFrame(page);
         const replay = (await read(page)).snapshot;
-        assert.deepEqual(replay.plan, [0, 8, 9]);
-        assert.equal(replay.work.stageExecutions, 3);
+        assert.deepEqual(replay.plan, replay.policy.reuseDocument ? [0, 8, 9] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        assert.equal(replay.work.stageExecutions, replay.policy.reuseDocument ? 3 : 10);
         assert.equal(replay.rasterized, 0);
         assert.equal(replay.frameHash, tuned.snapshot.frameHash);
         await click('mutate'); await click('run');
@@ -227,7 +232,14 @@ async function run() {
         assert.ok(result.snapshot.frame >= 1);
         if (test.seed.fault) {
           assert.notEqual(result.snapshot.policy.tile, 128);
-          assert.ok(result.feedback.history.some(r => r.policy.tile === 128 && r.mismatchedPixels > 0 && !r.accepted), 'bad tile policy rejected');
+          // A slow engine may exhaust the bounded search budget before visiting
+          // 128px. Exercise that exact fault independently without changing the
+          // live image or extending the automatic controller's time budget.
+          const faultProbe = await m.page.evaluate(() => document.getElementById('chromium-rendering-3d').crEmulator.probePolicy({tile: 128, tightBounds: true, visibleOnly: true, reuseDocument: true}));
+          assert.equal(faultProbe.valid, false, 'dropped raster tiles cannot pass the independent verification gate');
+          assert.ok(faultProbe.mismatchedPixels > 0);
+          assert.equal((await read(m.page)).snapshot.frameHash, result.snapshot.frameHash);
+          result.faultProbe = faultProbe;
         }
         if (test.name === 'stored-policy-rollback') assert.ok(result.feedback.rollbacks > 0);
         assert.deepEqual(m.errors, []);

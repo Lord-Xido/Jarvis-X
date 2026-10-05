@@ -66,6 +66,12 @@ live policy retries the default 64px policy; any remaining mismatch holds the
 previous verified front buffer. Source/layout correctness is outside the pixel
 reference: both paths share the document parser, layout, and display list.
 
+If native Canvas-to-Canvas tile transport changes pixel values, the compositor
+retries using the raster tiles' own RGBA bytes and explicit viewport clipping.
+This preserves the independent full-list reference and the zero-difference gate;
+reference pixels are never substituted into candidate output. The snapshot names
+the selected `compositionBackend`; the Present receipt records any fallback.
+
 Each pass allows at most eight candidate probes plus its baseline. The 2,500ms
 compute budget is checked between probes and is a soft bound, so one probe can
 overshoot it. Probes are synchronous bounded work; timers yield between them.
@@ -76,7 +82,8 @@ Feedback packets rotate and contract in three spatial coordinates by `0.68^depth
 toward the controller core. Ω stores a four-value moving average of observed work,
 tile size, stage work, and pixel residual. This is a descriptive controller memory,
 not trained model weights. Optimization changes bounded policies, not source code.
-Counted calls exclude the independent reference render, verification, 3D view, and
+Counted calls include drawing and tile-copy submissions (`drawImage` or
+`putImageData`) and exclude the independent reference render, verification, 3D view, and
 tuning overhead. These counts are not FPS, latency, GPU throughput, or a speedup;
 probe elapsed time is reported separately.
 
@@ -119,7 +126,7 @@ npm run package
 The Canvas suite uses real software rasterization with a small Python HTMLParser
 DOM adapter. It checks pixel identity, bounded convergence, independent probes,
 document/tile reuse, mutation, scroll, 3D contraction, corrupted/blocked storage,
-candidate rejection, live rollback, and cancellation. Native browser tests run
+candidate rejection, live rollback, byte-copy fallback/clipping, and cancellation. Native browser tests run
 seven profiles per engine: desktop, mobile, injected bad tile rendering, poisoned
 stored policy, corrupt storage, blocked storage, and direct-file offline use.
 They also check responsive layout at 320px, controls, persistence, and pointer
