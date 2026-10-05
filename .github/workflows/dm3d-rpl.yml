@@ -1,0 +1,47 @@
+name: DM3D RPL
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "cpp_runtime/dm3d_rpl/**"
+      - ".github/workflows/dm3d-rpl.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "cpp_runtime/dm3d_rpl/**"
+      - ".github/workflows/dm3d-rpl.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S cpp_runtime/dm3d_rpl -B build/dm3d-rpl -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/dm3d-rpl --parallel
+
+      - name: Execute source program
+        run: |
+          build/dm3d-rpl/dm3d_rpl run cpp_runtime/dm3d_rpl/examples/multimodal.dm3d | tee source.log
+          grep -q '^\[FABRIC\] 1000000 x 1000000 = 1000000000000 logical positions' source.log
+          test "$(grep -c '^\[REFINE\]' source.log)" -ge 2
+          grep -q '^\[HALT\]' source.log
+
+      - name: Compile bytecode
+        run: build/dm3d-rpl/dm3d_rpl compile cpp_runtime/dm3d_rpl/examples/multimodal.dm3d build/dm3d-rpl/pipeline.bc
+
+      - name: Execute compiled bytecode
+        run: |
+          build/dm3d-rpl/dm3d_rpl exec build/dm3d-rpl/pipeline.bc | tee bytecode.log
+          test "$(grep -c '^\[EMIT\]' bytecode.log)" -eq 3
+          grep -q '^\[HALT\]' bytecode.log
+
+      - name: CTest
+        run: ctest --test-dir build/dm3d-rpl --output-on-failure
