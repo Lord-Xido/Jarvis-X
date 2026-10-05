@@ -8,6 +8,10 @@ The project follows semantic versioning where practical during alpha development
 
 ### Added
 
+- Chromium Inward 3D offline browser demonstration with an executable rendering
+  pipeline, bounded pixel-verified policy optimization, inward 3D feedback,
+  corrupted-policy rollback, native browser validation and checksum packaging;
+
 - bounded C++17 million-pathway self-verifying inward reference with aligned heap
   SoA storage, optional OpenMP, independent numerical audits, convergence-gated
   pruning, JSON receipts and regression/CLI checks;

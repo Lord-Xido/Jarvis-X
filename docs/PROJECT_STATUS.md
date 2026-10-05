@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-10-02
+**Last reviewed:** 2026-10-05
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -48,6 +48,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Septillion³ recursive swarm AE/AD | Integration candidate | `dr_moagi_septillion_swarm.py`, `test_dr_moagi_septillion_swarm.py`, ADR-021 | `10^72` sites are virtual addressing semantics; only the bounded active swarm is resident; local decoder adaptation is verification-gated and does not establish pretrained model quality |
 | Trillion³ kinetic hyper-swarm | Reference laboratory | `dr_moagi_trillion3_kinetic_swarm.py`, `test_dr_moagi_trillion3_kinetic_swarm.py`, ADR-024 | `10^36` sites and `10^48` logical parameter-address positions are virtual semantics; only a bounded active 3D block is resident; local aggregation is not Byzantine consensus and manifold projection does not establish semantic truth |
 | Hyperscale Geometric VM | Demonstration | `apps/hyperscale-geometric-vm/`, numerical tests and browser smoke workflow | 64,000 simulated particles; 4,000 drawn in Canvas fallback; exponent tower is symbolic, radial summary is untrained, and no canonical VM state is changed |
+| Chromium Inward 3D | Demonstration | `apps/chromium-inward-3d/`, Canvas invariants, native Chromium/WebKit workflow and offline bundle | bounded HTML/CSS rendering with independent pixel verification and finite adaptive policy search; 1024³ is a logical sparse map; counted calls are not measured speedup; no canonical VM state or source code is changed |
 | 3D Cyber-IDE Pixel Engine | Demonstration | `apps/cyber-ide-3d/`, deterministic model tests and scoped workflow | 1,000,000 LOC and 10^12 LOC/s are architectural/emulation arithmetic; the browser processes 2,500 bounded towers and reports measured rendering separately; no canonical VM state is changed |\n| 6400³ logical worker fabric | Reference laboratory / canonical geometry profile | `src/jarvisx/dr_moagi_worker_fabric.py`, `tests/test_dr_moagi_worker_fabric.py`, `docs/DR_MOAGI_6400_CUBE_WORKER_FABRIC.md`, ADR-032, ANN IDE API/container CI | exactly 262,144,000,000 logical worker coordinates partitioned into 1,000,000 64³-worker bricks; only bounded active workers and resident bricks execute through a bounded physical pool; logical cardinality is not physical parallelism |
 
 ## Empirical evidence gate
