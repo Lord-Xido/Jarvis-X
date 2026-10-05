@@ -1,0 +1,25 @@
+fabric 1000000
+stream video video 16384
+stream audio audio 8192
+stream text text 2048
+stream depth depth 4096
+zeros omega 16384
+encode video -> zv 4096
+encode audio -> za 2048
+embed text -> zt 2048
+encode depth -> zd 2048
+fuse zv za -> zva
+fuse zva zt -> zvat
+fuse zvat zd -> latent
+map3d latent -> geom scale 0.985
+llm_attend geom -> semantic heads 8
+repeat 12 until residual rms 0.001 {
+  fold3d semantic omega -> semantic lambda 0.985
+  decode semantic -> recon 16384
+  residual video recon -> residual
+  omega omega residual beta 0.88
+}
+emit semantic
+emit recon
+emit residual
+halt
