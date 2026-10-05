@@ -104,6 +104,8 @@ async function run() {
       const {page, context} = m;
       try {
         await page.goto(baseURL, {waitUntil: 'load'});
+        await waitReady(page);
+        assert.equal((await read(page)).snapshot.pixelDiff, 0, 'the first frame verifies before automatic tuning');
         await settle(page);
         const tuned = await read(page), f = tuned.feedback;
         assert.equal(tuned.snapshot.pixelDiff, 0);
@@ -116,6 +118,7 @@ async function run() {
         assert.ok(f.radius < f.initialRadius / 50);
         assert.equal(tuned.snapshot.logicalCells, 1024 ** 3);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow');
+        await page.screenshot({path: path.join(output, profile.name + '.png'), fullPage: true});
         await autoOff(page);
         // Once loaded, operations require no network connection or assets.
         await context.setOffline(true);
@@ -183,7 +186,7 @@ async function run() {
           await page.setViewportSize({width: 320, height: 780});
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, '320px layout fits');
         }
-        await page.screenshot({path: path.join(output, profile.name + '.png'), fullPage: true});
+        await page.screenshot({path: path.join(output, profile.name + '-theme-switched.png'), fullPage: true});
         // Reload verifies the persisted policy on a fresh renderer before use.
         await context.setOffline(false);
         const stored = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), policyKey);

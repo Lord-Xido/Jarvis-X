@@ -1520,6 +1520,9 @@ body{margin:0;padding:16px}main{max-width:1000px;margin:0 auto}</style></head><b
     }
     function drawFrame(output,commands,quads,scroll,reference,policy,counters=null) {
       const c=output.getContext('2d');
+      // Tile texels map 1:1 to integer framebuffer pixels. Resampling adds
+      // unnecessary interpolation and engine-dependent rounding to this copy.
+      c.imageSmoothingEnabled=false;
       c.clearRect(0,0,output.width,output.height);c.fillStyle=colors.background;c.fillRect(0,0,output.width,output.height);
       if(counters)counters.drawCalls+=2;
       c.save();c.beginPath();c.rect(0,CH,W,VH);c.clip();
