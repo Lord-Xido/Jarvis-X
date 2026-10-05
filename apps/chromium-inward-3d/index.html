@@ -1,0 +1,1953 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>Chromium 3D Inward Feedback Emulator</title><style>:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Shared color and typography tokens for the standalone app. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 10px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'%3E%3Cpath d='M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z'/%3E%3C/svg%3E");
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html > body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+:root:not([data-app-block-surface], [data-visualize-standalone]) > body {
+  padding: 12px;
+}
+
+.cursor-interaction {
+  cursor: var(--cursor-interaction, pointer);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: var(--cursor-interaction, pointer);
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive > .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align="right"]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align="center"]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+.widget {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  box-shadow: 0 0 0 0.5px var(--border-strong, var(--border));
+  color: var(--foreground);
+  background: var(--background);
+}
+
+#widget > :not(.card, .widget, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The shared runtime owns data-tooltip; suppress AppBlock's pseudo-tooltip. */
+main [data-tooltip]::after {
+  content: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls > .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls > .form-label > :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover,
+.nav-link:not(:disabled):not([aria-disabled="true"]):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+/* Shared preview chrome; product styles stay inside each variant. */
+.viz-dotted-background {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--foreground) 14%, transparent) 0.8px,
+    transparent 0.8px
+  );
+  background-position: center;
+  background-size: 16px 16px;
+}
+
+.viz-carousel {
+  position: relative;
+  min-width: 0;
+}
+
+.viz-carousel:has(> .viz-carousel-controls) {
+  min-height: calc(60px + var(--viz-carousel-picker-height, 0px));
+  padding-bottom: 60px;
+}
+
+.viz-carousel > [data-variant][hidden] {
+  display: none !important;
+}
+
+.viz-carousel > [data-variant] {
+  isolation: isolate;
+}
+
+.viz-carousel-controls {
+  --viz-carousel-hover: light-dark(
+    color-mix(in srgb, var(--foreground) 5.4%, transparent),
+    color-mix(in srgb, var(--foreground) 7.8%, transparent)
+  );
+  position: absolute;
+  z-index: 2;
+  bottom: 8px;
+  left: 50%;
+  display: flex;
+  width: max-content;
+  /* Leave room for the host's design-controls launcher at the trailing edge. */
+  max-width: calc(100% - 96px);
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans);
+  /* Match the settings dropdown chrome independently of the content font size. */
+  font-size: 13px;
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+  transform: translateX(-50%);
+  user-select: none;
+}
+
+/* Keep authored mockup button styles out of the shared carousel chrome. */
+.viz-carousel-controls button,
+.viz-carousel-picker > summary {
+  display: flex !important;
+  height: auto !important;
+  min-height: 30px;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px;
+  padding: 0 6px !important;
+  -webkit-app-region: no-drag;
+  border: 0 !important;
+  border-radius: 14px !important;
+  color: inherit !important;
+  background: transparent !important;
+  font: inherit !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.viz-carousel-controls > button,
+.viz-carousel-picker > summary {
+  position: relative;
+  isolation: isolate;
+}
+
+.viz-carousel-controls > button {
+  --icon-size: 16px;
+  width: 30px !important;
+  padding: 0 !important;
+}
+
+.viz-carousel-picker > summary {
+  padding-inline: 12px !important;
+}
+
+.viz-carousel-controls .viz-carousel-caret {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin: 0;
+  color: inherit;
+  transform: rotate(180deg);
+}
+
+.viz-carousel-controls > button > svg,
+.viz-carousel-controls .viz-carousel-caret,
+.viz-carousel-count {
+  opacity: 0.5;
+}
+
+.viz-carousel-controls > button::before,
+.viz-carousel-picker > summary::before {
+  position: absolute;
+  z-index: -1;
+  inset: 3px;
+  border-radius: 12px;
+  content: "";
+  pointer-events: none;
+}
+
+.viz-carousel-controls > button:hover::before,
+.viz-carousel-picker > summary:hover::before {
+  background: var(--viz-carousel-hover);
+}
+
+.viz-carousel-controls > button,
+.viz-carousel-controls [data-lucide],
+.viz-carousel-controls .lucide {
+  flex-shrink: 0;
+}
+
+.viz-carousel-picker {
+  min-width: 0;
+}
+
+.viz-carousel-picker > summary {
+  min-width: 0;
+  list-style: none;
+}
+
+.viz-carousel-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.viz-carousel-count {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.viz-carousel-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viz-carousel-options {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  max-height: 240px;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+  box-shadow: 0 4px 12px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 25%));
+}
+
+.viz-carousel-options > button {
+  border-radius: max(0px, calc(var(--radius-lg) - 5px)) !important;
+  width: 100% !important;
+  min-height: 28px;
+  justify-content: flex-start !important;
+  padding: 4px 8px !important;
+  font-size: var(--font-size-small) !important;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.viz-carousel-options > [aria-current="true"],
+.viz-carousel-options > button:hover {
+  background: var(--viz-carousel-hover) !important;
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type="file"] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type="file"]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type="file"]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type="color"] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type="color"]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type="checkbox"]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: "";
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type="radio"]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: "";
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed="true"],
+  [aria-selected="true"],
+  .is-selected
+) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed="true"], [aria-selected="true"], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.viz-carousel-controls :is(button, summary):focus-visible {
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
+}
+
+@media (pointer: coarse) {
+  .viz-carousel:has(> .viz-carousel-controls) {
+    min-height: calc(76px + var(--viz-carousel-picker-height, 0px));
+    padding-bottom: 76px;
+  }
+
+  .btn,
+  .nav-link,
+  .viz-carousel-controls button,
+  .viz-carousel-picker > summary,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, var(--font-size-normal));
+  }
+
+  .form-control[type="file"]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type="color"] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type="date"],
+    [type="datetime-local"],
+    [type="month"],
+    [type="time"],
+    [type="week"]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: "";
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+
+  .form-range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+
+  .form-range::-moz-range-track {
+    height: 44px;
+  }
+
+  .form-range::-webkit-slider-thumb {
+    margin-top: 12px;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget > svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+body{margin:0;padding:16px}main{max-width:1000px;margin:0 auto}</style></head><body><main><div id="chromium-rendering-3d">
+  <style>
+    #chromium-rendering-3d { color: var(--foreground); }
+    #chromium-rendering-3d .cr-head { padding-right: 96px; margin-bottom: 12px; }
+    #chromium-rendering-3d .cr-head h2 { margin: 0 0 4px; }
+    #chromium-rendering-3d .cr-toolbar { margin-bottom: 12px; }
+    #chromium-rendering-3d .cr-view { position: relative; width: 100%; }
+    #chromium-rendering-3d .cr-scene { display: block; width: 100%; height: 470px; touch-action: pan-y; }
+    #chromium-rendering-3d .cr-caption { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 8px 0 12px; }
+    #chromium-rendering-3d .cr-phase { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+    #chromium-rendering-3d .cr-phase div { min-width: 0; }
+    #chromium-rendering-3d .cr-phase b { display: block; font-weight: 500; }
+    #chromium-rendering-3d .cr-track { background: var(--muted); height: 3px; margin-top: 6px; }
+    #chromium-rendering-3d .cr-track span { display: block; height: 100%; background: var(--viz-series-1); transition: width 180ms ease; }
+    #chromium-rendering-3d .cr-detail { margin-top: 12px; }
+    #chromium-rendering-3d .cr-detail summary { padding: 8px 0; }
+    #chromium-rendering-3d .cr-inspect { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+    #chromium-rendering-3d .cr-frame-output { display: block; width: 100%; max-width: 480px; height: auto; margin-top: 10px; }
+    #chromium-rendering-3d .cr-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+    #chromium-rendering-3d .cr-dot { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; }
+    #chromium-rendering-3d .cr-dot-browser { background: var(--viz-series-1); }
+    #chromium-rendering-3d .cr-dot-renderer { background: var(--viz-series-2); }
+    #chromium-rendering-3d .cr-dot-viz { background: var(--viz-series-3); }
+    #chromium-rendering-3d .cr-color-probe { position: absolute; visibility: hidden; pointer-events: none; }
+    #chromium-rendering-3d .cr-accessible { margin-top: 10px; }
+    #chromium-rendering-3d .cr-accessible label { display: block; }
+    @media (max-width: 520px) {
+      #chromium-rendering-3d .cr-scene { height: 440px; }
+      #chromium-rendering-3d .cr-phase { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      #chromium-rendering-3d .cr-head { padding-right: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #chromium-rendering-3d .cr-track span { transition: none; }
+    }
+  </style>
+  <div class="cr-head">
+    <h2>Chromium · inward feedback in 3D</h2>
+    <div class="text-small text-muted">Render → measure → contract → test → verify → adopt</div>
+  </div>
+  <div class="viz-controls cr-toolbar">
+    <button class="btn btn-primary" type="button" data-action="optimise">Inward optimise</button>
+    <button class="btn" type="button" data-action="run">Run</button>
+    <button class="btn" type="button" data-action="step">Step</button>
+    <button class="btn" type="button" data-action="mutate">Change heading</button>
+    <button class="btn" type="button" data-action="scroll">Scroll +24 px</button>
+    <label class="form-check">
+      <input class="form-check-input" data-action="auto" type="checkbox" checked>
+      <span class="form-check-label">Auto feedback</span>
+    </label>
+    <label class="form-check">
+      <input class="form-check-input" data-action="explode" type="checkbox" checked>
+      <span class="form-check-label">Exploded view</span>
+    </label>
+  </div>
+  <div class="cr-view">
+    <canvas class="cr-scene" role="img" aria-label="Rotatable three-dimensional browser, renderer and Viz stack, with ten execution stages and a live framebuffer." aria-describedby="cr-stage-detail">3D rendering pipeline. Use Run, Step, or the stage selector to inspect each transformation.</canvas>
+  </div>
+  <div class="cr-caption text-small">
+    <span>Drag to orbit · tap a numbered stage</span>
+    <span class="tabular-nums" data-stat="cache"></span>
+    <span class="tabular-nums" data-stat="pixels"></span>
+  </div>
+  <div class="cr-phase text-small" aria-label="Rendering phases">
+    <div><b>1 · Input</b><span class="text-muted">Browser</span><div class="cr-track"><span style="width:100%"></span></div></div>
+    <div><b>2 · Parse</b><span class="text-muted">DOM &amp; style</span><div class="cr-track"><span style="width:100%"></span></div></div>
+    <div><b>3 · Paint</b><span class="text-muted">Layout &amp; lists</span><div class="cr-track"><span style="width:100%"></span></div></div>
+    <div><b>4 · Commit</b><span class="text-muted">Layers &amp; tiles</span><div class="cr-track"><span style="width:100%"></span></div></div>
+    <div><b>5 · Raster</b><span class="text-muted">Tiles &amp; frame</span><div class="cr-track"><span style="width:100%"></span></div></div>
+    <div><b>6 · Present</b><span class="text-muted">Aggregate &amp; swap</span><div class="cr-track"><span style="width:100%"></span></div></div>
+  </div>
+  <div id="cr-stage-detail" aria-live="polite"></div>
+  <div class="text-small tabular-nums" data-output="feedback-status" aria-live="polite"></div>
+  <div class="cr-accessible">
+    <label class="form-label" for="cr-stage-select">Inspect stage</label>
+    <select class="form-select" id="cr-stage-select"></select>
+  </div>
+  <div class="cr-legend text-small">
+    <span><i class="cr-dot cr-dot-browser"></i>Browser process</span>
+    <span><i class="cr-dot cr-dot-renderer"></i>Renderer process</span>
+    <span><i class="cr-dot cr-dot-viz"></i>Viz / graphics</span>
+    <span><i class="cr-dot" style="background:var(--viz-series-4)"></i>Inward feedback · Ω</span>
+  </div>
+  <details class="cr-detail">
+    <summary class="cursor-interaction">Inspect optimisation decisions</summary>
+    <pre class="cr-inspect text-small"><code data-output="feedback-inspect"></code></pre>
+  </details>
+  <details class="cr-detail">
+    <summary class="cursor-interaction">Inspect intermediate data</summary>
+    <pre class="cr-inspect text-small"><code data-output="inspect"></code></pre>
+  </details>
+  <details class="cr-detail">
+    <summary class="cursor-interaction">Inspect displayed frame</summary>
+    <canvas class="cr-frame-output" width="320" height="226" role="img" aria-label="The current presented framebuffer, rendered from the emulated document and browser chrome.">Presented frame.</canvas>
+  </details>
+  <details class="cr-detail">
+    <summary class="cursor-interaction">Model scope</summary>
+    <div class="text-small">Bounded HTML/CSS, block layout, display lists, adaptive RGBA tiles, frame aggregation, two buffers and exact pixel verification. A finite controller tests rendering policies on this document's headings, scrolling and repeated frames. It minimises counted drawing calls, then stage executions. Those counters are not a speed estimate; probe timing and tuning overhead are reported separately.</div>
+    <div class="text-small">The feedback packets contract in real 3D coordinates toward the controller core. Ω retains a moving average of observed work and pixel residuals. Accepted policies survive reload where local storage is available. Each pass stops at a verified fixed policy or its probe budget. The logical 1024³ cube uses sparse working data; no billion-cell array is allocated.</div>
+    <div class="text-small">Architecture reference: <a href="https://developer.chrome.com/docs/chromium/renderingng-architecture" target="_blank" rel="noopener noreferrer">Chromium RenderingNG</a>.</div>
+  </details>
+  <span class="cr-color-probe" aria-hidden="true"></span>
+  <script>
+  (() => {
+    'use strict';
+    const root = document.getElementById('chromium-rendering-3d');
+    const $ = q => root.querySelector(q);
+    const scene = $('.cr-scene');
+    const ctx = scene.getContext('2d');
+    if (!ctx) { $('#cr-stage-detail').textContent = 'Canvas is unavailable in this browser.'; return; }
+    const W = 320, VH = 200, CH = 26;
+    const DEFAULT_POLICY = Object.freeze({tile:64,tightBounds:false,visibleOnly:false,reuseDocument:false});
+    const POLICY_KEY = 'chromium-3d-inward-policy-v1';
+    const MAX_PROBES = 8, MAX_PROBE_MS = 2500;
+    function safePolicy(value) {
+      if(!value || ![32,64,128].includes(value.tile))return {...DEFAULT_POLICY};
+      return {tile:value.tile,tightBounds:value.tightBounds===true,visibleOnly:value.visibleOnly===true,reuseDocument:value.reuseDocument===true};
+    }
+    function loadPolicy(){try{return safePolicy(JSON.parse(window.localStorage.getItem(POLICY_KEY)));}catch{return {...DEFAULT_POLICY};}}
+    function loadOmega(){try{const a=JSON.parse(window.localStorage.getItem(POLICY_KEY)).omega;return Array.isArray(a)&&a.length===4&&a.every(n=>Number.isFinite(n)&&n>=0&&n<=1)?a.slice():[0,0,0,0];}catch{return [0,0,0,0];}}
+    function newWork(){return {drawCalls:0,stageExecutions:0,rasterizedPixels:0,rasterCalls:0,quadsDrawn:0};}
+    const stages = [
+      {name:'Navigation', phase:0, process:'Browser', pos:[-105,40,20], desc:'Route the page source to the renderer.'},
+      {name:'Parse & style', phase:1, process:'Renderer', pos:[-100,40,79], desc:'Parse DOM nodes and match the supported CSS rules.'},
+      {name:'Layout', phase:2, process:'Renderer', pos:[-25,40,105], desc:'Calculate boxes and wrap text into lines.'},
+      {name:'Pre-paint & paint', phase:2, process:'Renderer', pos:[60,40,132], desc:'Record clipping, scroll properties and drawing commands.'},
+      {name:'Commit', phase:3, process:'Renderer', pos:[-100,-42,153], desc:'Copy the immutable display list to the compositor.'},
+      {name:'Layerize & tile', phase:3, process:'Renderer', pos:[0,-42,179], desc:'Divide the document surface using the verified adaptive tile size.'},
+      {name:'Raster', phase:4, process:'Viz / graphics', pos:[-95,38,246], desc:'Execute drawing commands into pixel tiles; reuse unchanged jobs.'},
+      {name:'Activate', phase:4, process:'Renderer', pos:[105,-42,196], desc:'Build draw quads referencing the rasterized tiles.'},
+      {name:'Aggregate & draw', phase:5, process:'Viz / graphics', pos:[-55,-43,284], desc:'Combine page quads and browser chrome in the back buffer.'},
+      {name:'Present', phase:5, process:'Viz / graphics', pos:[65,-43,309], desc:'Verify pixels against a direct render and swap the two buffers.'}
+    ];
+    const stageSelect = $('#cr-stage-select');
+    stages.forEach((s,i) => { const o = document.createElement('option'); o.value=i; o.textContent=`${i+1} · ${s.name}`; stageSelect.append(o); });
+    const makeCanvas = (w,h) => { const c=document.createElement('canvas'); c.width=w; c.height=h; return c; };
+    const measure = makeCanvas(1,1).getContext('2d');
+    const colors = {};
+    let typography = {size:14,small:12,family:'system-ui'};
+    function readTheme() {
+      const probe=$('.cr-color-probe');
+      ['background','foreground','muted-foreground','card','border','viz-series-1','viz-series-2','viz-series-3','viz-series-4'].forEach(k => {
+        probe.style.color=`var(--${k})`; colors[k]=getComputedStyle(probe).color;
+      });
+      const style=getComputedStyle(root);
+      typography.size=parseFloat(style.fontSize) || 14;
+      typography.family=style.fontFamily || 'system-ui';
+      probe.classList.add('text-small'); typography.small=parseFloat(getComputedStyle(probe).fontSize) || 12; probe.classList.remove('text-small');
+    }
+    readTheme();
+    function source(revision) {
+      const title=revision%2 ? 'A frame, refined' : 'A frame comes to life';
+      return `<style>
+      page { padding:16; background:surface; color:ink; }
+      h1 { font-size:22; margin-bottom:10; color:ink; }
+      p { font-size:12; margin-bottom:12; color:ink; }
+      .card { padding:12; margin-bottom:10; background:soft; }
+      .label { font-size:12; margin-bottom:6; }
+      .bar { height:10; width:248; background:accent; margin-bottom:6; }
+      .short { width:174; }
+      .footer { font-size:12; padding:8; background:soft; }
+      </style>
+      <page><h1>${title}</h1><p>Source becomes geometry. Geometry becomes pixels.</p>
+      <section class="card"><div class="label">01 / Document structure</div><div class="bar"></div><p>DOM and computed style</p></section>
+      <section class="card"><div class="label">02 / Graphics output</div><div class="bar short"></div><p>Tiles, frames and display</p></section>
+      <div class="footer">Scroll reuses the existing raster tiles.</div></page>`;
+    }
+    const model = {
+      revision:0, selected:9, done:-1, frameNo:0, scroll:0, pendingScroll:0,
+      dom:null, boxes:[], commands:[], committed:[], tiles:[], quads:[], cache:new Map(),
+      front:makeCanvas(W,VH+CH), back:makeCanvas(W,VH+CH), reference:makeCanvas(W,VH+CH),
+      trace:[], records:[], skipped:[], rasterized:0,reused:0,pixelDiff:null,contentH:0,
+      plan:stages.map((_,i)=>i),planIndex:0, playing:false,lastStageTime:0,stageDuration:850,
+      yaw:-0.66,pitch:0.48,exploded:true,hit:[],width:0,height:0, raf:0, visible:true,
+      selectedTile:null, themeSignature:JSON.stringify(colors),policy:loadPolicy(),work:newWork(),lastDocumentKey:null,exactTileCopy:false,
+      feedback:{auto:true,busy:false,queued:0,timer:0,token:0,pass:0,iterations:0,accepted:0,rejected:0,depth:0,omega:loadOmega(),history:[],observations:[],baseline:null,best:null,tested:new Set(),state:'Ready',lastKey:null,probeMs:0,started:0,converged:false,rollbacks:0}
+    };
+    function hashString(text) { let h=2166136261; for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);} return (h>>>0).toString(16).padStart(8,'0'); }
+    function pixelHash(data) { let h=2166136261; for(let i=0;i<data.length;i++){h^=data[i];h=Math.imul(h,16777619);} return (h>>>0).toString(16).padStart(8,'0'); }
+    function logicalAddress(i) {
+      const z=[64,224,320,416,512,608,800,688,896,960][i];
+      const x=128+(i%4)*192, y=192+Math.floor(i/4)*192;
+      return {xyz:[x,y,z],linear:(z*1024+y)*1024+x};
+    }
+    function parseAndStyle(html) {
+      const parsed=new DOMParser().parseFromString(html,'text/html');
+      const rules=[];
+      for(const match of (parsed.querySelector('style')?.textContent || '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const declarations={};
+        match[2].split(';').forEach(p=>{const colon=p.indexOf(':');if(colon>0)declarations[p.slice(0,colon).trim()]=p.slice(colon+1).trim();});
+        rules.push({selector:match[1].trim(),declarations});
+      }
+      let id=0;
+      function visit(el,inherited={}) {
+        const st={'font-size':'12',color:inherited.color || 'ink',...inherited};
+        for(const rule of rules) if(el.matches(rule.selector))Object.assign(st,rule.declarations);
+        const node={id:id++,tag:el.tagName.toLowerCase(),classes:el.className||'',text:Array.from(el.childNodes).filter(c=>c.nodeType===3).map(c=>c.textContent).join(' ').replace(/\s+/g,' ').trim(),style:st,children:[]};
+        for(const child of el.children)node.children.push(visit(child,{'font-size':st['font-size'],color:st.color}));
+        return node;
+      }
+      const page=parsed.querySelector('page');
+      if(!page)throw new Error('The emulated document requires a page element.');
+      return {root:visit(page),count:id,rules};
+    }
+    function num(st,key,fallback=0) { const n=parseFloat(st[key]);return Number.isFinite(n)?n:fallback; }
+    function wrap(text,width,fontSize) {
+      measure.font=`400 ${fontSize}px ${typography.family}`;
+      const lines=[];let line='';
+      for(const word of text.split(/\s+/)){
+        const candidate=line ? line+' '+word : word;
+        if(line && measure.measureText(candidate).width>width){lines.push(line);line=word;}else line=candidate;
+      }
+      if(line)lines.push(line);
+      return lines;
+    }
+    function layoutTree(node,x,y,width,boxes=model.boxes) {
+      const padding=num(node.style,'padding'), size=num(node.style,'font-size',12), explicitWidth=num(node.style,'width',width);
+      const box={id:node.id,tag:node.tag,x,y,w:Math.min(explicitWidth,width),h:0,padding,fontSize:size,style:node.style,text:node.text,lines:[]};
+      boxes.push(box);let cursor=y+padding;
+      if(node.text){box.lines=wrap(node.text,Math.max(1,box.w-2*padding),size);cursor+=box.lines.length*Math.ceil(size*1.35);}
+      for(const child of node.children){const c=layoutTree(child,x+padding,cursor,Math.max(1,box.w-2*padding),boxes);cursor+=c.h+num(child.style,'margin-bottom');}
+      box.h=Math.max(num(node.style,'height'),cursor-y+padding);
+      return box;
+    }
+    function paintLists(boxes=model.boxes) {
+      const cmds=[];
+      for(const b of boxes){
+        if(b.style.background)cmds.push({op:'fill',x:b.x,y:b.y,w:b.w,h:b.h,color:b.style.background,node:b.id});
+        b.lines.forEach((line,i)=>cmds.push({op:'text',x:b.x+b.padding,y:b.y+b.padding+i*Math.ceil(b.fontSize*1.35),w:b.w-2*b.padding,h:Math.ceil(b.fontSize*1.35),text:line,size:b.fontSize,color:b.style.color,node:b.id}));
+      }
+      return cmds;
+    }
+    function ink(name) { return name==='surface'?colors.background:name==='soft'?colors.card:name==='accent'?colors['viz-series-1']:colors.foreground; }
+    function executeList(c,commands,counters=null) {
+      c.textBaseline='top';
+      for(const cmd of commands){
+        if(counters){counters.drawCalls++;counters.rasterCalls++;}
+        c.fillStyle=ink(cmd.color);
+        if(cmd.op==='fill')c.fillRect(cmd.x,cmd.y,cmd.w,cmd.h);
+        else {c.font=`400 ${cmd.size}px ${typography.family}`;c.fillText(cmd.text,cmd.x,cmd.y);}
+      }
+    }
+    const glyphBounds = new WeakMap();
+    function commandBounds(cmd,policy){
+      if(cmd.op!=='text' || !policy.tightBounds)return cmd;
+      if(glyphBounds.has(cmd))return glyphBounds.get(cmd);
+      measure.font=`400 ${cmd.size}px ${typography.family}`;measure.textBaseline='top';
+      const m=measure.measureText(cmd.text), values=[m.actualBoundingBoxLeft,m.actualBoundingBoxRight,m.actualBoundingBoxAscent,m.actualBoundingBoxDescent];
+      const b=values.every(Number.isFinite)?{x:cmd.x-m.actualBoundingBoxLeft-3,y:cmd.y-m.actualBoundingBoxAscent-3,w:Math.max(1,m.actualBoundingBoxLeft+m.actualBoundingBoxRight)+6,h:Math.max(1,m.actualBoundingBoxAscent+m.actualBoundingBoxDescent)+6}:cmd;
+      glyphBounds.set(cmd,b);return b;
+    }
+    function intersects(cmd,t,policy=model.policy) { const b=commandBounds(cmd,policy);return b.x<t.x+t.w && b.x+b.w>t.x && b.y<t.y+t.h && b.y+b.h>t.y; }
+    function buildTiles(commands,height,policy){
+      const tiles=[],edge=policy.tile;
+      for(let y=0;y<height;y+=edge)for(let x=0;x<W;x+=edge){
+        const t={id:`${x/edge}:${y/edge}`,x,y,w:Math.min(edge,W-x),h:Math.min(edge,height-y)};
+        t.commands=commands.filter(cmd=>intersects(cmd,t,policy));
+        t.signature=JSON.stringify(t.commands)+'|'+model.themeSignature+'|'+typography.family+'|'+edge+'|'+policy.tightBounds+'|'+t.w+','+t.h;
+        tiles.push(t);
+      }
+      return tiles;
+    }
+    function rasterTiles(tiles,cache,counters){
+      let rasterized=0,reused=0;const keys=new Set();
+      for(const t of tiles){
+        keys.add(t.id);const cached=cache.get(t.id);
+        if(cached && cached.signature===t.signature){t.canvas=cached.canvas;t.reused=true;reused++;}
+        else{t.canvas=makeCanvas(t.w,t.h);const c=t.canvas.getContext('2d');c.fillStyle=colors.background;c.fillRect(0,0,t.w,t.h);
+          if(counters){counters.drawCalls++;counters.rasterizedPixels+=t.w*t.h;}
+          c.translate(-t.x,-t.y);executeList(c,t.commands,counters);t.reused=false;rasterized++;cache.set(t.id,{signature:t.signature,canvas:t.canvas});}
+      }
+      for(const key of cache.keys())if(!keys.has(key))cache.delete(key);
+      return {rasterized,reused};
+    }
+    function browserChrome(c,counters=null) {
+      if(counters)counters.drawCalls+=4;
+      c.fillStyle=colors.card;c.fillRect(0,0,W,CH);
+      c.fillStyle=colors.foreground;c.font=`400 11px ${typography.family}`;c.textBaseline='middle';
+      c.fillText('●   ●   ●',8,CH/2);c.fillText('local://frame-demo',73,CH/2);
+      c.fillStyle=colors.border;c.fillRect(0,CH-1,W,1);
+    }
+    function drawFrame(output,commands,quads,scroll,reference,policy,counters=null) {
+      const c=output.getContext('2d');
+      // Tile texels map 1:1 to integer framebuffer pixels. Resampling adds
+      // unnecessary interpolation and engine-dependent rounding to this copy.
+      c.imageSmoothingEnabled=false;
+      c.clearRect(0,0,output.width,output.height);c.fillStyle=colors.background;c.fillRect(0,0,output.width,output.height);
+      if(counters)counters.drawCalls+=2;
+      c.save();c.beginPath();c.rect(0,CH,W,VH);c.clip();
+      if(reference){c.translate(0,CH-scroll);executeList(c,commands);}
+      else for(const q of quads){
+        if(policy.visibleOnly && (q.y+q.h<=scroll || q.y>=scroll+VH))continue;
+        const targetY=CH+q.y-scroll;
+        if(model.exactTileCopy){
+          // Some engines round text-edge colors during canvas drawImage copies.
+          // Copy the candidate tile's own RGBA bytes, never reference pixels.
+          // putImageData ignores clipping, so explicitly constrain dirty rows
+          // to the document viewport before the browser chrome is drawn.
+          const pixels=q.canvas.getContext('2d').getImageData(0,0,q.w,q.h);
+          const top=Math.max(0,CH-targetY),bottom=Math.min(q.h,CH+VH-targetY);
+          c.putImageData(pixels,q.x,targetY,0,Math.min(q.h,top),q.w,Math.max(0,bottom-top));
+        }else c.drawImage(q.canvas,q.x,targetY);
+        if(counters){counters.drawCalls++;counters.quadsDrawn++;}
+      }
+      c.restore();browserChrome(c,counters);
+    }
+    function assemble(reference=false){drawFrame(reference?model.reference:model.back,model.committed,model.quads,model.pendingScroll,reference,model.policy,reference?null:model.work);}
+    function comparePixels(a,b){const actual=a.getContext('2d').getImageData(0,0,W,VH+CH).data,expected=b.getContext('2d').getImageData(0,0,W,VH+CH).data;let diff=0;for(let p=0;p<actual.length;p+=4)if(actual[p]!==expected[p]||actual[p+1]!==expected[p+1]||actual[p+2]!==expected[p+2]||actual[p+3]!==expected[p+3])diff++;return {diff,actual};}
+    function documentKey(){return hashString(source(model.revision)+'|'+model.themeSignature+'|'+typography.family+'|'+JSON.stringify(model.policy));}
+    function feedbackKey(){return hashString(source(model.revision)+'|'+model.themeSignature+'|'+typography.family);}
+    function compileProbeScene(revision){
+      const html=source(revision),dom=parseAndStyle(html),boxes=[],page=layoutTree(dom.root,0,0,W,boxes);
+      return {html,key:hashString(html),commands:paintLists(boxes),height:Math.ceil(page.h)};
+    }
+    function calibration(){
+      const current=compileProbeScene(model.revision),alternate=compileProbeScene(model.revision+1),max=Math.max(0,alternate.height-VH);
+      return [
+        {scene:current,scroll:0,kind:'document'},
+        {scene:alternate,scroll:0,kind:'document'},
+        {scene:alternate,scroll:Math.min(24,max),kind:'scroll'},
+        {scene:alternate,scroll:max,kind:'scroll'},
+        {scene:alternate,scroll:max,kind:'repeat'},
+        {scene:current,scroll:0,kind:'document'}
+      ];
+    }
+    function probePolicy(input,requests=calibration()){
+      const policy=safePolicy(input),work=newWork(),cache=new Map(),output=makeCanvas(W,VH+CH),reference=makeCanvas(W,VH+CH),started=performance.now();
+      let documentState=null,peakPixelBytes=0,mismatchedPixels=0,maxTiles=0;
+      const job=fn=>{work.stageExecutions++;return fn();};
+      for(const request of requests){
+        const s=request.scene,canReuse=documentState && documentState.key===s.key && (request.kind==='scroll' || policy.reuseDocument);
+        if(request.kind!=='scroll')job(()=>s.html);
+        if(!canReuse){
+          const dom=job(()=>parseAndStyle(s.html)),boxes=[];
+          const page=job(()=>layoutTree(dom.root,0,0,W,boxes));
+          const commands=job(()=>paintLists(boxes)),committed=job(()=>JSON.parse(JSON.stringify(commands)));
+          const tiles=job(()=>buildTiles(committed,Math.ceil(page.h),policy));
+          job(()=>rasterTiles(tiles,cache,work));
+          const quads=job(()=>tiles.map(t=>({id:t.id,x:t.x,y:t.y,w:t.w,h:t.h,canvas:t.canvas})));
+          documentState={key:s.key,committed,quads};maxTiles=Math.max(maxTiles,tiles.length);
+          // Conservatively count one frame's temporary tile byte arrays when
+          // the verified composition transport requires exact RGBA copies.
+          peakPixelBytes=Math.max(peakPixelBytes,tiles.reduce((sum,t)=>sum+t.w*t.h*4,0)*(model.exactTileCopy?2:1)+2*W*(VH+CH)*4);
+        }
+        job(()=>drawFrame(output,documentState.committed,documentState.quads,request.scroll,false,policy,work));
+        // Independent full-list rendering never uses the candidate's tile selection.
+        drawFrame(reference,s.commands,[],request.scroll,true,DEFAULT_POLICY);
+        mismatchedPixels+=job(()=>comparePixels(output,reference)).diff;
+      }
+      return {policy,work,frames:requests.length,checkedPixels:requests.length*W*(VH+CH),mismatchedPixels,peakPixelBytes,valid:mismatchedPixels===0 && maxTiles<=512 && peakPixelBytes<=2_000_000,elapsedMs:Math.round((performance.now()-started)*100)/100};
+    }
+    function betterWork(a,b){
+      for(const key of ['drawCalls','stageExecutions','rasterizedPixels']){if(a[key]!==b[key])return a[key]<b[key];}
+      return false;
+    }
+    function nextCandidate(){
+      const p=model.policy,f=model.feedback;
+      const options=[{...p,tightBounds:true},{...p,visibleOnly:true},{...p,tile:128},{...p,reuseDocument:true},{...p,tile:32},{...p,tile:64}];
+      return options.find(candidate=>!f.tested.has(JSON.stringify(candidate))) || null;
+    }
+    function feedbackPoint(index,depth=model.feedback.depth){
+      const centre=world([0,0,145]),seed=world(stages[index].pos),v=seed.map((n,i)=>n-centre[i]),angle=depth*0.27,tilt=depth*0.13;
+      const y=v[1]*Math.cos(tilt)-v[2]*Math.sin(tilt),z=v[1]*Math.sin(tilt)+v[2]*Math.cos(tilt),factor=0.68**depth;
+      return [centre[0]+factor*(v[0]*Math.cos(angle)-y*Math.sin(angle)),centre[1]+factor*(v[0]*Math.sin(angle)+y*Math.cos(angle)),centre[2]+factor*z];
+    }
+    function feedbackRadius(depth=model.feedback.depth){const centre=world([0,0,145]);return stages.reduce((sum,_,i)=>sum+Math.hypot(...feedbackPoint(i,depth).map((v,j)=>v-centre[j])),0)/stages.length;}
+    function observeFrame(){
+      const f=model.feedback,w=model.work;
+      const descriptor=[Math.min(1,Math.log1p(w.drawCalls)/Math.log1p(1000)),model.policy.tile/128,Math.min(1,w.stageExecutions/14),(model.pixelDiff||0)/(W*(VH+CH))];
+      f.omega=f.omega.map((v,i)=>0.85*v+0.15*descriptor[i]);
+      f.observations.push({frame:model.frameNo,drawCalls:w.drawCalls,stageExecutions:w.stageExecutions,mismatchedPixels:model.pixelDiff,policy:{...model.policy}});
+      if(f.observations.length>8)f.observations.shift();
+    }
+    function savePolicy(){try{window.localStorage.setItem(POLICY_KEY,JSON.stringify({...model.policy,omega:model.feedback.omega}));return true;}catch{return false;}}
+    function cancelFeedback(state='Paused'){
+      const f=model.feedback;f.token++;clearTimeout(f.timer);clearTimeout(f.queued);f.timer=0;f.queued=0;f.busy=false;f.state=state;updateUI();draw();
+    }
+    function finishFeedback(state,converged=false){
+      const f=model.feedback;f.busy=false;f.timer=0;f.state=state;f.converged=converged;f.lastKey=feedbackKey();f.depth=12;f.workloads=null;savePolicy();updateUI();draw();
+    }
+    function applyVerifiedPolicy(policy){
+      const previous={...model.policy};model.policy={...policy};model.cache.clear();prepare('full',true);
+      while(model.planIndex<model.plan.length)advance();
+      if(model.pixelDiff || JSON.stringify(model.policy)!==JSON.stringify(policy)){
+        model.policy=previous;model.cache.clear();prepare('full',true);while(model.planIndex<model.plan.length)advance();return false;
+      }
+      savePolicy();return true;
+    }
+    function stepFeedback(token){
+      const f=model.feedback;if(token!==f.token || !f.busy)return;
+      try{
+        if(!f.baseline){
+          f.workloads=calibration();const baseline=probePolicy(model.policy,f.workloads);f.probeMs+=baseline.elapsedMs;
+          if(!baseline.valid){finishFeedback('Probe failed · policy held');return;}
+          f.baseline=baseline;f.best=baseline;f.depth=1;f.state='Contracting observed work';
+        }else{
+          const candidate=nextCandidate();
+          if(!candidate){finishFeedback('Fixed policy in tested neighbourhood',true);return;}
+          if(f.iterations>=MAX_PROBES || f.probeMs>=MAX_PROBE_MS){finishFeedback('Probe budget reached');return;}
+          f.tested.add(JSON.stringify(candidate));f.iterations++;
+          const result=probePolicy(candidate,f.workloads);f.probeMs+=result.elapsedMs;
+          const improvement=result.valid && betterWork(result.work,f.best.work),accepted=improvement && applyVerifiedPolicy(candidate);
+          if(accepted){f.best=result;f.accepted++;}else f.rejected++;
+          f.depth=Math.min(10,f.depth+1);
+          f.history.push({pass:f.pass,iteration:f.iterations,policy:candidate,drawCalls:result.work.drawCalls,stageExecutions:result.work.stageExecutions,mismatchedPixels:result.mismatchedPixels,accepted,reason:!result.valid?'pixel or memory verification failed':!improvement?'no reduction in counted work':accepted?'verified and applied':'live frame verification failed'});
+          if(f.history.length>40)f.history.shift();
+          f.state=accepted?'Verified improvement adopted':'Candidate rejected · policy held';
+        }
+        updateUI();draw();
+        f.timer=setTimeout(()=>stepFeedback(token),180);
+      }catch(error){f.history.push({pass:f.pass,accepted:false,reason:String(error.message||error)});finishFeedback('Probe error · verified policy held');}
+    }
+    function startFeedback(){
+      const f=model.feedback;
+      if(f.busy){cancelFeedback('Paused · verified policy held');return;}
+      clearTimeout(f.queued);f.queued=0;f.busy=true;stop();
+      while(model.planIndex<model.plan.length)advance();
+      if(model.pixelDiff){finishFeedback('Frame verification failed · policy held');return;}
+      f.pass++;f.iterations=0;f.baseline=null;f.best=null;f.tested=new Set([JSON.stringify(model.policy)]);f.depth=0;f.probeMs=0;f.converged=false;f.state='Encoding observed work';
+      const token=++f.token;f.timer=setTimeout(()=>stepFeedback(token),80);updateUI();draw();
+    }
+    function queueAutoFeedback(){
+      const f=model.feedback;if(!f.auto || f.busy || f.queued || model.playing || !model.visible || model.pixelDiff!==0 || f.lastKey===feedbackKey())return;
+      f.state='Feedback queued';f.queued=setTimeout(()=>{f.queued=0;if(f.auto && model.visible && !model.playing && !f.busy)startFeedback();},120);
+    }
+    function executeStage(i) {
+      const start=performance.now(),workBefore={...model.work};model.work.stageExecutions++;let data;
+      switch(i){
+        case 0:
+          model.html=source(model.revision);
+          data={sourceBytes:new TextEncoder().encode(model.html).length,route:'browser → renderer',revision:model.revision,source:model.html.replace(/\s+/g,' ').slice(0,500)};break;
+        case 1:
+          model.html=source(model.revision);model.dom=parseAndStyle(model.html);
+          data={nodes:model.dom.count,rules:model.dom.rules.length,tree:flattenNodes(model.dom.root).map(n=>({id:n.id,tag:n.tag,text:n.text})).slice(0,12)};break;
+        case 2:
+          model.boxes=[];const page=layoutTree(model.dom.root,0,0,W);model.contentH=Math.ceil(page.h);
+          model.pendingScroll=Math.min(model.pendingScroll,Math.max(0,model.contentH-VH));
+          data={surface:[W,model.contentH],boxes:model.boxes.slice(0,10).map(b=>({id:b.id,tag:b.tag,box:[b.x,b.y,b.w,b.h]}))};break;
+        case 3:
+          model.commands=paintLists();model.properties={clip:[0,0,W,VH],scroll:[0,model.pendingScroll],transform:[1,0,0,1,0,0]};
+          data={commands:model.commands.length,properties:model.properties,displayList:model.commands.slice(0,6)};break;
+        case 4:
+          model.committed=JSON.parse(JSON.stringify(model.commands));
+          data={boundary:'main thread → compositor (emulated)',immutableCopy:true,listHash:hashString(JSON.stringify(model.committed)),commands:model.committed.length};break;
+        case 5:
+          model.tiles=buildTiles(model.committed,model.contentH,model.policy);
+          data={layers:1,tileSize:model.policy.tile,jobs:model.tiles.length,grid:[Math.ceil(W/model.policy.tile),Math.ceil(model.contentH/model.policy.tile)],example:model.tiles.slice(0,6).map(t=>({tile:t.id,commands:t.commands.length}))};break;
+        case 6:
+          Object.assign(model,rasterTiles(model.tiles,model.cache,model.work));
+          data={rasterized:model.rasterized,reused:model.reused,tileBytes:model.tiles.reduce((s,t)=>s+t.w*t.h*4,0),format:'RGBA8, software canvas'};break;
+        case 7:
+          model.quads=model.tiles.map(t=>({id:t.id,x:t.x,y:t.y,w:t.w,h:t.h,canvas:t.canvas}));
+          data={quads:model.quads.length,frameSurface:[W,model.contentH],quad:model.quads.slice(0,4).map(q=>({tile:q.id,rect:[q.x,q.y,q.w,q.h]}))};break;
+        case 8:
+          assemble();
+          data={surfaces:['browser chrome','page tiles'],target:'back buffer',scroll:model.pendingScroll,backBuffer:[W,VH+CH],bytes:W*(VH+CH)*4};break;
+        case 9:{
+          assemble(true);
+          let checked=comparePixels(model.back,model.reference),rollback=null,tileCopyFallback=null;
+          if(checked.diff && JSON.stringify(model.policy)!==JSON.stringify(DEFAULT_POLICY)){
+            rollback={rejectedPolicy:{...model.policy},mismatchedPixels:checked.diff};model.feedback.rollbacks++;
+            model.policy={...DEFAULT_POLICY};model.cache.clear();for(const stage of [5,6,7,8])executeStage(stage);
+            checked=comparePixels(model.back,model.reference);
+          }
+          if(checked.diff && !model.exactTileCopy){
+            tileCopyFallback={mismatchedPixels:checked.diff,transport:'exact RGBA tile bytes'};
+            model.exactTileCopy=true;executeStage(8);
+            checked=comparePixels(model.back,model.reference);
+          }
+          model.pixelDiff=checked.diff;
+          if(!checked.diff){
+            model.frameHash=pixelHash(checked.actual);const previous=model.front;model.front=model.back;model.back=previous;model.scroll=model.pendingScroll;model.frameNo++;
+            model.lastDocumentKey=documentKey();
+          }
+          data={frame:model.frameNo,frontBufferHash:model.frameHash,pixelsChecked:W*(VH+CH),mismatchedPixels:checked.diff,presented:checked.diff===0,rollback,tileCopyFallback,swap:checked.diff?'held previous verified frame':'back → front',skipped:model.skipped.map(n=>stages[n].name),work:{...model.work}};break;
+        }
+      }
+      const ms=performance.now()-start;
+      model.done=Math.max(model.done,i);
+      const address=logicalAddress(i);
+      const work=Object.fromEntries(Object.keys(model.work).map(k=>[k,model.work[k]-workBefore[k]]));
+      model.records[i]={stage:stages[i].name,process:stages[i].process,logical:address,executionMs:Math.round(ms*1000)/1000,work,data};
+      model.trace.push({stage:i,name:stages[i].name,ms,frame:model.frameNo});
+      if(model.trace.length>200)model.trace.splice(0,model.trace.length-200);
+    }
+    function flattenNodes(n){return [n,...n.children.flatMap(flattenNodes)];}
+    function stop(){model.playing=false;model.lastStageTime=0;$('[data-action="run"]').textContent='Run';}
+    function prepare(kind='full',force=false){
+      stop();model.planIndex=0;model.records=[];model.done=-1;model.selected=-1;model.selectedTile=null;
+      const unchanged=!force && kind==='full' && model.policy.reuseDocument && model.lastDocumentKey===documentKey() && model.quads.length;
+      model.plan=kind==='scroll'?[8,9]:unchanged?[0,8,9]:stages.map((_,i)=>i);
+      model.skipped=stages.map((_,i)=>i).filter(i=>!model.plan.includes(i));model.work=newWork();
+      if(kind==='scroll' || unchanged){model.rasterized=0;model.reused=model.tiles.length;}
+      else {model.dom=null;model.boxes=[];model.commands=[];model.committed=[];model.tiles=[];model.quads=[];model.pixelDiff=null;}
+    }
+    function advance(){
+      if(model.planIndex>=model.plan.length)prepare();
+      const i=model.plan[model.planIndex++];executeStage(i);model.selected=i;
+      if(model.planIndex>=model.plan.length)stop();
+      if(i===9){observeFrame();queueAutoFeedback();}
+      updateUI();draw();return i;
+    }
+    function seek(i){
+      if(model.feedback.busy)return;
+      stop();
+      if(model.skipped.includes(i)){prepare('full',true);}
+      while(!model.records[i] && model.planIndex<model.plan.length)advance();
+      model.selected=i;updateUI();draw();
+    }
+    function play(){
+      if(model.feedback.busy)return;
+      if(model.playing){stop();updateUI();return;}
+      if(model.planIndex>=model.plan.length)prepare();
+      advance();
+      if(model.planIndex<model.plan.length){model.playing=true;model.lastStageTime=performance.now();$('[data-action="run"]').textContent='Pause';schedule();}
+    }
+    function updateUI(){
+      const i=Math.max(0,model.selected),s=stages[i];stageSelect.value=i;
+      $('#cr-stage-detail').textContent=`${i+1}/10 · ${s.name} — ${s.desc}`;
+      $('[data-stat="cache"]').textContent=model.tiles.length?`${model.tiles.length} tiles · ${model.rasterized} rasterized · ${model.reused} reused`:'';
+      $('[data-stat="pixels"]').textContent=model.pixelDiff===null?'':`${W*(VH+CH)} pixels checked · ${model.pixelDiff} differences`;
+      $('[data-output="inspect"]').textContent=JSON.stringify(model.records[i] || {stage:s.name,status:'Skipped for this frame'},null,2);
+      const output=$('.cr-frame-output').getContext('2d');
+      output.clearRect(0,0,W,VH+CH);if(model.frameNo)output.drawImage(model.front,0,0);
+      const phaseNodes=root.querySelectorAll('.cr-track span');
+      phaseNodes.forEach((node,p)=>{
+        const phaseStages=stages.map((s,i)=>s.phase===p?i:-1).filter(i=>i>=0);
+        const count=phaseStages.filter(n=>n<=model.selected && !model.skipped.includes(n)).length;
+        node.style.width=(count/phaseStages.length*100)+'%';
+      });
+      const f=model.feedback,policy=model.policy;
+      $('[data-action="scroll"]').disabled=model.frameNo===0 || model.playing || f.busy || !model.quads.length;
+      $('[data-action="mutate"]').disabled=model.playing || f.busy;
+      $('[data-action="run"]').disabled=f.busy;$('[data-action="step"]').disabled=f.busy;stageSelect.disabled=f.busy;
+      $('[data-action="optimise"]').textContent=f.busy?'Stop optimisation':'Inward optimise';
+      const improvement=f.baseline && f.best?`${f.baseline.work.drawCalls} → ${f.best.work.drawCalls} probe drawing calls`:'awaiting probe';
+      $('[data-output="feedback-status"]').textContent=`Ω · ${f.state} · ${improvement} · tile ${policy.tile} px`;
+      $('[data-output="feedback-inspect"]').textContent=JSON.stringify({state:f.state,policy,objective:'counted drawing calls, then stage executions, then rasterized pixels; no latency claim',baseline:f.baseline,best:f.best,probeMilliseconds:Math.round(f.probeMs*100)/100,pass:f.pass,accepted:f.accepted,rejected:f.rejected,rollbacks:f.rollbacks,omega:f.omega.map(n=>Math.round(n*10000)/10000),contraction:{factor:0.68,depth:f.depth,meanRadius:Math.round(feedbackRadius()*100)/100},history:f.history.slice(-8),latestFrame:f.observations.at(-1),bounds:{candidateProbes:MAX_PROBES,softTimeBudgetMs:MAX_PROBE_MS}},null,2);
+    }
+    function zOffset(z){return model.exploded?(z<50?0:z<210?28:70):0;}
+    function world(p){return [p[0],p[1],p[2]+zOffset(p[2])];}
+    function camera(p){
+      const co=Math.cos(model.yaw),si=Math.sin(model.yaw),x=p[0]*co-p[1]*si,y=p[0]*si+p[1]*co;
+      return [x,y*Math.sin(model.pitch)-p[2]*Math.cos(model.pitch),y*Math.cos(model.pitch)+p[2]*Math.sin(model.pitch)];
+    }
+    let projection={scale:1,cx:0,cy:0};
+    function project(p){const q=camera(p);return [q[0]*projection.scale+projection.cx,q[1]*projection.scale+projection.cy,q[2]];}
+    function poly(points,fill,stroke,opacity=1){ctx.save();ctx.globalAlpha=opacity;ctx.beginPath();points.forEach((p,i)=>{if(i)ctx.lineTo(p[0],p[1]);else ctx.moveTo(p[0],p[1]);});ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}ctx.restore();}
+    function addBox(faces,x,y,z,w,d,h,color,alpha=0.1){
+      const a=[x-w/2,y-d/2,z],b=[x+w/2,y-d/2,z],c=[x+w/2,y+d/2,z],e=[x-w/2,y+d/2,z];
+      const top=p=>[p[0],p[1],p[2]+h];
+      [ [a,b,top(b),top(a)], [b,c,top(c),top(b)], [c,e,top(e),top(c)], [e,a,top(a),top(e)], [top(a),top(b),top(c),top(e)] ].forEach((ps,j)=>{const pts=ps.map(project);faces.push({pts,depth:pts.reduce((s,p)=>s+p[2],0)/4,color,alpha:alpha*(j===4?1.6:1),stroke:colors.border});});
+    }
+    function line(a,b,color,width=1,opacity=1){ctx.save();ctx.globalAlpha=opacity;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();ctx.restore();}
+    function text(label,x,y,align='left',color=colors.foreground){ctx.font=`400 ${typography.small}px ${typography.family}`;ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillStyle=color;ctx.fillText(label,x,y);}
+    function fit(){
+      const samples=[];
+      [-170,170].forEach(x=>[-118,118].forEach(y=>[0,world([0,0,330])[2]].forEach(z=>samples.push(camera([x,y,z])))));
+      const xs=samples.map(p=>p[0]),ys=samples.map(p=>p[1]);
+      const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+      const padding=model.width<520?16:28;
+      projection.scale=Math.min((model.width-padding*2)/(maxx-minx),(model.height-92)/(maxy-miny));
+      projection.cx=model.width/2-(minx+maxx)/2*projection.scale;
+      projection.cy=(model.height+20)/2-(miny+maxy)/2*projection.scale;
+    }
+    function mapImage(image,points){
+      const [p0,p1,p2]=points;ctx.save();ctx.setTransform(projection.dpr,0,0,projection.dpr,0,0);
+      ctx.transform((p1[0]-p0[0])/image.width,(p1[1]-p0[1])/image.width,(p2[0]-p0[0])/image.height,(p2[1]-p0[1])/image.height,p0[0],p0[1]);
+      ctx.drawImage(image,0,0);ctx.restore();
+    }
+    function draw(){
+      if(!model.width)return;
+      ctx.setTransform(projection.dpr,0,0,projection.dpr,0,0);ctx.clearRect(0,0,model.width,model.height);fit();model.hit=[];
+      const faces=[];
+      const slabs=[{z:0,h:22,c:colors['viz-series-1'],label:'BROWSER',index:0},{z:62,h:137,c:colors['viz-series-2'],label:'RENDERER',index:1},{z:227,h:90,c:colors['viz-series-3'],label:'VIZ / GRAPHICS',index:2}];
+      for(const slab of slabs){
+        addBox(faces,0,0,slab.z+zOffset(slab.z),330,220,slab.h,slab.c,0.08);
+      }
+      const selected=Math.max(0,model.selected);
+      stages.forEach((s,i)=>{
+        const p=world(s.pos), color=s.process==='Browser'?colors['viz-series-1']:s.process==='Renderer'?colors['viz-series-2']:colors['viz-series-3'];
+        addBox(faces,p[0],p[1],p[2],54,34,13,color,i===selected?0.56:i<=model.done?0.22:0.08);
+      });
+      faces.sort((a,b)=>a.depth-b.depth).forEach(f=>poly(f.pts,f.color,f.stroke,f.alpha));
+      for(const slab of slabs){
+        const z=slab.z+zOffset(slab.z)+slab.h;
+        for(let x=-165;x<=165;x+=33)line(project([x,-110,z]),project([x,110,z]),colors.border,1,0.65);
+        for(let y=-110;y<=110;y+=27.5)line(project([-165,y,z]),project([165,y,z]),colors.border,1,0.65);
+      }
+      const points=stages.map(s=>project(world(s.pos.map((v,j)=>j===2?v+18:v))));
+      for(let i=0;i<points.length-1;i++)line(points[i],points[i+1],i<selected?colors['viz-series-1']:colors.border,1.5,i<selected?0.7:0.6);
+      if(model.playing && !window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+        const next=model.plan[model.planIndex];
+        if(next!==undefined){const a=points[selected],b=points[next],t=Math.min(1,(performance.now()-model.lastStageTime)/model.stageDuration);
+          const pulse=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];ctx.beginPath();ctx.arc(pulse[0],pulse[1],4,0,Math.PI*2);ctx.fillStyle=colors['viz-series-1'];ctx.fill();}
+      }
+      const labelx=16;
+      const zones=[['BROWSER · 0–127',35],['RENDERER · 128–703',183],['VIZ · 704–1023',318]];
+      zones.forEach(([label,z])=>{
+        const p=project(world([-165,-112,z]));
+        if(model.width>=600){text(label,labelx,p[1]);line([labelx+150,p[1]],p,colors.border);}
+      });
+      // The final buffer is an actual canvas texture on a three-dimensional plane.
+      const displayZ=world([0,0,342])[2];
+      const displayWidth=model.width<520?230:250,displayDepth=displayWidth*(VH+CH)/W;
+      const top=project([-displayWidth/2,-displayDepth/2,displayZ]);
+      const right=project([displayWidth/2,-displayDepth/2,displayZ]);
+      const bottom=project([-displayWidth/2,displayDepth/2,displayZ]);
+      const fourth=project([displayWidth/2,displayDepth/2,displayZ]);
+      poly([top,right,fourth,bottom],colors.background,colors.border);
+      if(model.frameNo)mapImage(model.front,[top,right,bottom]);
+      const edge=project([0,-displayDepth/2,displayZ+4]);
+      text(`FRONT BUFFER · frame ${model.frameNo}`,edge[0],edge[1]-14,'center');
+      const bottomLabel=model.width<600?'Browser → renderer → Viz':'X / work items     Y / resources     Z / stages';
+      text(bottomLabel,model.width/2,model.height-18,'center');
+      // Tile jobs appear as a small plane of real tiles beside the raster node.
+      if(model.tiles.length && selected>=5){
+        const tileWorldZ=world([0,0,230])[2];
+        model.tiles.slice(0,30).forEach((t,i)=>{
+          const x=75+(i%5)*14,y=55+Math.floor(i/5)*10;
+          const ps=[[x,y,tileWorldZ],[x+11,y,tileWorldZ],[x+11,y+8,tileWorldZ],[x,y+8,tileWorldZ]].map(project);
+          poly(ps,t.reused?colors['viz-series-3']:colors['viz-series-1'],null,t.canvas?0.72:0.15);
+        });
+      }
+      // Output-derived packets rotate and contract in the same 3D coordinate system.
+      const f=model.feedback,centre3=world([0,0,145]),centre=project(centre3),feedbackColor=colors['viz-series-4'];
+      if(f.pass || f.queued){
+        for(let i=0;i<stages.length;i++){
+          const folded=project(feedbackPoint(i));
+          if(i===9){let prior=project(feedbackPoint(i,0));for(let k=1;k<=Math.min(12,f.depth);k++){const next=project(feedbackPoint(i,k));line(prior,next,feedbackColor,1.2,0.65);prior=next;}line(prior,centre,feedbackColor,1,0.4);}
+          ctx.beginPath();ctx.arc(folded[0],folded[1],3,0,Math.PI*2);ctx.fillStyle=feedbackColor;ctx.fill();
+        }
+        let prior=null;
+        for(let k=0;k<=32;k++){const angle=k*Math.PI/16,p=project([centre3[0]+Math.cos(angle)*15,centre3[1]+Math.sin(angle)*15,centre3[2]]);if(prior)line(prior,p,feedbackColor,1,0.5);prior=p;}
+        ctx.beginPath();ctx.arc(centre[0],centre[1],7,0,Math.PI*2);ctx.fillStyle=colors.background;ctx.fill();
+        text('Ω',centre[0],centre[1],'center');text(`fold ${f.depth}`,centre[0],centre[1]+18,'center');
+        line(centre,points[5],feedbackColor,1,0.6);
+      }
+      // Stage controls remain legible above the translucent geometry and texture.
+      stages.forEach((s,i)=>{
+        const p=points[i], active=i===selected;
+        ctx.beginPath();ctx.arc(p[0],p[1],active?12:9,0,Math.PI*2);ctx.fillStyle=active?colors['viz-series-1']:colors.background;ctx.fill();
+        text(String(i+1),p[0],p[1],'center',active?colors.background:colors.foreground);
+        model.hit.push({x:p[0],y:p[1],index:i});
+      });
+    }
+    function schedule(){if(!model.raf && model.visible)model.raf=requestAnimationFrame(tick);}
+    function tick(now){
+      model.raf=0;
+      if(model.playing && now-model.lastStageTime>=model.stageDuration){advance();model.lastStageTime=now;}
+      draw();if(model.playing && model.visible)schedule();
+    }
+    function resize(){
+      const r=scene.getBoundingClientRect();model.width=r.width;model.height=r.height;projection.dpr=Math.min(2,window.devicePixelRatio||1);
+      scene.width=Math.round(r.width*projection.dpr);scene.height=Math.round(r.height*projection.dpr);draw();
+    }
+    $('[data-action="run"]').addEventListener('click',play);
+    $('[data-action="optimise"]').addEventListener('click',startFeedback);
+    $('[data-action="auto"]').addEventListener('change',e=>{model.feedback.auto=e.target.checked;if(!e.target.checked)cancelFeedback('Auto feedback off · policy retained');else{queueAutoFeedback();updateUI();}});
+    $('[data-action="step"]').addEventListener('click',()=>{stop();advance();});
+    $('[data-action="mutate"]').addEventListener('click',()=>{if(model.feedback.busy)return;model.revision++;prepare();play();});
+    $('[data-action="scroll"]').addEventListener('click',()=>{
+      if(model.feedback.busy)return;
+      const max=Math.max(0,model.contentH-VH);model.pendingScroll=model.scroll+24>max?0:model.scroll+24;prepare('scroll');play();
+    });
+    $('[data-action="explode"]').addEventListener('change',e=>{model.exploded=e.target.checked;draw();});
+    stageSelect.addEventListener('change',e=>seek(Number(e.target.value)));
+    let pointer=null;
+    scene.addEventListener('pointerdown',e=>{
+      pointer={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false};
+      if(e.pointerType==='mouse')scene.setPointerCapture(e.pointerId);
+    });
+    scene.addEventListener('pointermove',e=>{
+      if(!pointer || e.pointerId!==pointer.id)return;
+      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
+      if(Math.hypot(e.clientX-pointer.startX,e.clientY-pointer.startY)>6)pointer.moved=true;
+      if(pointer.moved){model.yaw+=dx*0.008;model.pitch=Math.max(0.24,Math.min(0.78,model.pitch+dy*0.004));draw();}
+      pointer.x=e.clientX;pointer.y=e.clientY;
+    });
+    scene.addEventListener('pointerup',e=>{
+      if(!pointer)return;
+      if(!pointer.moved){const r=scene.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+        const nearest=model.hit.reduce((best,h)=>{const dist=Math.hypot(h.x-x,h.y-y);return !best||dist<best.dist?{...h,dist}:best;},null);
+        if(nearest && nearest.dist<24)seek(nearest.index);
+      }
+      pointer=null;
+    });
+    scene.addEventListener('pointercancel',()=>{pointer=null;});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();if(model.feedback.busy||model.feedback.queued)cancelFeedback('Paused while hidden');updateUI();}else queueAutoFeedback();});
+    new ResizeObserver(resize).observe(scene);
+    if('IntersectionObserver' in window)new IntersectionObserver(entries=>{model.visible=entries[0].isIntersecting;if(model.visible){schedule();queueAutoFeedback();}else if(model.feedback.busy||model.feedback.queued)cancelFeedback('Paused outside view');}).observe(scene);
+    function updateTheme(){
+      readTheme();const signature=JSON.stringify(colors);
+      if(signature!==model.themeSignature){cancelFeedback('Theme updated');model.themeSignature=signature;prepare('full',true);while(model.planIndex<model.plan.length)advance();}
+      draw();
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',updateTheme);
+    if('MutationObserver' in window)new MutationObserver(updateTheme).observe(document.documentElement,{attributes:true,attributeFilter:['class','style','data-theme','data-color-scheme']});
+    // Display a verified first frame, then begin one bounded feedback pass.
+    while(model.planIndex<model.plan.length)advance();
+    resize();
+    // Read-only diagnostics also make the actual emulator data inspectable.
+    root.crEmulator={
+      snapshot:()=>({stage:model.selected,stageName:stages[model.selected]?.name,frame:model.frameNo,revision:model.revision,scroll:model.scroll,contentHeight:model.contentH,nodes:model.dom?.count||0,boxes:model.boxes.length,commands:model.committed.length,tiles:model.tiles.length,rasterized:model.rasterized,reused:model.reused,pixelDiff:model.pixelDiff,frameHash:model.frameHash,playing:model.playing,skipped:model.skipped.slice(),yaw:model.yaw,pitch:model.pitch,exploded:model.exploded,plan:model.plan.slice(),policy:{...model.policy},work:{...model.work},compositionBackend:model.exactTileCopy?'rgba-copy':'canvas-copy',optimising:model.feedback.busy,feedbackQueued:!!model.feedback.queued,execution:model.records.filter(Boolean).map(r=>({stage:r.stage,ms:r.executionMs})),corePixelBytes:model.tiles.reduce((s,t)=>s+t.w*t.h*4,0)+3*W*(VH+CH)*4,viewPixelBytes:scene.width*scene.height*4+W*(VH+CH)*4,logicalCells:1024**3}),
+      inspect:i=>JSON.parse(JSON.stringify(model.records[i] || null)),
+      pixels:()=>Array.from(model.front.getContext('2d').getImageData(0,0,W,VH+CH).data),
+      trace:()=>model.trace.map(t=>({...t})),
+      feedback:()=>JSON.parse(JSON.stringify({state:model.feedback.state,pass:model.feedback.pass,iterations:model.feedback.iterations,busy:model.feedback.busy,converged:model.feedback.converged,depth:model.feedback.depth,omega:model.feedback.omega,policy:model.policy,baseline:model.feedback.baseline,best:model.feedback.best,history:model.feedback.history,accepted:model.feedback.accepted,rejected:model.feedback.rejected,rollbacks:model.feedback.rollbacks,probeMs:model.feedback.probeMs,points:stages.map((_,i)=>feedbackPoint(i)),radius:feedbackRadius(),initialRadius:feedbackRadius(0)})),
+      probePolicy:p=>probePolicy(p)
+    };
+  })();
+  </script>
+</div>
+</main></body></html>

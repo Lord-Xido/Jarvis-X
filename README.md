@@ -373,6 +373,7 @@ Every canonical subsystem should provide:
 
 ## Documentation
 
+- [Chromium Inward 3D — offline renderer with pixel-verified policy optimization](apps/chromium-inward-3d/README.md)
 - [3D Cyber-IDE Pixel Engine — million-LOC grid/torus pixel-addressable browser emulator](apps/cyber-ide-3d/README.md)
 - [Hyperscale Geometric VM — standalone 64,000-particle browser demo](apps/hyperscale-geometric-vm/README.md)
 - [Architecture](docs/ARCHITECTURE.md)

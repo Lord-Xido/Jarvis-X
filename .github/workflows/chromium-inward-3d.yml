@@ -1,0 +1,99 @@
+name: Chromium Inward 3D
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/chromium-inward-3d/**"
+      - ".github/workflows/chromium-inward-3d.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/chromium-inward-3d/**"
+      - ".github/workflows/chromium-inward-3d.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chromium-inward-3d-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: apps/chromium-inward-3d
+
+jobs:
+  canvas:
+    name: Canvas invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/chromium-inward-3d/package-lock.json
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Validate rendering, adaptation, rejection, and rollback
+        run: npm test
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: chromium-inward-3d-canvas-evidence
+          path: apps/chromium-inward-3d/test-results/canvas
+          if-no-files-found: warn
+
+  browser:
+    name: Browser ${{ matrix.engine }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/chromium-inward-3d/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install native browser
+        run: npx playwright install ${{ matrix.engine }} --with-deps
+      - name: Validate native browser and offline interaction
+        env:
+          BROWSER_NAME: ${{ matrix.engine }}
+        run: npm run test:browser
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: chromium-inward-3d-${{ matrix.engine }}-evidence
+          path: apps/chromium-inward-3d/test-results/${{ matrix.engine }}
+          if-no-files-found: warn
+
+  package:
+    name: Verified offline bundle
+    needs: [canvas, browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - run: npm run package
+      - name: Verify packaged checksums
+        run: cd dist/chromium-inward-3d && sha256sum --check SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: chromium-inward-3d-offline
+          path: apps/chromium-inward-3d/dist/chromium-inward-3d
+          if-no-files-found: error
+          retention-days: 30
