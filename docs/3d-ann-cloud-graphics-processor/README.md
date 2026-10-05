@@ -20,6 +20,12 @@ The 15-page report covers:
 - performance bottlenecks and an implementation blueprint;
 - the unified recurrent operational formulation.
 
+## Executable closed-loop backend
+
+Jarvis-X now includes a bounded dependency-free C++ backend at `cpp_runtime/src/inward_graphics_ann_main.cpp`. It instantiates the documented loop as an exact 80,000-pixel software framebuffer feeding a `16^3 x 8` recurrent 3D neural field, followed by decode, residual backprojection, same-frame candidate verification, commit/rollback and bounded deformation of the next 3D scene.
+
+The executable backend is intentionally narrower than the full cloud architecture: it is a single-process CPU reference and does not establish distributed scheduling, accelerator performance, arbitrary differentiable rendering, or trained generalization. See [Dr Moagi 80K-Pixel Inward Graphics ANN](../DR_MOAGI_80K_PIXEL_INWARD_GRAPHICS_ANN.md).
+
 ## Core engineering boundary
 
 The `1000MB x 1000MB x 1000MB` construct is treated as a **logical sparse 3D address/computation field**, not as a claim that the full cube is physically resident in RAM. Physical resource use is determined by the active working set, model state, accelerator memory, network traffic and the entropy of the represented data.

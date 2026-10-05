@@ -8,6 +8,7 @@ The project follows semantic versioning where practical during alpha development
 
 ### Added
 
+- dependency-free 80K-pixel inward graphics ANN C++ reference with an exact `400 x 200` framebuffer, `16^3 x 8` recurrent neural field, residual backprojection, transactional same-frame parameter verification, JSON receipts, CTest gates and GCC/Clang/sanitizer CI;
 - bounded C++17 million-pathway self-verifying inward reference with aligned heap
   SoA storage, optional OpenMP, independent numerical audits, convergence-gated
   pruning, JSON receipts and regression/CLI checks;
