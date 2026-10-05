@@ -41,6 +41,15 @@ async function newPage(browser, profile = {}, seed = {}) {
     return url.startsWith(baseURL) || url.startsWith('file:') ? route.continue() : route.abort();
   });
   await page.addInitScript(({policyKey, stored, blocked, fault}) => {
+    // Keep the first few offscreen canvases for failure evidence, without
+    // changing renderer state or injecting a candidate into the live model.
+    const createElement = document.createElement.bind(document);
+    window.__crTestCanvases = [];
+    document.createElement = (...args) => {
+      const element = createElement(...args);
+      if (String(args[0]).toLowerCase() === 'canvas' && window.__crTestCanvases.length < 256) window.__crTestCanvases.push(element);
+      return element;
+    };
     if (blocked) Object.defineProperty(window, 'localStorage', {get() { throw new DOMException('Storage denied', 'SecurityError'); }});
     else if (stored !== undefined) try { localStorage.setItem(policyKey, stored); } catch {}
     if (fault) {
@@ -58,6 +67,24 @@ async function newPage(browser, profile = {}, seed = {}) {
 
 let baseURL;
 const reports = [];
+async function failureEvidence(page, name, error) {
+  await page.screenshot({path: path.join(output, name + '-failure.png'), fullPage: true}).catch(() => {});
+  const diagnostics = await page.evaluate(() => {
+    const api = document.getElementById('chromium-rendering-3d')?.crEmulator;
+    const images = (window.__crTestCanvases || []).filter(c => c.width === 320 && c.height === 226).slice(0, 3);
+    const actual = images[1]?.getContext('2d').getImageData(0, 0, 320, 226).data;
+    const expected = images[2]?.getContext('2d').getImageData(0, 0, 320, 226).data;
+    const samples = [];
+    if (actual && expected) for (let i = 0; i < actual.length && samples.length < 20; i += 4) {
+      if ([0, 1, 2, 3].some(j => actual[i + j] !== expected[i + j])) samples.push({x: i / 4 % 320, y: Math.floor(i / 4 / 320), actual: Array.from(actual.slice(i, i + 4)), expected: Array.from(expected.slice(i, i + 4))});
+    }
+    return {snapshot: api?.snapshot(), feedback: api?.feedback(), samples,
+      images: images.map(c => c.toDataURL('image/png'))};
+  }).catch(error => ({diagnosticError: String(error)}));
+  for (const [i, data] of (diagnostics.images || []).entries()) fs.writeFileSync(path.join(output, `${name}-buffer-${i}.png`), Buffer.from(data.split(',')[1], 'base64'));
+  delete diagnostics.images;
+  return {profile: name, status: 'FAIL', error: String(error.stack || error), diagnostics};
+}
 async function run() {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   baseURL = 'http://127.0.0.1:' + server.address().port;
@@ -175,8 +202,7 @@ async function run() {
         reports.push({profile: profile.name, status: 'PASS', tuned, replay, changed, scrolled,
           reload, nativeTouchOrbit: !!profile.options.hasTouch && engine === 'chromium', externalRequests: 0});
       } catch (error) {
-        await page.screenshot({path: path.join(output, profile.name + '-failure.png'), fullPage: true}).catch(() => {});
-        reports.push({profile: profile.name, status: 'FAIL', error: String(error.stack || error)});
+        reports.push(await failureEvidence(page, profile.name, error));
         throw error;
       } finally { await context.close(); }
     }
@@ -205,8 +231,7 @@ async function run() {
         assert.deepEqual(m.externalRequests, []);
         reports.push({profile: test.name, status: 'PASS', ...result});
       } catch (error) {
-        await m.page.screenshot({path: path.join(output, test.name + '-failure.png'), fullPage: true}).catch(() => {});
-        reports.push({profile: test.name, status: 'FAIL', error: String(error.stack || error)});
+        reports.push(await failureEvidence(m.page, test.name, error));
         throw error;
       } finally { await m.context.close(); }
     }
