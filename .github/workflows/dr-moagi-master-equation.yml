@@ -1,0 +1,50 @@
+name: Dr Moagi Master Equation
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/include/jarvisx/master_equation.hpp"
+      - "cpp_runtime/src/master_equation_main.cpp"
+      - "cpp_runtime/tests/master_equation_tests.cpp"
+      - "cpp_runtime/master_equation.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DR_MOAGI_3D_RECURSIVE_AUTOCODEC_MASTER_EQUATION.md"
+      - ".github/workflows/dr-moagi-master-equation.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/include/jarvisx/master_equation.hpp"
+      - "cpp_runtime/src/master_equation_main.cpp"
+      - "cpp_runtime/tests/master_equation_tests.cpp"
+      - "cpp_runtime/master_equation.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DR_MOAGI_3D_RECURSIVE_AUTOCODEC_MASTER_EQUATION.md"
+      - ".github/workflows/dr-moagi-master-equation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure C++ runtime
+        run: >
+          cmake -S cpp_runtime -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DJARVISX_BUILD_GL_VISUALIZER=OFF
+
+      - name: Build master equation targets
+        run: >
+          cmake --build build
+          --target jarvisx-master-equation jarvisx-master-equation-tests
+          -j 2
+
+      - name: Verify canonical invariants
+        run: ctest --test-dir build -R dr-moagi-master-equation --output-on-failure
+
+      - name: Emit canonical runtime state
+        run: ./build/jarvisx-master-equation
