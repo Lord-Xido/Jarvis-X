@@ -269,3 +269,15 @@ cmake -S cpp_runtime -B build/cpp-runtime-san \
 cmake --build build/cpp-runtime-san --parallel
 ctest --test-dir build/cpp-runtime-san --output-on-failure
 ```
+
+
+## Canonical Dr Moagi 3D Recursive Auto-Codec Master Equation
+
+The runtime includes the canonical total-collapse operator
+`Psi = D_Omega o C_{v*} o pi_0`, with `Lambda_0 = Z_11 x Z_6 x Z_4`
+and `v* = (1,2,1)`. The implementation explicitly distinguishes functional
+idempotence from group-endomorphism semantics and verifies the canonical
+invariants in CTest.
+
+See
+[`docs/DR_MOAGI_3D_RECURSIVE_AUTOCODEC_MASTER_EQUATION.md`](../docs/DR_MOAGI_3D_RECURSIVE_AUTOCODEC_MASTER_EQUATION.md).
