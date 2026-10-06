@@ -1,6 +1,6 @@
 # Jarvis-X Project Status
 
-**Last reviewed:** 2026-10-02
+**Last reviewed:** 2026-10-05
 **Release line:** `0.1.x` alpha
 
 This document is the authoritative implemented-versus-experimental capability matrix. Names, diagrams and specifications do not imply implementation.
@@ -34,6 +34,7 @@ This document is the authoritative implemented-versus-experimental capability ma
 | 3D Self-Hosting Inward Runtime | Specification | `docs/DR_MOAGI_SELF_HOSTING_INWARD_RUNTIME.md`, ADR-031 | whole-machine self-hosting is an architectural target; Jarvis-X does not yet autonomously replace its compiler/runtime, and all future self-changes remain candidate transactions requiring shadow execution, verification and atomic commit/rollback |
 | NV-X9 / Dr. Moagi’s Beast contractive 3D engine | Specification / provenance | `docs/attribution/NVX9_ORIGINALITY_PROVENANCE.md`, ADR-030 | canonical named Riemannian/contractive synthesis; source-report benchmarks are not yet independently reproduced as a canonical runtime, and repository provenance is not a patentability or global-novelty determination |
 | C++ inward processor | Reference laboratory | `cpp_runtime/`, CTest, cross-platform workflow | sparse virtual `8192³` domain; bounded parameter/schedule search; floating-point bit identity across platforms is not claimed |
+| 80K-pixel inward graphics ANN | Reference laboratory | `cpp_runtime/src/inward_graphics_ann_main.cpp`, CTest, focused GCC/Clang/sanitizer workflow, ADR-0035 | exact `400 x 200 = 80,000` framebuffer and `16^3 x 8` neural field; same-frame non-regression gate for adaptive parameters; CPU software renderer, not 80K resolution and not the separate `80,000^3` logical volume |
 | 1 MiB³ volumetric ROM ANN | Reference laboratory | `cpp_runtime/include/jarvisx/volumetric_rom_ann.hpp`, `cpp_runtime/src/volumetric_rom_ann_main.cpp`, CTest, cross-platform C++ workflow | `2^60` logical voxel addresses / 1 EiB virtual byte capacity; only bounded `32^3` tiles are materialized; fixed-point and adaptive dynamics are software emulation, not physical 1 EiB memory or hardware-throughput evidence |
 | Fractional 3D smoothing | Numerical reference | `fractional_smoothing_3d.py`, independent DFT/stencil/semigroup tests | dense periodic scalar grids and separable `O(N⁴)` cubic DFT; not a production FFT or calibrated physical model |
 | Fractal octree | Stable reference | `fractal_octree.py`, invariant tests | geometric reference, not a general sparse database or proof of long-memory quality |
@@ -118,6 +119,7 @@ Jarvis-X does not currently claim:
 - that a failed orthogonal precision gate may be repaired by simply doubling the admissible quantization threshold;
 - unique convergence of arbitrary learned Moagi-Helmholtz or ADR-017 fixed-point pipelines without sufficient mathematical assumptions;
 - physical hardware performance from a virtual address-space description;
+- that the 80K-pixel terminal means 80K display resolution; it means exactly 80,000 total logical framebuffer pixels;
 - physical residency of the volumetric ROM ANN's 1 EiB logical address space;
 - trained model quality from deterministic initialized weights;
 - safety certification from the presence of a policy or coherence gate;

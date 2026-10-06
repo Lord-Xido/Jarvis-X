@@ -31,6 +31,20 @@ ctest --test-dir build/cpp-runtime -C Release --output-on-failure
 
 OpenGL and GLUT/freeglut are detected automatically. When either dependency is absent, CMake skips only the graphics targets; the headless runtimes and regression suite still build. Use `-DJARVISX_BUILD_GL_VISUALIZER=OFF` to disable detection explicitly.
 
+
+## Run the 80K-pixel inward graphics ANN
+
+```bash
+cmake --build build/cpp-runtime --target jarvisx-80k-pixel-inward-ann --parallel
+./build/cpp-runtime/DrMoagi-80K-Pixel-Inward-ANN --self-test
+./build/cpp-runtime/DrMoagi-80K-Pixel-Inward-ANN --headless --frames 30 --json
+./build/cpp-runtime/DrMoagi-80K-Pixel-Inward-ANN
+```
+
+This target closes the software graphics loop around an exact `400 x 200 = 80,000`-pixel RGB/depth framebuffer and a `16^3 x 8` recurrent 3D neural field. Reconstruction residuals are back-projected into the 3D lattice, while decoder/density updates run as shadow candidates and cross the authority boundary only when same-frame MSE is non-regressing, metrics are finite, and feedback energy is bounded.
+
+The interactive terminal is a presentation surface only; the internal framebuffer remains 80,000 logical pixels. This target is distinct from `DrMoagi-80K3-MP4`, whose `80,000^3` value is a sparse logical 3D compute extent. See [80K-Pixel Inward Graphics ANN](../docs/DR_MOAGI_80K_PIXEL_INWARD_GRAPHICS_ANN.md).
+
 ## Run the verified adaptive multigrid 3D engine
 
 ```bash

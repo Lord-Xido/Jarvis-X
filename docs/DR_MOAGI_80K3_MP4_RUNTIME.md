@@ -66,6 +66,15 @@ The reference runtime treats a candidate as admissible only when reconstruction
 metrics are finite, residual correction is non-worsening, and MSE remains under
 the declared ceiling.
 
+## Naming boundary and interoperability
+
+This `80K^3` runtime and the [80K-Pixel Inward Graphics ANN](DR_MOAGI_80K_PIXEL_INWARD_GRAPHICS_ANN.md) are different coordinate contracts:
+
+- **80K^3** here means `80,000 x 80,000 x 80,000` logical sparse voxels;
+- **80K-pixel** in the terminal/ANN runtime means exactly `400 x 200 = 80,000` total logical framebuffer pixels.
+
+A future adapter may feed a bounded 2D projection from this sparse engine into the 80K-pixel ANN observation surface. Such an adapter does not make the full `80,000^3` field resident and does not imply an 80K-resolution video frame.
+
 ## Build
 
 ```bash

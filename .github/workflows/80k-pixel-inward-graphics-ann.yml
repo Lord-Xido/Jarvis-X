@@ -1,0 +1,81 @@
+name: 80K-Pixel Inward Graphics ANN
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "cpp_runtime/src/inward_graphics_ann_main.cpp"
+      - "cpp_runtime/world_engine.cmake"
+      - "docs/DR_MOAGI_80K_PIXEL_INWARD_GRAPHICS_ANN.md"
+      - "docs/adr/0035-80k-pixel-inward-graphics-ann.md"
+      - ".github/workflows/80k-pixel-inward-graphics-ann.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "cpp_runtime/src/inward_graphics_ann_main.cpp"
+      - "cpp_runtime/world_engine.cmake"
+      - "docs/DR_MOAGI_80K_PIXEL_INWARD_GRAPHICS_ANN.md"
+      - "docs/adr/0035-80k-pixel-inward-graphics-ann.md"
+      - ".github/workflows/80k-pixel-inward-graphics-ann.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 80k-pixel-ann-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: ${{ matrix.compiler }} reference verification
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure compiler
+        run: |
+          if [ "${{ matrix.compiler }}" = clang ]; then
+            echo "CC=clang" >> "$GITHUB_ENV"
+            echo "CXX=clang++" >> "$GITHUB_ENV"
+          else
+            echo "CC=gcc" >> "$GITHUB_ENV"
+            echo "CXX=g++" >> "$GITHUB_ENV"
+          fi
+      - name: Configure
+        run: cmake -S cpp_runtime -B build/80k-ann -DCMAKE_BUILD_TYPE=Release -DJARVISX_BUILD_GL_VISUALIZER=OFF
+      - name: Build focused target
+        run: cmake --build build/80k-ann --target jarvisx-80k-pixel-inward-ann --parallel
+      - name: Deterministic self-test
+        run: build/80k-ann/DrMoagi-80K-Pixel-Inward-ANN --self-test
+      - name: CTest focused gates
+        run: ctest --test-dir build/80k-ann -R "80k-pixel-inward-ann" --output-on-failure
+      - name: Validate JSON receipt
+        run: |
+          build/80k-ann/DrMoagi-80K-Pixel-Inward-ANN --headless --frames 30 --json > receipt.json
+          python - <<'PY'
+          import json, math
+          r=json.load(open("receipt.json", encoding="utf-8"))
+          assert r["framebuffer_pixels"] == 80000
+          assert r["latent_voxels"] == 4096
+          assert r["hidden_channels"] == 8
+          assert math.isfinite(r["authoritative_mse"])
+          assert math.isfinite(r["feedback_energy"])
+          assert r["feedback_energy"] <= 0.5
+          if r["parameter_commit"]:
+              assert r["candidate_mse"] <= r["baseline_mse"] + 1e-7
+          PY
+
+  sanitize:
+    name: ASan + UBSan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure sanitizers
+        run: cmake -S cpp_runtime -B build/80k-ann-san -DCMAKE_BUILD_TYPE=Debug -DJARVISX_ENABLE_SANITIZERS=ON -DJARVISX_BUILD_GL_VISUALIZER=OFF
+      - name: Build
+        run: cmake --build build/80k-ann-san --target jarvisx-80k-pixel-inward-ann --parallel
+      - name: Self-test under sanitizers
+        run: build/80k-ann-san/DrMoagi-80K-Pixel-Inward-ANN --self-test

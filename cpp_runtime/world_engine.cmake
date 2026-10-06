@@ -127,3 +127,23 @@ jarvisx_harden(jarvisx-volumetric-80k-mp4-tests)
 
 add_test(NAME volumetric-80k-mp4-regressions COMMAND jarvisx-volumetric-80k-mp4-tests)
 set_tests_properties(volumetric-80k-mp4-regressions PROPERTIES TIMEOUT 120)
+
+add_executable(jarvisx-80k-pixel-inward-ann
+    src/inward_graphics_ann_main.cpp
+)
+set_target_properties(jarvisx-80k-pixel-inward-ann PROPERTIES
+    OUTPUT_NAME "DrMoagi-80K-Pixel-Inward-ANN")
+jarvisx_include_runtime(jarvisx-80k-pixel-inward-ann)
+jarvisx_harden(jarvisx-80k-pixel-inward-ann)
+
+add_test(
+    NAME 80k-pixel-inward-ann-self-test
+    COMMAND jarvisx-80k-pixel-inward-ann --self-test
+)
+set_tests_properties(80k-pixel-inward-ann-self-test PROPERTIES TIMEOUT 120)
+
+add_test(
+    NAME 80k-pixel-inward-ann-headless
+    COMMAND jarvisx-80k-pixel-inward-ann --headless --frames 12 --json
+)
+set_tests_properties(80k-pixel-inward-ann-headless PROPERTIES TIMEOUT 120)
