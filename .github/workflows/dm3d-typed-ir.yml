@@ -1,0 +1,28 @@
+name: DM3D Typed IR Verify
+
+on:
+  push:
+    paths:
+      - 'cpp_runtime/dm3d_typed_ir/**'
+      - '.github/workflows/dm3d-typed-ir.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/dm3d_typed_ir/**'
+      - '.github/workflows/dm3d-typed-ir.yml'
+
+jobs:
+  typed-ir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S cpp_runtime/dm3d_typed_ir -B build/dm3d_typed_ir -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/dm3d_typed_ir --parallel 2
+      - name: Evolve, emit, compile, execute, verify
+        run: |
+          ./build/dm3d_typed_ir/dm3d_typed_ir 5 10 8 build/dm3d_typed_ir/generated/typed_ir_kernel.cpp | tee build/dm3d_typed_ir/typed_ir_trace.log
+          grep -q '\[VERIFY\] PASS' build/dm3d_typed_ir/typed_ir_trace.log
+          test -s build/dm3d_typed_ir/generated/typed_ir_kernel.cpp
+          test -x build/dm3d_typed_ir/generated/typed_ir_kernel
+          test -s build/dm3d_typed_ir/generated/typed_ir_run.log
