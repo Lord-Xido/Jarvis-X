@@ -7,6 +7,9 @@
 #include <random>
 #include <thread>
 #include <tuple>
+#ifdef _WIN32
+#include <process.h>
+#endif
 namespace fs=std::filesystem;
 using namespace dm3d;
 #ifndef DM3D_SSA_HEADER
@@ -99,18 +102,35 @@ int main(int argc,char** argv){try{
     }
     Graph winner=make_graph(champion.g,N);auto expected=execute(winner,x);
     fs::path cpp=dir/"best_kernel.cpp",bin=dir/"best_kernel",dat=dir/"best_kernel.bin";
-#ifdef _WIN32
-    bin+=".exe";
-#endif
     emit(cpp,winner,N);
 #ifdef _WIN32
-    std::string compile=std::string("\"")+DM3D_CXX+"\" /std:c++17 /O2 /EHsc \""+cpp.string()+"\" /Fe:\""+bin.string()+"\"";
+    // A native CMake sub-build uses the already configured MSVC toolchain.
+    // Direct std::system() calls to cl.exe fail when VS lives in Program Files.
+    fs::path native=dir/"standalone", build=native/"build";
+    fs::create_directories(native);
+    fs::copy_file(cpp,native/"best_kernel.cpp",fs::copy_options::overwrite_existing);
+    std::ofstream conf(native/"CMakeLists.txt");
+    conf<<"cmake_minimum_required(VERSION 3.16)\nproject(dm3d_emitted LANGUAGES CXX)\n"
+        <<"set(CMAKE_CXX_STANDARD 17)\nadd_executable(best_kernel best_kernel.cpp)\n";
+    conf.close();
+    std::string configure="cmake -S \""+native.string()+"\" -B \""+build.string()+"\"";
+    std::string compile="cmake --build \""+build.string()+"\" --config Release --parallel 2";
+    std::cout<<"[CONFIGURE] "<<configure<<'\n';
+    if(std::system(configure.c_str())!=0)throw std::runtime_error("generated CMake configure failed");
+    std::cout<<"[COMPILE] "<<compile<<'\n';
+    if(std::system(compile.c_str())!=0)throw std::runtime_error("generated source compilation failed");
+    bin=build/"Release"/"best_kernel.exe";
+    // Avoid cmd.exe quoting ambiguities by invoking the binary directly.
+    std::string binary=bin.string(),data=dat.string();
+    const char* arguments[]={binary.c_str(),data.c_str(),nullptr};
+    std::cout<<"[EXECUTE] "<<binary<<'\n';
+    if(_spawnv(_P_WAIT,binary.c_str(),arguments)!=0)throw std::runtime_error("generated binary execution failed");
 #else
     std::string compile=std::string("\"")+DM3D_CXX+"\" -O2 -std=c++17 \""+cpp.string()+"\" -o \""+bin.string()+"\"";
-#endif
     std::cout<<"[COMPILE] "<<compile<<'\n';if(std::system(compile.c_str())!=0)throw std::runtime_error("generated source compilation failed");
     std::string run="\""+bin.string()+"\" \""+dat.string()+"\"";
     std::cout<<"[EXECUTE] "<<run<<'\n';if(std::system(run.c_str())!=0)throw std::runtime_error("generated binary execution failed");
+#endif
     Value actual=load_result(dat,expected.shape);
     double err=max_error(expected,actual);
     std::cout<<"[VERIFY] lowering_max_error="<<std::setprecision(12)<<err<<" task_max_error="<<max_error(actual,target)<<"\n";
