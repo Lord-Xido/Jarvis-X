@@ -1,0 +1,28 @@
+name: DM3D SSA Full Runtime
+on:
+  push:
+    paths:
+      - 'cpp_runtime/dm3d_ssa_full/**'
+      - '.github/workflows/dm3d-ssa-full.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/dm3d_ssa_full/**'
+      - '.github/workflows/dm3d-ssa-full.yml'
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-latest
+          - os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S cpp_runtime/dm3d_ssa_full -B build/dm3d-ssa -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/dm3d-ssa --config Release --parallel 2
+      - name: Test unit and end-to-end generated executable
+        run: ctest --test-dir build/dm3d-ssa -C Release --output-on-failure
