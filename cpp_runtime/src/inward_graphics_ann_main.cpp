@@ -112,8 +112,12 @@ static Vec3 rotate_xyz(Vec3 p,float ax,float ay,float az) {
 }
 
 struct Framebuffer {
-    std::array<RGB,FB_PIXELS> color{};
-    std::array<float,FB_PIXELS> depth{};
+    // 80,000 RGB pixels and 80,000 depth values take about 560 KB.
+    // Keep the large arrays on the heap: MSVC reserves a small default
+    // thread stack, and nested self-tests otherwise exceed that reserve.
+    std::vector<RGB> color;
+    std::vector<float> depth;
+    Framebuffer() : color(FB_PIXELS), depth(FB_PIXELS) {}
     void clear(float t) {
         for(int y=0;y<FB_H;++y){
             float v=float(y)/float(FB_H-1);

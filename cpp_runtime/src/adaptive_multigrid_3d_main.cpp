@@ -155,7 +155,9 @@ void apply_operator(
 #pragma omp parallel for collapse(2) reduction(+:local) if(D >= 32)
     for (int d = 0; d < D; ++d) {
         for (int h = 0; h < D; ++h) {
+#if !defined(_MSC_VER)
 #pragma omp simd
+#endif
             for (int w = 0; w < D; ++w) {
                 out[L.index(d,h,w)] = apply_operator_point(L, u, d, h, w);
                 local += 31;
@@ -174,7 +176,9 @@ void smooth(Level3D& L, int sweeps, WorkCounter& work, f32 omega = kOmega) {
 #pragma omp parallel for collapse(2) reduction(+:local) if(D >= 32)
         for (int d = 0; d < D; ++d) {
             for (int h = 0; h < D; ++h) {
+#if !defined(_MSC_VER)
 #pragma omp simd
+#endif
                 for (int w = 0; w < D; ++w) {
                     const std::size_t i = L.index(d,h,w);
                     const auto s = stencil_values(L, L.u, d, h, w);
@@ -200,7 +204,9 @@ void compute_residual(Level3D& L, WorkCounter& work) {
 #pragma omp parallel for collapse(2) reduction(+:local) if(D >= 32)
     for (int d = 0; d < D; ++d) {
         for (int h = 0; h < D; ++h) {
+#if !defined(_MSC_VER)
 #pragma omp simd
+#endif
             for (int w = 0; w < D; ++w) {
                 const std::size_t i = L.index(d,h,w);
                 L.residual[i] =
@@ -312,7 +318,9 @@ void prolong_trilinear_add(
 #pragma omp parallel for collapse(2) reduction(+:local) if(Df >= 32)
     for (int d = 0; d < Df; ++d) {
         for (int h = 0; h < Df; ++h) {
+#if !defined(_MSC_VER)
 #pragma omp simd
+#endif
             for (int w = 0; w < Df; ++w) {
                 const int cd0 = d >> 1;
                 const int ch0 = h >> 1;
@@ -561,6 +569,30 @@ OuterReceipt adaptive_outer_loop(
 
         f32 max_err = 0.0f;
 
+// MSVC's /openmp supports neither simd nor reduction(max:...).
+// Retain the parallel maximum reduction using per-thread accumulation
+// and a single critical-section combine per worker, avoiding a serial
+// fallback on Windows. GCC/Clang retain their native max reduction.
+#if defined(_MSC_VER)
+#pragma omp parallel if(F.u.size() >= 32768)
+        {
+            f32 thread_max_err = 0.0f;
+#pragma omp for nowait
+            for (std::int64_t i = 0;
+                 i < static_cast<std::int64_t>(F.u.size());
+                 ++i) {
+
+                const auto j = static_cast<std::size_t>(i);
+                thread_max_err = std::max(
+                    thread_max_err,
+                    std::fabs(P.truth[j] - F.u[j]));
+            }
+#pragma omp critical(jarvisx_mg3d_max_error)
+            {
+                max_err = std::max(max_err, thread_max_err);
+            }
+        }
+#else
 #pragma omp parallel for reduction(max:max_err) if(F.u.size() >= 32768)
         for (std::int64_t i = 0;
              i < static_cast<std::int64_t>(F.u.size());
@@ -572,6 +604,7 @@ OuterReceipt adaptive_outer_loop(
                 max_err,
                 std::fabs(P.truth[j] - F.u[j]));
         }
+#endif
 
         max_err = std::max(max_err, 1e-8f);
 
