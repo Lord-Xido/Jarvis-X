@@ -1,0 +1,29 @@
+name: DM3D Codegen Verify
+
+on:
+  push:
+    paths:
+      - 'cpp_runtime/dm3d_codegen/**'
+      - '.github/workflows/dm3d-codegen.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/dm3d_codegen/**'
+      - '.github/workflows/dm3d-codegen.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S cpp_runtime/dm3d_codegen -B build/dm3d_codegen -DCMAKE_BUILD_TYPE=Release
+      - name: Build generator
+        run: cmake --build build/dm3d_codegen --config Release --parallel 2
+      - name: Run closed-loop generation
+        run: ./build/dm3d_codegen/dm3d_codegen 3 6 32 build/dm3d_codegen/generated/best_kernel.cpp
+      - name: Verify emitted artifacts
+        run: |
+          test -s build/dm3d_codegen/generated/best_kernel.cpp
+          test -x build/dm3d_codegen/generated/best_kernel
+          test -s build/dm3d_codegen/generated/generated_kernel_run.log
+          grep -q 'checksum=' build/dm3d_codegen/generated/generated_kernel_run.log
