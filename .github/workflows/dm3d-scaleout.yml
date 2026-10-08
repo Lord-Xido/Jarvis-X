@@ -26,7 +26,7 @@ jobs:
           python -m pip install -e './research/dm3d_scaleout[test]'
       - name: Verify sharding, retrieval and virtual tiling
         run: |
-          python -m pytest -q research/dm3d_scaleout/tests/test_scaleout.py
+          python -m pytest -q -o addopts='' research/dm3d_scaleout/tests/test_scaleout.py
       - name: Virtual canvas footprint
         run: |
           python -m dm3d_scale footprint --height 8000000 --width 8000000 --tile 2048 --slots 122
