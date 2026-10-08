@@ -51,3 +51,7 @@ Unit tests check group arithmetic, inverse translations, exact orbit period 132,
 ## Integration boundary
 
 Include the header at cpp_runtime/finite_fiber_264/include/dm3d/fiber264.hpp from the existing SSA/compiler or scale-out runtime. Embed its observable 512D features into a learned model if needed. The constant collapse output contains zero information about the hidden state: it cannot reconstruct the hidden state or perform intelligence. This module is a finite algebraic engine plus a deterministic contraction test, **not** a trained 3D ANN or an allocation of 264-cubed neural weights.
+
+## Executable SSA integration
+
+The fourth CTest, `fiber264-ssa-integration`, converts an actual finite-group state to its deterministic 512D observation, interprets it as a Tensor3D[8,8,8] in the existing `cpp_runtime/dm3d_ssa_full` engine, and executes Conv3D → Multiply → Mean to compute measurable scalar energy. A zero hidden state gives zero energy, while a nonzero hidden observation gives finite positive energy. Both retain the same constant collapsed output. This validates operational interoperability without implying the fixed output carries state information.
