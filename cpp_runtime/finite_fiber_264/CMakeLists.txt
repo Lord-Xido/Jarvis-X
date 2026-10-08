@@ -19,3 +19,13 @@ add_test(NAME fiber264-unit COMMAND dm3d-fiber264-tests)
 add_test(NAME fiber264-dynamics COMMAND dm3d-fiber264 --steps 32 --lambda 0.73)
 add_test(NAME fiber264-exhaustive COMMAND dm3d-fiber264 --steps 3 --exhaustive)
 set_tests_properties(fiber264-exhaustive PROPERTIES TIMEOUT 180)
+
+# Integration with the previously merged multi-type SSA and 3D operator interpreter.
+add_executable(dm3d-fiber264-ssa-bridge tests/fiber264_ssa_bridge_tests.cpp)
+target_include_directories(dm3d-fiber264-ssa-bridge PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/../dm3d_ssa_full/include")
+if(MSVC)
+  target_compile_options(dm3d-fiber264-ssa-bridge PRIVATE /W4 /O2)
+else()
+  target_compile_options(dm3d-fiber264-ssa-bridge PRIVATE -Wall -Wextra -Wpedantic -O2)
+endif()
+add_test(NAME fiber264-ssa-integration COMMAND dm3d-fiber264-ssa-bridge)
