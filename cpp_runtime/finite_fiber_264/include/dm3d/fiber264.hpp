@@ -158,11 +158,12 @@ inline Refinement refine(Latent512 current,const Latent512& target,double lambda
     for(double v:target)if(!std::isfinite(v))throw std::invalid_argument("non-finite target");
     Refinement r{};
     for(int k=0;k<max_steps;++k){
-        const auto prev=current;
         for(std::size_t i=0;i<LATENT_DIM;++i)
             current[i]=lambda*current[i]+(1.0-lambda)*target[i];
         r.iterations=k+1;
-        r.final_delta=max_residual(prev,current);
+        // Residual of the *new* state under a hypothetical next iteration.
+        // For lambda=0 the fixed point is reached in one step (residual zero).
+        r.final_delta=(1.0-lambda)*max_residual(current,target);
         if(r.final_delta<=tolerance){r.converged=true;break;}
     }
     r.latent=current;r.final_mse=mse(current,target);return r;
