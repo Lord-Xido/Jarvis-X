@@ -1,0 +1,25 @@
+name: DM3D Finite Fiber 264 Verify
+on:
+  push:
+    paths:
+      - 'cpp_runtime/finite_fiber_264/**'
+      - '.github/workflows/dm3d-finite-fiber-264.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/finite_fiber_264/**'
+      - '.github/workflows/dm3d-finite-fiber-264.yml'
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S cpp_runtime/finite_fiber_264 -B build/fiber264 -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/fiber264 --config Release --parallel 2
+      - name: Verify unit, dynamic and exhaustive invariants
+        run: ctest --test-dir build/fiber264 -C Release --output-on-failure
