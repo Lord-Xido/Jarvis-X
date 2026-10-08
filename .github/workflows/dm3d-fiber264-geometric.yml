@@ -1,0 +1,43 @@
+name: DM3D 264 Cubed Geometric Emulator Verify
+
+on:
+  push:
+    paths:
+      - 'apps/dm3d_fiber264_geometric/**'
+      - '.github/workflows/dm3d-fiber264-geometric.yml'
+  pull_request:
+    paths:
+      - 'apps/dm3d_fiber264_geometric/**'
+      - '.github/workflows/dm3d-fiber264-geometric.yml'
+
+jobs:
+  numerical-core:
+    name: Numerical core (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify 264-cubed hidden state and contraction
+        run: node apps/dm3d_fiber264_geometric/test_core.cjs
+
+  browser-smoke:
+    name: Real browser controls and exhaustive CTR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install browser testing dependency
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Verify 3D viewport, translation, inward loop and complete 264-cubed domain
+        run: python apps/dm3d_fiber264_geometric/browser_test.py
