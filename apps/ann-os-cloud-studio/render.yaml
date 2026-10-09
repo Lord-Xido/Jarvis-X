@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ann-os-cloud-studio
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/status
+    envVars:
+      - key: APP_ACCESS_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DATA_DIR
+        value: /app/data

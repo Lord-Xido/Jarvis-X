@@ -1,0 +1,39 @@
+name: ANN OS Cloud Studio
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ann-os-cloud-studio/**'
+      - '.github/workflows/ann-os-cloud-studio.yml'
+  pull_request:
+    paths:
+      - 'apps/ann-os-cloud-studio/**'
+      - '.github/workflows/ann-os-cloud-studio.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ann-os-cloud-studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install renderer and fonts
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - name: Syntax verification and end-to-end tests
+        run: |
+          node --check server.mjs
+          node --test tests/*.test.mjs
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production Docker image
+        run: docker build --pull -t ann-os-cloud-studio:ci apps/ann-os-cloud-studio
