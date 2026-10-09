@@ -1,0 +1,46 @@
+name: Inward Loop Certificate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/inward_loop_certified.py"
+      - "tests/test_inward_loop_certified.py"
+      - "docs/INWARD_LOOP_CERTIFICATE.md"
+      - ".github/workflows/inward-loop-certificate.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/jarvisx/inward_loop_certified.py"
+      - "tests/test_inward_loop_certified.py"
+      - "docs/INWARD_LOOP_CERTIFICATE.md"
+      - ".github/workflows/inward-loop-certificate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install -e '.[test]'
+      - name: Test analytic reconstruction, finite-difference projector, and certificates
+        run: python -m pytest tests/test_inward_loop_certified.py -q --no-cov
+      - name: Run 8,192-particle reproducible witness
+        run: >-
+          python -m jarvisx.inward_loop_certified
+          --particles 8192 --frames 60 --seed 7
+          --json artifacts/inward-loop-certificate.json
+      - name: Replay certificate
+        run: python -m jarvisx.inward_loop_certified --verify artifacts/inward-loop-certificate.json
+      - name: Upload witness manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: inward-loop-certificate-${{ github.sha }}
+          path: artifacts/inward-loop-certificate.json
+          if-no-files-found: error
