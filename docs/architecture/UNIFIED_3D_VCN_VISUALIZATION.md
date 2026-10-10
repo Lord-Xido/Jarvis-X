@@ -246,6 +246,19 @@ This specification is subordinate to:
 
 The diagram is therefore best understood as a unified **operational visualization of the research compute envelope**, not as a replacement for the canonical deterministic execution core.
 
+## Multimodal sparse 3D ANN visual
+
+![Moagi Multimodal Sparse 3D ANN topology](../assets/moagi-multimodal-sparse-3d-ann.svg)
+
+This visual binds the multimodal transport path to the same candidate-first
+authority model: canonicalize inputs, materialize a bounded active tile set,
+encode tile state, perform modality/context conditioning and weighted fusion,
+refine a shared inward latent state, inject context back into each tile, decode,
+then submit the reconstruction and residual receipts to CTR for commit or
+rollback. The shown 10^27 coordinate cube is virtual address geometry and the
+64-active-tile annotation is a bounded topology envelope, not a physical-memory
+or throughput claim.
+
 ## C++ system-wide reference runtime
 
 The bounded C++ mapping of this topology is implemented by:
