@@ -1,0 +1,7 @@
+numpy>=1.24,<3
+torch>=2.8,<3
+Pillow>=10
+imageio>=2.33
+imageio-ffmpeg>=0.5
+scipy>=1.10
+pytest>=8

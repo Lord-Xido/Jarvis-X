@@ -1,0 +1,32 @@
+name: DM3D Multimodal Scale-Out Verify
+
+on:
+  push:
+    paths:
+      - 'research/dm3d_scaleout/**'
+      - '.github/workflows/dm3d-scaleout.yml'
+  pull_request:
+    paths:
+      - 'research/dm3d_scaleout/**'
+      - '.github/workflows/dm3d-scaleout.yml'
+
+jobs:
+  cpu-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'torch>=2.8,<3' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e './research/dm3d_scaleout[test]'
+      - name: Verify sharding, retrieval and virtual tiling
+        run: |
+          python -m pytest -q -o addopts='' research/dm3d_scaleout/tests/test_scaleout.py
+      - name: Virtual canvas footprint
+        run: |
+          python -m dm3d_scale footprint --height 8000000 --width 8000000 --tile 2048 --slots 122
