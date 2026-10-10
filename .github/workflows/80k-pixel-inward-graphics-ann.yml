@@ -5,6 +5,9 @@ on:
     branches: [main, develop]
     paths:
       - "cpp_runtime/src/inward_graphics_ann_main.cpp"
+      - "cpp_runtime/src/qsol_reverberation3d.hpp"
+      - "cpp_runtime/tests/qsol_reverberation3d_test.cpp"
+      - "docs/adr/0036-qsol-deterministic-3d-observer.md"
       - "cpp_runtime/world_engine.cmake"
       - "docs/DR_MOAGI_80K_PIXEL_INWARD_GRAPHICS_ANN.md"
       - "docs/adr/0035-80k-pixel-inward-graphics-ann.md"
@@ -13,6 +16,9 @@ on:
     branches: [main, develop]
     paths:
       - "cpp_runtime/src/inward_graphics_ann_main.cpp"
+      - "cpp_runtime/src/qsol_reverberation3d.hpp"
+      - "cpp_runtime/tests/qsol_reverberation3d_test.cpp"
+      - "docs/adr/0036-qsol-deterministic-3d-observer.md"
       - "cpp_runtime/world_engine.cmake"
       - "docs/DR_MOAGI_80K_PIXEL_INWARD_GRAPHICS_ANN.md"
       - "docs/adr/0035-80k-pixel-inward-graphics-ann.md"
@@ -52,6 +58,11 @@ jobs:
         run: build/80k-ann/DrMoagi-80K-Pixel-Inward-ANN --self-test
       - name: CTest focused gates
         run: ctest --test-dir build/80k-ann -R "80k-pixel-inward-ann" --output-on-failure
+      - name: QSOL fixed-point conformance
+        run: |
+          "${CXX:-g++}" -std=c++17 -O2 -Wall -Wextra -Werror -pedantic -Icpp_runtime/src \
+            cpp_runtime/tests/qsol_reverberation3d_test.cpp -o qsol-conformance
+          ./qsol-conformance
       - name: Validate JSON receipt
         run: |
           build/80k-ann/DrMoagi-80K-Pixel-Inward-ANN --headless --frames 30 --json > receipt.json
@@ -61,6 +72,13 @@ jobs:
           assert r["framebuffer_pixels"] == 80000
           assert r["latent_voxels"] == 4096
           assert r["hidden_channels"] == 8
+          assert r["qsol_voxels"] == 4096
+          assert r["qsol_observer_units"] == 256
+          assert r["qsol_contraction_bound"] == 0.9375
+          assert str(r["qsol_state_hash"]).isdigit()
+          assert str(r["qsol_render_hash"]).isdigit()
+          assert -6 <= r["qsol_camera_dx"] <= 6
+          assert -6 <= r["qsol_camera_dy"] <= 6
           assert math.isfinite(r["authoritative_mse"])
           assert math.isfinite(r["feedback_energy"])
           assert r["feedback_energy"] <= 0.5
