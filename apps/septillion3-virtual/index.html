@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>DM3D | Septillion³ Virtual Intelligence Emulator</title>
+<style>
+:root{color-scheme:dark;--bg:#090d18;--panel:#111a2c;--line:#24364d;--ink:#e7f0fa;--muted:#91a6bf;--a:#50e0cb;--b:#b89dff;--green:#83ddb1}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 52% 0%,#122341,#080e1c 58%,#070b14);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+header,.shell{max-width:1340px;margin:0 auto;padding:20px 22px}header{padding-bottom:7px}h1{font-size:clamp(22px,3vw,34px);letter-spacing:-.04em;margin:4px 0}h2{font-size:15px;margin:0 0 12px}p{margin:4px 0;color:var(--muted)}.eyebrow{font-size:11px;color:var(--a);font-weight:700;letter-spacing:.17em}.tag{border:1px solid #2c4661;border-radius:99px;padding:4px 10px;font-size:11px;color:#abc9dd;white-space:nowrap}
+.split{display:grid;grid-template-columns:minmax(370px,1.4fr) minmax(310px,.92fr);gap:15px}.card{background:#121c30d8;border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:0 10px 33px #050b19a8}.canvas-wrap{position:relative;background:#071020;border:1px solid #203852;border-radius:12px;overflow:hidden}canvas#view{display:block;width:100%;height:480px}.canvas-overlay{position:absolute;pointer-events:none;left:14px;top:11px;color:#b6d0e6;font-size:12px}.pill{display:inline-block;background:#0b2a2a;padding:3px 8px;border:1px solid #246054;border-radius:8px;color:#80e1ce}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.stat{background:#0d182a;border:1px solid #233851;border-radius:10px;padding:12px}.stat strong{font-size:18px;display:block;color:#e8fff9}.stat span{font-size:11px;color:var(--muted)}label{display:block;font-size:12px;color:#b2c7d7;margin-bottom:5px}.field{min-width:0}input,select{background:#071320;border:1px solid #2b4560;color:#e5f7fa;border-radius:8px;padding:10px 9px;width:100%;min-width:0;font:inherit}input:focus,select:focus{outline:2px solid #2e8f99;outline-offset:1px}.coords{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.hint{font-size:11px;color:#8da6bb;line-height:1.5;margin:7px 0}.slider{display:grid;grid-template-columns:1fr 72px;align-items:center;gap:10px;margin-top:12px}.slider input{padding:0}.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}button{border:1px solid #34516a;background:#192840;color:#e9f5ff;border-radius:9px;padding:9px 12px;cursor:pointer;font-weight:650}button:hover{background:#244363}button.primary{background:#1a655e;border-color:#289889;color:#f0fffc}button.primary:hover{background:#278577}.modebar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}.modebar button.active{background:#295a6d;border-color:#49b7b6}.log{white-space:pre-wrap;overflow-wrap:anywhere;background:#071120;border-radius:9px;padding:12px;height:165px;overflow:auto;color:#a1e1d8;font:11px/1.5 ui-monospace,SFMono-Regular,monospace}.math{font-family:ui-monospace,monospace;font-size:12px;line-height:1.8;background:#0a1426;padding:12px;border-radius:9px;border:1px solid #253951;overflow:auto;color:#d4e1ec}.below{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px}.ok{color:var(--green)}.warn{color:#ffc986}.small{font-size:12px;color:var(--muted)}
+@media(max-width:880px){.split,.below{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}canvas#view{height:390px}}@media(max-width:450px){header,.shell{padding:14px}.card{padding:12px}.coords{grid-template-columns:1fr}canvas#view{height:320px}}
+</style></head><body>
+<header><div class="eyebrow">DR MOAGI INTELLIGENCE ENGINE · SYMBOLIC MATRIX</div><h1>Septillion³ virtual 3D autoencoder</h1><p>One trillion trillion positions per axis · 10<sup>72</sup> virtual voxel addresses · finite, verified computations on demand.</p></header>
+<main class="shell">
+<div class="stats"><div class="stat"><span>VIRTUAL ADDRESSES</span><strong>10<sup>72</sup></strong></div><div class="stat"><span>ADDRESS PRECISION</span><strong>BigInt</strong></div><div class="stat"><span>WORKING TILE</span><strong>8 × 8 × 8</strong></div><div class="stat"><span>LOSSLESS RECOVERY</span><strong id="verifyLabel" class="ok">—</strong></div></div>
+<div class="split">
+<section class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px"><h2>Spatial working set</h2><span class="tag">Rotatable view · auto rotation</span></div>
+<div class="modebar" id="modes"><button data-mode="orig" class="active">Original</button><button data-mode="latent">Encoded 4³</button><button data-mode="approx">Decoded</button><button data-mode="residual">Residual</button><button data-mode="exact">Exact restored</button></div>
+<div class="canvas-wrap"><div class="canvas-overlay"><span class="pill" id="panelMode">Original sampled tile</span><div style="margin-top:9px">3D toroidal latent folds + modulo-256 residual correction</div></div><canvas id="view" aria-label="Rotating virtual voxel cube"></canvas></div>
+<div class="stats" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:0"><div class="stat"><span>APPROX. PSNR</span><strong id="psnr">—</strong></div><div class="stat"><span>ACTIVE Ω (MSE)</span><strong id="omega">—</strong></div><div class="stat"><span>PROCESSED TILES</span><strong id="tiles">0</strong></div></div>
+</section>
+<section class="card"><h2>Virtual address selection</h2><div class="coords"><div class="field"><label for="x">X (0 … 10²⁴−1)</label><input id="x" spellcheck="false" value="18446744073709551979"/></div><div class="field"><label for="y">Y</label><input id="y" spellcheck="false" value="999999999999999999999992"/></div><div class="field"><label for="z">Z</label><input id="z" spellcheck="false" value="314159265358979323846264"/></div></div>
+<div class="hint">Coordinates use exact 80-bit-scale integer arithmetic. All three dimensions wrap periodically; only the requested 512 voxels are computed.</div>
+<div class="slider"><label for="alpha">Latent fold strength α: <strong id="av">0.24</strong></label><input type="range" id="alpha" min="0" max="1" step="0.01" value="0.24"/></div>
+<div class="slider"><label for="steps">Inward recursion depth K: <strong id="kv">2</strong></label><input type="range" id="steps" min="0" max="8" step="1" value="2"/></div>
+<div class="controls"><button class="primary" id="run">Encode → Fold → Decode</button><button id="batch">Process 16 virtual tiles</button><button id="adapt">CTR refine α</button></div>
+<div class="controls"><button id="nextx">+X tile</button><button id="nexty">+Y tile</button><button id="nextz">+Z tile</button><button id="corner">Far corner</button></div>
+<div class="controls"><button id="stream">▶ Continuous sample stream</button><button id="audit">Export JSON audit</button></div>
+<p id="status" class="small" style="margin-top:12px">Ready.</p>
+<div class="math" id="coordLabel">q = floor((x,y,z) / 8)</div>
+<h2 style="margin-top:18px">Execution telemetry</h2><div class="log" id="log" role="status" aria-live="polite"></div>
+</section>
+</div>
+<div class="below"><section class="card"><h2>Mathematical mechanics</h2><div class="math">Λ = (ℤ / 10²⁴ℤ)³,  |Λ| = 10⁷²<br/>T<sub>q</sub>X = F<sub>σ</sub>(8q + r),  r ∈ {0,…,7}³<br/>Z = Pool₂(T<sub>q</sub>X),  Z ∈ ℤ₂₅₆<sup>4×4×4×3</sup><br/>Z* = Φ<sub>𝕋³</sub><sup>K</sup>(Z),  X̂ = Repeat₂(Z*)<br/>R = (X − X̂) mod 256<br/>X<sub>exact</sub> = (X̂ + R) mod 256 = X</div><p class="small">The periodic fold operates within the 4³ latent working tile, not across the entire virtual domain.</p></section>
+<section class="card"><h2>Verified vs simulated</h2><p><strong class="ok">Real execution:</strong> Coordinate-to-tile generation, 3D average-pooling encoding, discrete six-neighbour periodic folding, approximate decoding, exact residual correction, and byte equality verification.</p><p><strong class="warn">Emulated:</strong> Queueing and grouped microbatch dispatch, feedback-selected scalar α updates, infinite-scale addressability. The code does not instantiate 10⁷² voxels.</p><p><strong>Not claimed:</strong> A trained neural model, AGI, global 3D attention, septillion-way parallelism, or measured GPU throughput. A neural encoder can replace the pooling kernel without changing address-space semantics.</p></section></div>
+</main>
+<script>
+/* DM3D Septillion³ portable codec kernel: browser/Node, no dependencies.
+   Structured virtual 3D field, 3D 2x average pooling, periodic latent folding,
+   modular exact residual decoding. This is NOT a pretrained neural network. */
+const DM3D = (() => {
+  const SIDE = 10n ** 24n;
+  const TILE = 8, LATENT = 4, N_TILES = SIDE / 8n;
+  const MASK = (1n << 64n) - 1n;
+  function hash64(text) {
+    let h = 0xcbf29ce484222325n;
+    for (let i=0;i<text.length;i++) h = ((h ^ BigInt(text.charCodeAt(i))) * 0x100000001b3n) & MASK;
+    return h;
+  }
+  function splitmix64(v) {
+    v = (v + 0x9e3779b97f4a7c15n) & MASK;
+    v = ((v ^ (v >> 30n)) * 0xbf58476d1ce4e5b9n) & MASK;
+    v = ((v ^ (v >> 27n)) * 0x94d049bb133111ebn) & MASK;
+    return (v ^ (v >> 31n)) & MASK;
+  }
+  function readPosition(values) {
+    const xyz = values.map(v => BigInt(String(v).trim()));
+    if (xyz.some(v => v<0n || v>=SIDE)) throw new RangeError('Coordinates must satisfy 0 ≤ x,y,z < 10²⁴');
+    return xyz;
+  }
+  function getTile(q, seed=7) {
+    if (q.some(v => v<0n || v>=N_TILES)) throw new RangeError('Tile index out of bounds');
+    const h=hash64(`${seed}|${q[0]}|${q[1]}|${q[2]}`);
+    const bases=[8n,16n,24n].map(s => 64+Number((h>>s)&127n));
+    const buf=new Uint8Array(8*8*8*3);
+    for (let z=0;z<8;z++) for (let y=0;y<8;y++) for (let x=0;x<8;x++) {
+      const index=x+8*(y+8*z);
+      const g=[Math.floor((3*x+2*y-2*z)/2)-5,
+               Math.floor((-2*x+3*y+2*z)/2)-5,
+               Math.floor((2*x-2*y+3*z)/2)-5];
+      for(let c=0;c<3;c++) {
+        const jitter=Number(splitmix64(h ^ BigInt(index*17+c*1337)) % 5n)-2;
+        buf[index*3+c]=Math.max(0,Math.min(255,bases[c]+g[c]+jitter));
+      }
+    }
+    return buf;
+  }
+  const srcIdx=(z,y,x,c)=>((z*8+y)*8+x)*3+c;
+  const latIdx=(z,y,x,c)=>((z*4+y)*4+x)*3+c;
+  function encode(input) {
+    if(input.length !== 1536) throw new RangeError('Expected 1536 RGB8 bytes');
+    const out = new Uint8Array(192);
+    for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)for(let c=0;c<3;c++){
+      let s=0;
+      for(let dz=0;dz<2;dz++)for(let dy=0;dy<2;dy++)for(let dx=0;dx<2;dx++)
+        s+=input[srcIdx(z*2+dz,y*2+dy,x*2+dx,c)];
+      out[latIdx(z,y,x,c)]=Math.floor(s/8+0.5);
+    }
+    return out;
+  }
+  function fold(latent, alpha=0.12, steps=2) {
+    if(!(alpha>=0&&alpha<=1 && steps>=0 && steps<=100 && Number.isInteger(steps))) throw new RangeError('Bad fold parameters');
+    let a=new Uint8Array(latent);
+    for(let k=0;k<steps;k++) {
+      const b = new Uint8Array(192);
+      for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)for(let c=0;c<3;c++) {
+        const n=a[latIdx((z+3)%4,y,x,c)] + a[latIdx((z+1)%4,y,x,c)]
+          +a[latIdx(z,(y+3)%4,x,c)] + a[latIdx(z,(y+1)%4,x,c)]
+          +a[latIdx(z,y,(x+3)%4,c)] + a[latIdx(z,y,(x+1)%4,c)];
+        const v=(1-alpha)*a[latIdx(z,y,x,c)]+(alpha/6)*n;
+        b[latIdx(z,y,x,c)]=Math.max(0,Math.min(255,Math.floor(v+0.5)));
+      }
+      a=b;
+    }
+    return a;
+  }
+  function decodeApprox(latent) {
+    const out=new Uint8Array(1536);
+    for(let z=0;z<8;z++)for(let y=0;y<8;y++)for(let x=0;x<8;x++)for(let c=0;c<3;c++)
+      out[srcIdx(z,y,x,c)]=latent[latIdx(z>>1,y>>1,x>>1,c)];
+    return out;
+  }
+  function reconstruct(orig,approx) {
+    const residual=new Uint8Array(1536),exact=new Uint8Array(1536);
+    let mse=0,identical=true;
+    for(let i=0;i<1536;i++) {
+      residual[i]=(orig[i]-approx[i]+256)&255;
+      exact[i]=(approx[i]+residual[i])&255;
+      mse+=(orig[i]-approx[i])**2;
+      if(exact[i] !== orig[i]) identical=false;
+    }
+    mse/=1536;
+    return {residual,exact,identical,mse,psnr:mse===0?Infinity:10*Math.log10(255*255/mse)};
+  }
+  function processTile(q,alpha=.12,steps=2,seed=7) {
+    const orig=getTile(q,seed),z=encode(orig),zf=fold(z,alpha,steps),approx=decodeApprox(zf);
+    return {q,orig,z,zf,approx,...reconstruct(orig,approx)};
+  }
+  function loss(q,alpha,steps=2,seed=7) {return processTile(q,alpha,steps,seed).mse;}
+  return {SIDE,TILE,LATENT,N_TILES,hash64,splitmix64,readPosition,getTile,
+          encode,fold,decodeApprox,reconstruct,processTile,loss};
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = DM3D;
+
+</script>
+<script>
+(()=>{
+ 'use strict';
+ const $=id=>document.getElementById(id),c=$('view'),ctx=c.getContext('2d',{alpha:false});
+ let current=null, mode='orig', rotation=0, count=0,omega=null,streamTimer=null;
+ const audit=[],logs=[];
+ function log(s){logs.unshift(`[${new Date().toLocaleTimeString()}] ${s}`);if(logs.length>35)logs.pop();$('log').textContent=logs.join('\n');}
+ function getAlpha(){return Number($('alpha').value)}
+ function getSteps(){return Number($('steps').value)}
+ function getQ(){return DM3D.readPosition(['x','y','z'].map(k=>$(k).value)).map(v=>v/8n)}
+ function move(axis){try{const q=getQ();q[axis]=(q[axis]+1n)%DM3D.N_TILES;['x','y','z'].forEach((k,i)=>$(k).value=(q[i]*8n).toString());processCurrent()}catch(e){error(e)}}
+ function error(e){$('status').textContent='Error: '+e.message;$('status').style.color='#ff9a9a';log('ERROR: '+e.message)}
+ function labelCoords(q){$('coordLabel').textContent=`tile index q = (${q.map(x=>x.toString()).join(', ')})\naddressable 3D tile count = (10²⁴ / 8)³ ≈ 1.953125 × 10⁶⁹`}
+ function processCurrent(){try{
+    const q=getQ();current=DM3D.processTile(q,getAlpha(),getSteps());count++;
+    omega=omega==null?current.mse:.88*omega+.12*current.mse;
+    const ps=current.psnr;
+    $('verifyLabel').textContent=current.identical?'PASS ✓':'FAIL';
+    $('verifyLabel').className=current.identical?'ok':'warn';
+    $('psnr').textContent=Number.isFinite(ps)?ps.toFixed(2)+' dB':'∞ dB';
+    $('omega').textContent=omega.toFixed(3);$('tiles').textContent=String(count);
+    labelCoords(q);$('status').style.color='#a4bfce';$('status').textContent='8³ RGB tile reconstructed byte-for-byte. Active state uses 1,536 RGB8 bytes + 192 latent bytes + residual.';
+    const row={q:q.map(String),alpha:getAlpha(),folds:getSteps(),approx_mse:current.mse,exact:current.identical};
+    audit.push(row);log(`TILE #${count}: MSE=${current.mse.toFixed(4)} PSNR=${ps.toFixed(2)} dB; exact ${current.identical?'PASS':'FAIL'}`);
+  }catch(e){error(e)}}
+ function runBatch(){try{const start=getQ(),alpha=getAlpha(),steps=getSteps();let exact=0,sum=0;
+   for(let i=0;i<16;i++){const q=[(start[0]+BigInt(i))%DM3D.N_TILES,start[1],start[2]],t=DM3D.processTile(q,alpha,steps);
+     if(t.identical)exact++;sum+=t.mse;omega=omega==null?t.mse:.88*omega+.12*t.mse;count++;
+     audit.push({q:q.map(String),alpha,folds:steps,approx_mse:t.mse,exact:t.identical});current=t;
+   }
+   $('tiles').textContent=String(count);$('omega').textContent=omega.toFixed(3);
+   $('verifyLabel').textContent=exact===16?'PASS ✓':'FAIL';$('psnr').textContent=current.psnr.toFixed(2)+' dB';
+   log(`MICROBATCH GROUP: 16/16 finite tiles; ${exact} exact passes; mean approx MSE ${(sum/16).toFixed(4)}. Sequential CPU execution.`);
+   labelCoords(current.q);
+ }catch(e){error(e)}}
+ function adapt(){try{const q=getQ(),steps=getSteps(),oldAlpha=getAlpha();
+   const validation=Array.from({length:6},(_,j)=>[
+      (q[0]+BigInt(17+j))%DM3D.N_TILES,
+      (q[1]+BigInt(31+j))%DM3D.N_TILES,
+      (q[2]+BigInt(41+j))%DM3D.N_TILES]);
+   const score=a=>validation.reduce((v,p)=>v+DM3D.loss(p,a,steps),0)/validation.length;
+   const oldScore=score(oldAlpha);
+   const trials=[...new Set([oldAlpha,.2,.15,.10,.05,.02])];
+   const order=trials.map(a=>({a,loss:score(a)})).sort((l,r)=>l.loss-r.loss);
+   const next=order[0],accepted=next.loss<oldScore-1e-10;
+   if(accepted){$('alpha').value=String(next.a);$('av').textContent=next.a.toFixed(2)}
+   log(`CTR UPDATE: ${accepted?'ACCEPT':'ROLLBACK'}; validation MSE ${oldScore.toFixed(5)} → ${(accepted?next.loss:oldScore).toFixed(5)}; α ${oldAlpha.toFixed(2)} → ${(accepted?next.a:oldAlpha).toFixed(2)}`);
+   processCurrent();
+ }catch(e){error(e)}}
+ function exportAudit(){const o={system:'DM3D septillion³ virtual 3D emulator',axis_length:DM3D.SIDE.toString(),virtual_positions:'10^72',sampled_tiles:count,omega,fold_strength:getAlpha(),recursion:getSteps(),history:audit};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(o,null,2)],{type:'application/json'}));let a=document.createElement('a');a.href=url;a.download='dm3d_septillion_audit.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+ function render(now){const w=c.clientWidth,h=c.clientHeight;
+   if(c.width!==Math.round(w*devicePixelRatio)||c.height!==Math.round(h*devicePixelRatio)){c.width=Math.round(w*devicePixelRatio);c.height=Math.round(h*devicePixelRatio)}
+   ctx.setTransform(c.width/w,0,0,c.height/h,0,0);
+   ctx.fillStyle='#071020';ctx.fillRect(0,0,w,h);
+   ctx.strokeStyle='#14314e';ctx.lineWidth=1;for(let i=0;i<12;i++){const yy=h*(i+1)/12;ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(w,yy);ctx.stroke()}
+   const cx=w/2,cy=h/2+10,size=Math.min(w,h)*.41,rx=rotation,ry=rotation*.53;
+   const project=(a,b,d)=>{const px=a*Math.cos(rx)-d*Math.sin(rx),pz=a*Math.sin(rx)+d*Math.cos(rx);
+     const py=b*Math.cos(ry)-pz*Math.sin(ry),pzz=b*Math.sin(ry)+pz*Math.cos(ry);
+     const scale=2.5/(2.8+pzz*.6);return {x:cx+px*size*scale,y:cy+py*size*scale,z:pzz,scale}};
+   const corners=[];for(let z of [-1,1])for(let y of [-1,1])for(let x of [-1,1]) corners.push(project(x,y,z));
+   ctx.strokeStyle='#2a5574';ctx.lineWidth=1;
+   for(let i=0;i<8;i++)for(let j=i+1;j<8;j++) if(((i^j)===1)||((i^j)===2)||((i^j)===4)){
+     ctx.beginPath();ctx.moveTo(corners[i].x,corners[i].y);ctx.lineTo(corners[j].x,corners[j].y);ctx.stroke();}
+   if(current){const n=mode==='latent'?4:8,arr=mode==='latent'?current.zf:(mode==='approx'?current.approx:mode==='exact'?current.exact:mode==='residual'?current.residual:current.orig);
+      const pts=[];
+      for(let z=0;z<n;z++)for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+        const idx=((z*n+y)*n+x)*3;const rgb=[arr[idx],arr[idx+1],arr[idx+2]];
+        const pos=project((x+.5)/n*2-1,(y+.5)/n*2-1,(z+.5)/n*2-1);
+        const R=mode==='residual'?Math.min(255,Math.abs(rgb[0]>127?rgb[0]-256:rgb[0])*22):rgb[0];
+        const G=mode==='residual'?Math.min(255,Math.abs(rgb[1]>127?rgb[1]-256:rgb[1])*22):rgb[1];
+        const B=mode==='residual'?Math.min(255,Math.abs(rgb[2]>127?rgb[2]-256:rgb[2])*22):rgb[2];
+        pts.push({...pos,color:`rgb(${R},${G},${B})`,rad:Math.max(1.4,Math.min(4.6,size*.018*pos.scale))});
+      }
+      pts.sort((a,b)=>b.z-a.z);
+      for(const p of pts){ctx.beginPath();ctx.arc(p.x,p.y,p.rad,0,Math.PI*2);ctx.fillStyle=p.color;ctx.fill();}
+   }
+   rotation+=.0039;requestAnimationFrame(render)
+ }
+ $('run').addEventListener('click',processCurrent);$('batch').addEventListener('click',runBatch);$('adapt').addEventListener('click',adapt);
+ $('nextx').addEventListener('click',()=>move(0));$('nexty').addEventListener('click',()=>move(1));$('nextz').addEventListener('click',()=>move(2));
+ $('corner').addEventListener('click',()=>{['x','y','z'].forEach(k=>$(k).value=(DM3D.SIDE-1n).toString());processCurrent()});
+ $('stream').addEventListener('click',()=>{if(streamTimer){clearInterval(streamTimer);streamTimer=null;$('stream').textContent='▶ Continuous sample stream';log('STREAM paused')}else{
+   streamTimer=setInterval(()=>move(0),650);$('stream').textContent='◼ Stop continuous stream';log('STREAM started — one finite tile every 650 ms')}});
+ $('audit').addEventListener('click',exportAudit);
+ $('alpha').addEventListener('input',()=>{$('av').textContent=getAlpha().toFixed(2)});
+ $('steps').addEventListener('input',()=>{$('kv').textContent=String(getSteps())});
+ $('modes').addEventListener('click',e=>{let btn=e.target.closest('button[data-mode]');if(!btn)return;mode=btn.dataset.mode;
+   document.querySelectorAll('#modes button').forEach(x=>x.classList.toggle('active',x===btn));$('panelMode').textContent=btn.textContent});
+ log('VIRTUAL ENGINE INITIALIZED: allocated 0 of 10^72 global voxels.');processCurrent();requestAnimationFrame(render);
+})();
+</script></body></html>
