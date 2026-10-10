@@ -1,0 +1,42 @@
+name: DM3D Pi-Torus Mahler Numerical
+on:
+  pull_request:
+    paths:
+      - "apps/dm3d-pi-mahler/**"
+      - "docs/DM3D_PI_TORUS_MAHLER.md"
+      - ".github/workflows/dm3d-pi-torus-mahler.yml"
+  push:
+    paths:
+      - "apps/dm3d-pi-mahler/**"
+      - "docs/DM3D_PI_TORUS_MAHLER.md"
+      - ".github/workflows/dm3d-pi-torus-mahler.yml"
+jobs:
+  numerical-regressions:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: apps/dm3d-pi-mahler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: apps/dm3d-pi-mahler/requirements.txt
+      - name: Install numerical dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Verify mathematical and statistical invariants
+        run: python -m unittest -v test_pi_mahler.py test_fourier_feedback.py
+      - name: Reproduce Smyth and Fourier audit receipts
+        run: |
+          python pi_mahler.py demo --n 32 --out demo_audit_ci.json > /dev/null
+          python fourier_feedback.py --case smyth --seed 42 --out fourier_audit_ci.json > /dev/null
+          python -c "import json; p=json.load(open('demo_audit_ci.json')); f=json.load(open('fourier_audit_ci.json')); c=p['cases']['smyth']; assert c['direct3d']['evaluations']==32768; assert c['jensen2d']['evaluations']==1024; assert c['jensen_error']<1e-5; assert f['independent_holdout']; assert f['evaluations_feedback']==f['evaluations_plain']==2560; assert f['se_feedback']<f['se_plain']; print('AUDIT PASS')"
+      - name: Offline dashboard script syntax
+        run: |
+          python -c "import pathlib,re; s=pathlib.Path('pi_torus_monitor.html').read_text(); t=re.search(r'<script>(.*?)</script>',s,re.S); assert t and 'integrate2' in t.group(1); pathlib.Path('dashboard_check.js').write_text(t.group(1))"
+          node --check dashboard_check.js
