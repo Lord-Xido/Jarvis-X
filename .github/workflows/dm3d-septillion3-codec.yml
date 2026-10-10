@@ -1,0 +1,25 @@
+name: DM3D Septillion3 virtual tile codec
+on:
+  push:
+    paths:
+      - "apps/septillion3-virtual/**"
+      - "docs/SEPTILLION3_VIRTUAL_TILE_CODEC.md"
+      - ".github/workflows/dm3d-septillion3-codec.yml"
+  pull_request:
+    paths:
+      - "apps/septillion3-virtual/**"
+      - "docs/SEPTILLION3_VIRTUAL_TILE_CODEC.md"
+      - ".github/workflows/dm3d-septillion3-codec.yml"
+jobs:
+  codec:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Run bounded reference checks
+        run: node apps/septillion3-virtual/test_cross_language.js
