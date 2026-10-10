@@ -1,0 +1,33 @@
+name: Multipurpose 3D ANN mathematical verification
+on:
+  pull_request:
+    paths:
+      - 'apps/jarvis-x-multipurpose-ann/**'
+      - '.github/workflows/multipurpose-ann-verify.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/jarvis-x-multipurpose-ann/**'
+      - '.github/workflows/multipurpose-ann-verify.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  numeric-validation:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Static syntax checks
+        run: |
+          node --check apps/jarvis-x-multipurpose-ann/dm3d_core.js
+          node --check apps/jarvis-x-multipurpose-ann/ui.js
+          node --check apps/jarvis-x-multipurpose-ann/tests/verification.js
+      - name: Run reference arithmetic, learning and convergence tests
+        run: node apps/jarvis-x-multipurpose-ann/tests/verification.js
