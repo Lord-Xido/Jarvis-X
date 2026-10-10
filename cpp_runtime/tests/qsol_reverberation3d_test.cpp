@@ -14,6 +14,7 @@ int main() {
     assert(x.cells == original.cells);
     assert(snapshot.units.size()==256);
     assert(observe(x,input,0).render_hash == snapshot.render_hash);
+    assert(snapshot.render_hash == 13031730993188382959ULL); // cross-compiler vector
     assert(observe(x,input,1).render_hash != snapshot.render_hash);
     assert(index(-1,0,0)==index(15,0,0));
     assert(index(16,0,0)==index(0,0,0));
