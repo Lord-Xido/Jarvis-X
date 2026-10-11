@@ -74,6 +74,24 @@ cmake --build build/cpp-runtime --target jarvisx-80k-pixel-inward-ann --parallel
 
 Interactive mode uses ANSI true-colour half-block cells. Terminal output may be resampled to fit the physical console, while the internal framebuffer remains exactly `400 x 200`.
 
+## QSOL deterministic observation integration
+
+The 80K framebuffer also drives a separate 16³ Q16.16 reverberation field
+via fixed RGB sampling. The additional non-mutating observation yields a
+256-unit 8×8×4 pooled signal and canonical integer render hash. It is
+**read-only**: no QSOL observer output is routed to the ANN candidate verifier,
+render geometry, or the reverberation state update. The ANN's existing
+guarded learning remains unchanged.
+
+For headless JSON runs, the fields `qsol_state_hash` and
+`qsol_render_hash` are decimal strings; the observer's integer camera offsets
+are derived solely for deterministic layout telemetry. Equal quantized input
+sequences and frame indices produce equal hashes. Floating-point rasterization
+may differ across architectures, so cross-device pixel identity is not claimed.
+
+See [ADR-0036](adr/0036-qsol-deterministic-3d-observer.md) for the exact
+`||A||∞ ≤ 15/16` operator, quantization, hashing order, and test vectors.
+
 ## Verification
 
 The deterministic self-test checks exact framebuffer and latent cardinality, projection/unprojection consistency, finite metrics, feedback energy `<= 0.5`, non-regressing MSE for every committed parameter candidate, and at least one accepted candidate. Focused CI covers GCC, Clang, ASan and UBSan.

@@ -44,6 +44,7 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include "qsol_reverberation3d.hpp"
 
 #ifdef _WIN32
   #define NOMINMAX
@@ -553,6 +554,17 @@ static Args parse_args(int argc,char** argv){
     return a;
 }
 
+// Exact-integer adapter from the already-rendered 80K RGB framebuffer.
+// Fixed spatial sampling into a 16^3 forcing field; no back-edge from QSOL readout.
+static qsol3d::Field qsol_frame_input(const Framebuffer& fb){
+    qsol3d::Field input{};
+    for(int k=0;k<qsol3d::kVoxels;++k){
+        const auto& px=fb.color[(static_cast<std::size_t>(k)*FB_PIXELS)/qsol3d::kVoxels];
+        input.cells[k]=qsol3d::excitation_from_rgb(px.r,px.b);
+    }
+    return input;
+}
+
 static bool receipt_valid(const CycleReceipt& r){
     return std::isfinite(r.baseline_mse)
         && std::isfinite(r.candidate_mse)
@@ -564,7 +576,9 @@ static bool receipt_valid(const CycleReceipt& r){
         && (!r.parameter_commit||r.candidate_mse<=r.baseline_mse+1.0e-7f);
 }
 
-static std::string receipt_json(const CycleReceipt& r,std::uint64_t frames){
+static std::string receipt_json(const CycleReceipt& r,std::uint64_t frames,
+                                const qsol3d::Field& qsol_state,
+                                const qsol3d::Observation& qsol_readout){
     std::ostringstream os;
     os<<std::fixed<<std::setprecision(8)
       <<"{\"engine\":\"DrMoagi-80K-Pixel-Inward-ANN\","
@@ -583,7 +597,14 @@ static std::string receipt_json(const CycleReceipt& r,std::uint64_t frames){
       <<"\"latent_rms\":"<<r.latent_rms<<','
       <<"\"active_voxels\":"<<r.active_voxels<<','
       <<"\"parameter_commit\":"<<(r.parameter_commit?"true":"false")<<','
-      <<"\"step_ms\":"<<r.step_ms<<'}';
+      <<"\"step_ms\":"<<r.step_ms<<','
+      <<"\"qsol_voxels\":"<<qsol3d::kVoxels<<','
+      <<"\"qsol_observer_units\":"<<qsol3d::kObserverUnits<<','
+      <<"\"qsol_contraction_bound\":0.9375,"
+      <<"\"qsol_state_hash\":\""<<qsol3d::state_hash(qsol_state)<<"\","
+      <<"\"qsol_render_hash\":\""<<qsol_readout.render_hash<<"\","
+      <<"\"qsol_camera_dx\":"<<qsol_readout.camera_dx<<','
+      <<"\"qsol_camera_dy\":"<<qsol_readout.camera_dy<<'}';
     return os.str();
 }
 
@@ -602,6 +623,7 @@ static bool self_test(){
 
     Framebuffer fb;
     NeuralField3D ann;
+    qsol3d::Field qsol_state{};
     int commits=0;
     CycleReceipt last{};
     constexpr std::uint64_t kFrames=18;
@@ -609,6 +631,14 @@ static bool self_test(){
         const float t=static_cast<float>(i)*0.025f;
         const RenderContext rc=render_scene(fb,t,i,ann);
         last=ann.closed_loop_update(fb,rc.cam,rc.basis,i);
+        const auto excitation=qsol_frame_input(fb);
+        qsol_state=qsol3d::advance(qsol_state,excitation);
+        const auto state_before_observe=qsol3d::state_hash(qsol_state);
+        const auto readout=qsol3d::observe(qsol_state,excitation,static_cast<std::uint32_t>(i));
+        if(qsol3d::state_hash(qsol_state)!=state_before_observe ||
+           qsol3d::observe(qsol_state,excitation,static_cast<std::uint32_t>(i)).render_hash
+               !=readout.render_hash ||
+           std::abs(readout.camera_dx)>6 || std::abs(readout.camera_dy)>6) return false;
         if(!receipt_valid(last)) return false;
         commits+=last.parameter_commit?1:0;
     }
@@ -637,6 +667,8 @@ int main(int argc,char** argv){
 
         Framebuffer fb;
         NeuralField3D ann;
+        qsol3d::Field qsol_state{};
+        qsol3d::Observation qsol_readout{};
         using clock=std::chrono::steady_clock;
         auto t0=clock::now(),last=t0;
         double fps=0;
@@ -644,9 +676,14 @@ int main(int argc,char** argv){
         CycleReceipt lastReceipt{};
         while(running && (args.maxFrames==0 || frame<args.maxFrames)){
             const auto begin=clock::now();
-            const float t=std::chrono::duration<float>(begin-t0).count();
+            const float t=args.headless ? static_cast<float>(frame)*0.025f
+                : std::chrono::duration<float>(begin-t0).count();
             const RenderContext rc=render_scene(fb,t,frame,ann);
             lastReceipt=ann.closed_loop_update(fb,rc.cam,rc.basis,frame);
+            const auto excitation=qsol_frame_input(fb);
+            qsol_state=qsol3d::advance(qsol_state,excitation);
+            // Readout is pure: not supplied to ANN, renderer, or evolution logic.
+            qsol_readout=qsol3d::observe(qsol_state,excitation,static_cast<std::uint32_t>(frame));
 
             const auto now=clock::now();
             const double dt=std::chrono::duration<double>(now-last).count();
@@ -675,7 +712,7 @@ int main(int argc,char** argv){
             }
         }
         if(!args.headless) terminal_leave();
-        if(args.json) std::cout<<receipt_json(lastReceipt,frame)<<'\n';
+        if(args.json) std::cout<<receipt_json(lastReceipt,frame,qsol_state,qsol_readout)<<'\n';
         return receipt_valid(lastReceipt)||frame==0?0:3;
     } catch(const std::exception& e){
         std::cerr<<"fatal: "<<e.what()<<'\n';

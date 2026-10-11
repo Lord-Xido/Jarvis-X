@@ -12,7 +12,7 @@ import json
 import math
 import struct
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -65,7 +65,7 @@ class FourierEncoder:
             axis=1,
         )
         assert Z.shape == (len(P), Z_DIM)
-        return Z
+        return cast(np.ndarray, Z)
 
 
 class FourierDecoder:
@@ -158,7 +158,7 @@ def projection_jacobian(
     basis = np.eye(3) * eps
     plus = dec(enc(P0[None, :] + basis))
     minus = dec(enc(P0[None, :] - basis))
-    return (plus - minus).T / (2.0 * eps)
+    return cast(np.ndarray, (plus - minus).T / (2.0 * eps))
 
 
 class InwardLoop:
