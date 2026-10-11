@@ -38,12 +38,12 @@ def test():
             out.writeframes(bytes((i*19) % 256 for i in range(16000)))
         samples = [
             ("empty", b"", "application/octet-stream"),
-            ("one", b"\\x01", "application/octet-stream"),
-            ("utf8", ("你好 مرحبا 😀 Dr Moagi\\n" * 40).encode(), "text/plain"),
-            ("image", b"P6\\n16 16\\n255\\n" + os.urandom(768), "image/x-portable-pixmap"),
+            ("one", b"\x01", "application/octet-stream"),
+            ("utf8", ("你好 مرحبا 😀 Dr Moagi\n" * 40).encode(), "text/plain"),
+            ("image", b"P6\n16 16\n255\n" + os.urandom(768), "image/x-portable-pixmap"),
             ("wav", wavpath.read_bytes(), "audio/wav"),
-            ("mp4-bytes", b"\\0\\0\\0\\x18ftypisom" + os.urandom(5409), "video/mp4"),
-            ("jpeg-bytes", b"\\xff\\xd8\\xff" + os.urandom(3000), "image/jpeg"),
+            ("mp4-bytes", b"\0\0\0\x18ftypisom" + os.urandom(5409), "video/mp4"),
+            ("jpeg-bytes", b"\xff\xd8\xff" + os.urandom(3000), "image/jpeg"),
             ("zeroes", bytes(65536), "application/octet-stream"),
             ("512", os.urandom(512), "application/octet-stream"),
             ("513", os.urandom(513), "application/octet-stream"),
