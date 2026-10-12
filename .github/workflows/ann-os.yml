@@ -1,0 +1,71 @@
+name: ANN OS v2 C++17
+on:
+  push:
+    paths:
+      - "cpp_runtime/ann_os/**"
+      - "cpp_runtime/CMakeLists.txt"
+      - ".github/workflows/ann-os.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/ann_os/**"
+      - "cpp_runtime/CMakeLists.txt"
+      - ".github/workflows/ann-os.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ann-os-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: ${{ matrix.os }} / ${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: g++
+            sanitizers: "OFF"
+          - os: ubuntu-latest
+            compiler: clang++
+            sanitizers: "ON"
+          - os: windows-latest
+            compiler: msvc
+            sanitizers: "OFF"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            export CXX="${{ matrix.compiler }}"
+          fi
+          cmake -S cpp_runtime/ann_os -B build/ann-os -DCMAKE_BUILD_TYPE=Release -DANN_OS_SANITIZERS=${{ matrix.sanitizers }}
+
+      - name: Build
+        run: cmake --build build/ann-os --config Release --parallel 2
+
+      - name: Regression tests and batch-mode boot
+        run: ctest --test-dir build/ann-os -C Release --output-on-failure
+
+      - name: Generate, compile and execute XOR app
+        if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'g++'
+        working-directory: build/ann-os
+        shell: bash
+        run: |
+          printf 'generate app xor\ndebug\nexit\n' | ./ann_os --self ann_os.cpp
+          ./app/generated_app
+
+      - name: Upload tested executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: ann-os-${{ matrix.os }}-${{ matrix.compiler }}
+          path: |
+            build/ann-os/ann_os
+            build/ann-os/Release/ann_os.exe
+          if-no-files-found: error
