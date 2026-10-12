@@ -1,0 +1,36 @@
+name: DM3D C++ Inward Loop v2
+on:
+  push:
+    paths:
+      - 'cpp_runtime/dm3d_inward_loop_v2/**'
+      - '.github/workflows/dm3d-inward-loop-v2.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/dm3d_inward_loop_v2/**'
+      - '.github/workflows/dm3d-inward-loop-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpp20:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S cpp_runtime/dm3d_inward_loop_v2 -B build/dm3d-inward-loop-v2 -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/dm3d-inward-loop-v2 --parallel 2
+      - name: Unit and self tests
+        run: |
+          ctest --test-dir build/dm3d-inward-loop-v2 --output-on-failure
+          ./build/dm3d-inward-loop-v2/dm3d selftest
+      - name: Media roundtrip
+        run: |
+          ./build/dm3d-inward-loop-v2/dm3d loop cpp_runtime/dm3d_inward_loop_v2/examples/generated/sample.wav "${{ runner.temp }}/wav.dm3d" "${{ runner.temp }}/wav_restored.wav" --threads 2 --folds 12 --passes 5
+          cmp cpp_runtime/dm3d_inward_loop_v2/examples/generated/sample.wav "${{ runner.temp }}/wav_restored.wav"
