@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
       - name: Build
@@ -26,7 +26,7 @@ jobs:
       - name: Generate smoke-test frames
         run: dotnet run --project apps/qsol-graphics-codec/QSol.GraphicsCodec.csproj -c Release --no-build -- --frames 3 --target-error 0.0025 --output artifacts/qsol-graphics-codec
       - name: Upload smoke-test artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: qsol-graphics-codec-smoke
           path: artifacts/qsol-graphics-codec

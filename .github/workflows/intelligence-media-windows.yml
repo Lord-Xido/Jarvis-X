@@ -89,7 +89,7 @@ jobs:
           Compress-Archive -Path "$stage/*" -DestinationPath "build/intelligence-media/DrMoagi-Intelligence-Media-Windows-x64.zip" -Force
 
       - name: Upload Windows package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: DrMoagi-Intelligence-Media-Windows-x64
           path: |
