@@ -1,5 +1,7 @@
 # Jarvis-X / Moagi system-wide 3D C++ map
 
+![Moagi Multimodal Sparse 3D ANN topology](assets/moagi-multimodal-sparse-3d-ann.svg)
+
 This is a self-contained C++17 reference implementation of the systems-wide architecture.
 
 It maps and executes:
@@ -7,6 +9,58 @@ It maps and executes:
 `REALITY -> multimodal ingest -> sparse virtual 1000MB^3 substrate -> active tile fabric -> encoder -> distributed tile latents -> orchestrator/fusion -> Omega + possibility field -> Phi_in inward refinement -> decoder -> residual -> codec boundary -> CTR -> commit/serve -> REALITY`
 
 It also exposes an arithmetic-planner integration point capable of selecting between `EXECUTE`, `REDUCE_3D`, `COMPOSE_OPERATOR`, and `SOLVE_FIXED_POINT`.
+
+## Visual topology contract
+
+The repository visual fixes the end-to-end spatial roles as:
+
+```text
+TEXT / IMAGE / AUDIO / VIDEO / BYTES
+                 |
+                 v
+      canonicalization + metadata
+                 |
+                 v
+       bounded active 3D tile set
+                 |
+                 v
+              E_theta
+                 |
+        distributed tile latents
+                 |
+      modality/context conditioning
+                 |
+        orchestrator + weighted fusion
+                 |
+                 v
+              Z_k, Omega
+                 |
+                 v
+       Phi_in: Z_k -> ... -> Z*
+                 |
+        context injection to tiles
+                 |
+                 v
+              D_phi
+                 |
+                 v
+        reconstructed modalities
+                 |
+                 v
+       CTR verify / commit / rollback
+```
+
+The visual shows a **maximum 64-active-tile architectural envelope** for the
+multimodal sparse topology. The C++ executable keeps the active-tile count
+explicitly bounded through `--max-tiles`; that option is a reference-runtime
+materialization control and does not imply that the full logical cube is
+resident.
+
+"Modality embeddings" in the visual are an interface contract. The current
+dependency-free C++ adapter uses modality-conditioned deterministic weighting,
+not a learned embedding table. A learned Conv3D/libtorch backend may replace
+that adapter without changing the surrounding sparse-address, fusion, inward,
+decoder, CTR or authority contracts.
 
 ## Scale semantics
 
@@ -23,6 +77,10 @@ g++ -std=c++17 -O2 -Wall -Wextra -pedantic cpp_runtime/src/systemwide_3d_map_mai
 ```bash
 ./build/cpp-runtime/DrMoagi-Systemwide-3D-Map --tile-side 16 --block 4 --max-tiles 8 --iterations 10 --out moagi_system
 ```
+
+To exercise the full visual envelope for one bounded input stream, set
+`--max-tiles 64`. Resident work still remains bounded by the supplied runtime
+limits and actual input size.
 
 ## Outputs
 
