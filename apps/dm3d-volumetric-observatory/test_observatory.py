@@ -13,7 +13,7 @@ class ObservatoryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.html = APP.read_text(encoding='utf-8')
-        cls.module = re.search(r'<script type="module">([\\s\\S]*?)</script>', cls.html)
+        cls.module = re.search(r'<script type="module">([\s\S]*?)</script>', cls.html)
 
     def test_document_structure(self):
         self.assertTrue(self.html.startswith('<!DOCTYPE html>'))
