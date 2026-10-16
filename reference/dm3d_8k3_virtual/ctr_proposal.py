@@ -7,7 +7,7 @@ from pathlib import Path
 REQUIRED = {"size","version","coordinates","morton39","decode2","bit_exact","fnv","metadata"}
 
 
-def build_proposal(receipt: dict, report: dict) -> dict:
+def build_proposal(receipt: dict, report: dict, vm_receipt: dict | None = None) -> dict:
     if receipt.get("schema") != "JX8K-CTR-1" or receipt.get("status") != "PASS":
         raise ValueError("unverified receipt")
     if not REQUIRED.issubset(set(receipt.get("checkpoints",[]))):
@@ -24,8 +24,34 @@ def build_proposal(receipt: dict, report: dict) -> dict:
             or receipt.get("physical_raw_bytes")!=report.get("materialized_raw_bytes")
             or receipt.get("encoded_packet_bytes")!=report.get("packet_file_bytes")):
         raise ValueError("receipt/report mismatch")
-    return {
-        "schema":"JX8K-TXPROPOSAL-1",
+    if vm_receipt is not None:
+        import hashlib
+        from tile_vm_adapter import default_bytecode
+
+        count = report["tiles_verified"]
+        if (vm_receipt.get("schema") != "JX8K-TILEVM-1"
+                or vm_receipt.get("status") != "PASS"
+                or vm_receipt.get("authority") != "provisional"
+                or vm_receipt.get("commit_eligible") is not False
+                or vm_receipt.get("production_state_modified") is not False
+                or vm_receipt.get("packet_sha256") != receipt["packet_sha256"]
+                or vm_receipt.get("raw_sha256") != receipt["raw_sha256"]
+                or vm_receipt.get("program_sha256") != hashlib.sha256(default_bytecode()).hexdigest()
+                or vm_receipt.get("tiles_processed") != count
+                or vm_receipt.get("physical_tensor_values") != count * 4096
+                or vm_receipt.get("instruction_steps") != count * 6 + 1):
+            raise ValueError("VM staging evidence does not match verified tile packet")
+        observations = vm_receipt.get("observations")
+        if (not isinstance(observations, list) or len(observations) != count
+                or any(not x.get("bit_exact", False) or sum(x.get("counts", [])) != 4096
+                       or x.get("tensor_dtype") != "float32"
+                       or x.get("tensor_shape") != [16, 16, 16]
+                       or x.get("tile_coord") != [report["observations"][i][a] for a in ("x", "y", "z")]
+                       or x.get("morton39") != report["observations"][i]["morton"]
+                       for i, x in enumerate(observations))):
+            raise ValueError("VM per-tile geometric observations are invalid")
+    proposal = {
+        "schema": "JX8K-TXPROPOSAL-1",
         "authority":"provisional",
         "commit_eligible":False,
         "production_state_modified":False,
@@ -44,6 +70,16 @@ def build_proposal(receipt: dict, report: dict) -> dict:
                  "external_world_correspondence":"not_evaluated","production_policy":"not_evaluated"},
         "next_action":"Review evidence; production authority requires explicit integration and all applicable gates."
     }
+    proposal["gates"]["tile_vm_staging"] = "pass" if vm_receipt is not None else "not_evaluated"
+    if vm_receipt is not None:
+        proposal["typed_state"]["vm_staging"] = {
+            "schema": vm_receipt["schema"],
+            "program_sha256": vm_receipt["program_sha256"],
+            "tiles_processed": vm_receipt["tiles_processed"],
+            "tensor_dtype": "float32",
+            "voxel_values_per_tile": 4096,
+        }
+    return proposal
 
 
 def main():
@@ -51,9 +87,11 @@ def main():
     p.add_argument("--receipt",required=True)
     p.add_argument("--report",required=True)
     p.add_argument("--out")
+    p.add_argument("--vm-receipt")
     a=p.parse_args()
     proposal=build_proposal(json.loads(Path(a.receipt).read_text()),
-                            json.loads(Path(a.report).read_text()))
+                            json.loads(Path(a.report).read_text()),
+                            json.loads(Path(a.vm_receipt).read_text()) if a.vm_receipt else None)
     data=json.dumps(proposal,indent=2,sort_keys=True)+"\n"
     if a.out:Path(a.out).write_text(data)
     print(data,end="")
