@@ -42,3 +42,8 @@ jobs:
           python reference/dm3d_8k3_virtual/tile_vm_adapter.py --report build/jx8k-fixture/report.json --encoded build/jx8k-fixture/packet.jx8k --raw build/jx8k-fixture/raw.bin --receipt build/jx8k-fixture/tile_vm.json --program-out build/jx8k-fixture/tile_vm.bc
           python reference/dm3d_8k3_virtual/ctr_proposal.py --report build/jx8k-fixture/report.json --receipt build/jx8k-fixture/receipt.json --vm-receipt build/jx8k-fixture/tile_vm.json --out build/jx8k-fixture/proposal.json
           python -c 'import json; p=json.load(open("build/jx8k-fixture/proposal.json")); assert p["authority"]=="provisional" and p["commit_eligible"] is False and p["gates"]["tile_vm_staging"]=="pass" and p["production_state_modified"] is False'
+      - name: Native C++ sandbox transaction and independent Python cross-runtime linkage
+        run: |
+          build/jx8k3/jarvisx_dm3d_8k3_native_vm --encoded build/jx8k-fixture/packet.jx8k --raw build/jx8k-fixture/raw.bin --program build/jx8k-fixture/tile_vm.bc --receipt build/jx8k-fixture/native_receipt.json
+          python reference/dm3d_8k3_virtual/native_receipt_link.py --native-receipt build/jx8k-fixture/native_receipt.json --report build/jx8k-fixture/report.json --encoded build/jx8k-fixture/packet.jx8k --raw build/jx8k-fixture/raw.bin --out build/jx8k-fixture/native_link.json
+          python -c 'import json; n=json.load(open("build/jx8k-fixture/native_link.json")); assert n["status"]=="PASS" and n["tiles_verified"]==192 and n["commit_eligible"] is False and n["production_state_modified"] is False'
