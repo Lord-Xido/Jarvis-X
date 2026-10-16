@@ -8,6 +8,9 @@ import tempfile
 import unittest
 from array import array
 
+from ctr_proposal import build_proposal
+from verify_packet import verify
+
 from tile_vm_adapter import (
     BoundedTileVM, DEFAULT_PROGRAM, MAX_TILES, TileOp,
     default_bytecode, pack_tensor, pack_word, parse_program, unpack_tensor,
@@ -98,6 +101,22 @@ class AdapterTests(unittest.TestCase):
         ):
             with self.subTest(case=len(p)), self.assertRaises((ValueError, IndexError)):
                 vm.run(metadata, p, r)
+
+    def test_ctr_receipt_chain_and_corruption_rejection(self):
+        vm = BoundedTileVM(default_bytecode())
+        receipt = verify(self.report_data, self.packet_data, self.raw_data)
+        result = vm.run(self.report_data, self.packet_data, self.raw_data)
+        proposal = build_proposal(receipt, self.report_data, result)
+        self.assertEqual(proposal["gates"]["tile_vm_staging"], "pass")
+        self.assertFalse(proposal["commit_eligible"])
+        self.assertFalse(proposal["production_state_modified"])
+        self.assertEqual(proposal["typed_state"]["vm_staging"]["tiles_processed"], 8)
+        with self.assertRaises(ValueError):
+            build_proposal(receipt, self.report_data, {**result, "packet_sha256": "0" * 64})
+        with self.assertRaises(ValueError):
+            build_proposal(receipt, self.report_data, {**result, "instruction_steps": 999999})
+        with self.assertRaises(ValueError):
+            build_proposal(receipt, self.report_data, {**result, "observations": []})
 
     def test_cli_emits_only_provisional_receipt(self):
         outfile = self.base / "proposal.json"
