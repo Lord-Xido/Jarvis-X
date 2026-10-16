@@ -1,0 +1,43 @@
+name: DM3D 8K3 Virtual Tile Reference
+
+on:
+  push:
+    paths:
+      - 'reference/dm3d_8k3_virtual/**'
+      - '.github/workflows/dm3d-8k3-virtual-reference.yml'
+  pull_request:
+    paths:
+      - 'reference/dm3d_8k3_virtual/**'
+      - '.github/workflows/dm3d-8k3-virtual-reference.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Configure and build isolated reference
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: |
+          cmake -S reference/dm3d_8k3_virtual -B build/jx8k3 -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/jx8k3 --parallel 2
+      - name: Run C++ self-test and Python packet tests
+        run: ctest --test-dir build/jx8k3 --output-on-failure
+      - name: Full bounded fixture and provisional CTR receipt
+        run: |
+          mkdir -p build/jx8k-fixture
+          build/jx8k3/jarvisx_dm3d_8k3_virtual --rounds 3 --candidates 256 --budget 64 --seed 42 --report build/jx8k-fixture/report.json --tiles build/jx8k-fixture/raw.bin --encoded build/jx8k-fixture/packet.jx8k
+          python reference/dm3d_8k3_virtual/verify_packet.py --report build/jx8k-fixture/report.json --raw build/jx8k-fixture/raw.bin --encoded build/jx8k-fixture/packet.jx8k --receipt build/jx8k-fixture/receipt.json
+          python reference/dm3d_8k3_virtual/ctr_proposal.py --report build/jx8k-fixture/report.json --receipt build/jx8k-fixture/receipt.json --out build/jx8k-fixture/proposal.json
+          python -c 'import json; p=json.load(open("build/jx8k-fixture/proposal.json")); assert p["authority"]=="provisional" and p["commit_eligible"] is False'
