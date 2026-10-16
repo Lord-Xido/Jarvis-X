@@ -69,3 +69,24 @@ This is an **adapter-level execution**, not yet an integration with the legacy p
 The standalone workflow now runs independent packet validation, the fixed-word typed VM adapter, then the optional `ctr_proposal.py --vm-receipt /tmp/tile_vm_receipt.json` evidence cross-check. The latter verifies identical raw/packet SHA-256 digests, instruction program hash, tile coordinates, 39-bit Morton addresses, 4,096-value float32 histogram totals, bounded execution-step counts, and the explicitly non-committable receipt flags. Any mismatch fails closed.
 
 The output is an **observational candidate transaction only**. It does not call the legacy DM3D bytecode VM, modify the canonical control plane, or claim authoritative commit capability. The codec and bridge remain finite procedural reference implementations, not learned models.
+
+## Native C++ sandbox transaction (review-first implementation)
+
+The native C++17 native_tile_vm.cpp executable consumes JX8KT1 packets directly and validates the exact seven-word JX8K experimental bytecode profile. It stages an entire finite selected tile batch in a private in-memory std::map<uint64_t, RawTile>, retaining the pre-existing sandbox state. For every tile, it executes the logical LOAD_TILE → DECODE_2BIT → MAP_FLOAT32 → REPACK_2BIT → VERIFY_CTR → EMIT_PROVISIONAL chain. Only after all records pass format, duplicate coordinate, bitwise reconstruction, independent raw-reference and resource checks does one state_.swap(staged) publish the batch **inside the sandbox**. Any exception or injected failure prevents this swap.
+
+The C++ command emits JX8K-NATIVE-TILEVM-1 observational telemetry: sandbox_committed, rolled_back, state_unchanged_after_rollback, per-tile Morton 39-bit addresses, 2-bit histograms, non-cryptographic FNV fingerprints and production_state_modified=false / commit_eligible=false.
+
+The separate native_receipt_link.py independently decodes and checks actual serialized packets against raw data, replays the experimental Python typed tile VM and cross-checks tile coordinates, Morton keys, histogram counts and report fingerprints. It emits a JX8K-NATIVE-LINK-1 provisional result containing independent raw/packet SHA-256 evidence.
+
+After creating the original /tmp fixture and a 56-byte experimental tile_vm.bc via the Python adapter, run:
+
+    build/jx8k3/jarvisx_dm3d_8k3_native_vm --encoded /tmp/tiles.jx8k --raw /tmp/raw.bin --program /tmp/tile_vm.bc --receipt /tmp/native_receipt.json
+    python reference/dm3d_8k3_virtual/native_receipt_link.py --native-receipt /tmp/native_receipt.json --report /tmp/report.json --encoded /tmp/tiles.jx8k --raw /tmp/raw.bin --out /tmp/native_link.json
+
+Rollback test with injected failure after staging the last tile:
+
+    build/jx8k3/jarvisx_dm3d_8k3_native_vm --encoded /tmp/tiles.jx8k --raw /tmp/raw.bin --force-reject-at 191
+
+Injection exits 2 and reports state_unchanged_after_rollback=true, sandbox_committed=false, and one unchanged sentinel record. Success for the same 192-tile input yields instruction_steps=1153 and sandbox_records_after=193 (one sentinel plus 192 verified tiles).
+
+**Boundary:** The native C++ consumer owns a sandbox only. This change does not modify cpp_runtime/dm3d_bytecode/dm3d_vm.cpp, alter canonical runtime authority, authenticate packets, guarantee durable transactional storage, or establish trained intelligence. Production commits remain prohibited. CMake and GCC/Clang workflows exercise native self-test, cross-language comparison, and malicious/incomplete input rejection.
