@@ -13,5 +13,5 @@ enable_testing()
 add_test(NAME jx8k_cpp_selftest COMMAND jarvisx_dm3d_8k3_virtual --self-test)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME jx8k_independent_python
-  COMMAND ${Python3_EXECUTABLE} -m unittest -v test_stack.py)
+  COMMAND ${Python3_EXECUTABLE} -m unittest discover -v -p "test_*.py")
 set_tests_properties(jx8k_independent_python PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
