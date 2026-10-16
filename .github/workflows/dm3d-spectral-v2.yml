@@ -1,0 +1,30 @@
+name: DM3D Spectral V2 C++17
+on:
+  push:
+    paths:
+      - 'reference/dm3d_spectral_v2/**'
+      - '.github/workflows/dm3d-spectral-v2.yml'
+  pull_request:
+    paths:
+      - 'reference/dm3d_spectral_v2/**'
+      - '.github/workflows/dm3d-spectral-v2.yml'
+  workflow_dispatch:
+jobs:
+  compile-and-verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install C++ dependencies
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev cmake
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S reference/dm3d_spectral_v2 -B build/dm3d-spectral-v2 -DCMAKE_BUILD_TYPE=Release
+      - name: Compile
+        run: cmake --build build/dm3d-spectral-v2 --parallel 2
+      - name: Self-test and end-to-end regression
+        run: ctest --test-dir build/dm3d-spectral-v2 --output-on-failure
