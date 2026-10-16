@@ -63,3 +63,9 @@ python reference/dm3d_8k3_virtual/tile_vm_adapter.py \
 ```
 
 This is an **adapter-level execution**, not yet an integration with the legacy production DM3D VM. A subsequent change must define a typed provider/consumer ABI and authoritative transaction policy before any real VM tile opcode can be introduced.
+
+### CTR proof-chain check
+
+The standalone workflow now runs independent packet validation, the fixed-word typed VM adapter, then the optional `ctr_proposal.py --vm-receipt /tmp/tile_vm_receipt.json` evidence cross-check. The latter verifies identical raw/packet SHA-256 digests, instruction program hash, tile coordinates, 39-bit Morton addresses, 4,096-value float32 histogram totals, bounded execution-step counts, and the explicitly non-committable receipt flags. Any mismatch fails closed.
+
+The output is an **observational candidate transaction only**. It does not call the legacy DM3D bytecode VM, modify the canonical control plane, or claim authoritative commit capability. The codec and bridge remain finite procedural reference implementations, not learned models.
