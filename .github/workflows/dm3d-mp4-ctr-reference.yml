@@ -1,0 +1,42 @@
+name: DM3D MP4 CTR Reference
+
+on:
+  push:
+    paths:
+      - 'reference/dm3d_mp4_ctr/**'
+      - '.github/workflows/dm3d-mp4-ctr-reference.yml'
+  pull_request:
+    paths:
+      - 'reference/dm3d_mp4_ctr/**'
+      - '.github/workflows/dm3d-mp4-ctr-reference.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  codec-integration:
+    name: ${{ matrix.os }} ${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, compiler: gcc}
+          - {os: ubuntu-latest, compiler: clang}
+          - {os: windows-latest, compiler: msvc}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Configure C++ reference
+        shell: bash
+        run: |
+          if [ "${{ matrix.compiler }}" = 'clang' ]; then
+            export CC=clang CXX=clang++
+          fi
+          cmake -S reference/dm3d_mp4_ctr -B build/dm3d-mp4-ctr -DCMAKE_BUILD_TYPE=Release
+      - name: Compile
+        run: cmake --build build/dm3d-mp4-ctr --config Release --parallel 2
+      - name: Native and independent tests
+        run: ctest --test-dir build/dm3d-mp4-ctr -C Release --output-on-failure
