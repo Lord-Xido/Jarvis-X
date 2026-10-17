@@ -33,4 +33,6 @@ jobs:
             cmake --build "build/mb4-$compiler" --target jarvisx-mandelbulb4 --parallel 2
             ctest --test-dir "build/mb4-$compiler" -R '^mandelbulb4-' --output-on-failure
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --iterations 18 --force-hierarchy --out "mb4-$compiler.mb4" --decoded "mb4-$compiler.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "mb4-$compiler.mb4" --decoded "mb4-$compiler-replayed.raw"
+            cmp "mb4-$compiler.raw" "mb4-$compiler-replayed.raw"
           done
