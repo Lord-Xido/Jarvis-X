@@ -5,15 +5,19 @@ on:
     branches: [main]
     paths:
       - "cpp_runtime/src/global_cognitive_action_kinetics_main.cpp"
+      - "cpp_runtime/src/dr_moagi_8m_aead_main.cpp"
       - "cpp_runtime/CMakeLists.txt"
       - "docs/GLOBAL_COGNITIVE_ACTION_3D_KINETICS.md"
+      - "docs/DR_MOAGI_8M_3D_AEAD_MASTER_EQUATION.md"
       - ".github/workflows/global-cognitive-action-3d-kinetics.yml"
   push:
     branches: [main]
     paths:
       - "cpp_runtime/src/global_cognitive_action_kinetics_main.cpp"
+      - "cpp_runtime/src/dr_moagi_8m_aead_main.cpp"
       - "cpp_runtime/CMakeLists.txt"
       - "docs/GLOBAL_COGNITIVE_ACTION_3D_KINETICS.md"
+      - "docs/DR_MOAGI_8M_3D_AEAD_MASTER_EQUATION.md"
       - ".github/workflows/global-cognitive-action-3d-kinetics.yml"
 
 permissions:
@@ -25,12 +29,25 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Strict standalone compile
+      - name: Strict compile cognitive-action kinetics
         run: |
           g++ -std=c++17 -O2 \
             -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
             cpp_runtime/src/global_cognitive_action_kinetics_main.cpp \
             -o /tmp/gcain-kinetics
+
+      - name: Strict compile Dr Moagi 8M AEAD
+        run: |
+          g++ -std=c++17 -O2 \
+            -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+            cpp_runtime/src/dr_moagi_8m_aead_main.cpp \
+            -o /tmp/dr-moagi-8m-aead
+
+      - name: Verify exact 8,000,000-pixel AEAD loop
+        run: |
+          /tmp/dr-moagi-8m-aead 4000 2000 2 | tee /tmp/dr-moagi-8m-aead.log
+          grep -F "pixels=8000000" /tmp/dr-moagi-8m-aead.log
+          grep -F "Verification: PASS" /tmp/dr-moagi-8m-aead.log
 
       - name: Verify 3-cycle closed loop
         run: |
@@ -50,16 +67,16 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DJARVISX_BUILD_GL_VISUALIZER=OFF
 
-      - name: Build integrated target
+      - name: Build integrated targets
         run: |
           cmake --build build/gcain \
-            --target jarvisx-global-cognitive-action-kinetics \
+            --target jarvisx-global-cognitive-action-kinetics jarvisx-dr-moagi-8m-aead \
             --parallel
 
-      - name: CTest integration gate
+      - name: CTest integration gates
         run: |
           ctest --test-dir build/gcain \
-            -R global-cognitive-action-kinetics-smoke \
+            -R "global-cognitive-action-kinetics-smoke|dr-moagi-8m-aead-smoke" \
             --output-on-failure
 
   sanitizers:
@@ -74,10 +91,10 @@ jobs:
             -DJARVISX_BUILD_GL_VISUALIZER=OFF \
             -DJARVISX_ENABLE_SANITIZERS=ON
 
-      - name: Build sanitizer target
+      - name: Build sanitizer targets
         run: |
           cmake --build build/gcain-sanitize \
-            --target jarvisx-global-cognitive-action-kinetics \
+            --target jarvisx-global-cognitive-action-kinetics jarvisx-dr-moagi-8m-aead \
             --parallel
 
       - name: Execute sanitizer verification
@@ -88,3 +105,6 @@ jobs:
           ./build/gcain-sanitize/DrMoagi-Global-Cognitive-Action-3D-Kinetics 32 \
             | tee /tmp/gcain-sanitize.log
           grep -F "Verification: PASS" /tmp/gcain-sanitize.log
+          ./build/gcain-sanitize/DrMoagi-8M-3D-AEAD 512 256 2 \
+            | tee /tmp/aead-sanitize.log
+          grep -F "Verification: PASS" /tmp/aead-sanitize.log
