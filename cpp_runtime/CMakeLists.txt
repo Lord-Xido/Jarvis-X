@@ -108,6 +108,16 @@ set_target_properties(jarvisx-adaptive-multigrid-3d PROPERTIES
 jarvisx_include_runtime(jarvisx-adaptive-multigrid-3d)
 jarvisx_harden(jarvisx-adaptive-multigrid-3d)
 
+
+add_executable(jarvisx-global-cognitive-action-kinetics
+    src/global_cognitive_action_kinetics_main.cpp
+)
+set_target_properties(jarvisx-global-cognitive-action-kinetics PROPERTIES
+    OUTPUT_NAME "DrMoagi-Global-Cognitive-Action-3D-Kinetics"
+)
+jarvisx_include_runtime(jarvisx-global-cognitive-action-kinetics)
+jarvisx_harden(jarvisx-global-cognitive-action-kinetics)
+
 find_package(OpenMP QUIET COMPONENTS CXX)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(jarvisx-adaptive-multigrid-3d PRIVATE OpenMP::OpenMP_CXX)
@@ -278,6 +288,13 @@ add_test(
     COMMAND jarvisx-adaptive-multigrid-3d --self-test
 )
 set_tests_properties(adaptive-multigrid-3d-self-test PROPERTIES TIMEOUT 120)
+
+
+add_test(
+    NAME global-cognitive-action-kinetics-smoke
+    COMMAND jarvisx-global-cognitive-action-kinetics 3
+)
+set_tests_properties(global-cognitive-action-kinetics-smoke PROPERTIES TIMEOUT 120)
 
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
