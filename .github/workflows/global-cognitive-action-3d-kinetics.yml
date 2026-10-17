@@ -1,0 +1,90 @@
+name: Global Cognitive-Action 3D Kinetics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "cpp_runtime/src/global_cognitive_action_kinetics_main.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/GLOBAL_COGNITIVE_ACTION_3D_KINETICS.md"
+      - ".github/workflows/global-cognitive-action-3d-kinetics.yml"
+  push:
+    branches: [main]
+    paths:
+      - "cpp_runtime/src/global_cognitive_action_kinetics_main.cpp"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/GLOBAL_COGNITIVE_ACTION_3D_KINETICS.md"
+      - ".github/workflows/global-cognitive-action-3d-kinetics.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  strict-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Strict standalone compile
+        run: |
+          g++ -std=c++17 -O2 \
+            -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+            cpp_runtime/src/global_cognitive_action_kinetics_main.cpp \
+            -o /tmp/gcain-kinetics
+
+      - name: Verify 3-cycle closed loop
+        run: |
+          /tmp/gcain-kinetics 3 | tee /tmp/gcain-3.log
+          grep -F "Verification: PASS" /tmp/gcain-3.log
+          grep -F "bounded=yes finite=yes" /tmp/gcain-3.log
+
+      - name: Verify 1000-cycle stress loop
+        run: |
+          /tmp/gcain-kinetics 1000 | tee /tmp/gcain-1000.log
+          grep -F "Verification: PASS" /tmp/gcain-1000.log
+          grep -F "Events  : 9008" /tmp/gcain-1000.log
+
+      - name: Configure CMake integration
+        run: |
+          cmake -S cpp_runtime -B build/gcain \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DJARVISX_BUILD_GL_VISUALIZER=OFF
+
+      - name: Build integrated target
+        run: |
+          cmake --build build/gcain \
+            --target jarvisx-global-cognitive-action-kinetics \
+            --parallel
+
+      - name: CTest integration gate
+        run: |
+          ctest --test-dir build/gcain \
+            -R global-cognitive-action-kinetics-smoke \
+            --output-on-failure
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure ASan and UBSan
+        run: |
+          cmake -S cpp_runtime -B build/gcain-sanitize \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DJARVISX_BUILD_GL_VISUALIZER=OFF \
+            -DJARVISX_ENABLE_SANITIZERS=ON
+
+      - name: Build sanitizer target
+        run: |
+          cmake --build build/gcain-sanitize \
+            --target jarvisx-global-cognitive-action-kinetics \
+            --parallel
+
+      - name: Execute sanitizer verification
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: |
+          ./build/gcain-sanitize/DrMoagi-Global-Cognitive-Action-3D-Kinetics 32 \
+            | tee /tmp/gcain-sanitize.log
+          grep -F "Verification: PASS" /tmp/gcain-sanitize.log
