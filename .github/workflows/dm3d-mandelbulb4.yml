@@ -1,0 +1,36 @@
+name: DM3D Mandelbulb Four-Way Codec
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/src/mandelbulb4_main.cpp"
+      - "cpp_runtime/mandelbulb4.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DM3D_MANDELBULB4_CODEC.md"
+      - ".github/workflows/dm3d-mandelbulb4.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/src/mandelbulb4_main.cpp"
+      - "cpp_runtime/mandelbulb4.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DM3D_MANDELBULB4_CODEC.md"
+      - ".github/workflows/dm3d-mandelbulb4.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  codec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test on GCC and Clang
+        shell: bash
+        run: |
+          set -euo pipefail
+          for compiler in g++ clang++; do
+            cmake -S cpp_runtime -B "build/mb4-$compiler" -DCMAKE_BUILD_TYPE=Release -DJARVISX_BUILD_GL_VISUALIZER=OFF "-DCMAKE_CXX_COMPILER=$compiler"
+            cmake --build "build/mb4-$compiler" --target jarvisx-mandelbulb4 --parallel 2
+            ctest --test-dir "build/mb4-$compiler" -R '^mandelbulb4-' --output-on-failure
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --iterations 18 --force-hierarchy --out "mb4-$compiler.mb4" --decoded "mb4-$compiler.raw"
+          done
