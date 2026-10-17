@@ -65,6 +65,26 @@ self-test fail. It is a semantic dynamics layer and complements the existing
 voxel-level Kinetic 3D backend. See
 [Global Cognitive-Action 3D Kinetics](../docs/GLOBAL_COGNITIVE_ACTION_3D_KINETICS.md).
 
+## Run the Dr Moagi 8M-pixel 3D AE/AD master equation
+
+```bash
+cmake --build build/cpp-runtime \
+  --target jarvisx-dr-moagi-8m-aead \
+  --parallel
+
+./build/cpp-runtime/DrMoagi-8M-3D-AEAD 4000 2000 2
+```
+
+The reference runtime streams the exact `4000 x 2000 = 8,000,000` logical
+pixel domain into a bounded `32^3` periodic latent field, executes a shadow
+toroidal inward fold, decodes the full frame, and uses CTR to commit the
+candidate only when reconstruction loss does not regress. Persistent
+`Omega` memory is updated from the authoritative latent state and every
+boundedness/finiteness failure propagates to the process exit code.
+
+See
+[Dr Moagi 8M 3D AE/AD Master Equation](../docs/DR_MOAGI_8M_3D_AEAD_MASTER_EQUATION.md).
+
 ## Run the verified adaptive multigrid 3D engine
 
 ```bash
