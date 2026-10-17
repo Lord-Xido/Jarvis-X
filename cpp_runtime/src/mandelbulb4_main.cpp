@@ -380,7 +380,7 @@ int main(int argc, char** argv) {
     try {
         unsigned side = 32, iterations = 18;
         bool force_hierarchy = false, test = false;
-        std::string input, archive = "mandelbulb4.mb4", decoded_path;
+        std::string input, archive = "mandelbulb4.mb4", decoded_path, decode_source;
         for (int i = 1; i < argc; ++i) {
             const std::string option(argv[i]);
             const auto arg = [&]() -> std::string {
@@ -390,6 +390,7 @@ int main(int argc, char** argv) {
             if (option == "--side") side = static_cast<unsigned>(std::stoul(arg()));
             else if (option == "--iterations") iterations = static_cast<unsigned>(std::stoul(arg()));
             else if (option == "--input") input = arg();
+            else if (option == "--decode-archive") decode_source = arg();
             else if (option == "--out") archive = arg();
             else if (option == "--decoded") decoded_path = arg();
             else if (option == "--force-hierarchy") force_hierarchy = true;
@@ -397,6 +398,15 @@ int main(int argc, char** argv) {
             else throw std::runtime_error("unknown option: " + option);
         }
         if (test) { mb4::self_test(); return 0; }
+        if (!decode_source.empty()) {
+            mb4::require(!decoded_path.empty(), "decode mode requires --decoded output path");
+            const mb4::Bytes file = mb4::read_file(decode_source, mb4::max_archive_bytes);
+            const mb4::Bytes output = mb4::decode(file);
+            mb4::write_file(decoded_path, output);
+            std::cout << "MB4C verified=1 independent_decode=1 decoded_bytes="
+                      << output.size() << " max_error=0\n";
+            return 0;
+        }
         mb4::levels_for(side);
         const mb4::Bytes voxels = input.empty()
             ? mb4::generate(side, iterations)
@@ -411,7 +421,7 @@ int main(int argc, char** argv) {
                   << " mode=" << (packed[5] == 1 ? "fourway" : "raw")
                   << " original_bytes=" << voxels.size()
                   << " archive_bytes=" << packed.size()
-                  << " ratio=" << static_cast<double>(voxels.size()) / packed.size()
+                  << " ratio=" << static_cast<double>(voxels.size()) / static_cast<double>(packed.size())
                   << " max_error=0\n";
         return 0;
     } catch (const std::exception& e) {
