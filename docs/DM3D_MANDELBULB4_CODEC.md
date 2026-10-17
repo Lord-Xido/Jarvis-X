@@ -27,6 +27,12 @@ The hierarchy reduces coarse node count, not information entropy by fiat. Residu
     ./build/cpp-runtime/jarvisx-mandelbulb4 --side 32 --iterations 18 --out mandelbulb.mb4 --decoded recovered.raw
 
 Append --force-hierarchy to force the hierarchical stream.
+
+Independent archive decoding, without regenerating the Mandelbulb or requiring the source field:
+
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --decode-archive mandelbulb.mb4 --decoded replay.raw
+
+The CI performs a binary comparison of the internally reconstructed and independently decoded raw outputs.
 To encode arbitrary XYZ-order uint8 sample bytes instead of generating a fractal:
 
     ./build/cpp-runtime/jarvisx-mandelbulb4 --side 16 --input input.raw --out output.mb4 --decoded decoded.raw
