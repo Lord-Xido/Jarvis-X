@@ -118,6 +118,15 @@ set_target_properties(jarvisx-global-cognitive-action-kinetics PROPERTIES
 jarvisx_include_runtime(jarvisx-global-cognitive-action-kinetics)
 jarvisx_harden(jarvisx-global-cognitive-action-kinetics)
 
+add_executable(jarvisx-dr-moagi-8m-aead
+    src/dr_moagi_8m_aead_main.cpp
+)
+set_target_properties(jarvisx-dr-moagi-8m-aead PROPERTIES
+    OUTPUT_NAME "DrMoagi-8M-3D-AEAD"
+)
+jarvisx_include_runtime(jarvisx-dr-moagi-8m-aead)
+jarvisx_harden(jarvisx-dr-moagi-8m-aead)
+
 find_package(OpenMP QUIET COMPONENTS CXX)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(jarvisx-adaptive-multigrid-3d PRIVATE OpenMP::OpenMP_CXX)
@@ -295,6 +304,12 @@ add_test(
     COMMAND jarvisx-global-cognitive-action-kinetics 3
 )
 set_tests_properties(global-cognitive-action-kinetics-smoke PROPERTIES TIMEOUT 120)
+
+add_test(
+    NAME dr-moagi-8m-aead-smoke
+    COMMAND jarvisx-dr-moagi-8m-aead 4000 2000 2
+)
+set_tests_properties(dr-moagi-8m-aead-smoke PROPERTIES TIMEOUT 120)
 
 add_executable(jarvisx-processor-tests
     tests/processor_tests.cpp
