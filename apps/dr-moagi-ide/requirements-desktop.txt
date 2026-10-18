@@ -1,0 +1,9 @@
+numpy>=1.26
+PyQt5>=5.15
+pyqtgraph>=0.13
+pyttsx3>=2.90
+PyAudio>=0.2.14
+scipy>=1.11
+opencv-python>=4.9
+PyOpenGL>=3.1
+astunparse>=1.6
