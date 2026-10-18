@@ -60,6 +60,36 @@ The Mandelbulb generator uses floating-point trigonometry; generated samples nee
 
 The baseline archive size is reported from actually serialized bytes. No fixed compression ratio, universal speedup or global convergence guarantee is claimed.
 
+
+## Adaptive four-way geometry-guided codec (mode 2)
+
+The updated codec supports an additional archive mode: mode 2, a geometry-guided *cost-gated 4-ary volume tree*. At each region, the encoder examines the exact sampled or ingested uint8 voxel field:
+
+- If every voxel is identical, store 1-byte node tag 0 and one value (2 bytes total), without subdividing.
+- Otherwise evaluate a literal leaf (1-byte tag 1 followed by all voxels in local XYZ traversal).
+- When XY, YZ or ZX divisibility permits, recursively encode four spatial child regions; select a split node (1-byte tag 2 + four children) **only if its total serialized bytes are strictly fewer than a literal leaf**.
+
+This computes a local minimum across constant, literal and split candidates with children optimized recursively. It is data-aware because Mandelbulb escape-time interiors and exterior regions tend to be locally uniform while intricate boundaries are mixed. It does **not** evaluate a certified surface-distance bound and does **not** guarantee that sampling accurately resolves features smaller than the chosen voxel pitch. It is also not an entropy coder or learned neural model.
+
+The adaptive decoder uses the fixed XY/YZ/ZX subdivision schedule to parse the tree from the serialized archive, filling every output voxel exactly. It does not run the procedural Mandelbulb generator, making the archive self-contained. Malformed geometry, invalid node tags, truncated leaf data, trailing bytes, wrong depth and checksum mismatch are rejected.
+
+Archive header remains 17 bytes. Mode 2 uses the same major archive version 1 as mode 0 and mode 1. **Legacy MB4C v1 readers that only implemented modes 0 and 1 reject mode 2**; the updated decoder supports all three. This is a research format, not a finalized backward-compatible ecosystem protocol.
+
+Build instructions remain unchanged:
+
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --side 32 --iterations 18 --adaptive --out adaptive.mb4 --decoded adaptive.raw
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --decode-archive adaptive.mb4 --decoded independently_replayed.raw
+
+Compare modes with real serialized byte counts and median of three process-local encode/decode timings:
+
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --side 32 --fixture mandelbulb --benchmark
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --side 32 --fixture uniform --benchmark
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --side 32 --fixture noise --benchmark
+
+Use --auto-codec to select the smallest archive among raw, reversible hierarchical residual coding and adaptive four-way partitioning. Default operation still selects between raw and the original lossless hierarchy. Results depend on field geometry; mode 2 can be less efficient than the original hierarchy for some inputs, hence --auto-codec.
+
+Reported encoding and decoding timings exclude Mandelbulb field generation and process startup, vary by hardware/compiler and should not be treated as statistically robust system-wide benchmarks. Compression ratios are measured using actual full archive byte sizes including header and tree topology.
+
 ## Integration points
 
 The component is registered under cpp_runtime/CMakeLists.txt and uses jarvisx_harden. Its standalone MB4C stream can be treated as a byte-volume input/output adapter by DM3D processors or existing CTR evaluators without silently mutating their formats. A path-scoped GitHub Actions workflow tests GCC and Clang.
