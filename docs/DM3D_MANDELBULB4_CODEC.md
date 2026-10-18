@@ -90,6 +90,24 @@ Use --auto-codec to select the smallest archive among raw, reversible hierarchic
 
 Reported encoding and decoding timings exclude Mandelbulb field generation and process startup, vary by hardware/compiler and should not be treated as statistically robust system-wide benchmarks. Compression ratios are measured using actual full archive byte sizes including header and tree topology.
 
+## Reproducible CI benchmark evidence (2026-10-18)
+
+GitHub Actions run: https://github.com/Lord-Xido/Jarvis-X/actions/runs/39108158152
+
+The dedicated workflow successfully compiled with GCC and Clang, passed all 2 CTests in each toolchain, decoded the original and adaptive archives in separate process invocations, and binary-compared decoded outputs. The example input was power-8 Mandelbulb escape-time data, 18 iterations, 8 bits per sample, and a 17-byte archive header.
+
+| 3D side | Input bytes | Raw archive bytes | Legacy 4:1 bytes | Adaptive bytes | Adaptive / source ratio | Adaptive size improvement vs legacy |
+|---:|---:|---:|---:|---:|---:|---:|
+| 32 | 32,768 | 32,785 | 12,717 | 9,748 | 3.3615:1 | 23.35% |
+| 64 | 262,144 | 262,161 | 67,353 | 53,362 | 4.9126:1 | 20.77% |
+
+Both compilers produced the same serialized sizes and byte-perfect reconstruction for both volumes. The adaptive 32^3 example used 1,813 tree nodes (453 splits, 766 constant leaves, 594 literal leaves). The 64^3 example used 14,557 nodes (3,639 splits, 7,172 constant leaves, 3,746 literal leaves). These are workload-specific, **not general compression guarantees**.
+
+Control fixtures demonstrate the necessity of fallback:
+- 32^3 uniform field: adaptive 19 bytes vs legacy hierarchical 42 bytes (high ratios arise because all voxels share one value).
+- 32^3 pseudo-random field: 32,786 adaptive bytes vs 32,785 raw bytes, so --auto-codec selected raw storage.
+- --benchmark gives single-process three-run median microsecond samples, not a rigorous independent machine-performance evaluation.
+
 ## Integration points
 
 The component is registered under cpp_runtime/CMakeLists.txt and uses jarvisx_harden. Its standalone MB4C stream can be treated as a byte-volume input/output adapter by DM3D processors or existing CTR evaluators without silently mutating their formats. A path-scoped GitHub Actions workflow tests GCC and Clang.
