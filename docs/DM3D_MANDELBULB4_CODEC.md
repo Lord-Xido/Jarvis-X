@@ -141,6 +141,25 @@ Encoding in mode 3 exhaustively computes every region's sample minimum/maximum a
 
 The 128³ benchmark records both a requested-tolerance mode and lossless references. More aggressive error budgets should not be compared to exact archives without noting that they have different fidelity contracts.
 
+## Larger-volume bounded-mode results (2026-10-18)
+
+Dedicated GitHub CI: https://github.com/Lord-Xido/Jarvis-X/actions/runs/39109256455
+
+The workflow passed two CTests each under GCC and Clang, tested a separate decoder invocation and `cmp` output equality for stored lossy reconstruction, and evaluated the following power-8 Mandelbulb fixture at 128³ (2,097,152 8-bit source samples):
+
+| Mode | Archive bytes | Source/archive ratio | Source max absolute error |
+|---|---:|---:|---:|
+| Raw | 2,097,169 | 1.00:1 | 0 |
+| Fixed hierarchical | 358,006 | 5.86:1 | 0 |
+| Cost-gated adaptive lossless | 274,048 | 7.65:1 | 0 |
+| Cost-gated bounded, tolerance 16 | 144,437 | 14.52:1 | 15 |
+
+The bounded encoder selected 5,246 approximate leaves covering 1,363,648 samples, and 6,801 tree splits. Both GCC and Clang reported the same sizes and error counts.
+
+A separate smooth sampled ramp at 32³ with tolerance 16 produced a 1,143-byte archive and observed maximum error 11, compared to 32,768 original bytes. This control fixture checks that the system can actually use approximate leaves instead of merely passing error checks with a lossless reconstruction.
+
+**Tradeoff:** The 14.52:1 result is not comparable as losslessly equivalent to 7.65:1. The benchmark timing is short-process, three-run median microseconds; encoder creation of the source Mandelbulb field is not included. This system still keeps the source voxel volume resident in memory and does not certify fractal geometry between sampled coordinates.
+
 ## Integration points
 
 The component is registered under cpp_runtime/CMakeLists.txt and uses jarvisx_harden. Its standalone MB4C stream can be treated as a byte-volume input/output adapter by DM3D processors or existing CTR evaluators without silently mutating their formats. A path-scoped GitHub Actions workflow tests GCC and Clang.
