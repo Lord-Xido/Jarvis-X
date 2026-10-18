@@ -138,11 +138,26 @@ void decode_bounded_node(const Bytes& in, std::size_t& pos, Bytes& output, Shape
                 output[at(whole, region.x+x,region.y+y,region.z+z)] =
                     static_cast<std::uint8_t>(tag == 1 ? get_byte(in,pos) : value);
 }
+// Hashes mode-3 payload metadata and tree, excluding the 8-byte hash field.
+// FNV-1a detects accidental corruption; it provides no adversarial authentication.
+std::uint64_t bounded_wire_hash(const Bytes& in) {
+    constexpr std::size_t metadata_end = header_bytes + 9u;
+    constexpr std::size_t hash_end = metadata_end + 8u;
+    require(in.size() >= hash_end, "truncated bounded metadata hash");
+    Bytes covered(in.begin() + static_cast<std::ptrdiff_t>(header_bytes),
+                  in.begin() + static_cast<std::ptrdiff_t>(metadata_end));
+    covered.insert(covered.end(),
+                   in.begin() + static_cast<std::ptrdiff_t>(hash_end), in.end());
+    return checksum(covered);
+}
 Bytes decode_bounded(const Bytes& in, std::size_t& pos, unsigned side) {
     const unsigned tolerance = get_byte(in,pos);
     require(tolerance <= 64u, "invalid stored tolerance");
     const std::uint64_t source_hash = get_u64(in,pos);
     (void)source_hash; // For provenance comparisons only; unavailable source cannot be checked.
+    const std::uint64_t stored_wire_hash = get_u64(in,pos);
+    require(stored_wire_hash == bounded_wire_hash(in),
+            "bounded payload checksum mismatch");
     const Shape whole{static_cast<int>(side),static_cast<int>(side),static_cast<int>(side)};
     Bytes decoded(count(whole),0);
     decode_bounded_node(in,pos,decoded,whole,AdaptiveRegion{0,0,0,whole},0,tolerance);
@@ -157,11 +172,16 @@ Bytes encode_bounded(const Bytes& source, unsigned side, unsigned tolerance,
     const AdaptiveRegion root{0,0,0,whole};
     const auto plan = build_bounded(source,whole,root,0,tolerance);
     Bytes archive = archive_header(side,3,depth,source);
-    archive.reserve(header_bytes+1u+8u+plan->bytes);
+    archive.reserve(header_bytes+1u+8u+8u+plan->bytes);
     archive.push_back(static_cast<std::uint8_t>(tolerance));
     put_u64(archive,checksum(source));
+    put_u64(archive,0); // placeholder for full metadata + payload checksum
     write_bounded_node(*plan,source,whole,root,0,archive);
-    require(archive.size() == header_bytes+9u+plan->bytes,"bounded byte count mismatch");
+    require(archive.size() == header_bytes+17u+plan->bytes,"bounded byte count mismatch");
+    const std::uint64_t wire_hash = bounded_wire_hash(archive);
+    for (unsigned i=0; i<8; ++i)
+        archive[header_bytes+9u+i] =
+            static_cast<std::uint8_t>((wire_hash>>(8u*i)) & 255u);
     std::size_t cursor = header_bytes;
     const Bytes reconstructed = decode_bounded(archive,cursor,side);
     require(cursor == archive.size(), "bounded encoder trailing data");
