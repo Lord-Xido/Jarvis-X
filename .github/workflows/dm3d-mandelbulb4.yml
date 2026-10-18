@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "cpp_runtime/src/mandelbulb4_main.cpp"
+      - "cpp_runtime/src/mandelbulb4_adaptive.inc"
       - "cpp_runtime/mandelbulb4.cmake"
       - "cpp_runtime/CMakeLists.txt"
       - "docs/DM3D_MANDELBULB4_CODEC.md"
@@ -11,6 +12,7 @@ on:
   pull_request:
     paths:
       - "cpp_runtime/src/mandelbulb4_main.cpp"
+      - "cpp_runtime/src/mandelbulb4_adaptive.inc"
       - "cpp_runtime/mandelbulb4.cmake"
       - "cpp_runtime/CMakeLists.txt"
       - "docs/DM3D_MANDELBULB4_CODEC.md"
@@ -35,4 +37,10 @@ jobs:
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --iterations 18 --force-hierarchy --out "mb4-$compiler.mb4" --decoded "mb4-$compiler.raw"
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "mb4-$compiler.mb4" --decoded "mb4-$compiler-replayed.raw"
             cmp "mb4-$compiler.raw" "mb4-$compiler-replayed.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture mandelbulb --adaptive --out "adaptive-$compiler.mb4" --decoded "adaptive-$compiler.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "adaptive-$compiler.mb4" --decoded "adaptive-$compiler-replayed.raw"
+            cmp "adaptive-$compiler.raw" "adaptive-$compiler-replayed.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture mandelbulb --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture uniform --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture noise --benchmark
           done
