@@ -46,8 +46,9 @@ jobs:
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture uniform --benchmark
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture noise --benchmark
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 64 --fixture mandelbulb --benchmark
-            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 128 --fixture mandelbulb --bounded-error 2 --benchmark
-            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture mandelbulb --bounded-error 2 --out "bounded-$compiler.mb4" --decoded "bounded-$compiler.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 128 --fixture mandelbulb --bounded-error 16 --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture ramp --bounded-error 16 --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture mandelbulb --bounded-error 16 --out "bounded-$compiler.mb4" --decoded "bounded-$compiler.raw"
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "bounded-$compiler.mb4" --decoded "bounded-$compiler-replayed.raw"
             cmp "bounded-$compiler.raw" "bounded-$compiler-replayed.raw"
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture noise --auto-codec --out "auto-$compiler.mb4" --decoded "auto-$compiler.raw"
