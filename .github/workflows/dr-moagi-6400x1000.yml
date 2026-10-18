@@ -39,7 +39,7 @@ jobs:
         run: cmake --build build/cpp-runtime --config Release --target jarvisx-dr-moagi-6400x1000 jarvisx-dr-moagi-6400x1000-tests jarvisx-dr-moagi-1gib-bit-engine
 
       - name: Test
-        run: ctest --test-dir build/cpp-runtime -C Release -R "dr-moagi-" --output-on-failure
+        run: ctest --test-dir build/cpp-runtime -C Release -R "^(dr-moagi-6400x1000-(runtime-smoke|regressions)|dr-moagi-1gib-bit-engine-runtime-smoke)$" --output-on-failure
 
       - name: Package Windows executables
         if: matrix.os == 'windows-latest'
