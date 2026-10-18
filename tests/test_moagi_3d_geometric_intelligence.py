@@ -66,6 +66,16 @@ def test_sparse_octree_redistributes_points_and_tracks_total():
     assert tree.token_count == len(points)
 
 
+def test_octree_boundary_centers_are_not_limited_to_data_chart():
+    tree = FractalOctreeNode(center=(1, 1, 1), half_size=1, capacity=1)
+    assert tree.insert((1.0, 1.0, 1.0))
+    assert tree.insert((1.0, 1.0, 1.0))
+    assert tree.count_nodes() > 1
+    assert tree.validate_counts()
+    with pytest.raises(ValueError):
+        FractalOctreeNode(center=(float("inf"), 0, 0))
+
+
 def test_sparse_octree_handles_exact_boundary_and_clusters():
     tree = FractalOctreeNode(max_depth=5, capacity=1)
     for _ in range(50):
