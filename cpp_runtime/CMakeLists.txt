@@ -417,3 +417,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/self_verifying_omni.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/dm3d_operational.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/master_equation.cmake)
+
+# Reference 3D orthogonal codec with verified CTR / Omega feedback.
+add_subdirectory(dm3d_klein_codec)

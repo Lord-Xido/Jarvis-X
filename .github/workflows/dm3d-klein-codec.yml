@@ -1,0 +1,46 @@
+name: DM3D Klein 3D Codec C++17
+
+on:
+  push:
+    paths:
+      - 'cpp_runtime/dm3d_klein_codec/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/dm3d-klein-codec.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/dm3d_klein_codec/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/dm3d-klein-codec.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  standalone-compile-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+          - os: ubuntu-latest
+            compiler: clang
+          - os: windows-latest
+            compiler: msvc
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / ${{ matrix.compiler }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select GCC
+        if: matrix.compiler == 'gcc'
+        run: echo "CXX=g++" >> "$GITHUB_ENV"
+      - name: Select Clang
+        if: matrix.compiler == 'clang'
+        run: echo "CXX=clang++" >> "$GITHUB_ENV"
+      - name: Configure standalone module
+        run: cmake -S cpp_runtime/dm3d_klein_codec -B build/dm3d-klein -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/dm3d-klein --config Release --parallel 2
+      - name: Test codec and CTR invariants
+        run: ctest --test-dir build/dm3d-klein -C Release --output-on-failure
