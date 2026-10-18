@@ -417,3 +417,5 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/self_verifying_omni.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/dm3d_operational.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/master_equation.cmake)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/streaming_framebuffer3d.cmake)
