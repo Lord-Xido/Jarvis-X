@@ -1,0 +1,46 @@
+name: JARVIS-X EM-aware 3D C++
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cpp_runtime/em_aware/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/em-aware-3d.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/em_aware/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/em-aware-3d.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure strict C++17 + ASan/UBSan
+        run: cmake -S cpp_runtime -B build/em-aware -DJARVISX_BUILD_GL_VISUALIZER=OFF -DJARVISX_ENABLE_SANITIZERS=ON
+      - name: Build narrow target
+        run: cmake --build build/em-aware --target jarvisx-em-aware-3d -j2
+      - name: Focused tests
+        run: ctest --test-dir build/em-aware -R '^em-aware-3d-' --output-on-failure
+      - name: Generate machine-readable execution receipt
+        run: |
+          ./build/em-aware/em_aware/jarvisx-em-aware-3d --edge 16 --iterations 48 --receipt build/em-aware/receipt.json --slice build/em-aware/middle.pgm
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          receipt = json.loads(Path('build/em-aware/receipt.json').read_text())
+          assert receipt['ctr']['fixed_point'] and receipt['ctr']['pass']
+          assert receipt['physical_em_fields_simulated'] is False
+          assert receipt['voxels'] == 4096
+          assert receipt['ctr']['reconstructed_mse'] < 1e-12
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: em-aware-3d-receipt
+          path: |
+            build/em-aware/receipt.json
+            build/em-aware/middle.pgm
