@@ -1,0 +1,57 @@
+name: DM3D Mandelbulb Four-Way Codec
+
+on:
+  push:
+    paths:
+      - "cpp_runtime/src/mandelbulb4_main.cpp"
+      - "cpp_runtime/src/mandelbulb4_adaptive.inc"
+      - "cpp_runtime/src/mandelbulb4_bounded.inc"
+      - "cpp_runtime/mandelbulb4.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DM3D_MANDELBULB4_CODEC.md"
+      - ".github/workflows/dm3d-mandelbulb4.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/src/mandelbulb4_main.cpp"
+      - "cpp_runtime/src/mandelbulb4_adaptive.inc"
+      - "cpp_runtime/src/mandelbulb4_bounded.inc"
+      - "cpp_runtime/mandelbulb4.cmake"
+      - "cpp_runtime/CMakeLists.txt"
+      - "docs/DM3D_MANDELBULB4_CODEC.md"
+      - ".github/workflows/dm3d-mandelbulb4.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  codec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test on GCC and Clang
+        shell: bash
+        run: |
+          set -euo pipefail
+          for compiler in g++ clang++; do
+            cmake -S cpp_runtime -B "build/mb4-$compiler" -DCMAKE_BUILD_TYPE=Release -DJARVISX_BUILD_GL_VISUALIZER=OFF "-DCMAKE_CXX_COMPILER=$compiler"
+            cmake --build "build/mb4-$compiler" --target jarvisx-mandelbulb4 --parallel 2
+            ctest --test-dir "build/mb4-$compiler" -R '^mandelbulb4-' --output-on-failure
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --iterations 18 --force-hierarchy --out "mb4-$compiler.mb4" --decoded "mb4-$compiler.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "mb4-$compiler.mb4" --decoded "mb4-$compiler-replayed.raw"
+            cmp "mb4-$compiler.raw" "mb4-$compiler-replayed.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture mandelbulb --adaptive --out "adaptive-$compiler.mb4" --decoded "adaptive-$compiler.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "adaptive-$compiler.mb4" --decoded "adaptive-$compiler-replayed.raw"
+            cmp "adaptive-$compiler.raw" "adaptive-$compiler-replayed.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture mandelbulb --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture uniform --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture noise --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 64 --fixture mandelbulb --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 128 --fixture mandelbulb --bounded-error 16 --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture ramp --bounded-error 16 --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture mandelbulb --bounded-error 16 --out "bounded-$compiler.mb4" --decoded "bounded-$compiler.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "bounded-$compiler.mb4" --decoded "bounded-$compiler-replayed.raw"
+            cmp "bounded-$compiler.raw" "bounded-$compiler-replayed.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture noise --auto-codec --out "auto-$compiler.mb4" --decoded "auto-$compiler.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "auto-$compiler.mb4" --decoded "auto-$compiler-replayed.raw"
+            cmp "auto-$compiler.raw" "auto-$compiler-replayed.raw"
+          done
