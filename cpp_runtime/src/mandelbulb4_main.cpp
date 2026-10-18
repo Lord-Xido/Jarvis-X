@@ -21,7 +21,7 @@ using Grid = std::vector<std::int32_t>;
 struct Shape { int x, y, z; };
 struct Stage { Shape fine, coarse; Grid detail; };
 constexpr std::size_t header_bytes = 17;
-constexpr std::size_t max_archive_bytes = 16u * 1024u * 1024u;
+constexpr std::size_t max_archive_bytes = 32u * 1024u * 1024u;
 
 void require(bool condition, const char* why) {
     if (!condition) throw std::runtime_error(why);
@@ -60,8 +60,8 @@ Shape reduced(Shape s, unsigned level) {
     return s;
 }
 unsigned levels_for(unsigned side) {
-    require(side >= 4 && side <= 64 && (side & (side - 1u)) == 0u,
-            "side must be a power of two from 4 to 64");
+    require(side >= 4 && side <= 128 && (side & (side - 1u)) == 0u,
+            "side must be a power of two from 4 to 128");
     Shape s{static_cast<int>(side), static_cast<int>(side), static_cast<int>(side)};
     unsigned levels = 0;
     while (split_possible(s, levels)) {
@@ -231,6 +231,7 @@ Bytes archive_header(unsigned side, std::uint8_t mode, unsigned depth, const Byt
     return out;
 }
 #include "mandelbulb4_adaptive.inc"
+#include "mandelbulb4_bounded.inc"
 
 Bytes encode(const Bytes& voxels, unsigned side, bool force_hierarchy = false) {
     const unsigned depth = levels_for(side);
@@ -284,6 +285,9 @@ Bytes decode(const Bytes& in) {
     } else if (mode == 2) {
         require(depth == max_depth, "invalid adaptive hierarchy depth");
         reconstructed = decode_adaptive(in, pos, side);
+    } else if (mode == 3) {
+        require(depth == max_depth, "invalid bounded hierarchy depth");
+        reconstructed = decode_bounded(in, pos, side);
     } else {
         throw std::runtime_error("unknown archive mode");
     }
@@ -359,13 +363,26 @@ void write_file(const std::string& path, const Bytes& data) {
               static_cast<std::streamsize>(data.size()));
     require(static_cast<bool>(out), "output write failure");
 }
-void benchmark(const Bytes& voxels, unsigned side, const std::string& fixture) {
+unsigned maximum_error(const Bytes& a, const Bytes& b) {
+    require(a.size() == b.size(), "source and reconstruction lengths differ");
+    unsigned error = 0;
+    for (std::size_t i = 0; i < a.size(); ++i) {
+        const unsigned x = a[i], y = b[i];
+        error = std::max(error, x > y ? x-y : y-x);
+    }
+    return error;
+}
+
+void benchmark(const Bytes& voxels, unsigned side, const std::string& fixture,
+               unsigned tolerance = 0) {
     using Clock = std::chrono::steady_clock;
-    const char* labels[] = {"raw", "hierarchical", "adaptive"};
-    for (unsigned mode = 0; mode < 3; ++mode) {
+    const char* labels[] = {"raw", "hierarchical", "adaptive", "bounded"};
+    for (unsigned mode = 0; mode < (tolerance > 0 ? 4u : 3u); ++mode) {
         std::array<std::int64_t, 3> enc_us{}, dec_us{};
         std::size_t bytes = 0;
         AdaptiveStats stats{};
+        BoundedStats bounded{};
+        unsigned max_err = 0;
         for (unsigned repetition = 0; repetition < 3; ++repetition) {
             const auto start = Clock::now();
             Bytes encoded;
@@ -374,14 +391,19 @@ void benchmark(const Bytes& voxels, unsigned side, const std::string& fixture) {
                 encoded.insert(encoded.end(), voxels.begin(), voxels.end());
             } else if (mode == 1) {
                 encoded = encode(voxels, side, true);
-            } else {
-                stats = AdaptiveStats{}; // independent of earlier benchmark repetitions
+            } else if (mode == 2) {
+                stats = AdaptiveStats{};
                 encoded = encode_adaptive(voxels, side, &stats);
+            } else {
+                bounded = BoundedStats{};
+                encoded = encode_bounded(voxels, side, tolerance, &bounded);
             }
             const auto encoded_at = Clock::now();
             const Bytes restored = decode(encoded);
             const auto decoded_at = Clock::now();
-            require(restored == voxels, "benchmark CTR exactness failure");
+            max_err = maximum_error(restored, voxels);
+            require(max_err <= (mode == 3 ? tolerance : 0u),
+                    "benchmark CTR maximum-error bound failed");
             bytes = encoded.size();
             enc_us[repetition] = std::chrono::duration_cast<std::chrono::microseconds>(
                 encoded_at - start).count();
@@ -397,13 +419,20 @@ void benchmark(const Bytes& voxels, unsigned side, const std::string& fixture) {
                   << " ratio=" << static_cast<double>(voxels.size()) / static_cast<double>(bytes)
                   << " median_encode_us=" << enc_us[1]
                   << " median_decode_us=" << dec_us[1]
-                  << " max_error=0";
+                  << " max_error=" << max_err;
         if (mode == 2) {
             std::cout << " tree_nodes=" << stats.nodes
                       << " splits=" << stats.split_nodes
                       << " constant_leaves=" << stats.constant_leaves
                       << " raw_leaves=" << stats.raw_leaves
                       << " deepest_split=" << stats.deepest_split;
+        }
+        if (mode == 3) {
+            std::cout << " tolerance=" << tolerance
+                      << " tree_nodes=" << bounded.nodes
+                      << " splits=" << bounded.splits
+                      << " approximate_leaves=" << bounded.approximations
+                      << " approximate_voxels=" << bounded.covered_approx_voxels;
         }
         std::cout << "\n";
     }
@@ -459,6 +488,37 @@ void self_test() {
         catch (const std::runtime_error&) { rejected_adaptive = true; }
         require(rejected_adaptive, "malformed adaptive archive accepted");
     }
+    // Exhaustive region range checking bounds every sampled voxel's error.
+    Bytes near_uniform(16u*16u*16u);
+    for (std::size_t i = 0; i < near_uniform.size(); ++i)
+        near_uniform[i] = static_cast<std::uint8_t>(40 + (i % 5u));
+    BoundedStats bounded_stats{};
+    const Bytes bounded_archive = encode_bounded(near_uniform,16,2,&bounded_stats);
+    const Bytes bounded_output = decode(bounded_archive);
+    require(bounded_archive[5] == 3 && bounded_stats.approximations > 0,
+            "bounded approximation not selected");
+    require(maximum_error(near_uniform,bounded_output) == 2,
+            "bounded field expected exact measured maximum error 2");
+    require(bounded_stats.measured_max_error == 2,
+            "bounded certificate statistics incorrect");
+    // Tight tolerance 0 never loses bytes.
+    require(decode(encode_bounded(near_uniform,16,0)) == near_uniform,
+            "zero tolerance should be exact");
+    // Falsified per-leaf reported range cannot exceed archive tolerance.
+    Bytes invalid_envelope = bounded_archive;
+    require(invalid_envelope[header_bytes+9u] == 3,
+            "bounded test requires a representative root leaf");
+    invalid_envelope[header_bytes+9u+3u] = 255;
+    bool bad_envelope_rejected = false;
+    try { (void)decode(invalid_envelope); }
+    catch (const std::runtime_error&) { bad_envelope_rejected = true; }
+    require(bad_envelope_rejected, "invalid tolerance envelope was accepted");
+    Bytes truncated_bounded = bounded_archive;
+    truncated_bounded.pop_back();
+    bool truncated_bounded_rejected = false;
+    try { (void)decode(truncated_bounded); }
+    catch (const std::runtime_error&) { truncated_bounded_rejected = true; }
+    require(truncated_bounded_rejected, "truncated bounded archive was accepted");
     Bytes shortened = boundary_archive;
     shortened.pop_back();
     bool shortened_rejected = false;
@@ -493,6 +553,7 @@ int main(int argc, char** argv) {
         unsigned side = 32, iterations = 18;
         bool force_hierarchy = false, adaptive = false, auto_codec = false;
         bool test = false, run_benchmark = false;
+        int bound = -1;
         std::string fixture = "mandelbulb";
         std::string input, archive = "mandelbulb4.mb4", decoded_path, decode_source;
         for (int i = 1; i < argc; ++i) {
@@ -511,6 +572,7 @@ int main(int argc, char** argv) {
             else if (option == "--adaptive") adaptive = true;
             else if (option == "--auto-codec") auto_codec = true;
             else if (option == "--benchmark") run_benchmark = true;
+            else if (option == "--bounded-error") bound = std::stoi(arg());
             else if (option == "--fixture") fixture = arg();
             else if (option == "--self-test") test = true;
             else throw std::runtime_error("unknown option: " + option);
@@ -526,41 +588,53 @@ int main(int argc, char** argv) {
             return 0;
         }
         mb4::levels_for(side);
-        mb4::require(!(force_hierarchy && (adaptive || auto_codec))
-                     && !(adaptive && auto_codec), "conflicting codec options");
+        mb4::require(!(force_hierarchy && (adaptive || auto_codec || bound >= 0))
+                     && !(adaptive && (auto_codec || bound >= 0))
+                     && !(auto_codec && bound >= 0), "conflicting codec options");
+        mb4::require(bound <= 64, "bounded tolerance must be 0..64");
         const mb4::Bytes voxels = input.empty()
             ? mb4::fixture_volume(side, iterations, fixture)
             : mb4::read_file(input, static_cast<std::size_t>(side) * side * side);
         mb4::require(voxels.size() == static_cast<std::size_t>(side) * side * side,
                      "source must contain exactly side cubed bytes");
         if (run_benchmark) {
-            mb4::benchmark(voxels, side, input.empty() ? fixture : "input");
+            mb4::benchmark(voxels, side, input.empty() ? fixture : "input",
+                            bound > 0 ? static_cast<unsigned>(bound) : 0u);
             return 0;
         }
         mb4::AdaptiveStats adaptive_stats{};
         mb4::Bytes packed;
-        if (adaptive) packed = mb4::encode_adaptive(voxels, side, &adaptive_stats);
+        mb4::BoundedStats bounded_stats{};
+        if (bound >= 0) packed = mb4::encode_bounded(voxels, side,
+                                 static_cast<unsigned>(bound), &bounded_stats);
+        else if (adaptive) packed = mb4::encode_adaptive(voxels, side, &adaptive_stats);
         else if (auto_codec) {
             packed = mb4::encode(voxels, side);
             mb4::Bytes candidate = mb4::encode_adaptive(voxels, side, &adaptive_stats);
             if (candidate.size() < packed.size()) packed.swap(candidate);
         } else packed = mb4::encode(voxels, side, force_hierarchy);
         const mb4::Bytes restored = mb4::decode(packed);
-        mb4::require(restored == voxels, "CTR byte equality failed");
+        const unsigned error = mb4::maximum_error(restored, voxels);
+        mb4::require(error <= (bound >= 0 ? static_cast<unsigned>(bound) : 0u),
+                     "CTR sampled-field maximum error exceeds declared tolerance");
         mb4::write_file(archive, packed);
         if (!decoded_path.empty()) mb4::write_file(decoded_path, restored);
         std::cout << "MB4C verified=1 side=" << side
                   << " depth=" << mb4::levels_for(side)
-                  << " mode=" << (packed[5] == 2 ? "adaptive" : packed[5] == 1 ? "fourway" : "raw")
+                  << " mode=" << (packed[5] == 3 ? "bounded" : packed[5] == 2 ? "adaptive" : packed[5] == 1 ? "fourway" : "raw")
                   << " original_bytes=" << voxels.size()
                   << " archive_bytes=" << packed.size()
                   << " ratio=" << static_cast<double>(voxels.size()) / static_cast<double>(packed.size())
-                  << " max_error=0";
+                  << " max_error=" << error;
         if (packed[5] == 2)
             std::cout << " tree_nodes=" << adaptive_stats.nodes
                       << " splits=" << adaptive_stats.split_nodes
                       << " constant_leaves=" << adaptive_stats.constant_leaves
                       << " raw_leaves=" << adaptive_stats.raw_leaves;
+        if (packed[5] == 3)
+            std::cout << " bound=" << bound
+                      << " approximate_leaves=" << bounded_stats.approximations
+                      << " approximate_voxels=" << bounded_stats.covered_approx_voxels;
         std::cout << "\n";
         return 0;
     } catch (const std::exception& e) {
