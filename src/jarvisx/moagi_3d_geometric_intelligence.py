@@ -166,7 +166,9 @@ class FractalOctreeNode:
 
     def __init__(self, center: Sequence[float] = (0, 0, 0), half_size: float = 1.0,
                  depth: int = 0, max_depth: int = 10, capacity: int = 8) -> None:
-        self.center = _point(center)
+        self.center = tuple(float(value) for value in center)
+        if len(self.center) != 3 or not all(math.isfinite(value) for value in self.center):
+            raise ValueError("octree center must be a finite 3D position")
         if not math.isfinite(half_size) or half_size <= 0:
             raise ValueError("half_size must be positive and finite")
         if not 0 <= depth <= max_depth <= 32 or capacity < 1:
