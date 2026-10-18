@@ -1,11 +1,14 @@
+#include "jarvisx/bitwise_world500.hpp"
 #include "jarvisx/world_engine_vmad.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -15,6 +18,89 @@ void require(bool condition, const std::string& message) {
 
 std::filesystem::path test_dir(const char* name) {
     return std::filesystem::temp_directory_path() / (std::string("jarvisx-world-") + name);
+}
+
+void test_world500_footprint_and_address_geometry() {
+    namespace bw = jarvisx::world::bitwise500;
+    require(bw::kWorldEdge == 500U, "World500 edge constant is incorrect");
+    require(bw::kWorldAgentCount == 125000000ULL, "World500 agent count is incorrect");
+    require(bw::kLatentDimensions == 16U, "World500 latent width is incorrect");
+    require(bw::kBitsPerAgent == 512U, "World500 bits-per-agent is incorrect");
+    require(bw::kWorldLatentBits == 64000000000ULL, "World500 latent bit footprint is incorrect");
+    require(bw::kWorldLatentBytes == 8000000000ULL, "World500 latent byte footprint is incorrect");
+    require(bw::kWorldLatentGiB > 7.45L && bw::kWorldLatentGiB < 7.46L,
+            "World500 GiB conversion is incorrect");
+
+    require(bw::linear_address(0U, 0U, 0U) == 0ULL, "World500 origin address is incorrect");
+    const std::uint64_t last = bw::linear_address(499U, 499U, 499U);
+    require(last == bw::kWorldAgentCount - 1ULL, "World500 terminal address is incorrect");
+    require(bw::coordinate_from_address(last) == bw::Coord500{499U, 499U, 499U},
+            "World500 inverse address mapping failed");
+
+    const std::uint64_t interior = bw::linear_address(17U, 231U, 404U);
+    require(bw::coordinate_from_address(interior) == bw::Coord500{17U, 231U, 404U},
+            "World500 address mapping is not bijective");
+
+    bool rejected = false;
+    try {
+        (void)bw::linear_address(500U, 0U, 0U);
+    } catch (const std::out_of_range&) {
+        rejected = true;
+    }
+    require(rejected, "World500 accepted an out-of-range coordinate");
+}
+
+void test_world500_bit_and_residual_semantics() {
+    namespace bw = jarvisx::world::bitwise500;
+    const std::vector<std::uint8_t> bits{1U, 0U, 1U, 1U, 0U, 0U, 1U, 0U};
+    const auto packed = bw::pack_bits_lsb_first(bits);
+    require(packed.size() == 1U && packed[0] == 0x4dU, "World500 LSB-first bit packing failed");
+    require(bw::unpack_bits_lsb_first(packed, bits.size()) == bits,
+            "World500 bit packing roundtrip failed");
+
+    require(std::fabs(bw::normalize_byte(255U) - 1.0F) < 1.0e-6F,
+            "World500 byte normalization failed");
+    require(bw::xor_residual(0xb6U, 0xa6U) == 0x10U,
+            "World500 byte XOR residual failed");
+    require(std::fabs(bw::byte_xor_error_rate(0xb6U, 0xa6U) - 0.125F) < 1.0e-6F,
+            "World500 XOR error density failed");
+    require(bw::fp32_xor_residual(1.0F, 1.0F) == 0U,
+            "World500 identical FP32 values produced a representation residual");
+    require(bw::fp32_xor_residual(1.0F, 1.5F) != 0U,
+            "World500 distinct FP32 values produced no representation residual");
+    require(std::fabs(bw::numeric_abs_error(1.0F, 1.5F) - 0.5F) < 1.0e-6F,
+            "World500 numeric residual failed");
+    require(bw::byte_fixed_point(0x5aU, 0x5aU), "World500 byte fixed point failed");
+    require(!bw::byte_fixed_point(0x5aU, 0x5bU), "World500 false byte fixed point accepted");
+}
+
+void test_world500_permeation_attention_memory_transaction() {
+    namespace bw = jarvisx::world::bitwise500;
+    require(std::fabs(bw::permeate_channel(1.0F, 0.0F) - 0.82F) < 1.0e-6F,
+            "World500 0.82/0.18 permeation rule failed");
+
+    std::array<float, bw::kLatentDimensions> query{};
+    std::array<float, bw::kLatentDimensions> key{};
+    query.fill(1.0F);
+    key.fill(1.0F);
+    require(std::fabs(bw::scaled_dot_logit(query, key) - 4.0F) < 1.0e-6F,
+            "World500 scaled dot-product attention logit failed");
+
+    const auto weights = bw::softmax({0.0F, 1.0F, 2.0F});
+    require(weights.size() == 3U, "World500 softmax output width is incorrect");
+    const float sum = weights[0] + weights[1] + weights[2];
+    require(std::fabs(sum - 1.0F) < 1.0e-6F, "World500 softmax is not normalized");
+    require(weights[2] > weights[1] && weights[1] > weights[0],
+            "World500 softmax ordering is incorrect");
+
+    require(std::fabs(bw::memory_update(0.0F, 1.0F, 0.9F) - 0.1F) < 1.0e-6F,
+            "World500 Omega memory recurrence failed");
+    require(std::fabs(bw::latent_velocity(1.0F, 2.0F, 3.0F, 4.0F,
+                                          0.5F, 0.25F, 0.1F, 0.05F) - 0.1F) < 1.0e-6F,
+            "World500 latent velocity equation failed");
+    require(bw::should_commit(1.0, 0.5), "World500 strict improvement was not committed");
+    require(!bw::should_commit(1.0, 1.0), "World500 accepted a non-improving equal-error candidate");
+    require(!bw::should_commit(1.0, 1.5), "World500 accepted a worse candidate");
 }
 
 void test_vmad_pack_roundtrip() {
@@ -151,15 +237,18 @@ void test_transfer_bound() {
 
 int main() {
     try {
+        test_world500_footprint_and_address_geometry();
+        test_world500_bit_and_residual_semantics();
+        test_world500_permeation_attention_memory_transaction();
         test_vmad_pack_roundtrip();
         test_micro_op_roundtrip();
         test_sparse_ingest_and_pipeline();
         test_candidate_commit_and_rollback();
         test_transfer_bound();
-        std::cout << "world-engine VMAD128 regressions passed\n";
+        std::cout << "world-engine VMAD128 + World500 regressions passed\n";
         return 0;
     } catch (const std::exception& error) {
-        std::cerr << "world-engine VMAD128 regression failure: " << error.what() << '\n';
+        std::cerr << "world-engine regression failure: " << error.what() << '\n';
         return 1;
     }
 }
