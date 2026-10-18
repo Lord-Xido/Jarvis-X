@@ -375,6 +375,7 @@ void benchmark(const Bytes& voxels, unsigned side, const std::string& fixture) {
             } else if (mode == 1) {
                 encoded = encode(voxels, side, true);
             } else {
+                stats = AdaptiveStats{}; // independent of earlier benchmark repetitions
                 encoded = encode_adaptive(voxels, side, &stats);
             }
             const auto encoded_at = Clock::now();
@@ -435,6 +436,9 @@ void self_test() {
     AdaptiveStats boundary_stats{};
     const Bytes boundary_archive = encode_adaptive(boundary, 16, &boundary_stats);
     require(decode(boundary_archive) == boundary, "adaptive geometric interface roundtrip");
+    require(boundary_stats.nodes == boundary_stats.split_nodes
+            + boundary_stats.constant_leaves + boundary_stats.raw_leaves,
+            "invalid adaptive node statistics");
     require(boundary_stats.split_nodes > 0 && boundary_stats.constant_leaves >= 2,
             "adaptive geometry did not choose coarse regions");
     require(boundary_archive.size() < boundary.size(), "adaptive interface compression failed");
