@@ -142,7 +142,7 @@ private:
 // Stable hash for provenance / event IDs (FNV-1a 64-bit).
 // -----------------------------------------------------------------------------
 static uint64_t fnv1a64(const std::string& s) {
-    uint64_t h = 1469598103934665603ULL;
+    uint64_t h = 14695981039346656037ULL;
     for (unsigned char c : s) {
         h ^= c;
         h *= 1099511628211ULL;
@@ -624,8 +624,14 @@ private:
 int main(int argc, char** argv) {
     size_t steps = 3;
     if (argc > 1) {
-        try { steps = static_cast<size_t>(std::stoul(argv[1])); }
-        catch (...) {
+        const std::string arg{argv[1]};
+        if (arg.empty() || !std::all_of(arg.begin(), arg.end(),
+            [](unsigned char c) { return c >= '0' && c <= '9'; })) {
+            std::cerr << "Usage: " << argv[0] << " [steps]\n";
+            return 2;
+        }
+        try { steps = static_cast<size_t>(std::stoul(arg)); }
+        catch (const std::exception&) {
             std::cerr << "Usage: " << argv[0] << " [steps]\n";
             return 2;
         }

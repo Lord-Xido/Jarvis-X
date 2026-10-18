@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "cpp_runtime/src/global_cognitive_action_kinetics_main.cpp"
+      - "cpp_runtime/tests/global_cognitive_action_kinetics_regressions.cpp"
       - "cpp_runtime/src/dr_moagi_8m_aead_main.cpp"
       - "cpp_runtime/CMakeLists.txt"
       - "docs/GLOBAL_COGNITIVE_ACTION_3D_KINETICS.md"
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - "cpp_runtime/src/global_cognitive_action_kinetics_main.cpp"
+      - "cpp_runtime/tests/global_cognitive_action_kinetics_regressions.cpp"
       - "cpp_runtime/src/dr_moagi_8m_aead_main.cpp"
       - "cpp_runtime/CMakeLists.txt"
       - "docs/GLOBAL_COGNITIVE_ACTION_3D_KINETICS.md"
@@ -35,6 +37,14 @@ jobs:
             -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
             cpp_runtime/src/global_cognitive_action_kinetics_main.cpp \
             -o /tmp/gcain-kinetics
+
+      - name: Strict compile kinetics regressions
+        run: |
+          g++ -std=c++17 -O2 \
+            -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+            cpp_runtime/tests/global_cognitive_action_kinetics_regressions.cpp \
+            -o /tmp/gcain-regressions
+          /tmp/gcain-regressions
 
       - name: Strict compile Dr Moagi 8M AEAD
         run: |
@@ -70,13 +80,13 @@ jobs:
       - name: Build integrated targets
         run: |
           cmake --build build/gcain \
-            --target jarvisx-global-cognitive-action-kinetics jarvisx-dr-moagi-8m-aead \
+            --target jarvisx-global-cognitive-action-kinetics jarvisx-global-cognitive-action-kinetics-regressions jarvisx-dr-moagi-8m-aead \
             --parallel
 
       - name: CTest integration gates
         run: |
           ctest --test-dir build/gcain \
-            -R "global-cognitive-action-kinetics-smoke|dr-moagi-8m-aead-smoke" \
+            -R "global-cognitive-action-kinetics-(smoke|regressions)|dr-moagi-8m-aead-smoke" \
             --output-on-failure
 
   sanitizers:
@@ -94,7 +104,7 @@ jobs:
       - name: Build sanitizer targets
         run: |
           cmake --build build/gcain-sanitize \
-            --target jarvisx-global-cognitive-action-kinetics jarvisx-dr-moagi-8m-aead \
+            --target jarvisx-global-cognitive-action-kinetics jarvisx-global-cognitive-action-kinetics-regressions jarvisx-dr-moagi-8m-aead \
             --parallel
 
       - name: Execute sanitizer verification
@@ -108,3 +118,6 @@ jobs:
           ./build/gcain-sanitize/DrMoagi-8M-3D-AEAD 512 256 2 \
             | tee /tmp/aead-sanitize.log
           grep -F "Verification: PASS" /tmp/aead-sanitize.log
+          ctest --test-dir build/gcain-sanitize \
+            -R "^global-cognitive-action-kinetics-regressions$" \
+            --output-on-failure

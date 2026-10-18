@@ -305,6 +305,16 @@ add_test(
 )
 set_tests_properties(global-cognitive-action-kinetics-smoke PROPERTIES TIMEOUT 120)
 
+add_executable(jarvisx-global-cognitive-action-kinetics-regressions
+    tests/global_cognitive_action_kinetics_regressions.cpp
+)
+jarvisx_harden(jarvisx-global-cognitive-action-kinetics-regressions)
+add_test(
+    NAME global-cognitive-action-kinetics-regressions
+    COMMAND jarvisx-global-cognitive-action-kinetics-regressions
+)
+set_tests_properties(global-cognitive-action-kinetics-regressions PROPERTIES TIMEOUT 15)
+
 add_test(
     NAME dr-moagi-8m-aead-smoke
     COMMAND jarvisx-dr-moagi-8m-aead 4000 2000 2
