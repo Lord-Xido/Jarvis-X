@@ -5,10 +5,12 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -228,6 +230,8 @@ Bytes archive_header(unsigned side, std::uint8_t mode, unsigned depth, const Byt
     put_u64(out, checksum(original));
     return out;
 }
+#include "mandelbulb4_adaptive.inc"
+
 Bytes encode(const Bytes& voxels, unsigned side, bool force_hierarchy = false) {
     const unsigned depth = levels_for(side);
     require(voxels.size() == static_cast<std::size_t>(side) * side * side, "wrong voxel count");
@@ -277,6 +281,9 @@ Bytes decode(const Bytes& in) {
             require(v >= 0 && v <= 255, "out-of-range voxel");
             reconstructed.push_back(static_cast<std::uint8_t>(v));
         }
+    } else if (mode == 2) {
+        require(depth == max_depth, "invalid adaptive hierarchy depth");
+        reconstructed = decode_adaptive(in, pos, side);
     } else {
         throw std::runtime_error("unknown archive mode");
     }
@@ -318,6 +325,21 @@ Bytes generate(unsigned side, unsigned iterations) {
             }
     return voxels;
 }
+Bytes fixture_volume(unsigned side, unsigned iterations, const std::string& fixture) {
+    if (fixture == "mandelbulb") return generate(side, iterations);
+    const std::size_t n = static_cast<std::size_t>(side) * side * side;
+    if (fixture == "uniform") return Bytes(n, 127);
+    if (fixture == "noise") {
+        Bytes output(n);
+        std::uint32_t state = UINT32_C(0x1234abcd);
+        for (std::uint8_t& b : output) {
+            state = 1664525u * state + 1013904223u;
+            b = static_cast<std::uint8_t>(state >> 24u);
+        }
+        return output;
+    }
+    throw std::runtime_error("unknown fixture: " + fixture);
+}
 Bytes read_file(const std::string& path, std::size_t limit) {
     std::ifstream in(path, std::ios::binary | std::ios::ate);
     require(static_cast<bool>(in), "cannot open input");
@@ -337,12 +359,62 @@ void write_file(const std::string& path, const Bytes& data) {
               static_cast<std::streamsize>(data.size()));
     require(static_cast<bool>(out), "output write failure");
 }
+void benchmark(const Bytes& voxels, unsigned side, const std::string& fixture) {
+    using Clock = std::chrono::steady_clock;
+    const char* labels[] = {"raw", "hierarchical", "adaptive"};
+    for (unsigned mode = 0; mode < 3; ++mode) {
+        std::array<std::int64_t, 3> enc_us{}, dec_us{};
+        std::size_t bytes = 0;
+        AdaptiveStats stats{};
+        for (unsigned repetition = 0; repetition < 3; ++repetition) {
+            const auto start = Clock::now();
+            Bytes encoded;
+            if (mode == 0) {
+                encoded = archive_header(side, 0, 0, voxels);
+                encoded.insert(encoded.end(), voxels.begin(), voxels.end());
+            } else if (mode == 1) {
+                encoded = encode(voxels, side, true);
+            } else {
+                encoded = encode_adaptive(voxels, side, &stats);
+            }
+            const auto encoded_at = Clock::now();
+            const Bytes restored = decode(encoded);
+            const auto decoded_at = Clock::now();
+            require(restored == voxels, "benchmark CTR exactness failure");
+            bytes = encoded.size();
+            enc_us[repetition] = std::chrono::duration_cast<std::chrono::microseconds>(
+                encoded_at - start).count();
+            dec_us[repetition] = std::chrono::duration_cast<std::chrono::microseconds>(
+                decoded_at - encoded_at).count();
+        }
+        std::sort(enc_us.begin(), enc_us.end());
+        std::sort(dec_us.begin(), dec_us.end());
+        std::cout << "MB4_BENCH fixture=" << fixture
+                  << " side=" << side << " mode=" << labels[mode]
+                  << " original_bytes=" << voxels.size()
+                  << " archive_bytes=" << bytes
+                  << " ratio=" << static_cast<double>(voxels.size()) / static_cast<double>(bytes)
+                  << " median_encode_us=" << enc_us[1]
+                  << " median_decode_us=" << dec_us[1]
+                  << " max_error=0";
+        if (mode == 2) {
+            std::cout << " tree_nodes=" << stats.nodes
+                      << " splits=" << stats.split_nodes
+                      << " constant_leaves=" << stats.constant_leaves
+                      << " raw_leaves=" << stats.raw_leaves
+                      << " deepest_split=" << stats.deepest_split;
+        }
+        std::cout << "\n";
+    }
+}
 void self_test() {
     require(levels_for(16) == 6, "wrong level count");
     for (unsigned side : {4u, 8u, 16u}) {
         Bytes fixture = generate(side, 18);
         require(decode(encode(fixture, side, true)) == fixture, "Mandelbulb lossless roundtrip");
         require(decode(encode(fixture, side)) == fixture, "Mandelbulb auto mode");
+        require(decode(encode_adaptive(fixture, side)) == fixture,
+                "adaptive Mandelbulb roundtrip");
     }
     Bytes zeros(16u * 16u * 16u, 0);
     const Bytes packed = encode(zeros, 16);
@@ -354,6 +426,41 @@ void self_test() {
         state = 1664525u * state + 1013904223u;
         value = static_cast<std::uint8_t>(state >> 24u);
     }
+    // A synthetic plane-aligned interface must be partitioned into coarse constant blocks.
+    Bytes boundary(16u * 16u * 16u);
+    for (int z = 0; z < 16; ++z)
+        for (int y = 0; y < 16; ++y)
+            for (int x = 0; x < 16; ++x)
+                boundary[at(Shape{16,16,16},x,y,z)] = x < 8 ? 11 : 200;
+    AdaptiveStats boundary_stats{};
+    const Bytes boundary_archive = encode_adaptive(boundary, 16, &boundary_stats);
+    require(decode(boundary_archive) == boundary, "adaptive geometric interface roundtrip");
+    require(boundary_stats.split_nodes > 0 && boundary_stats.constant_leaves >= 2,
+            "adaptive geometry did not choose coarse regions");
+    require(boundary_archive.size() < boundary.size(), "adaptive interface compression failed");
+    // Random data is not declared compressible: root literal fallback is optimal here.
+    AdaptiveStats random_stats{};
+    const Bytes random_archive = encode_adaptive(noisy, 8, &random_stats);
+    require(decode(random_archive) == noisy, "adaptive noise roundtrip");
+    require(random_stats.raw_leaves >= 1, "adaptive fallback not exercised");
+    // Corrupt adaptive payload / depth / node type / suffix must be rejected.
+    for (int mutation = 0; mutation < 4; ++mutation) {
+        Bytes bad = boundary_archive;
+        if (mutation == 0) bad[9] ^= 1u;                  // checksum
+        else if (mutation == 1) bad[8] = 0;              // invalid depth
+        else if (mutation == 2) bad[header_bytes] = 255; // unknown node tag
+        else bad.push_back(0);                           // trailing content
+        bool rejected_adaptive = false;
+        try { (void)decode(bad); }
+        catch (const std::runtime_error&) { rejected_adaptive = true; }
+        require(rejected_adaptive, "malformed adaptive archive accepted");
+    }
+    Bytes shortened = boundary_archive;
+    shortened.pop_back();
+    bool shortened_rejected = false;
+    try { (void)decode(shortened); }
+    catch (const std::runtime_error&) { shortened_rejected = true; }
+    require(shortened_rejected, "truncated adaptive archive accepted");
     const Bytes auto_archive = encode(noisy, 8);
     require(auto_archive[5] == 0, "incompressible source should use raw fallback");
     require(decode(auto_archive) == noisy, "raw fallback roundtrip");
@@ -372,14 +479,17 @@ void self_test() {
     rejected = false;
     try { (void)decode(damaged); } catch (const std::runtime_error&) { rejected = true; }
     require(rejected, "trailing bytes not rejected");
-    std::cout << "MB4C_SELF_TEST PASS; exact roundtrip; raw fallback; corruption rejection\n";
+    std::cout << "MB4C_SELF_TEST PASS; exact and adaptive roundtrip; "
+                 "cost-gated geometric branching; raw fallback; malformed archive rejection\n";
 }
 } // namespace mb4
 
 int main(int argc, char** argv) {
     try {
         unsigned side = 32, iterations = 18;
-        bool force_hierarchy = false, test = false;
+        bool force_hierarchy = false, adaptive = false, auto_codec = false;
+        bool test = false, run_benchmark = false;
+        std::string fixture = "mandelbulb";
         std::string input, archive = "mandelbulb4.mb4", decoded_path, decode_source;
         for (int i = 1; i < argc; ++i) {
             const std::string option(argv[i]);
@@ -394,6 +504,10 @@ int main(int argc, char** argv) {
             else if (option == "--out") archive = arg();
             else if (option == "--decoded") decoded_path = arg();
             else if (option == "--force-hierarchy") force_hierarchy = true;
+            else if (option == "--adaptive") adaptive = true;
+            else if (option == "--auto-codec") auto_codec = true;
+            else if (option == "--benchmark") run_benchmark = true;
+            else if (option == "--fixture") fixture = arg();
             else if (option == "--self-test") test = true;
             else throw std::runtime_error("unknown option: " + option);
         }
@@ -408,21 +522,42 @@ int main(int argc, char** argv) {
             return 0;
         }
         mb4::levels_for(side);
+        mb4::require(!(force_hierarchy && (adaptive || auto_codec))
+                     && !(adaptive && auto_codec), "conflicting codec options");
         const mb4::Bytes voxels = input.empty()
-            ? mb4::generate(side, iterations)
+            ? mb4::fixture_volume(side, iterations, fixture)
             : mb4::read_file(input, static_cast<std::size_t>(side) * side * side);
-        const mb4::Bytes packed = mb4::encode(voxels, side, force_hierarchy);
+        mb4::require(voxels.size() == static_cast<std::size_t>(side) * side * side,
+                     "source must contain exactly side cubed bytes");
+        if (run_benchmark) {
+            mb4::benchmark(voxels, side, input.empty() ? fixture : "input");
+            return 0;
+        }
+        mb4::AdaptiveStats adaptive_stats{};
+        mb4::Bytes packed;
+        if (adaptive) packed = mb4::encode_adaptive(voxels, side, &adaptive_stats);
+        else if (auto_codec) {
+            packed = mb4::encode(voxels, side);
+            mb4::Bytes candidate = mb4::encode_adaptive(voxels, side, &adaptive_stats);
+            if (candidate.size() < packed.size()) packed.swap(candidate);
+        } else packed = mb4::encode(voxels, side, force_hierarchy);
         const mb4::Bytes restored = mb4::decode(packed);
         mb4::require(restored == voxels, "CTR byte equality failed");
         mb4::write_file(archive, packed);
         if (!decoded_path.empty()) mb4::write_file(decoded_path, restored);
         std::cout << "MB4C verified=1 side=" << side
                   << " depth=" << mb4::levels_for(side)
-                  << " mode=" << (packed[5] == 1 ? "fourway" : "raw")
+                  << " mode=" << (packed[5] == 2 ? "adaptive" : packed[5] == 1 ? "fourway" : "raw")
                   << " original_bytes=" << voxels.size()
                   << " archive_bytes=" << packed.size()
                   << " ratio=" << static_cast<double>(voxels.size()) / static_cast<double>(packed.size())
-                  << " max_error=0\n";
+                  << " max_error=0";
+        if (packed[5] == 2)
+            std::cout << " tree_nodes=" << adaptive_stats.nodes
+                      << " splits=" << adaptive_stats.split_nodes
+                      << " constant_leaves=" << adaptive_stats.constant_leaves
+                      << " raw_leaves=" << adaptive_stats.raw_leaves;
+        std::cout << "\n";
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "MB4C error: " << e.what() << "\n";
