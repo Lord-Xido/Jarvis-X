@@ -43,4 +43,8 @@ jobs:
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture mandelbulb --benchmark
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture uniform --benchmark
             "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture noise --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 64 --fixture mandelbulb --benchmark
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --side 32 --fixture noise --auto-codec --out "auto-$compiler.mb4" --decoded "auto-$compiler.raw"
+            "./build/mb4-$compiler/jarvisx-mandelbulb4" --decode-archive "auto-$compiler.mb4" --decoded "auto-$compiler-replayed.raw"
+            cmp "auto-$compiler.raw" "auto-$compiler-replayed.raw"
           done
