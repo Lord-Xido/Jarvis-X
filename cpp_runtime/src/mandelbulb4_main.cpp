@@ -516,13 +516,23 @@ void self_test() {
             "zero tolerance should be exact");
     // Falsified per-leaf reported range cannot exceed archive tolerance.
     Bytes invalid_envelope = bounded_archive;
-    require(invalid_envelope[header_bytes+9u] == 3,
+    require(invalid_envelope[header_bytes+17u] == 3,
             "bounded test requires a representative root leaf");
-    invalid_envelope[header_bytes+9u+3u] = 255;
+    invalid_envelope[header_bytes+17u+3u] = 255;
+    const std::uint64_t envelope_hash = bounded_wire_hash(invalid_envelope);
+    for (unsigned i=0; i<8; ++i)
+        invalid_envelope[header_bytes+9u+i] =
+            static_cast<std::uint8_t>((envelope_hash>>(8u*i)) & 255u);
     bool bad_envelope_rejected = false;
     try { (void)decode(invalid_envelope); }
     catch (const std::runtime_error&) { bad_envelope_rejected = true; }
     require(bad_envelope_rejected, "invalid tolerance envelope was accepted");
+    Bytes altered_metadata = bounded_archive;
+    altered_metadata[header_bytes+1u] ^= 1u; // provenance fingerprint
+    bool metadata_rejected = false;
+    try { (void)decode(altered_metadata); }
+    catch (const std::runtime_error&) { metadata_rejected = true; }
+    require(metadata_rejected, "bounded archive metadata mutation accepted");
     Bytes truncated_bounded = bounded_archive;
     truncated_bounded.pop_back();
     bool truncated_bounded_rejected = false;
@@ -594,7 +604,9 @@ int main(int argc, char** argv) {
             const mb4::Bytes output = mb4::decode(file);
             mb4::write_file(decoded_path, output);
             std::cout << "MB4C verified=1 independent_decode=1 decoded_bytes="
-                      << output.size() << " max_error=0\n";
+                      << output.size() << " source_error="
+                      << (file[5] == 3 ? "requires_original" : "lossless")
+                      << "\n";
             return 0;
         }
         mb4::levels_for(side);
