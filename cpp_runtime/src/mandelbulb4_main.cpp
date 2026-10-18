@@ -333,6 +333,16 @@ Bytes fixture_volume(unsigned side, unsigned iterations, const std::string& fixt
     if (fixture == "mandelbulb") return generate(side, iterations);
     const std::size_t n = static_cast<std::size_t>(side) * side * side;
     if (fixture == "uniform") return Bytes(n, 127);
+    if (fixture == "ramp") {
+        Bytes output(n);
+        const Shape shape{static_cast<int>(side),static_cast<int>(side),static_cast<int>(side)};
+        for (unsigned z=0; z<side; ++z)
+            for (unsigned y=0; y<side; ++y)
+                for (unsigned x=0; x<side; ++x)
+                    output[at(shape,static_cast<int>(x),static_cast<int>(y),static_cast<int>(z))] =
+                        static_cast<std::uint8_t>((96u*x+64u*y+32u*z)/side);
+        return output;
+    }
     if (fixture == "noise") {
         Bytes output(n);
         std::uint32_t state = UINT32_C(0x1234abcd);
@@ -591,7 +601,7 @@ int main(int argc, char** argv) {
         mb4::require(!(force_hierarchy && (adaptive || auto_codec || bound >= 0))
                      && !(adaptive && (auto_codec || bound >= 0))
                      && !(auto_codec && bound >= 0), "conflicting codec options");
-        mb4::require(bound <= 64, "bounded tolerance must be 0..64");
+        mb4::require(bound >= -1 && bound <= 64, "bounded tolerance must be 0..64");
         const mb4::Bytes voxels = input.empty()
             ? mb4::fixture_volume(side, iterations, fixture)
             : mb4::read_file(input, static_cast<std::size_t>(side) * side * side);
