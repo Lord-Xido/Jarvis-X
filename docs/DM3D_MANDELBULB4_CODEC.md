@@ -37,7 +37,7 @@ To encode arbitrary XYZ-order uint8 sample bytes instead of generating a fractal
 
     ./build/cpp-runtime/jarvisx-mandelbulb4 --side 16 --input input.raw --out output.mb4 --decoded decoded.raw
 
-An input volume must contain exactly side^3 bytes. The first axis (x) is the fastest-varying array index. The CLI currently supports power-of-two sides 4, 8, 16, 32, and 64; it intentionally materializes a bounded grid. Fractal iterations are restricted to 2..64.
+An input volume must contain exactly side^3 bytes. The first axis (x) is the fastest-varying array index. The CLI currently supports power-of-two sides 4, 8, 16, 32, 64, and 128; it intentionally materializes a bounded grid. Fractal iterations are restricted to 2..64.
 
 ## Archive contract
 
@@ -50,7 +50,7 @@ An input volume must contain exactly side^3 bytes. The first axis (x) is the fas
 - Depth uint8 (1 byte)
 - FNV-1a 64-bit checksum of uncompressed voxel bytes (8 bytes)
 
-Hierarchical mode serializes the final coarse state and all detail levels in reverse order, reconstructible using the side and fixed XYZ stage schedule. Sequence records use token 0 + unsigned LEB128 positive zero count, or token 1 + zigzag unsigned LEB128 signed value. The decoder checks lengths, tokens, dimensions, overflow, trailing bytes, voxel range and checksum. FNV-1a is for accidental corruption detection, **not cryptographic authentication**. The archive is not yet a stable cross-project wire protocol.
+Hierarchical mode serializes the final coarse state and all detail levels in reverse order, reconstructible using the side and fixed XYZ stage schedule. Sequence records use token 0 + unsigned LEB128 positive zero count, or token 1 + zigzag unsigned LEB128 signed value. The decoder checks lengths, tokens, dimensions, overflow, trailing bytes, voxel range and checksum. See the separate mode-3 section for lossy envelope semantics. FNV-1a is for accidental corruption detection, **not cryptographic authentication**. The archive is not yet a stable cross-project wire protocol.
 
 ## Verification and capability boundaries
 
@@ -107,6 +107,33 @@ Control fixtures demonstrate the necessity of fallback:
 - 32^3 uniform field: adaptive 19 bytes vs legacy hierarchical 42 bytes (high ratios arise because all voxels share one value).
 - 32^3 pseudo-random field: 32,786 adaptive bytes vs 32,785 raw bytes, so --auto-codec selected raw storage.
 - --benchmark gives single-process three-run median microsecond samples, not a rigorous independent machine-performance evaluation.
+
+
+## Sampled-field error-bounded 3D sparse representation (mode 3)
+
+An additional, opt-in MB4C v1 archive mode 3 stores a cost-selected four-way tree, with a user-declared **maximum absolute reconstruction error in 8-bit sample units**.
+
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --side 128 --fixture mandelbulb --bounded-error 2 --out mb128-bounded.mb4 --decoded mb128-reconstruction.raw
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --decode-archive mb128-bounded.mb4 --decoded mb128-replay.raw
+    ./build/cpp-runtime/jarvisx-mandelbulb4 --side 128 --fixture mandelbulb --bounded-error 2 --benchmark
+
+For each nonconstant spatial region, the encoder **exhaustively scans each uint8 source sample in that region** and computes its exact minimum and maximum. It chooses the midpoint representative floor((min+max)/2) only when
+
+    max(rep-min, max-rep) <= tolerance.
+
+The tree evaluates constant leaves (2 bytes), literal leaves (1 + voxel_count bytes), bounded-envelope leaves (4 bytes) and optional recursive four-child subdivisions; only actual serialized size improves the selection. Encoded mode-3 leaves use tag 3, midpoint, original sampled minimum and sampled maximum. A node tag 0 remains losslessly constant; tag 1 remains a literal; tag 2 remains a four-child split. The decoder checks range ordering, representative containment and the declared envelope tolerance before filling approximated voxels.
+
+The 17-byte common header remains unchanged in layout. Mode 3 appends to its payload a one-byte tolerance (0..64) and a little-endian uint64 source FNV-1a hash before the tree. For mode 3, the **header checksum covers the reconstructed data**; the extra source checksum is a provenance fingerprint only, because the original samples are not available to the decoder. FNV-1a is neither authentication nor collision-resistant cryptographic provenance.
+
+After encoding, the source-aware CTR verifier performs an independent entire-volume comparison of the reconstructed voxels and the true sampled input. This establishes the finite-array guarantee:
+
+    max_i |source[i] - decode(encode(source))[i]| <= tolerance
+
+The decoder alone validates archive integrity and its asserted per-leaf envelope but **cannot independently prove the original input samples lay in those claimed envelopes** without possessing the original source. This is NOT a proof of Mandelbulb continuous geometry between sample locations, Hausdorff distance, certified raymarch step sizes or interval-arithmetic fractal set enclosure. Further certified continuous-field geometry requires interval methods or validated distance bounds and separate tests.
+
+For exact mode 3, set \`--bounded-error 0\`, yielding maximum error zero. Existing lossless modes 0, 1 and 2 retain their original wire behavior; old MB4C readers that know only earlier modes will reject mode 3.
+
+The runtime now permits bounded power-of-two sides 4, 8, 16, 32, 64 and **128** (128 cubed = 2,097,152 sampled bytes). The encoder still materializes the source volume in memory: **"sparse" describes the encoded representation and selective subdivision, not a low-memory streaming generator**. No multi-gigabyte streaming or general infinite-resolution claim is made.
 
 ## Integration points
 
