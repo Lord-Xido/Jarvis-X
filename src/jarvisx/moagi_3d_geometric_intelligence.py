@@ -132,14 +132,15 @@ class GridTokenCodec:
         y, z = divmod(remainder, side)
         if side == 1:
             return (0.0, 0.0, 0.0)
-        return tuple(2.0 * axis / (side - 1) - 1.0 for axis in (x, y, z))  # type: ignore[return-value]
+        return (2.0 * x / (side - 1) - 1.0, 2.0 * y / (side - 1) - 1.0,
+                2.0 * z / (side - 1) - 1.0)
 
     def encode(self, text: str) -> EncodedText:
         if not isinstance(text, str):
             raise TypeError("text must be str")
         tokens = TOKEN_PATTERN.findall(text)
         points = [self._id_to_point(self._register(token)) for token in tokens]
-        center = tuple(sum(p[i] for p in points) / len(points) for i in range(3)) if points else (0.0, 0.0, 0.0)
+        center = _point([sum(p[i] for p in points) / len(points) for i in range(3)]) if points else (0.0, 0.0, 0.0)
         return EncodedText(tokens=tokens, points=points, sentence_point=center)
 
     def decode(self, points: Sequence[Sequence[float]], method: str = "cosine") -> DecodedText:
@@ -253,7 +254,7 @@ class MoagiGeometricIntelligence:
         tokens = payload.get("virtual_tokens")
         if not isinstance(tokens, list) or len(tokens) != payload.get("token_count"):
             raise ValueError("missing or inconsistent ordered virtual token cloud")
-        return [tuple(gain * p for p in restore_virtual_coord(v)) for v in tokens]
+        return [_point([gain * p for p in restore_virtual_coord(v)]) for v in tokens]
 
     def decode_from_virtual(self, payload: dict[str, Any]) -> dict[str, Any]:
         points = self._decode_points(payload, self.decoder_gain)
@@ -279,7 +280,7 @@ class MoagiGeometricIntelligence:
             raise ValueError("iterations must be in [0, 1000]")
         if not math.isfinite(learning_rate) or not 0.0 < learning_rate <= 1.0:
             raise ValueError("learning_rate must be in (0, 1]")
-        pairs = []
+        pairs: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = []
         for text in texts:
             e = self.base.encode(text)
             true_points = [_point(p) for p in e.points]
@@ -322,17 +323,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     encoded = [engine.encode_to_virtual(text) for text in texts]
     log = engine.auto_evolve(texts, iterations=args.iterations)
     results = [engine.decode_from_virtual(payload) for payload in encoded]
+    round_trip = [a == b["decoded_text"] for a, b in zip(texts, results)]
+    octree_valid = engine.octree.validate_counts()
     report = {"engine": "Dr Moagi 3D geometric reference", "scope": "virtual coordinates + lexical token codec",
               "physical_allocation": "only observed token points and sparse octree nodes",
               "virtual_axis": "10^(24*10^24)-1", "virtual_cube_cells": "symbolic, not allocated",
-              "token_round_trip": [a == b["decoded_text"] for a, b in zip(texts, results)],
-              "octree_nodes": engine.octree.count_nodes(), "octree_counts_valid": engine.octree.validate_counts(),
+              "token_round_trip": round_trip,
+              "octree_nodes": engine.octree.count_nodes(), "octree_counts_valid": octree_valid,
               "evolution": log, "vocabulary": engine.base.vocab, "texts": texts,
               "decoded": [r["decoded_text"] for r in results]}
     print(json.dumps(report, indent=2, ensure_ascii=False))
     if args.output:
         args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-    return 0 if all(report["token_round_trip"]) and report["octree_counts_valid"] else 1
+    return 0 if all(round_trip) and octree_valid else 1
 
 
 if __name__ == "__main__":
