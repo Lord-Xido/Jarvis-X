@@ -123,17 +123,23 @@ For each nonconstant spatial region, the encoder **exhaustively scans each uint8
 
 The tree evaluates constant leaves (2 bytes), literal leaves (1 + voxel_count bytes), bounded-envelope leaves (4 bytes) and optional recursive four-child subdivisions; only actual serialized size improves the selection. Encoded mode-3 leaves use tag 3, midpoint, original sampled minimum and sampled maximum. A node tag 0 remains losslessly constant; tag 1 remains a literal; tag 2 remains a four-child split. The decoder checks range ordering, representative containment and the declared envelope tolerance before filling approximated voxels.
 
-The 17-byte common header remains unchanged in layout. Mode 3 appends to its payload a one-byte tolerance (0..64) and a little-endian uint64 source FNV-1a hash before the tree. For mode 3, the **header checksum covers the reconstructed data**; the extra source checksum is a provenance fingerprint only, because the original samples are not available to the decoder. FNV-1a is neither authentication nor collision-resistant cryptographic provenance.
+The 17-byte common header remains unchanged in layout. Mode 3 appends to its payload a one-byte tolerance (0..64), a little-endian uint64 source FNV-1a fingerprint, and an additional little-endian uint64 FNV-1a checksum over the mode-3 tolerance, source fingerprint, and tree payload (excluding the checksum field itself). This detects accidental corruption in both metadata and tree bytes. For mode 3, the **header checksum covers the reconstructed data**; the extra source checksum is a provenance fingerprint only, because the original samples are not available to the decoder. FNV-1a is neither authentication nor collision-resistant cryptographic provenance.
 
 After encoding, the source-aware CTR verifier performs an independent entire-volume comparison of the reconstructed voxels and the true sampled input. This establishes the finite-array guarantee:
 
     max_i |source[i] - decode(encode(source))[i]| <= tolerance
 
-The decoder alone validates archive integrity and its asserted per-leaf envelope but **cannot independently prove the original input samples lay in those claimed envelopes** without possessing the original source. This is NOT a proof of Mandelbulb continuous geometry between sample locations, Hausdorff distance, certified raymarch step sizes or interval-arithmetic fractal set enclosure. Further certified continuous-field geometry requires interval methods or validated distance bounds and separate tests.
+The decoder alone validates archive integrity, including metadata checksums, and its asserted per-leaf envelope but **cannot independently prove the original input samples lay in those claimed envelopes** without possessing the original source. This is NOT a proof of Mandelbulb continuous geometry between sample locations, Hausdorff distance, certified raymarch step sizes or interval-arithmetic fractal set enclosure. Further certified continuous-field geometry requires interval methods or validated distance bounds and separate tests.
 
 For exact mode 3, set \`--bounded-error 0\`, yielding maximum error zero. Existing lossless modes 0, 1 and 2 retain their original wire behavior; old MB4C readers that know only earlier modes will reject mode 3.
 
 The runtime now permits bounded power-of-two sides 4, 8, 16, 32, 64 and **128** (128 cubed = 2,097,152 sampled bytes). The encoder still materializes the source volume in memory: **"sparse" describes the encoded representation and selective subdivision, not a low-memory streaming generator**. No multi-gigabyte streaming or general infinite-resolution claim is made.
+
+### Certified-sample bound verification
+
+Encoding in mode 3 exhaustively computes every region's sample minimum/maximum and performs a second end-to-end comparison against the decoded source. For validated archives, the source-aware encoder guarantees a maximum absolute **sample** error no larger than the requested threshold. Independent replay cannot establish error against a source that was not provided. The in-archive min/max declarations and FNV-1a checksums are useful for internal consistency and accidental-corruption detection but are not cryptographic proofs.
+
+The 128³ benchmark records both a requested-tolerance mode and lossless references. More aggressive error budgets should not be compared to exact archives without noting that they have different fidelity contracts.
 
 ## Integration points
 
