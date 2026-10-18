@@ -1,0 +1,48 @@
+name: Publish HyperCloud Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/jarvisx/cloud/**"
+      - "Dockerfile.cloud"
+      - "pyproject.toml"
+      - ".github/workflows/hypercloud-publish.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: hypercloud-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.cloud
+          push: true
+          tags: |
+            ghcr.io/lord-xido/jarvis-x:hypercloud
+            ghcr.io/lord-xido/jarvis-x:hypercloud-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
