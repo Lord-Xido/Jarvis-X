@@ -1,0 +1,54 @@
+name: MMVM full-stack
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/mmvm.py"
+      - "src/jarvisx/mmvm_api.py"
+      - "apps/mmvm-fullstack/**"
+      - "tests/test_mmvm_runtime.py"
+      - ".github/workflows/mmvm-fullstack.yml"
+  pull_request:
+    paths:
+      - "src/jarvisx/mmvm.py"
+      - "src/jarvisx/mmvm_api.py"
+      - "apps/mmvm-fullstack/**"
+      - "tests/test_mmvm_runtime.py"
+      - ".github/workflows/mmvm-fullstack.yml"
+
+jobs:
+  kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install -e ".[test]"
+      - name: Compile MMVM modules
+        run: python -m py_compile src/jarvisx/mmvm.py src/jarvisx/mmvm_api.py
+      - name: Run MMVM conformance tests
+        run: pytest -q --no-cov tests/test_mmvm_runtime.py
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build MMVM image
+        run: docker build -f apps/mmvm-fullstack/Dockerfile -t jarvisx-mmvm:test .
+      - name: Smoke test control plane
+        run: |
+          docker run -d --rm --name jarvisx-mmvm-test -p 18080:8080 jarvisx-mmvm:test
+          trap 'docker stop jarvisx-mmvm-test || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/health; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:18080/api/status
+          curl -fsS -X POST http://127.0.0.1:18080/api/submit \
+            -H 'Content-Type: application/json' \
+            -d '{"text":"MMVM CI self-cycle","modality":"text","generate":"image"}'
+          sleep 1
+          curl -fsS http://127.0.0.1:18080/api/tasks
