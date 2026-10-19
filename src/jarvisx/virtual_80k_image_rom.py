@@ -197,7 +197,9 @@ def read_png(data: bytes) -> dict:
         elif name == b"IEND":
             seen_end = True
             break
-    _check(seen_end and seen_idat and off == len(data) and isinstance(record, dict), "missing PNG data or ROM")
+    _check(seen_end and seen_idat and off == len(data), "missing PNG data")
+    if not isinstance(record, dict):
+        raise ValueError("missing ROM")
     _check(record.get("format") == "dr-moagi-virtual-80k-image-rom"
            and type(record.get("version")) is int and record["version"] == 1,
            "bad ROM version")
