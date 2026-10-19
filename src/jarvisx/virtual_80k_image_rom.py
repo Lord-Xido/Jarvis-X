@@ -125,7 +125,7 @@ def _png_chunk(name: bytes, payload: bytes) -> bytes:
             struct.pack(">I", zlib.crc32(name+payload)&0xffffffff))
 
 
-def _preview(tx: int, ty: int, tile: int, seed: int, preview: int = 48) -> bytes:
+def _preview(tx: int, ty: int, tile: int, seed: int, preview: int = 48) -> tuple[bytes, bytes]:
     rows = bytearray()
     for y in range(preview):
         rows.append(0)
