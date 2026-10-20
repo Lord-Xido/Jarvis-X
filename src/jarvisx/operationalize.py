@@ -61,6 +61,7 @@ def run_preflight() -> OperationalReport:
         "jarvisx.dr_moagi_os_api",
         "jarvisx.nexus3d_api",
         "jarvisx.hyper3d_api",
+        "jarvisx.identity_permeation",
     )
 
     checks: list[OperationalCheck] = []
@@ -177,6 +178,29 @@ def _torus_smoke(*, steps: int = 16, batch: int = 8) -> str:
     )
 
 
+def _identity_permeation_smoke() -> str:
+    """Verify the locked 11x6x4 terminal identity-permeation profile."""
+
+    from .identity_permeation import verify_canonical_identity
+
+    receipt = verify_canonical_identity()
+    if not receipt.permeates:
+        raise RuntimeError(
+            "identity-permeation verification failed: "
+            f"fixed={receipt.fixed_point_residual:.6g} "
+            f"idempotence={receipt.idempotence_residual:.6g} "
+            f"gradient={receipt.identity_defect_gradient_residual:.6g} "
+            f"circulation={receipt.circulation_residual:.6g}"
+        )
+    return (
+        f"shape={receipt.shape} cells={receipt.cells_checked} "
+        f"fixed={receipt.fixed_point_residual:.1e} "
+        f"idempotence={receipt.idempotence_residual:.1e} "
+        f"gradient={receipt.identity_defect_gradient_residual:.1e} "
+        f"circulation={receipt.circulation_residual:.1e}"
+    )
+
+
 def _api_smoke() -> str:
     from .dr_moagi_os_api import app
 
@@ -227,6 +251,7 @@ def run_smoke() -> OperationalReport:
             _capture("dr-moagi-os-cycle", _os_smoke),
             _capture("control-plane-api", _api_smoke),
             _capture("hyper3d-runtime", _hyper3d_smoke),
+            _capture("identity-permeation", _identity_permeation_smoke),
         )
     )
     return OperationalReport(mode="smoke", checks=tuple(checks))
