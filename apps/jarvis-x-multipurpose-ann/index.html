@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>JARVIS-X 3D Multipurpose ANN</title>
+<style>
+:root{--bg:#05101d;--panel:#0a1d2c;--gold:#e6bd61;--cyan:#48d9f1;--text:#e6f3ff;--muted:#91a9be;--border:#1d4760}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+header{padding:15px 20px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,#0b2537,#07101b);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+h1{font-size:17px;letter-spacing:2px;margin:0;color:var(--gold)}header .sub{font-size:10px;letter-spacing:2px;color:var(--cyan)}
+.layout{display:grid;grid-template-columns:minmax(250px,300px) 1fr minmax(250px,285px);gap:12px;padding:12px;min-height:calc(100dvh - 75px)}.panel{padding:15px;border:1px solid var(--border);background:#071929;border-radius:12px;box-shadow:inset 0 0 20px #071525}.panel h2{font-size:11px;letter-spacing:1.2px;color:var(--cyan);border-bottom:1px solid var(--border);padding-bottom:9px;margin:0 0 14px}
+.controls{display:flex;flex-direction:column;gap:15px}label{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}select,input[type=number]{font:inherit;background:#102b3d;border:1px solid #30586b;border-radius:6px;color:var(--text);padding:9px;width:100%;outline:0}input[type=range]{width:100%;accent-color:var(--cyan)}button{cursor:pointer;border:1px solid var(--border);border-radius:7px;background:#153245;color:var(--text);padding:10px 12px;font:inherit;font-weight:700}button.primary{background:#765820;color:#fff1c8;border-color:#ba9247}button:hover{filter:brightness(1.14)}button:disabled{opacity:.5;cursor:wait}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.range-label{display:flex;justify-content:space-between}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}.canvaswrap{height:460px;min-height:350px;position:relative;border:1px solid var(--border);background:#05101b;border-radius:12px;overflow:hidden}canvas#fieldCanvas{width:100%;height:100%;display:block;touch-action:none}.hint{position:absolute;bottom:6px;left:0;right:0;text-align:center;color:#a2afbd;font-size:10px;pointer-events:none}
+.diagram{font-size:12px;padding:14px;color:var(--text)}.diagram strong{color:var(--gold)}.operators{display:flex;gap:6px;flex-wrap:wrap;align-items:center;color:var(--muted)}.operators span{color:var(--cyan);background:#0e2f3c;padding:4px 8px;border-radius:5px}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}.kpi>div{background:#0c2638;border:1px solid var(--border);border-radius:8px;padding:9px}.kpi label{font-size:9px;letter-spacing:.5px}.kpi b{font-size:17px;color:#e3f8ff}.kpi b.accent{color:var(--gold)}.small{font-size:10px;color:var(--muted)}.badge{color:#72f4a4;border:1px solid #23644b;padding:4px 8px;border-radius:5px;letter-spacing:1px;font-size:10px}
+#lossCanvas{display:block;width:100%;height:110px;background:#071523;border:1px solid var(--border);border-radius:7px}.eq{border-left:2px solid var(--gold);padding:10px;background:#152534;overflow-wrap:anywhere;font-size:11px;color:#dfd3a5}.foot{margin-top:12px;color:var(--muted);font-size:10px}
+@media(max-width:1040px){.layout{grid-template-columns:1fr 1fr}.stage{grid-column:1 / -1;grid-row:1}.controls,.metrics{grid-row:2}}@media(max-width:620px){.layout{display:flex;flex-direction:column}.canvaswrap{height:340px;min-height:340px}header{padding:12px}h1{font-size:13px}.stage{order:0}.controls{order:1}.metrics{order:2}}
+</style></head><body>
+<header><div><h1>JARVIS-X // 3D MULTIPURPOSE COMPUTING ANN</h1><div class="sub">PRECOMPUTED GF(2) BIT KERNEL · TRAINABLE MLP · CONTRACTIVE INWARD FOLD</div></div><div class="badge">LOCAL NUMERICAL EMULATION</div></header>
+<main class="layout">
+<aside class="panel controls"><h2>3D OPERATIONAL CONTROL</h2>
+<div><label for="task">COMPUTING TASK</label><select id="task"><option value="restore">3D denoising / restoration</option><option value="edge">3D boundary detection</option><option value="xor">3D XOR distillation (oracle-assisted)</option></select></div>
+<div><label for="shape">3D INPUT GEOMETRY</label><select id="shape"><option value="torus">Toroidal ring</option><option value="sphere">Sphere</option><option value="double">Twin spheres</option><option value="wave">Wave surface</option></select></div>
+<div class="range-label"><label for="noise">BIT FLIP NOISE</label><b id="noiseVal">0.14</b></div><input id="noise" type="range" min="0" max="0.35" step="0.01" value="0.14">
+<div class="range-label"><label for="lam">CONTRACTION λ</label><b id="lamVal">0.80</b></div><input id="lam" type="range" min="0.1" max="0.96" step="0.01" value="0.8">
+<div class="range-label"><label for="gam">DECODE FEEDBACK γ</label><b id="gamVal">0.20</b></div><input id="gam" type="range" min="0" max="0.8" step="0.01" value="0.2">
+<div><label for="jump">GF(2) JUMP ITERATIONS (EXACT)</label><input type="number" id="jump" min="0" max="1000000" value="1000000"><div class="small" id="jumplabel">K^1000000</div></div>
+<div><label for="view">RIGHT-HAND 3D FIELD</label><select id="view"><option value="fold">Inward-fold decoder</option><option value="ANN">ANN head output</option><option value="latent">Converged 3D latent</option><option value="bit">Exact XOR jump field</option><option value="truth">Target / ground truth</option><option value="input">Input bits</option></select></div>
+<div class="two"><button class="primary" id="train">TRAIN 1,200 STEPS</button><button class="primary" id="trainLong">TRAIN 4,200</button></div>
+<div class="two"><button id="new">NEW 3D INPUT</button><button id="orbit">Orbit: ON</button></div>
+<div class="small">Updates are gated on a tuning validation set, not the independent audit set. XOR ANN training receives the exact kernel output as an input feature (oracle-assisted distillation); it is not an independent forecasting benchmark.</div>
+</aside>
+<section class="stage">
+<div class="canvaswrap"><canvas id="fieldCanvas"></canvas><div class="hint">DRAG TO ORBIT · TWO VIEWS OF ONE 16³ VOXEL LATTICE · RIGHT FIELD IS CONFIGURABLE</div></div>
+<div class="panel diagram"><h2>RECURSIVE COMPUTATION GRAPH</h2><div class="operators"><span>Input 3D bits</span> → <span>Kⁿ GF(2)</span> → <span>Features</span> → <span>ANN<sub>θ</sub></span> → <span>D<sub>θ</sub></span> → <span>E/Q</span> → <span>Fixed point z*</span> → <span>CTR validation</span> ↺</div>
+<p><strong>Trainable tasks:</strong> restore noisy 3D shapes; detect their 3D boundaries; distill an XOR kernel output that is already provided as a feature (oracle assisted). <strong>Outer loop:</strong> supervised gradient updates, validation, accept/rollback. <strong>Inner loop:</strong> deterministic contraction to a numerically certified latent fixed point.</p>
+<div class="eq">F(z) = (1−λ)b + ½λ [Q(z) + E(D(z))]<br>D(z) = (1−γ)ANN<sub>θ</sub>(x, task) + γz<br>||F(z)-F(w)||∞ ≤ ½λ(1+γ)||z-w||∞</div>
+<div class="foot">Training uses procedurally generated labeled 3D data. This demonstrates a small multipurpose ANN, not AGI, not a physical 10^6,000,000-engine simulation. FLOP counts and latency are hardware dependent.</div>
+</div></section>
+<aside class="panel metrics"><h2>LIVE NUMERICAL TELEMETRY</h2><div class="kpi">
+<div><label>SHAPE</label><b id="nameShape" style="font-size:14px">TORUS</b></div><div><label>TASK</label><b id="nameTask" style="font-size:14px">RESTORE</b></div>
+<div><label>FIXED-POINT STEPS</label><b id="iterations">—</b></div><div><label>CONTRACTION L ≤</label><b id="lip" class="accent">—</b></div>
+<div><label>CERTIFIED LATENT ERROR ≤</label><b id="bound" style="font-size:13px">—</b></div><div><label>OUTPUT MSE</label><b id="mse" class="accent">—</b></div>
+<div><label>OUTPUT ACCURACY</label><b id="acc">—</b></div><div><label>MEMORY Ω (EMA MSE)</label><b id="omega">—</b></div>
+<div><label>TUNING VALIDATION MSE</label><b id="held">—</b></div><div><label>TUNING VALIDATION ACC.</label><b id="heldacc">—</b></div><div><label>SEPARATE AUDIT: RESTORE / EDGE ACC.</label><b id="audit">—</b></div><div><label>XOR WITHOUT ORACLE FEATURE (STRESS TEST)</label><b id="oracleFree">—</b></div>
+</div><h2 style="margin-top:18px">FIXED-POINT RESIDUAL (LOG₁₀)</h2><canvas id="lossCanvas" width="600" height="110"></canvas>
+<h2 style="margin-top:18px">CTR WEIGHT UPDATE GATE</h2><div class="eq" id="gate">READY · UNTRAINED INITIALIZATION</div>
+<div class="foot">The reference target is synthetic and available only during supervised training or evaluation. A falling fixed-point residual is not itself a proof of reconstruction accuracy. Per-voxel accuracy can be inflated by the majority class; see README for IoU and balanced accuracy. The separate audit set is never used for weight acceptance.</div>
+</aside></main>
+<script src="dm3d_core.js"></script><script src="ui.js"></script></body></html>
