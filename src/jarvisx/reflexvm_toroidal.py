@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import math
 import time
+from typing import cast
 
 import numpy as np
 
@@ -30,7 +31,7 @@ def _xyz(values: object, label: str) -> np.ndarray:
 
 
 def fold(points: object, period: float = 1000.0) -> np.ndarray:
-    return np.remainder(_xyz(points, "points"), _period(period))
+    return cast(np.ndarray, np.remainder(_xyz(points, "points"), _period(period)))
 
 
 def periodic_delta(a: object, b: object, period: float = 1000.0) -> np.ndarray:
@@ -39,11 +40,11 @@ def periodic_delta(a: object, b: object, period: float = 1000.0) -> np.ndarray:
     u, v = _xyz(a, "a"), _xyz(b, "b")
     if v.shape[0] not in (1, u.shape[0]):
         raise ValueError("b must have one row or match a's rows")
-    return np.remainder(u - v + p / 2.0, p) - p / 2.0
+    return cast(np.ndarray, np.remainder(u - v + p / 2.0, p) - p / 2.0)
 
 
 def periodic_max_error(a: object, b: object, period: float = 1000.0) -> np.ndarray:
-    return np.max(np.abs(periodic_delta(a, b, period)), axis=-1)
+    return cast(np.ndarray, np.max(np.abs(periodic_delta(a, b, period)), axis=-1))
 
 
 def encode6(points: object, period: float = 1000.0) -> np.ndarray:
