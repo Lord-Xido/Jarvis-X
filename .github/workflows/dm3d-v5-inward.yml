@@ -1,0 +1,30 @@
+name: DM3D v5 finite 3D inward-loop
+on:
+  pull_request:
+    paths:
+      - "reference/dm3d_septillion_v5/**"
+      - ".github/workflows/dm3d-v5-inward.yml"
+  push:
+    paths:
+      - "reference/dm3d_septillion_v5/**"
+      - ".github/workflows/dm3d-v5-inward.yml"
+
+jobs:
+  bounded-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: Install reference dependencies
+        run: python -m pip install -r reference/dm3d_septillion_v5/requirements.txt
+      - name: Native Python self-tests and independent bounded tests
+        working-directory: reference/dm3d_septillion_v5
+        run: |
+          python dm3d_septillion_inward_v5.py selftest
+          python -m unittest -v test_dm3d_v5.py
