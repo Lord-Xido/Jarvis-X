@@ -1,0 +1,33 @@
+name: DM3D public document bridge reference
+
+on:
+  push:
+    paths:
+      - 'reference/dm3d_document_bridge/**'
+      - '.github/workflows/dm3d-document-bridge.yml'
+  pull_request:
+    paths:
+      - 'reference/dm3d_document_bridge/**'
+      - '.github/workflows/dm3d-document-bridge.yml'
+
+jobs:
+  public-reference:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Word compatibility test dependency
+        run: python -m pip install 'python-docx>=1.1.0'
+      - name: Test standalone reversible codec
+        working-directory: reference/dm3d_document_bridge
+        run: python -m unittest -q test_codec.py
+      - name: Test independent self-source encode/decode
+        run: |
+          python reference/dm3d_document_bridge/codec.py encode reference/dm3d_document_bridge/codec.py /tmp/dm3d-self.docx
+          python reference/dm3d_document_bridge/codec.py decode /tmp/dm3d-self.docx /tmp/dm3d-self-recovered.py
+          cmp reference/dm3d_document_bridge/codec.py /tmp/dm3d-self-recovered.py
