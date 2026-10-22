@@ -26,6 +26,9 @@ jobs:
       - name: Test standalone reversible codec
         working-directory: reference/dm3d_document_bridge
         run: python -m unittest -q test_codec.py
+      - name: Test public v2 interoperability adapter (synthetic fixtures)
+        working-directory: reference/dm3d_document_bridge
+        run: python -m unittest -q test_v2_adapter.py
       - name: Test independent self-source encode/decode
         run: |
           python reference/dm3d_document_bridge/codec.py encode reference/dm3d_document_bridge/codec.py /tmp/dm3d-self.docx

@@ -34,3 +34,19 @@ N = (10^24)^((10^24)^(10^24)) can be stored as a finite symbolic expression with
     python -m unittest -q test_codec.py
 
 The path-scoped GitHub Actions workflow runs the same isolated tests without changing production entrypoints or authoritative VM formats.
+
+
+## DM3D v2 DOCX integration adapter (public interface, private engine)
+
+The sibling \`v2_adapter.py\` offers a **read-only** check for the locally held v2 Word package and an explicit local subprocess bridge to a **separately supplied, trusted Python runtime**. The public repository does not contain the private DOCX, runtime source, training weights, output media or IP dossier.
+
+    python reference/dm3d_document_bridge/v2_adapter.py inspect /private/path/engine.docx
+    python reference/dm3d_document_bridge/v2_adapter.py run /private/path/engine.docx factorial5 \
+      --runtime /trusted/local/dm3d_runtime.py --out /tmp/dm3d-results --approve-external-runtime
+
+The \`run\` subcommand is disabled without the explicit approval flag. The verifier checks ZIP path/size limits, required \`dm3d/\` members, the SHA-256 runtime digest, program names, ANN architecture metadata, ROM/RAM map metadata and Morton key shape. It does **not** execute embedded Python, prove trustworthiness, authenticate the author or exhaustively validate all media blocks. The adapter never downloads code, mutates the Word file, or performs hidden code updates. Review the separately supplied external runtime before approving execution.
+
+    cd reference/dm3d_document_bridge
+    python -m unittest -q test_v2_adapter.py
+
+All test DOCX packages are constructed in temporary directories from synthetic content. The public bridge is intended to remain distinct from the separately controlled proprietary package.
