@@ -54,7 +54,7 @@ All test DOCX packages are constructed in temporary directories from synthetic c
 
 ## DM3D 1,000-instruction DOCX bridge (public interface only)
 
-The standalone `v1000_adapter.py` recognizes the separate DM3D 1000-op document format without publishing or importing its private VM implementation. It validates bounded ZIP/XML structure, the 1,000 eight-byte instruction records, contiguous program counters, per-record CRC16, stored SHA-256 digests and payload size limits. The adapter **does not decode the private payload**, verify the declared source digest against decoded bytes, authenticate the document, or execute anything during inspection.
+The standalone `v1000_adapter.py` recognizes the separate DM3D 1000-op document format without publishing or importing its private VM implementation. It validates bounded ZIP/XML structure, basic required Word OOXML parts, exactly one manifest/program/payload XML section, rejection of XML document types and entity declarations, the 1,000 eight-byte instruction records, contiguous program counters, per-record CRC16, stored SHA-256 digests and payload size limits. The adapter **does not decode the private payload**, verify the declared source digest against decoded bytes, authenticate the document, or execute anything during inspection.
 
     python reference/dm3d_document_bridge/v1000_adapter.py inspect /private/path/DM3D_1000_Bytecode_VM.docx
 
@@ -63,7 +63,7 @@ A locally provided, independently reviewed private runtime is invoked only with 
     python reference/dm3d_document_bridge/v1000_adapter.py run /private/path/DM3D_1000_Bytecode_VM.docx \
       --runtime /trusted/local/dm3d_1000_bytecode_vm.py \
       --output /tmp/restored.bin \
-      --runtime-sha256 <approved-runtime-sha256> \
+      --runtime-sha256 YOUR_PREAPPROVED_64_HEX_DIGEST \
       --approve-external-runtime
 
 The public adapter is **not** the bytecode interpreter. Its synthetic test suite has no private VM program, document, input, output, trade secret, credential, or model weight:
@@ -72,3 +72,8 @@ The public adapter is **not** the bytecode interpreter. Its synthetic test suite
     python -m unittest -q test_v1000_adapter.py
 
 All confidential source and complete 1,000-instruction documents remain external to this public repository. Review local documents and runtime before approving execution; SHA-256 and CRC detect corruption but do not establish authenticity or trustworthiness.
+
+
+### Scope of verification
+
+The inspector enforces selected DOCX ZIP/XML structural invariants and checksums, **not** complete OOXML/ECMA-376 conformance or signature-based document authenticity. XML DTD/entity declarations and malformed or duplicate VM sections are rejected. Tests cover missing Word parts, XML document types, duplicate VM program sections and ZIP path traversal. The runtime hash should be obtained from a separately trusted source before execution; pinning alone cannot prevent all time-of-check/time-of-use races. Neither this adapter nor CodeQL success constitutes a full independent security audit. Public CI uses synthetic fixtures only.
