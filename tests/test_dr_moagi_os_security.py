@@ -121,3 +121,14 @@ def test_auth_check_is_exact():
     assert authorise_bearer("Bearer " + TOKEN + "X", TOKEN) == 401
     assert authorise_bearer("bearer " + TOKEN, TOKEN) == 401
     assert authorise_bearer("Bearer " + "x" * 1025, TOKEN) == 401
+
+
+def test_installed_api_rejects_mutation_before_handler(monkeypatch):
+    """Exercise the real production FastAPI app, not only a synthetic fixture."""
+    from jarvisx.dr_moagi_os_api import app
+
+    monkeypatch.delenv("JARVISX_OS_CONTROL_TOKEN", raising=False)
+    with TestClient(app) as client:
+        response = client.post("/v1/os/boot")
+        assert response.status_code == 503
+        assert client.get("/healthz").status_code == 200
