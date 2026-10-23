@@ -44,12 +44,22 @@ def fixture(*, fault=None):
     ET.SubElement(root, f'{{{ns}}}program', encoding='hex',
         record='8-byte-pc-op-count-index-crc16').text = program.hex()
     ET.SubElement(root, f'{{{ns}}}payload', encoding='base64+zlib').text = base64.b64encode(payload).decode()
+    if fault == 'duplicate-program':
+        ET.SubElement(root, f'{{{ns}}}program', encoding='hex').text = program.hex()
+    xml = ET.tostring(root)
+    if fault == 'doctype':
+        xml = b'<!DOCTYPE dm:machine [<!ENTITY ignored "not-used">]>' + xml
     with io.BytesIO() as stream:
         with zipfile.ZipFile(stream, 'w', zipfile.ZIP_DEFLATED) as z:
             z.writestr('[Content_Types].xml', '<Types/>')
-            z.writestr(a.PART, ET.tostring(root))
+            z.writestr('_rels/.rels', '<Relationships/>')
+            if fault != 'missing-word':
+                z.writestr('word/document.xml', '<w:document xmlns:w="urn:test"/>')
+            z.writestr(a.PART, xml)
+            if fault == 'traversal':
+                z.writestr('../escape.txt', 'unexpected')
             if fault == 'duplicate-path':
-                z.writestr(a.PART, ET.tostring(root))
+                z.writestr(a.PART, xml)
         return stream.getvalue()
 
 
@@ -85,6 +95,22 @@ class AdapterTests(unittest.TestCase):
     def test_duplicate_archive_path(self):
         with self.assertRaisesRegex(a.InvalidPackage, 'duplicate'):
             self.inspect('duplicate-path')
+
+    def test_missing_word_part_rejected(self):
+        with self.assertRaisesRegex(a.InvalidPackage, 'Word OOXML'):
+            self.inspect('missing-word')
+
+    def test_xml_doctype_rejected(self):
+        with self.assertRaisesRegex(a.InvalidPackage, 'document type'):
+            self.inspect('doctype')
+
+    def test_duplicate_program_node_rejected(self):
+        with self.assertRaisesRegex(a.InvalidPackage, 'exactly one'):
+            self.inspect('duplicate-program')
+
+    def test_zip_path_traversal_rejected(self):
+        with self.assertRaisesRegex(a.InvalidPackage, 'invalid'):
+            self.inspect('traversal')
 
     def test_execution_denied_without_approval(self):
         self.inspect()
