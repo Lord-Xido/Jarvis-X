@@ -1,0 +1,31 @@
+name: DM3D ENV1 cross-language conformance
+
+on:
+  push:
+    paths:
+      - 'reference/dm3d_env1/**'
+      - '.github/workflows/dm3d-env1-conformance.yml'
+  pull_request:
+    paths:
+      - 'reference/dm3d_env1/**'
+      - '.github/workflows/dm3d-env1-conformance.yml'
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12', '3.13']
+        compiler: ['g++', 'clang++']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile C++17 reference
+        working-directory: reference/dm3d_env1
+        run: ${{ matrix.compiler }} -std=c++17 -Wall -Wextra -Werror -O2 envelope.cpp -o envelope_cpp
+      - name: Run cross-language conformance tests
+        working-directory: reference/dm3d_env1
+        run: python -m unittest -v test_envelope.py
