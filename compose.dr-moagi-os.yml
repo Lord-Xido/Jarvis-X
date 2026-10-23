@@ -10,6 +10,7 @@ services:
       - "127.0.0.1:10000:10000"
     environment:
       PORT: "10000"
+      JARVISX_OS_CONTROL_TOKEN: "${JARVISX_OS_CONTROL_TOKEN:?Set a random token of at least 32 characters}"
       JARVISX_STATE_DIR: /var/lib/jarvisx
       JARVISX_OS_SIDE: "64"
       JARVISX_OS_MAX_ACTIVE_CELLS: "50000"
