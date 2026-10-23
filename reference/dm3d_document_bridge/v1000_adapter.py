@@ -20,6 +20,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 PART = "customXml/item2.xml"
+REQUIRED_OOXML = frozenset({"[Content_Types].xml", "_rels/.rels", "word/document.xml"})
 NS = "urn:dm-pcs:3d-docx-1000bytecode:v2"
 MAX_ZIP = 16 * 1024 * 1024
 MAX_XML = 2 * 1024 * 1024
@@ -63,12 +64,19 @@ def inspect_document(path: str | Path) -> dict:
                 total += entry.file_size
                 if total > MAX_EXPANDED:
                     raise InvalidPackage("ZIP expansion exceeds limit")
+            if not REQUIRED_OOXML.issubset(seen):
+                raise InvalidPackage("missing required Word OOXML parts")
             if PART not in seen or archive.getinfo(PART).file_size > MAX_XML:
                 raise InvalidPackage("missing or oversized VM custom XML")
-            root = ET.fromstring(archive.read(PART))
+            xml = archive.read(PART)
+            if b"<!DOCTYPE" in xml or b"<!ENTITY" in xml:
+                raise InvalidPackage("XML document type or entity declaration rejected")
+            root = ET.fromstring(xml)
         tag = lambda name: f"{{{NS}}}{name}"
         if root.tag != tag("machine") or root.attrib != {"version": "2.0"}:
             raise InvalidPackage("unrecognized VM namespace/version")
+        if [child.tag for child in root] != [tag("manifest"), tag("program"), tag("payload")]:
+            raise InvalidPackage("VM XML must contain exactly one ordered manifest/program/payload")
         manifest_node = root.find(tag("manifest"))
         program_node = root.find(tag("program"))
         payload_node = root.find(tag("payload"))
