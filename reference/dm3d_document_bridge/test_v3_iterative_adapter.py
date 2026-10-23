@@ -87,5 +87,79 @@ class V3PublicBridgeTests(unittest.TestCase):
             self.assertFalse((root / 'out').exists())
 
 
+
+    def test_approved_pinned_synthetic_runtime_end_to_end(self):
+        """Exercise the subprocess + source + SHA + independent-decode contract.
+
+        This synthetic reversible ZIP fixture is deliberately NOT the private 3D codec.
+        """
+        from textwrap import dedent
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            docx = root / 'synthetic.docx'
+            synthetic_docx(docx, ['energy = 7', 'print(energy)'])
+            runtime = root / 'fixture_runtime.py'
+            runtime.write_text(dedent(r'''
+                import hashlib
+                import json
+                from pathlib import Path
+                import sys
+                import xml.etree.ElementTree as ET
+                import zipfile
+
+                def sha(data):
+                    return hashlib.sha256(data).hexdigest()
+
+                command, *args = sys.argv[1:]
+                if command == 'iterate-docx':
+                    source_docx = Path(args[0])
+                    output = Path(args[args.index('--out') + 1])
+                    layers = int(args[args.index('--layers') + 1])
+                    with zipfile.ZipFile(source_docx) as source_zip:
+                        root = ET.fromstring(source_zip.read('word/document.xml'))
+                    namespace = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+                    paragraphs = [''.join(t.text or '' for t in p.iter(namespace + 't'))
+                                  for p in root.iter(namespace + 'p')]
+                    start = paragraphs.index('<<<DM3D-PYTHON-BEGIN>>>')
+                    end = paragraphs.index('<<<DM3D-PYTHON-END>>>')
+                    data = ('\n'.join(paragraphs[start + 1:end]) + '\n').encode('utf-8')
+                    output.mkdir(parents=True, exist_ok=True)
+                    for name in ('original.py', 'best.py', 'decoded_verified.py'):
+                        (output / name).write_bytes(data)
+                    with zipfile.ZipFile(output / 'best.dm3d', 'w') as package:
+                        package.writestr('manifest.json', json.dumps({
+                            'grid_side': 1,
+                            'blocks': [{'index': 0, 'xyz': [0, 0, 0]}]
+                        }))
+                        package.writestr('source.bin', data)
+                    report = {
+                        'engine': 'DM3D-CLOSED-LOOP-2', 'layers': layers,
+                        'final_sha256': sha(data), 'accepted_iterations': 0,
+                        'halt_reason': 'synthetic_fixed_point'
+                    }
+                    (output / 'iteration_report.json').write_text(json.dumps(report))
+                    print(json.dumps(report))
+                elif command == 'nested-decode':
+                    package, target = Path(args[0]), Path(args[1])
+                    with zipfile.ZipFile(package) as archive:
+                        data = archive.read('source.bin')
+                    wanted = args[args.index('--sha256') + 1]
+                    if sha(data) != wanted:
+                        raise ValueError('SHA mismatch')
+                    target.write_bytes(data)
+                    print(json.dumps({'sha256': sha(data)}))
+                else:
+                    raise ValueError('unknown CLI command')
+            ''').lstrip(), encoding='utf-8')
+            proof = run(docx, runtime, root / 'output', digest(runtime.read_bytes()),
+                        rounds=4, layers=2, approved=True)
+            self.assertTrue(proof['verified'])
+            self.assertEqual(proof['accepted_iterations'], 0)
+            self.assertEqual(proof['geometry']['block_xyz'], [[0, 0, 0]])
+            self.assertEqual((root / 'output' / 'best.py').read_bytes(),
+                             b'energy = 7\nprint(energy)\n')
+            self.assertTrue((root / 'output' / 'public_bridge_proof.json').is_file())
+
+
 if __name__ == '__main__':
     unittest.main()
