@@ -30,6 +30,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install Word-compatibility test dependency
+        run: python -m pip install 'python-docx>=1.1.0'
       - name: Run public DOCX/3D bridge synthetic regression tests
         working-directory: reference/dm3d_document_bridge
         run: python -m unittest -q test_v3_iterative_adapter.py
