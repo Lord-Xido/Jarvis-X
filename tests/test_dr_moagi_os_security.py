@@ -1,9 +1,10 @@
-"""Focused access-gate regression tests using an isolated ASGI test fixture."""
+"""Fail-closed control-plane tests without optional HTTP client dependencies."""
 from __future__ import annotations
 
-import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+import asyncio
+
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from jarvisx.dr_moagi_os_security import (
     authorise_bearer,
@@ -14,38 +15,28 @@ from jarvisx.dr_moagi_os_security import (
 TOKEN = "test-only-control-token-of-at-least-32-chars"
 
 
-@pytest.fixture
-def api(monkeypatch):
-    monkeypatch.delenv("JARVISX_OS_CONTROL_TOKEN", raising=False)
-    app = FastAPI()
-    app.middleware("http")(control_access_middleware)
-    calls = {"writes": 0, "exports": 0}
+def call_gate(monkeypatch, method, path, *, authorization=None, configured=None):
+    """Exercise the real middleware on a Starlette request and tracked handler."""
+    if configured is None:
+        monkeypatch.delenv("JARVISX_OS_CONTROL_TOKEN", raising=False)
+    else:
+        monkeypatch.setenv("JARVISX_OS_CONTROL_TOKEN", configured)
+    headers = []
+    if authorization is not None:
+        headers.append((b"authorization", authorization.encode("ascii")))
+    request = Request({
+        "type": "http", "method": method, "scheme": "http",
+        "path": path, "root_path": "", "query_string": b"", "headers": headers,
+        "server": ("localhost", 80), "client": ("127.0.0.1", 1234),
+    })
+    calls = []
 
-    @app.get("/healthz")
-    def health():
-        return {"ok": True}
+    async def handler(_request):
+        calls.append(method + " " + path)
+        return JSONResponse({"accepted": True})
 
-    @app.get("/v1/os/status")
-    def status():
-        return {"ready": True}
-
-    @app.get("/v1/os/export")
-    def export():
-        calls["exports"] += 1
-        return {"secret": "sensitive"}
-
-    @app.post("/v1/os/boot")
-    def boot():
-        calls["writes"] += 1
-        return {"state": "booted"}
-
-    @app.delete("/other/path")
-    def delete():
-        calls["writes"] += 1
-        return {"state": "deleted"}
-
-    with TestClient(app) as client:
-        yield client, calls, monkeypatch
+    response = asyncio.run(control_access_middleware(request, handler))
+    return response, calls
 
 
 def test_path_policy():
@@ -57,78 +48,73 @@ def test_path_policy():
     assert not requires_control_auth("GET", "/v1/os/status")
 
 
-def test_fail_closed_when_not_configured(api):
-    client, calls, _ = api
-    assert client.post("/v1/os/boot").status_code == 503
-    assert calls["writes"] == 0
+def test_fail_closed_when_unconfigured(monkeypatch):
+    response, calls = call_gate(monkeypatch, "POST", "/v1/os/boot")
+    assert response.status_code == 503
+    assert not calls
 
 
-def test_fail_closed_for_short_secret(api):
-    client, calls, env = api
-    env.setenv("JARVISX_OS_CONTROL_TOKEN", "weak")
-    assert client.post("/v1/os/boot", headers={"Authorization": "Bearer weak"}).status_code == 503
-    assert calls["writes"] == 0
+def test_fail_closed_for_short_secret(monkeypatch):
+    response, calls = call_gate(monkeypatch, "POST", "/v1/os/boot",
+                                configured="weak", authorization="Bearer weak")
+    assert response.status_code == 503
+    assert not calls
 
 
-def test_missing_token(api):
-    client, calls, env = api
-    env.setenv("JARVISX_OS_CONTROL_TOKEN", TOKEN)
-    response = client.post("/v1/os/boot")
+def test_missing_token_rejected(monkeypatch):
+    response, calls = call_gate(monkeypatch, "POST", "/v1/os/boot", configured=TOKEN)
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
-    assert calls["writes"] == 0
+    assert not calls
 
 
-def test_invalid_token(api):
-    client, calls, env = api
-    env.setenv("JARVISX_OS_CONTROL_TOKEN", TOKEN)
-    assert client.post("/v1/os/boot", headers={"Authorization": "Bearer wrong"}).status_code == 401
-    assert calls["writes"] == 0
+def test_invalid_token_rejected(monkeypatch):
+    response, calls = call_gate(monkeypatch, "POST", "/v1/os/boot",
+                                configured=TOKEN, authorization="Bearer wrong")
+    assert response.status_code == 401
+    assert not calls
 
 
-def test_authorized_post(api):
-    client, calls, env = api
-    env.setenv("JARVISX_OS_CONTROL_TOKEN", TOKEN)
-    response = client.post("/v1/os/boot", headers={"Authorization": "Bearer " + TOKEN})
+def test_correct_token_allows_mutation(monkeypatch):
+    response, calls = call_gate(monkeypatch, "POST", "/v1/os/boot",
+                                configured=TOKEN, authorization="Bearer " + TOKEN)
     assert response.status_code == 200
-    assert response.json()["state"] == "booted"
-    assert calls["writes"] == 1
+    assert calls == ["POST /v1/os/boot"]
 
 
-def test_authorized_sensitive_read(api):
-    client, calls, env = api
-    env.setenv("JARVISX_OS_CONTROL_TOKEN", TOKEN)
-    assert client.get("/v1/os/export").status_code == 401
-    assert calls["exports"] == 0
-    assert client.get("/v1/os/export", headers={"Authorization": "Bearer " + TOKEN}).status_code == 200
-    assert calls["exports"] == 1
+def test_sensitive_read_requires_auth(monkeypatch):
+    denied, denied_calls = call_gate(monkeypatch, "GET", "/v1/os/export", configured=TOKEN)
+    allowed, allowed_calls = call_gate(monkeypatch, "GET", "/v1/os/export",
+                                      configured=TOKEN, authorization="Bearer " + TOKEN)
+    assert denied.status_code == 401 and not denied_calls
+    assert allowed.status_code == 200 and allowed_calls
 
 
-def test_health_and_status_remain_readable(api):
-    client, _, _ = api
-    assert client.get("/healthz").status_code == 200
-    assert client.get("/v1/os/status").status_code == 200
+def test_health_and_status_remain_readable(monkeypatch):
+    for path in ("/healthz", "/v1/os/status"):
+        response, calls = call_gate(monkeypatch, "GET", path)
+        assert response.status_code == 200
+        assert calls
 
 
-def test_every_write_method_fails_closed(api):
-    client, calls, _ = api
-    assert client.delete("/other/path").status_code == 503
-    assert calls["writes"] == 0
+def test_every_write_method_fails_closed(monkeypatch):
+    for method in ("POST", "PUT", "PATCH", "DELETE"):
+        response, calls = call_gate(monkeypatch, method, "/new/handler")
+        assert response.status_code == 503
+        assert not calls
 
 
-def test_auth_check_is_exact():
+def test_bearer_exactness():
     assert authorise_bearer("Bearer " + TOKEN, TOKEN) == 200
     assert authorise_bearer("Bearer " + TOKEN + "X", TOKEN) == 401
     assert authorise_bearer("bearer " + TOKEN, TOKEN) == 401
     assert authorise_bearer("Bearer " + "x" * 1025, TOKEN) == 401
 
 
-def test_installed_api_rejects_mutation_before_handler(monkeypatch):
-    """Exercise the real production FastAPI app, not only a synthetic fixture."""
+def test_production_app_mounts_access_gate():
     from jarvisx.dr_moagi_os_api import app
 
-    monkeypatch.delenv("JARVISX_OS_CONTROL_TOKEN", raising=False)
-    with TestClient(app) as client:
-        response = client.post("/v1/os/boot")
-        assert response.status_code == 503
-        assert client.get("/healthz").status_code == 200
+    assert any(
+        getattr(layer, "kwargs", {}).get("dispatch") is control_access_middleware
+        for layer in app.user_middleware
+    )
