@@ -344,6 +344,7 @@ docker run --rm \
   -p 127.0.0.1:10000:10000 \
   -v jarvisx-state:/var/lib/jarvisx \
   -e JARVISX_STATE_DIR=/var/lib/jarvisx \
+  -e JARVISX_OS_CONTROL_TOKEN \
   jarvisx-dr-moagi-os
 ```
 
