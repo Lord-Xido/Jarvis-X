@@ -50,3 +50,25 @@ The `run` subcommand is disabled without the explicit approval flag. The verifie
     python -m unittest -q test_v2_adapter.py
 
 All test DOCX packages are constructed in temporary directories from synthetic content. The public bridge is intended to remain distinct from the separately controlled proprietary package.
+
+
+## DM3D 1,000-instruction DOCX bridge (public interface only)
+
+The standalone `v1000_adapter.py` recognizes the separate DM3D 1000-op document format without publishing or importing its private VM implementation. It validates bounded ZIP/XML structure, the 1,000 eight-byte instruction records, contiguous program counters, per-record CRC16, stored SHA-256 digests and payload size limits. The adapter **does not decode the private payload**, verify the declared source digest against decoded bytes, authenticate the document, or execute anything during inspection.
+
+    python reference/dm3d_document_bridge/v1000_adapter.py inspect /private/path/DM3D_1000_Bytecode_VM.docx
+
+A locally provided, independently reviewed private runtime is invoked only with explicit approval; use optional runtime SHA-256 pinning to guard against unintended file replacement:
+
+    python reference/dm3d_document_bridge/v1000_adapter.py run /private/path/DM3D_1000_Bytecode_VM.docx \
+      --runtime /trusted/local/dm3d_1000_bytecode_vm.py \
+      --output /tmp/restored.bin \
+      --runtime-sha256 <approved-runtime-sha256> \
+      --approve-external-runtime
+
+The public adapter is **not** the bytecode interpreter. Its synthetic test suite has no private VM program, document, input, output, trade secret, credential, or model weight:
+
+    cd reference/dm3d_document_bridge
+    python -m unittest -q test_v1000_adapter.py
+
+All confidential source and complete 1,000-instruction documents remain external to this public repository. Review local documents and runtime before approving execution; SHA-256 and CRC detect corruption but do not establish authenticity or trustworthiness.
