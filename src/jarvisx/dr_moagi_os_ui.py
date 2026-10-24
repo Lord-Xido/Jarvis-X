@@ -403,6 +403,7 @@ DR_MOAGI_OS_HTML = r"""<!DOCTYPE html>
         <input type="range" id="glow-slider" min="1.0" max="8.0" step="0.2" value="4.2">
       </div>
 
+      <div class="section-note" role="status">Protected control actions now require an authenticated API client. This browser visualization does not collect or store operator tokens.</div>
       <button class="btn btn-primary btn-wide" id="execute-btn">⚡ EXECUTE VERIFIED OS STEP</button>
       <button class="btn btn-meta btn-wide" id="meta-btn">∞ TURN SYSTEM INWARD / OPTIMIZE</button>
       <div class="btn-grid">

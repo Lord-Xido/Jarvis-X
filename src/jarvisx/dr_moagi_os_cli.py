@@ -19,7 +19,7 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     serve = sub.add_parser("serve", help="run the FastAPI + browser control plane")
-    serve.add_argument("--host", default="0.0.0.0")
+    serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=10000)
 
     demo = sub.add_parser("demo", help="run the built-in sparse 3D field locally")
