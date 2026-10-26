@@ -126,6 +126,13 @@ This is a canonical integration contract. It does not imply that every current b
 
 Experimental engines remain non-authoritative until their tests, interfaces and capability claims are reconciled with the canonical core and transaction contract.
 
+## DM3D sparse-bit Windows candidate
+
+The [Windows sparse-bit candidate](apps/windows/dm3d-sparse-bit/README.md) provides
+bounded parity evolution, bit-register bytecode, exact Morton addressing and snapshots.
+Its build has a compact default and an explicit 1 GB distribution with reserved
+padding. Its separate format does not replace canonical Python or C++ execution.
+
 ## Quick start
 
 ### Prove the integrated system
