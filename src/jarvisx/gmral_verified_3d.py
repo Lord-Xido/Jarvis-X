@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
-from typing import Literal
+from typing import Literal, cast
 
 from jarvisx.gmral_omega import (
     AffineBitOperator,
@@ -46,7 +46,7 @@ class Grid3D:
     def address(self, xyz: Coordinate3D) -> int:
         if not isinstance(xyz, tuple) or len(xyz) != 3:
             raise ValueError("coordinate must be (x, y, z)")
-        return morton3d(*xyz, side=self.side)
+        return cast(int, morton3d(*xyz, side=self.side))
 
     def coordinates(self, address: int) -> Coordinate3D:
         if type(address) is not int or address < 0 or address >= self.width:
@@ -180,7 +180,7 @@ def _cycle_reference(operator: AffineBitOperator, state: int, steps: int) -> int
 
 
 def _period_reference(operator: AffineBitOperator) -> int:
-    r = permutation_order(operator.permutation)
+    r = cast(int, permutation_order(operator.permutation))
     nonzero = False
     for cycle in _operator_cycles(operator):
         parity = 0
