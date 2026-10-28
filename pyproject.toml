@@ -80,6 +80,7 @@ Issues = "https://github.com/Lord-Xido/Jarvis-X/issues"
 Changelog = "https://github.com/Lord-Xido/Jarvis-X/blob/main/CHANGELOG.md"
 
 [project.scripts]
+jarvisx-dr-moagi-swarm3d = "jarvisx.dr_moagi_3d_ann_swarm:main"
 jarvisx-dr-moagi-hypermatrix = "jarvisx.dr_moagi_hypermatrix_engine:main"
 jarvisx = "jarvisx.cli:main"
 jarvisx-hyperion = "jarvisx.hyperion_cli:main"
