@@ -421,3 +421,7 @@ Academic and technical users can cite the project using [`CITATION.cff`](CITATIO
 ## License
 
 Jarvis-X is released under the [MIT License](LICENSE).
+
+## RSOVTE-Ω/XP sparse 3D emulator
+
+The bounded, deterministic 3D virtual-coordinate emulator, reversible RS3D packet codec, 1,000-pass adaptive contraction reference, browser viewer, command-line runner, and regression suite are under [apps/rsovte-omega-xp](apps/rsovte-omega-xp/README.md). Run `node --test apps/rsovte-omega-xp/test_core.mjs`; it is a sparse reference system, not a dense 10^18-voxel allocation or trained ANN.
