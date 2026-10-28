@@ -1,0 +1,40 @@
+name: RSOVTE Omega XP
+on:
+  push:
+    paths:
+      - "apps/rsovte-omega-xp/**"
+      - ".github/workflows/rsovte-omega-xp.yml"
+  pull_request:
+    paths:
+      - "apps/rsovte-omega-xp/**"
+      - ".github/workflows/rsovte-omega-xp.yml"
+jobs:
+  deterministic-emulation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax validation
+        run: |
+          node --check apps/rsovte-omega-xp/core.mjs
+          node --check apps/rsovte-omega-xp/cli.mjs
+          node --check apps/rsovte-omega-xp/test_core.mjs
+      - name: Regression suite
+        run: node --test apps/rsovte-omega-xp/test_core.mjs
+      - name: Reproducible 1000-pass run and replay
+        run: |
+          node apps/rsovte-omega-xp/cli.mjs --count 20000 --seed 42 --iterations 1000 --out rsovte-audit.json --packet rsovte.rs3d
+          node apps/rsovte-omega-xp/cli.mjs --input rsovte.rs3d --iterations 1000 --out rsovte-replay.json
+          node --input-type=module -e "import fs from 'node:fs';const a=JSON.parse(fs.readFileSync('rsovte-audit.json'));const b=JSON.parse(fs.readFileSync('rsovte-replay.json'));if(!a.passed||!b.passed||a.stateDigest!==b.stateDigest)process.exit(1);"
+      - name: Preserve evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: rsovte-verification
+          path: |
+            rsovte-audit.json
+            rsovte-replay.json
+            rsovte.rs3d
