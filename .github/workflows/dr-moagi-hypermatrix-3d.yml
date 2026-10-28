@@ -44,7 +44,9 @@ jobs:
       - name: Run package integration tests
         run: python -m pytest -q -o addopts='' tests/test_dr_moagi_hypermatrix.py tests/test_dr_moagi_3d_ann_swarm.py
       - name: Execute bounded trainable swarm
-        run: jarvisx-dr-moagi-swarm3d --particles 32 --minimum 10 --iterations 40 --out hypermatrix-results/swarm.npz > hypermatrix-results/swarm-report.json
+        run: |
+          mkdir -p hypermatrix-results
+          jarvisx-dr-moagi-swarm3d --particles 32 --minimum 10 --iterations 40 --out hypermatrix-results/swarm.npz > hypermatrix-results/swarm-report.json
       - name: Execute bounded end-to-end sample
         run: |
           jarvisx-dr-moagi-hypermatrix --side 8 --steps 4 --nu 8 --nv 8 --outdir hypermatrix-results > /dev/null
