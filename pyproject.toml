@@ -37,6 +37,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+hypermatrix = [
+    "numpy>=1.24,<2.3",
+    "scipy>=1.11",
+]
 dev = [
     "black>=25.0",
     "build>=1.2",
@@ -76,6 +80,7 @@ Issues = "https://github.com/Lord-Xido/Jarvis-X/issues"
 Changelog = "https://github.com/Lord-Xido/Jarvis-X/blob/main/CHANGELOG.md"
 
 [project.scripts]
+jarvisx-dr-moagi-hypermatrix = "jarvisx.dr_moagi_hypermatrix_engine:main"
 jarvisx = "jarvisx.cli:main"
 jarvisx-hyperion = "jarvisx.hyperion_cli:main"
 jarvisx-dr-moagi = "jarvisx.dr_moagi_autoexec_cli:main"
