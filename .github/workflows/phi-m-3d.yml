@@ -1,0 +1,61 @@
+name: Phi_M 3D research checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/jarvisx/dr_moagi_phi_m_3d.py'
+      - 'tests/test_dr_moagi_phi_m_3d.py'
+      - 'tests/test_dr_moagi_phi_m_codec_probe.py'
+      - 'src/jarvisx/dr_moagi_phi_m_codec_probe.py'
+      - 'src/jarvisx/dr_moagi_phi_m_stability_probe.py'
+      - 'tests/test_dr_moagi_phi_m_stability_probe.py'
+      - 'docs/DR_MOAGI_PHI_M_3D_OPERATOR.md'
+      - '.github/workflows/phi-m-3d.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/jarvisx/dr_moagi_phi_m_3d.py'
+      - 'tests/test_dr_moagi_phi_m_3d.py'
+      - 'src/jarvisx/dr_moagi_phi_m_codec_probe.py'
+      - 'tests/test_dr_moagi_phi_m_codec_probe.py'
+      - '.github/workflows/phi-m-3d.yml'
+  workflow_dispatch:
+
+jobs:
+  phi-m-mathematics:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install isolated test dependencies
+        run: python -m pip install 'numpy>=1.24,<2.3' 'scipy>=1.11,<2' 'pytest>=8'
+      - name: Validate numerical derivatives, graph isolation and bounds
+        run: PYTHONPATH=src python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_3d.py
+      - name: Independent numerical self-test
+        run: PYTHONPATH=src python -m jarvisx.dr_moagi_phi_m_3d --self-test
+
+      - name: Paired 3D codec regression checks
+        run: PYTHONPATH=src python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_codec_probe.py
+      - name: Iterated geometric dynamics and period-two checks
+        run: PYTHONPATH=src python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_stability_probe.py
+      - name: Archive sampled fixed-point and two-cycle analysis
+        run: PYTHONPATH=src python -m jarvisx.dr_moagi_phi_m_stability_probe --output phi-m-stability.json
+      - name: End-to-end lexical 3D codec multi-size shadow benchmarks
+        run: |
+          for words in 64 128 256 512; do
+            PYTHONPATH=src python -m jarvisx.dr_moagi_phi_m_codec_probe --word-count "$words" --repetitions 7 --output "phi-m-codec-probe-${words}.json"
+          done
+      - name: Save measured shadow comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: phi-m-codec-probe-${{ matrix.python-version }}
+          path: |
+            phi-m-codec-probe-*.json
+            phi-m-stability.json
+          retention-days: 14

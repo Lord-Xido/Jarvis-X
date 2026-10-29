@@ -1,0 +1,58 @@
+name: Phi_M Unified 3D Autoencoder Research
+
+on:
+  pull_request:
+    paths:
+      - 'src/jarvisx/dr_moagi_phi_m_autoencoder.py'
+      - 'tests/test_dr_moagi_phi_m_autoencoder.py'
+      - '.github/workflows/phi-m-autoencoder.yml'
+      - 'docs/DR_MOAGI_PHI_M_UNIFIED_AE.md'
+      - 'pyproject.toml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/jarvisx/dr_moagi_phi_m_autoencoder.py'
+      - 'tests/test_dr_moagi_phi_m_autoencoder.py'
+      - '.github/workflows/phi-m-autoencoder.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phi-m-ae:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install numerical test dependencies
+        run: python -m pip install 'numpy>=1.24,<2.3' 'scipy>=1.11,<2' 'pytest>=8'
+      - name: Install CPU-only PyTorch
+        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Execute 3D convolution, training, model I/O and negative tests
+        run: PYTHONPATH=src python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_autoencoder.py
+      - name: Execute exactly 1000 bounded 8-cubed training updates
+        run: PYTHONPATH=src python -m jarvisx.dr_moagi_phi_m_autoencoder --mode train --iters 1000 --grid 8 --latent 12 --train-samples 32 --val-samples 10 --batch 8 --out phi-m-ae-1000
+      - name: Verify holdout beats zero predictor
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("phi-m-ae-1000/report.json").read_text())
+          assert r["updates"]==1000
+          assert r["validation_mse"] < r["baseline_zero_mse"], r
+          print("1000 updates and held-out reconstruction check passed")
+          PY
+      - name: Independent mathematical self-test
+        run: PYTHONPATH=src python -m jarvisx.dr_moagi_phi_m_autoencoder --mode audit
+      - name: Archive provenance and synthetic training receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: phi-m-ae-1000-synthetic-research
+          path: |
+            phi-m-ae-1000/report.json
+            phi-m-ae-1000/config.json
+          retention-days: 14
