@@ -167,7 +167,7 @@ paired order; it reports median *whole-pipeline* elapsed time including
 tokenization, geometric work, residual pack/recovery and lexical decoding.
 It does not report pure-kernel-only speedup as a pipeline acceleration.
 
-The baseline numeric coordinate representation uses 3 × 4-byte float32 per
+The baseline numeric coordinate representation is actually round-tripped through 3 × 4-byte float32 per
 token (12 bytes). The residual path uses those 12 bytes plus 3 × 2-byte int16
 residuals (18 bytes). Both exclude dictionaries, framing, field parameters,
 and any checksums. The reported 2-byte uint16 token-ID representation is
@@ -175,10 +175,10 @@ only a theoretical encoding lower bound, **not** a protocol already implemented
 by the current GridTokenCodec.
 
 A representative local run at 255 tokens (Python 3.13, an API-compatible
-GridTokenCodec harness, 7 timed repetitions) measured:
-- Baseline: 100% token accuracy, 3060 coordinate bytes, median ~0.483 ms.
-- Direct warp: 0% token accuracy, 3060 bytes, median ~0.806 ms.
-- Residual warp: 100% token accuracy, 4590 bytes, median ~0.860 ms.
+GridTokenCodec harness, 9 timed repetitions) measured:
+- Baseline: 100% token accuracy, 3060 coordinate bytes, median ~0.520 ms.
+- Direct warp: 0% token accuracy, 3060 bytes, median ~0.810 ms.
+- Residual warp: 100% token accuracy, 4590 bytes, median ~0.980 ms.
 
 These figures are environment-specific and not a production workload or a
 general statistical throughput claim. Actual repository integration is covered
