@@ -43,3 +43,22 @@ def test_toroidal_operational_cli_returns_zero(capsys) -> None:
     assert exit_code == 0
     assert '"mode": "torus3d"' in payload
     assert '"healthy": true' in payload
+
+
+def test_control_plane_launchers_default_to_loopback() -> None:
+    from jarvisx.dr_moagi_os_cli import _parser as os_parser
+    from jarvisx.operationalize import _parser as operational_parser
+
+    for parser in (os_parser(), operational_parser()):
+        args = parser.parse_args(["serve"])
+        assert args.host == "127.0.0.1"
+        assert args.port == 10000
+
+
+def test_compose_port_is_published_to_loopback_only() -> None:
+    from pathlib import Path
+
+    compose = Path(__file__).resolve().parents[1] / "compose.dr-moagi-os.yml"
+    config = compose.read_text(encoding="utf-8")
+    assert '127.0.0.1:10000:10000' in config
+    assert '"10000:10000"' not in config
