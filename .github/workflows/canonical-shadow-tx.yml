@@ -31,6 +31,49 @@ jobs:
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_bridge.py -v
       - name: Test durable prepare, crash recovery and single-store atomicity
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_durable.py -v
+      - name: Test independently persisted participant recovery and visibility
+        run: python -m unittest discover -s reference/canonical_shadow_tx -p test_multiprocess.py -v
+      - name: Generate separate-participant recovery receipt
+        run: |
+          python - <<'PY'
+          import json
+          import tempfile
+          from pathlib import Path
+          import torch
+          from reference.canonical_shadow_tx.bridge import (
+              observe_ann, observe_geometry, observe_os, observe_vm,
+          )
+          from reference.canonical_shadow_tx.multiprocess import Coordinator
+          torch.set_num_threads(2)
+          frames = tuple(sorted(
+              (observe_ann(), observe_geometry(), observe_os(), observe_vm()),
+              key=lambda part: part.domain,
+          ))
+          with tempfile.TemporaryDirectory() as tmp:
+              with Coordinator(Path(tmp)) as coordinator:
+                  coordinator.prepare('cross-participant-001', frames)
+                  try:
+                      coordinator.approve(
+                          'cross-participant-001', approve=True,
+                          fault=lambda point: (_ for _ in ()).throw(
+                              OSError('simulated crash after first commit')
+                          ) if point == 'after_apply_ann' else None,
+                      )
+                  except OSError:
+                      pass
+              with Coordinator(Path(tmp)) as recovered:
+                  assert recovered.decision_status('cross-participant-001') == 'COMMIT_DECIDED'
+                  assert recovered.recover() == {'cross-participant-001': 'COMPLETE'}
+                  assert recovered.coordinated_read('cross-participant-001') == frames
+                  receipt = recovered.receipt('cross-participant-001')
+                  assert receipt['complete']['status'] == 'COMPLETE'
+                  assert receipt['complete']['external_evidence'] == 'NOT_APPLICABLE'
+                  assert receipt['acked_domains'] == ['ann', 'geometry', 'os', 'vm']
+                  Path('canonical-separate-participants-receipt.json').write_text(
+                      json.dumps(receipt, indent=2, sort_keys=True) + '\n'
+                  )
+                  print(json.dumps(receipt, indent=2, sort_keys=True))
+          PY
       - name: Generate durable recovery receipt against real isolated backends
         run: |
           python - <<'PY'
@@ -84,4 +127,5 @@ jobs:
           path: |
             canonical-shadow-receipt.json
             canonical-durable-receipt.json
+            canonical-separate-participants-receipt.json
           if-no-files-found: error
