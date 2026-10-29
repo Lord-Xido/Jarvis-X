@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install isolated test dependencies
-        run: python -m pip install 'numpy>=1.24,<2.3' 'pytest>=8'
+        run: python -m pip install 'numpy>=1.24,<2.3' 'scipy>=1.11,<2' 'pytest>=8'
       - name: Validate numerical derivatives, graph isolation and bounds
         run: PYTHONPATH=src python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_3d.py
       - name: Independent numerical self-test
