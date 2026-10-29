@@ -265,6 +265,8 @@ def serve(root: Path, domain: str) -> None:
     os.umask(0o077)
     root = root.resolve()
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if root.is_symlink() or not root.is_dir() or (root.stat().st_mode & 0o077):
+        raise PermissionError("IPC directory must be a private non-symlink directory")
     target = root / (domain + ".sock")
     if target.exists() or target.is_symlink():
         raise RuntimeError("existing socket path; refusing silent unlink")
