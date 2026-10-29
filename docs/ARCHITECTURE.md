@@ -587,3 +587,17 @@ This layer is deliberately evidence-scoped:
 
 The executable reference is `src/jarvisx/codec_terminus.py`, with conformance
 tests in `tests/test_codec_terminus.py`.
+
+## Isolated Windows sparse-bit candidate
+
+The optional apps/windows/dm3d-sparse-bit runtime owns a bounded sparse bit set and
+iteration count. Each STEP computes a GF(2) candidate, validates its active-count
+quota and commits atomically. Instructions before a later fault remain committed;
+the whole program is not a transaction. Snapshots validate before replacing memory;
+saves flush temporary files before replacement. Audit BEGIN/OK/FAILED records expose
+interruption but do not implement replay or canonical transaction receipts.
+
+D3VM bit-register bytecode and DM3D version-1 snapshots are distinct from existing
+C++ formats. Future adapters must translate and verify explicitly. Compact and 1 GB
+builds execute identical source; the latter adds zero-filled reserve. The command
+router does not intercept external applications or redirect canonical services.
