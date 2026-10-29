@@ -59,8 +59,9 @@ def _run_once(codec: GridTokenCodec, text: str, config: ProbeConfig, mode: str,
     if n == 0 or n > phi_config.max_points:
         raise ValueError("token count exceeds operator budget")
     if mode == "baseline":
-        recovered = x
-        payload_bytes = n * 12  # 3 float32 coordinates per token; excludes framing
+        packed = np.asarray(x, dtype="<f4").tobytes()
+        recovered = np.frombuffer(packed, dtype="<f4").reshape(-1, 3).astype(np.float64)
+        payload_bytes = len(packed)  # Actual f32 buffer; framing excluded
     else:
         warped = phi_m(x, config.time, phi_config)
         if mode == "direct_phi":
