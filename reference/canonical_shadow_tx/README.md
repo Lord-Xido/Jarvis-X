@@ -127,3 +127,27 @@ CI runs each participant as a real Python child process and checks signed reques
 This is authenticated **same-host local-process IPC**, not independently administered remote systems. Anyone able to read the process secret or edit the shadow SQLite files can bypass its logical protections. Unix socket permissions and HMAC do not replace OS account isolation, key rotation, TLS, operator RBAC, malicious-client resistance, durable leadership, network partition handling or safe authorization of arbitrary participant commands. A compromised authorized coordinator can still issue incorrect commands. Raw participant state reads can observe partially applied commits and must not be interpreted as an atomic distributed snapshot.
 
 **Never connect this transport to production Dr Moagi OS, CodexVM, ANN weights, finance, vehicles, patient care or device kernels without additional independent security review, authenticated endpoint identity, durable per-service protocol changes and isolation verification.** Issue #425 remains open.
+
+
+## Phase 7: fail-closed decision authority and production gate
+
+A security review of the local IPC prototype identified a release-blocking flaw: an authenticated client with the transport shared secret could call a participant's commit directly before the coordinator had recorded a durable decision. Similarly, a signed abort could interfere with a transaction whose commit decision had already been durably recorded.
+
+The local shadow service now loads the coordinator's **already durable SQLite transaction record in read-only mode** to verify each participant mutation:
+
+- **prepare** requires a coordinator PREPARING/PREPARED intent and exact match of txid, epoch, fencing token, domain, declared profile, canonical bytes and verified whole-manifest hash;
+- **commit** requires a COMMIT_DECIDED/COMPLETE coordinator decision, matching transaction and fencing token, and the same independently checked manifest;
+- **abort** requires a durable ABORTED coordinator decision. The coordinator writes that decision **before** contacting participants, and recovery replays any unfinished participant aborts after restart.
+
+The coordinator and participants still share a **local filesystem trust boundary**. A hostile process with permission to replace or rewrite the coordinator database (and its WAL files) can subvert the proof. Coordinator integrity is checked for the candidate manifest, but this is **not an independently signed distributed consensus certificate**. The existing in-process approve=True remains insufficient as an identity-bound operator permission. No new production networking, operator RBAC, live adapters, TLS, or independent storage authority is present.
+
+The participant service now also rejects a group/world-accessible Unix socket directory to limit accidental local exposure. Accepted signed requests still require valid HMAC authentication and durable anti-replay nonces.
+
+### Strict release gate
+
+    python -m reference.canonical_shadow_tx.release_gate
+    python -m reference.canonical_shadow_tx.release_gate --require-production
+
+The first command emits a machine-readable JSON readiness inventory; the second **exits with code 2** because the required real-world production evidence is absent. CI checks this fail-closed behavior and uploads canonical-production-readiness.json alongside the shadow and recovery receipts. The build may be green while production deployment remains **BLOCKED**.
+
+A production release still requires independently owned live VM/OS/ANN adapters, genuine atomic read isolation or explicit compensating sagas, operator identity and authorization, leader fencing across host/network failures, storage power-loss qualification, signed release/operations/incident runbooks and external security assessment. See issue #425. **Do not close #425 or label these references production-grade solely because the existing CI passes.**
