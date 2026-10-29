@@ -23,6 +23,7 @@ FROZEN_GIT_TREE = "302ae87d36bd00d57fddd350c7ecf44bc4f92821"
 LEAF_PREFIX = b"JARVISX-IPFREEZE/v1/leaf\x00"
 NODE_PREFIX = b"JARVISX-IPFREEZE/v1/node\x00"
 ROOT_FILE = Path(__file__).resolve().parents[2] / "docs" / "ip" / "2026-10-29-root.sha256"
+MANIFEST_HASH_FILE = ROOT_FILE.with_name("2026-10-29-manifest.sha256")
 
 
 def _git(*args: str) -> bytes:
@@ -159,6 +160,17 @@ def verify_against_anchor(result: dict, root_path: Path = ROOT_FILE) -> str:
     return expected
 
 
+def verify_manifest_digest(raw: bytes, path: Path = MANIFEST_HASH_FILE) -> str:
+    if not path.is_file():
+        raise RuntimeError("fixed canonical manifest digest anchor missing")
+    expected = path.read_text("ascii").strip().lower()
+    if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
+        raise RuntimeError("invalid frozen canonical manifest digest anchor")
+    if hashlib.sha256(raw).hexdigest() != expected:
+        raise RuntimeError("manifest SHA-256 differs from fixed canonical inventory anchor")
+    return expected
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path)
@@ -169,6 +181,7 @@ def main() -> None:
     canonical = canonical_bytes(result)
     if args.require_anchor:
         verify_against_anchor(result)
+        verify_manifest_digest(canonical)
     if args.verify is not None and args.verify.read_bytes() != canonical:
         raise RuntimeError("provided IP manifest differs from frozen Git tree")
     if args.out:
