@@ -14,6 +14,8 @@ on:
     paths:
       - 'src/jarvisx/dr_moagi_phi_m_3d.py'
       - 'tests/test_dr_moagi_phi_m_3d.py'
+      - 'src/jarvisx/dr_moagi_phi_m_codec_probe.py'
+      - 'tests/test_dr_moagi_phi_m_codec_probe.py'
       - '.github/workflows/phi-m-3d.yml'
   workflow_dispatch:
 
