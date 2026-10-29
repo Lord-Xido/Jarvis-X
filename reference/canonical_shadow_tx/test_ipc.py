@@ -374,5 +374,35 @@ with IPCCoordinator(sys.argv[1]) as c:
 
 
 
+    def test_authenticated_remote_participants_generate_geometric_3d_witness(self):
+        from reference.canonical_shadow_tx.geometry_witness import (
+            decode_lattice, witness,
+        )
+        with self.coordinator() as coordinator:
+            coordinator.prepare("geometry-ipc", self.frames)
+            stage = witness(coordinator, "geometry-ipc", iterations=1000)
+            self.assertTrue(stage.verifiable)
+            self.assertFalse(stage.complete)
+            self.assertEqual(set(stage.participant_statuses.values()), {"PREPARED"})
+            self.assertEqual(decode_lattice(stage.packet), stage.participant_statuses)
+            def interrupt(point):
+                if point == "after_apply_ann":
+                    raise OSError("interrupt authenticated process commit")
+            with self.assertRaises(OSError):
+                coordinator.approve("geometry-ipc", approve=True, fault=interrupt)
+            middle = witness(coordinator, "geometry-ipc")
+            self.assertTrue(middle.verifiable)
+            self.assertFalse(middle.complete)
+            self.assertEqual(middle.participant_statuses["ann"], "COMMITTED")
+            self.assertEqual(middle.participant_statuses["os"], "PREPARED")
+            self.assertEqual(coordinator.recover(), {"geometry-ipc": "COMPLETE"})
+            after = witness(coordinator, "geometry-ipc")
+            self.assertTrue(after.complete)
+            self.assertTrue(after.verifiable)
+            self.assertEqual(decode_lattice(after.packet), after.participant_statuses)
+            self.assertEqual(coordinator.coordinated_read("geometry-ipc"), self.frames)
+
+
+
 if __name__ == "__main__":
     unittest.main()

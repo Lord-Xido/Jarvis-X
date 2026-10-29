@@ -35,6 +35,29 @@ jobs:
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_multiprocess.py -v
       - name: Test authenticated local participant processes and crash recovery
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_ipc.py -v
+      - name: Test 3D geometric mapping, exact voxel inversion and recovery
+        run: python -m unittest discover -s reference/canonical_shadow_tx -p test_geometry_witness.py -v
+      - name: Generate end-to-end 3D geometric envelopes and state projections
+        run: |
+          python -m reference.canonical_shadow_tx.geometry_smoke --out canonical-geometry3d-evidence
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from reference.canonical_shadow_tx.geometry_witness import decode_lattice
+          evidence = Path('canonical-geometry3d-evidence')
+          report = json.loads((evidence / 'summary.json').read_text())
+          assert report['production_deployment'] == 'BLOCKED'
+          for name in ('prepared', 'partial', 'recovered'):
+              row = report['results'][name]
+              assert row['geometrically_verified']
+              assert row['commit_complete'] == (name == 'recovered')
+              assert len((evidence / (name + '.env')).read_bytes()) == 596
+              assert decode_lattice((evidence / (name + '.env')).read_bytes()) == row['participant_statuses']
+              assert (evidence / (name + '.svg')).read_text().startswith('<svg')
+          assert report['results']['partial']['participant_statuses']['ann'] == 'COMMITTED'
+          assert report['results']['partial']['participant_statuses']['os'] == 'PREPARED'
+          print(json.dumps(report, indent=2))
+          PY
       - name: Fail-closed production readiness and decision-authority gate
         run: |
           python -m unittest discover -s reference/canonical_shadow_tx -p test_release_gate.py -v
@@ -230,4 +253,5 @@ jobs:
             canonical-separate-participants-receipt.json
             canonical-authenticated-process-receipt.json
             canonical-production-readiness.json
+            canonical-geometry3d-evidence/**
           if-no-files-found: error
