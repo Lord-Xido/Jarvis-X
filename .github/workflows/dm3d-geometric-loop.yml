@@ -25,7 +25,9 @@ jobs:
           ${{ matrix.compiler }} -std=c++17 -O2 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
             reference/dm3d_geometric_loop/dm3d_geometric_loop.cpp -o "$RUNNER_TEMP/dm3d/geom"
       - name: Native self-test
-        run: "$RUNNER_TEMP/dm3d/geom" --self-test
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/dm3d/geom" --self-test
       - name: Independent process conformance
         run: python3 reference/dm3d_geometric_loop/test_cli.py --exe "$RUNNER_TEMP/dm3d/geom"
       - name: Reproducible JSON receipt
