@@ -33,6 +33,84 @@ jobs:
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_durable.py -v
       - name: Test independently persisted participant recovery and visibility
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_multiprocess.py -v
+      - name: Test authenticated local participant processes and crash recovery
+        run: python -m unittest discover -s reference/canonical_shadow_tx -p test_ipc.py -v
+      - name: Check authenticated process smoke receipt
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import secrets
+          import subprocess
+          import sys
+          import tempfile
+          import time
+          import torch
+          from reference.canonical_shadow_tx.bridge import (
+              observe_ann, observe_geometry, observe_os, observe_vm,
+          )
+          from reference.canonical_shadow_tx.ipc import IPCCoordinator, PeerClient
+          torch.set_num_threads(2)
+          frames = tuple(sorted(
+              (observe_ann(), observe_geometry(), observe_os(), observe_vm()),
+              key=lambda f: f.domain,
+          ))
+          domains = ('ann', 'geometry', 'os', 'vm')
+          with tempfile.TemporaryDirectory() as temp:
+              root = Path(temp)
+              token = secrets.token_urlsafe(48)
+              env = dict(os.environ, JARVISX_SHADOW_IPC_SECRET=token)
+              children = []
+              try:
+                  for domain in domains:
+                      children.append(subprocess.Popen(
+                          [sys.executable, '-m', 'reference.canonical_shadow_tx.ipc',
+                           str(root), 'serve', '--domain', domain],
+                          env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                      ))
+                  for domain in domains:
+                      for _ in range(120):
+                          try:
+                              if PeerClient(root, domain, token.encode(), 0.2).call('verify')['verified']:
+                                  break
+                          except OSError:
+                              time.sleep(0.025)
+                      else:
+                          raise RuntimeError('participant process failed to start')
+                  with IPCCoordinator(root, secret=token.encode()) as coordinator:
+                      coordinator.prepare('ci-rpc-001', frames)
+                      try:
+                          coordinator.approve(
+                              'ci-rpc-001', approve=True,
+                              fault=lambda point: (_ for _ in ()).throw(
+                                  OSError('injected post-decision interruption')
+                              ) if point == 'after_apply_ann' else None,
+                          )
+                      except OSError:
+                          pass
+                  with IPCCoordinator(root, secret=token.encode()) as coordinator:
+                      assert coordinator.decision_status('ci-rpc-001') == 'COMMIT_DECIDED'
+                      assert coordinator.recover() == {'ci-rpc-001': 'COMPLETE'}
+                      assert coordinator.coordinated_read('ci-rpc-001') == frames
+                      data = coordinator.receipt('ci-rpc-001')
+                      assert data['complete']['status'] == 'COMPLETE'
+                      assert data['acked_domains'] == list(domains)
+                      data['test_authority'] = 'four independent loopback Unix socket processes, shadow only'
+                      Path('canonical-authenticated-process-receipt.json').write_text(
+                          json.dumps(data, indent=2, sort_keys=True) + '\n'
+                      )
+                      print(json.dumps(data, indent=2, sort_keys=True))
+              finally:
+                  for child in children:
+                      child.terminate()
+                  for child in children:
+                      try:
+                          child.wait(timeout=5)
+                      except subprocess.TimeoutExpired:
+                          child.kill()
+                          child.wait(timeout=5)
+          PY
       - name: Generate separate-participant recovery receipt
         run: |
           python - <<'PY'
@@ -128,4 +206,5 @@ jobs:
             canonical-shadow-receipt.json
             canonical-durable-receipt.json
             canonical-separate-participants-receipt.json
+            canonical-authenticated-process-receipt.json
           if-no-files-found: error
