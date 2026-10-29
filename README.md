@@ -142,8 +142,10 @@ jarvisx-operationalize smoke
 Launch the canonical service directly:
 
 ```bash
-jarvisx-operationalize serve --host 0.0.0.0 --port 10000
+jarvisx-operationalize serve --host 127.0.0.1 --port 10000
 ```
+
+**Security:** On the current default branch this HTTP control plane has no built-in operator authentication. The local launcher and Compose port binding default to loopback only. Do not expose the control port on public/untrusted networks; reviewed fail-closed authentication remains in [PR #406](https://github.com/Lord-Xido/Jarvis-X/pull/406). A loopback bind is not a substitute for endpoint authentication.
 
 or as the hardened container profile:
 
