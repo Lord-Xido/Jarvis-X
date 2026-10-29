@@ -421,3 +421,14 @@ Academic and technical users can cite the project using [`CITATION.cff`](CITATIO
 ## License
 
 Jarvis-X is released under the [MIT License](LICENSE).
+
+## Review-only system-wide architecture evolution
+
+The [System-Wide Evolution Control](docs/SYSTEM_WIDE_EVOLUTION_CONTROL.md) enumerates verified/reference/proposed components across Jarvis-X, the separate `dr-moagi-billion3` Gigacube candidate and 3D interfaces. The executable, **standard-library-only**, evidence-gated planning module is `jarvisx.evolution_control`. It performs bounded deterministic **shadow planning only**: no code rewriting, external deployment, private DM-PCS access, financial transactions, medical decisions or ADAS changes.
+
+```bash
+jarvisx-evolve plan --iterations 1000 --seed 20261027 --output plan.json
+jarvisx-evolve verify plan.json
+```
+
+The 1,000 iterations are hypothetical **architecture candidate evaluations**, not 1,000 full-system training/execution iterations. Receipt hashes allow replay and consistency checks, not trusted external attestation or a claim of performance gain. [ADR-016](docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md), [ADR-017](docs/adr/0017-dr-moagi-operational-autoencoding-equation.md) and [ADR-031](docs/adr/0031-self-hosting-inward-runtime-closure.md) remain authoritative; promotion always requires independent evidence and human approval.

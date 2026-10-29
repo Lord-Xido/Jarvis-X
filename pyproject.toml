@@ -99,6 +99,7 @@ jarvisx-dr-moagi-1b = "jarvisx.dr_moagi_1b_intelligence:main"
 jarvisx-nexus3d = "jarvisx.nexus3d_cli:main"
 jarvisx-mm3d = "jarvisx.mm3d_engine:main"
 jarvisx-operationalize = "jarvisx.operationalize:main"
+jarvisx-evolve = "jarvisx.evolution_control:main"
 jarvisx-maplogic = "jarvisx.map_logic:main"
 jarvisx-inward3d-vm = "jarvisx.dr_moagi_inward_3d_vm:main"
 jarvisx-hyper3d = "jarvisx.hyper3d_cli:main"
@@ -112,7 +113,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-jarvisx = ["_reference/dr_moagi_3d_animation_autoencoder/*.part", "_static/nexus3d/*", "_static/hyper3d/*"]
+jarvisx = ["evolution_inventory.json", "_reference/dr_moagi_3d_animation_autoencoder/*.part", "_static/nexus3d/*", "_static/hyper3d/*"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

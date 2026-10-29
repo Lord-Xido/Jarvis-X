@@ -1,0 +1,529 @@
+{
+  "schema": "jarvisx.evolution.v1",
+  "as_of": "2026-10-27",
+  "provenance": "Curated public GitHub inventory plus named non-public boundaries; not a live automatically verified asset scan",
+  "canonical_repos": [
+    "Lord-Xido/Jarvis-X",
+    "Lord-Xido/dr-moagi-billion3",
+    "Lord-Xido/3D-Virtual-AI-Interactive-Interface"
+  ],
+  "principles": [
+    "logical!=physical!=measured",
+    "self-hosting!=self-authorizing",
+    "exact reversible bit-state!=fixed-point convergence",
+    "rendered geometry!=authoritative state",
+    "private DM-PCS never enters public automated source transfer",
+    "all operational changes require independent evidence and explicit human approval"
+  ],
+  "components": [
+    {
+      "id": "typed_state",
+      "name": "Canonical ADR-016 typed state / transaction",
+      "repository": "Jarvis-X",
+      "maturity": "specification",
+      "authority": "review-required",
+      "evidence_path": "docs/adr/0016-canonical-typed-state-transaction-and-geometry-profiles.md"
+    },
+    {
+      "id": "ae_ad",
+      "name": "ADR-017 deterministic encode/decode and CTR receipts",
+      "repository": "Jarvis-X",
+      "maturity": "specification",
+      "authority": "review-required",
+      "evidence_path": "docs/adr/0017-dr-moagi-operational-autoencoding-equation.md"
+    },
+    {
+      "id": "self_host",
+      "name": "ADR-031 candidate-first self-hosting",
+      "repository": "Jarvis-X",
+      "maturity": "specification",
+      "authority": "review-required",
+      "evidence_path": "docs/adr/0031-self-hosting-inward-runtime-closure.md"
+    },
+    {
+      "id": "vm",
+      "name": "Deterministic 64-bit CodexVM",
+      "repository": "Jarvis-X",
+      "maturity": "alpha",
+      "authority": "review-required",
+      "evidence_path": "src/jarvisx/core.py"
+    },
+    {
+      "id": "audit",
+      "name": "Trace and audit ledgers",
+      "repository": "Jarvis-X",
+      "maturity": "stable-reference",
+      "authority": "read-only",
+      "evidence_path": "src/jarvisx/ledger.py"
+    },
+    {
+      "id": "sparse",
+      "name": "Sparse 3D address/domain runtimes",
+      "repository": "Jarvis-X",
+      "maturity": "reference-laboratory",
+      "authority": "review-required",
+      "evidence_path": "src/jarvisx/dr_moagi_worker_fabric.py"
+    },
+    {
+      "id": "native_cpp",
+      "name": "C++ numerical/volumetric verifier",
+      "repository": "Jarvis-X",
+      "maturity": "reference-laboratory",
+      "authority": "review-required",
+      "evidence_path": "cpp_runtime/"
+    },
+    {
+      "id": "bit_verified",
+      "name": "ADR-034 exact bit residual and masked writes",
+      "repository": "Jarvis-X",
+      "maturity": "reference-laboratory",
+      "authority": "review-required",
+      "evidence_path": "docs/adr/0034-exact-bitwise-fixed-point-verification.md"
+    },
+    {
+      "id": "gigacube",
+      "name": "Disk-backed reversible 3D sparse Gigacube",
+      "repository": "dr-moagi-billion3",
+      "maturity": "integration-candidate",
+      "authority": "review-required",
+      "evidence_path": "gigacube/jarvisx_gigacube.py (PR #3; main unmerged)"
+    },
+    {
+      "id": "multimodal",
+      "name": "Multimodal encoding/rendering reference apps",
+      "repository": "Jarvis-X",
+      "maturity": "reference-laboratory",
+      "authority": "review-required",
+      "evidence_path": "apps/dr-moagi-volumetric-torch/"
+    },
+    {
+      "id": "gui",
+      "name": "3D UI visualization, projection only",
+      "repository": "3D-Virtual-AI-Interactive-Interface",
+      "maturity": "demonstration",
+      "authority": "read-only",
+      "evidence_path": "index.html and individual visualizers"
+    },
+    {
+      "id": "cloud_os",
+      "name": "Dr Moagi OS bounded control plane",
+      "repository": "Jarvis-X",
+      "maturity": "alpha",
+      "authority": "review-required",
+      "evidence_path": "docs/SYSTEM_OPERATIONALISATION.md"
+    },
+    {
+      "id": "dm_pcs_bridge",
+      "name": "Public DOCX codec/ABI bridging specification",
+      "repository": "Jarvis-X",
+      "maturity": "integration-candidate",
+      "authority": "review-required",
+      "evidence_path": "PR #408; unmerged"
+    },
+    {
+      "id": "dm_pcs_private",
+      "name": "Proprietary DM-PCS secure implementation",
+      "repository": "private/local",
+      "maturity": "restricted",
+      "authority": "no-auto-access",
+      "evidence_path": "NO PUBLIC PATH; name-only registry entry"
+    },
+    {
+      "id": "neural",
+      "name": "Contractive neural 3D model / adaptation",
+      "repository": "dr-moagi-billion3",
+      "maturity": "reference-laboratory",
+      "authority": "review-required",
+      "evidence_path": "core/neural_substrate.py"
+    },
+    {
+      "id": "knowledge",
+      "name": "Professional industrial knowledge repositories",
+      "repository": "future/private",
+      "maturity": "future-work",
+      "authority": "read-only",
+      "evidence_path": "not publicly verified"
+    },
+    {
+      "id": "clinical",
+      "name": "Clinical decision and healthcare services",
+      "repository": "outside-repository",
+      "maturity": "restricted",
+      "authority": "no-auto-access",
+      "evidence_path": "never auto-deploy"
+    },
+    {
+      "id": "finance",
+      "name": "Finance and banking execution",
+      "repository": "outside-repository",
+      "maturity": "restricted",
+      "authority": "no-auto-access",
+      "evidence_path": "never auto-deploy"
+    },
+    {
+      "id": "vehicle",
+      "name": "BYD/ADAS vehicle-control integration",
+      "repository": "outside-repository",
+      "maturity": "restricted",
+      "authority": "no-auto-access",
+      "evidence_path": "never auto-deploy"
+    },
+    {
+      "id": "quantum",
+      "name": "Quantum hardware and photonic computation",
+      "repository": "research-aspiration",
+      "maturity": "future-work",
+      "authority": "read-only",
+      "evidence_path": "no verified quantum runtime"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "unify_state_abi",
+      "component": "typed_state",
+      "purpose": "Define a single versioned canonical SystemState ABI with independent parser and golden vectors",
+      "priority": 100,
+      "requires": [],
+      "risk": "normal",
+      "mode": "shadow",
+      "required_gates": [
+        "deterministic_replay",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "typed_state"
+      ],
+      "evidence_required": "Cross-language field-type, endian, topology, versioning, digest fixtures"
+    },
+    {
+      "id": "schema_receipts",
+      "component": "audit",
+      "purpose": "Emit typed stage receipts for candidate/proof/resource/rollback without repurposing Omega memory",
+      "priority": 99,
+      "requires": [
+        "unify_state_abi"
+      ],
+      "risk": "normal",
+      "mode": "shadow",
+      "required_gates": [
+        "deterministic_replay",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "typed_state"
+      ],
+      "evidence_required": "Receipt schema, replay, hash chain, and tamper negative tests"
+    },
+    {
+      "id": "seal_security_boundary",
+      "component": "self_host",
+      "purpose": "Make runtime source/model changes shadow-only; preserve human approval and protected branches",
+      "priority": 98,
+      "requires": [
+        "schema_receipts"
+      ],
+      "risk": "elevated",
+      "mode": "shadow",
+      "required_gates": [
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "security_review",
+        "typed_state"
+      ],
+      "evidence_required": "Deny tests for live writes, policy weakening and privileged promotion"
+    },
+    {
+      "id": "vm_conformance",
+      "component": "vm",
+      "purpose": "Conform reference bytecode VM to canonical state / verified transaction receipts",
+      "priority": 94,
+      "requires": [
+        "schema_receipts"
+      ],
+      "risk": "normal",
+      "mode": "shadow",
+      "required_gates": [
+        "deterministic_replay",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "typed_state"
+      ],
+      "evidence_required": "Deterministic VM bytecode vectors, limits, atomic failure and rollback"
+    },
+    {
+      "id": "gigacube_bridge",
+      "component": "gigacube",
+      "purpose": "Map Gigacube allocated bricks and reversible cycles to typed state, avoiding dense-space claims",
+      "priority": 92,
+      "requires": [
+        "schema_receipts"
+      ],
+      "risk": "normal",
+      "mode": "shadow",
+      "required_gates": [
+        "deterministic_replay",
+        "geometry_profile",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "roundtrip",
+        "typed_state"
+      ],
+      "evidence_required": "Real Python CLI roundtrips, X/Y/Z face tests, digest-matched recovered payload"
+    },
+    {
+      "id": "codec_adapter",
+      "component": "ae_ad",
+      "purpose": "Declare exact-lossless vs lossy codec modes, residual accounting, and verified document transport",
+      "priority": 90,
+      "requires": [
+        "schema_receipts"
+      ],
+      "risk": "normal",
+      "mode": "shadow",
+      "required_gates": [
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "roundtrip",
+        "typed_state"
+      ],
+      "evidence_required": "Byte-exact codec and negative-corruption vectors; DOCX remains data carrier"
+    },
+    {
+      "id": "cpp_vm_crosscheck",
+      "component": "native_cpp",
+      "purpose": "Create independent C++ and Python conformance vector parity and resource receipts",
+      "priority": 89,
+      "requires": [
+        "vm_conformance",
+        "gigacube_bridge"
+      ],
+      "risk": "normal",
+      "mode": "shadow",
+      "required_gates": [
+        "benchmark_receipt",
+        "deterministic_replay",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "typed_state"
+      ],
+      "evidence_required": "Same-input same-output digests on declared backend and boundary conditions"
+    },
+    {
+      "id": "numerical_neural_bridge",
+      "component": "neural",
+      "purpose": "Give neural contractive solver explicit precision, tolerances, residual, checkpoint, and bounded training receipts",
+      "priority": 83,
+      "requires": [
+        "codec_adapter"
+      ],
+      "risk": "elevated",
+      "mode": "shadow",
+      "required_gates": [
+        "benchmark_receipt",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "security_review",
+        "typed_state"
+      ],
+      "evidence_required": "Measured stability and baseline comparisons, no implicit lossless neural compression"
+    },
+    {
+      "id": "multimodal_input_bridge",
+      "component": "multimodal",
+      "purpose": "Bring text/image/audio/video sensor adapters under typed ingress and privacy policy",
+      "priority": 80,
+      "requires": [
+        "codec_adapter"
+      ],
+      "risk": "elevated",
+      "mode": "shadow",
+      "required_gates": [
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "roundtrip",
+        "security_review",
+        "typed_state"
+      ],
+      "evidence_required": "Per-modality size/codec/unit limits with golden data and error receipts"
+    },
+    {
+      "id": "geometry_ui_projection",
+      "component": "gui",
+      "purpose": "Drive toroidal browser projection from recorded authoritative hashes/brick snapshots",
+      "priority": 78,
+      "requires": [
+        "gigacube_bridge"
+      ],
+      "risk": "normal",
+      "mode": "shadow",
+      "required_gates": [
+        "geometry_profile",
+        "human_approval",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "typed_state"
+      ],
+      "evidence_required": "Renderer-to-state traceability; UI never becomes authoritative"
+    },
+    {
+      "id": "end_to_end_gate",
+      "component": "cloud_os",
+      "purpose": "Compose a bounded offline demo that verifies cross-subsystem state and rolls back atomically",
+      "priority": 74,
+      "requires": [
+        "seal_security_boundary",
+        "vm_conformance",
+        "gigacube_bridge",
+        "codec_adapter",
+        "cpp_vm_crosscheck",
+        "numerical_neural_bridge",
+        "multimodal_input_bridge",
+        "geometry_ui_projection"
+      ],
+      "risk": "elevated",
+      "mode": "shadow",
+      "required_gates": [
+        "benchmark_receipt",
+        "deterministic_replay",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "roundtrip",
+        "security_review",
+        "typed_state"
+      ],
+      "evidence_required": "Independent E2E fixture with failure injection, digest comparison and resource metrics"
+    },
+    {
+      "id": "dm_pcs_private_review",
+      "component": "dm_pcs_private",
+      "purpose": "Private codec/encryption and IP review; never copy implementation into public repository",
+      "priority": 50,
+      "requires": [
+        "codec_adapter"
+      ],
+      "risk": "restricted",
+      "mode": "manual-only",
+      "required_gates": [
+        "domain_review",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "security_review",
+        "typed_state"
+      ],
+      "evidence_required": "Owner-approved private assessment under explicit access control"
+    },
+    {
+      "id": "clinical_release",
+      "component": "clinical",
+      "purpose": "Clinical workflow risk, evidence and regulatory controls before any patient-facing use",
+      "priority": 50,
+      "requires": [
+        "end_to_end_gate"
+      ],
+      "risk": "restricted",
+      "mode": "manual-only",
+      "required_gates": [
+        "domain_review",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "security_review",
+        "typed_state"
+      ],
+      "evidence_required": "Clinician safety review, validation, privacy, applicable regulation and authorized deployment"
+    },
+    {
+      "id": "financial_release",
+      "component": "finance",
+      "purpose": "Banking integration risk, authentication and transaction controls before any real funds movement",
+      "priority": 50,
+      "requires": [
+        "end_to_end_gate"
+      ],
+      "risk": "restricted",
+      "mode": "manual-only",
+      "required_gates": [
+        "domain_review",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "security_review",
+        "typed_state"
+      ],
+      "evidence_required": "Bank controls, formal authorization, regulatory review, independent security testing"
+    },
+    {
+      "id": "vehicle_release",
+      "component": "vehicle",
+      "purpose": "Automotive software and safety analysis before any connection to live driving systems",
+      "priority": 50,
+      "requires": [
+        "end_to_end_gate"
+      ],
+      "risk": "restricted",
+      "mode": "manual-only",
+      "required_gates": [
+        "domain_review",
+        "human_approval",
+        "independent_tests",
+        "integrity",
+        "policy",
+        "resource_bounds",
+        "rollback",
+        "security_review",
+        "typed_state"
+      ],
+      "evidence_required": "Vehicle safety-case, independent tests, OEM interfaces, human approvals"
+    }
+  ]
+}
