@@ -101,3 +101,29 @@ The GitHub workflow runs separate-participant regression tests (real training-ch
 **Operational safety:** No code under src/jarvisx or any live API endpoint is changed. The coordinator's approve=True is a local guard, not an authenticated identity check. No real-world financial, vehicle, medical, hardware or host-control operations are connected.
 
 To achieve an actual production-grade distributed transaction, separately owned services must implement durable prepare/commit/recover, authenticated RPC, arbitrated leadership/fencing, transactionally isolated reads or explicitly documented sagas, durable failure evidence, recovery under network partitions, and external independent safety review. Issue #425 remains open for that work.
+
+
+## Phase 6: authenticated local participant processes (ADR-016, issue #425)
+
+The isolated reference now has an optional process transport in ipc.py. It launches one **real independent Python process per participant** with one SQLite database and one Unix-domain socket each. The coordinator opens its own SQLite database in a separate process and uses IPCCoordinator, which overrides the participant boundary with authenticated socket calls rather than opening another participant's SQLite state. The four participants carry the existing *shadow observations* of VM, OS, ANN and geometry, not real live service state.
+
+### Local-only RPC protection
+
+- AF_UNIX sockets are bound under a trusted user-owned directory, chmod 0600; no TCP listener or public network port is created.
+- The process-only environment variable JARVISX_SHADOW_IPC_SECRET must contain a randomly generated, 32–256-character ASCII secret. **Do not commit or embed this secret into browser JavaScript, URLs, logs or source code.**
+- Every request binds protocol version, participant domain, method, canonical JSON arguments, timestamp and 128-bit random nonce into HMAC-SHA256; the service returns a corresponding authenticated response.
+- Requests beyond a 45-second clock-skew window are rejected. Accepted nonces are persisted **in the owning participant's SQLite file**, preventing replay after process restart (within the validity window). One request per nonce; retries require a new signed nonce, while existing prepare/commit operations remain idempotent as defined in Phase 5.
+- Input/response size is capped at 1 MiB, RPC method and argument shapes are explicitly allowlisted, and errors do not expose raw exception strings.
+- No shared secret is generated or deployed by the repository. For local use, start four participant service processes and a separate coordinator with the **same securely supplied secret**, and restrict the containing directory's permissions.
+
+### CI validation
+
+    python -m unittest discover -s reference/canonical_shadow_tx -p test_ipc.py -v
+
+CI runs each participant as a real Python child process and checks signed requests, invalid/tampered MACs, nonce replays (including after service restart), timestamp expiry, absence of operator approval, participant downtime, coordinated read gating and coordinator crash recovery after one local participant commit. An additional end-to-end process smoke check emits canonical-authenticated-process-receipt.json after recovery.
+
+### Limitations and mandatory follow-up
+
+This is authenticated **same-host local-process IPC**, not independently administered remote systems. Anyone able to read the process secret or edit the shadow SQLite files can bypass its logical protections. Unix socket permissions and HMAC do not replace OS account isolation, key rotation, TLS, operator RBAC, malicious-client resistance, durable leadership, network partition handling or safe authorization of arbitrary participant commands. A compromised authorized coordinator can still issue incorrect commands. Raw participant state reads can observe partially applied commits and must not be interpreted as an atomic distributed snapshot.
+
+**Never connect this transport to production Dr Moagi OS, CodexVM, ANN weights, finance, vehicles, patient care or device kernels without additional independent security review, authenticated endpoint identity, durable per-service protocol changes and isolation verification.** Issue #425 remains open.
