@@ -7,6 +7,8 @@ on:
       - 'tests/test_dr_moagi_phi_m_3d.py'
       - 'tests/test_dr_moagi_phi_m_codec_probe.py'
       - 'src/jarvisx/dr_moagi_phi_m_codec_probe.py'
+      - 'src/jarvisx/dr_moagi_phi_m_stability_probe.py'
+      - 'tests/test_dr_moagi_phi_m_stability_probe.py'
       - 'docs/DR_MOAGI_PHI_M_3D_OPERATOR.md'
       - '.github/workflows/phi-m-3d.yml'
   push:
@@ -40,6 +42,10 @@ jobs:
 
       - name: Paired 3D codec regression checks
         run: PYTHONPATH=src python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_codec_probe.py
+      - name: Iterated geometric dynamics and period-two checks
+        run: PYTHONPATH=src python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_stability_probe.py
+      - name: Archive sampled fixed-point and two-cycle analysis
+        run: PYTHONPATH=src python -m jarvisx.dr_moagi_phi_m_stability_probe --output phi-m-stability.json
       - name: End-to-end lexical 3D codec multi-size shadow benchmarks
         run: |
           for words in 64 128 256 512; do
@@ -49,5 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phi-m-codec-probe-${{ matrix.python-version }}
-          path: phi-m-codec-probe-*.json
+          path: |
+            phi-m-codec-probe-*.json
+            phi-m-stability.json
           retention-days: 14
