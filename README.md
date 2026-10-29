@@ -145,7 +145,7 @@ Launch the canonical service directly:
 jarvisx-operationalize serve --host 127.0.0.1 --port 10000
 ```
 
-**Security:** On the current default branch this HTTP control plane has no built-in operator authentication. The local launcher and Compose port binding default to loopback only. Do not expose the control port on public/untrusted networks; reviewed fail-closed authentication remains in [PR #406](https://github.com/Lord-Xido/Jarvis-X/pull/406). A loopback bind is not a substitute for endpoint authentication.
+**Security:** Protected API operations require an operator bearer token from `JARVISX_OS_CONTROL_TOKEN` (minimum 32 ASCII characters, randomly generated); missing or invalid configuration fails closed. Local service launchers and the Compose host port bind to loopback by default. The legacy CDN-backed browser UI does not receive the secret, so protected mutations require an authenticated API client. For Compose, set the token before invoking `docker compose`. The token is not a substitute for TLS and network restrictions, and the application is not production-security certified.
 
 or as the hardened container profile:
 
