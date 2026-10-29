@@ -120,10 +120,6 @@ class Participant:
                     or fence < 0 or (version == 0) != (frame is None)):
                 return False
             if frame is not None:
-                _checked(tuple(
-                    # A single participant frame has its own independent validation.
-                    [frame] if False else []  # No fake aggregate-validation claim.
-                )) if False else None
                 from reference.canonical_shadow_tx.bridge import _verify_frame
                 _verify_frame(frame)
             return True
