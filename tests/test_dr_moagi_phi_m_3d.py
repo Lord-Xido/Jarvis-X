@@ -114,3 +114,42 @@ def test_graph_rejects_too_many_nodes():
     graph = GeometricGraph((node,) * 3, ())
     with pytest.raises(ValueError, match="budget"):
         graph_candidate(graph, 0.5, PhiMConfig(max_points=2))
+
+
+def test_fast_analytic_matches_quadrature_moving_gaussian():
+    from jarvisx.dr_moagi_phi_m_3d import (
+        integrated_gradient_hessian_analytic,
+        integrated_gradient_hessian_quadrature,
+    )
+    rng = np.random.default_rng(121)
+    p = PhiMConfig(quadrature_order=48)
+    x = rng.uniform(-1.0, 1.0, (80, 3))
+    for t in (0.01, 0.3, 1.5, 3.0, 8.0):
+        g, h = integrated_gradient_hessian_analytic(x, t, p)
+        gq, hq = integrated_gradient_hessian_quadrature(x, t, p)
+        np.testing.assert_allclose(g, gq, atol=2e-9, rtol=2e-9)
+        np.testing.assert_allclose(h, hq, atol=2e-8, rtol=2e-8)
+
+
+def test_nearly_stationary_source_uses_stable_reference_limit():
+    from jarvisx.dr_moagi_phi_m_3d import integrated_gradient_hessian_analytic
+    p = PhiMConfig(velocity=(1e-7, -2e-7, 1e-7), quadrature_order=48)
+    x = np.array([[0.2, 0.5, -0.3], [0.0, 0.0, 0.0]])
+    g, h = integrated_gradient_hessian_analytic(x, 1.5, p)
+    assert np.isfinite(g).all()
+    assert np.isfinite(h).all()
+    from jarvisx.dr_moagi_phi_m_3d import integrated_gradient_hessian_quadrature
+    gq, hq = integrated_gradient_hessian_quadrature(x, 1.5, p)
+    np.testing.assert_allclose(g, gq, atol=1e-13)
+    np.testing.assert_allclose(h, hq, atol=1e-13)
+
+
+def test_method_selection_is_explicit():
+    from jarvisx.dr_moagi_phi_m_3d import integrated_gradient_hessian
+    x = np.array([[0.4, -0.3, 0.1]])
+    g_a, h_a = integrated_gradient_hessian(x, 1.2, method="analytic")
+    g_q, h_q = integrated_gradient_hessian(x, 1.2, method="quadrature")
+    np.testing.assert_allclose(g_a, g_q, atol=1e-9)
+    np.testing.assert_allclose(h_a, h_q, atol=1e-9)
+    with pytest.raises(ValueError, match="method"):
+        integrated_gradient_hessian(x, 1.2, method="magic")
