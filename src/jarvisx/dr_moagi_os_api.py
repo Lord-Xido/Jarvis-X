@@ -16,6 +16,7 @@ from .dr_moagi_field_runtime import SparseField
 from .dr_moagi_meta_optimizer import SelfOptimizing3DSystem
 from .dr_moagi_os import DrMoagiOSConfig, DrMoagiOSKernel, demo_field
 from .dr_moagi_os_ui import DR_MOAGI_OS_HTML
+from .dr_moagi_os_security import control_access_middleware
 
 
 def _float_env(name: str, default: float) -> float:
@@ -76,6 +77,9 @@ app = FastAPI(
         "and auto-run scheduling."
     ),
 )
+
+# Enforce operator control authorization before state-changing HTTP handlers.
+app.middleware("http")(control_access_middleware)
 
 _system = SelfOptimizing3DSystem(DrMoagiOSKernel(_config_from_env()))
 
