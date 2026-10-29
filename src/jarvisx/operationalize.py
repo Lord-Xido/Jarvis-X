@@ -254,7 +254,7 @@ def _parser() -> argparse.ArgumentParser:
     torus.add_argument("--json", action="store_true", dest="as_json")
 
     serve = sub.add_parser("serve", help="serve the authoritative Dr Moagi OS control plane")
-    serve.add_argument("--host", default="0.0.0.0")
+    serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=10000)
     return parser
 
