@@ -189,3 +189,39 @@ warped path unless it preserves exact text, uses no more bytes, and has median
 end-to-end time no greater than baseline. The default candidate is expected to
 fail the size and latency gates. No production decoder, VM, runtime state or
 existing encoder is modified by running this probe.
+
+
+## Stage 3: fixed points versus period-two geometric dynamics
+
+The map Phi_M is differentiable but **not necessarily globally contractive**.
+For iteration x_(k+1)=Phi_M(x_k,t) at fixed t, compare two residuals:
+
+    r1(k)=max_i ||Phi_M(x_(i,k),t)-x_(i,k)||
+    r2(k)=max_i ||Phi_M(Phi_M(x_(i,k),t),t)-x_(i,k)||
+
+A small r2 and large r1 is evidence of a sampled two-cycle, **not a
+fixed point**. A local two-cycle stability diagnostic is the spectral radius
+of J(Phi_M(x))*J(x), evaluated near the recovered cycle; below one is evidence
+of local stability of that cycle, not a global theorem.
+
+The bounded reproducible reference (64 input points, seed 221107,
+200 iterations per time, default Phi_M parameters) produced:
+
+| t | Max 1-step residual | Max 2-step residual | Classification |
+|---|---------------------|---------------------|----------------|
+| 0.00 | 7.49e-10 | 1.56e-9 | sampled fixed-point convergence |
+| 0.75 | 2.1065 | 9.17e-5 | not converged within 200 iterations |
+| 1.50 | 2.4357 | 9.99e-16 | sampled period-two convergence |
+| 3.00 | 2.5623 | 2.29e-16 | sampled period-two convergence |
+
+For t=1.5 and t=3.0, sampled two-step Jacobian spectral radii were ~0.636
+and ~0.705 respectively. Other parameters or inputs can behave differently.
+
+Reproduce:
+
+    python -m jarvisx.dr_moagi_phi_m_stability_probe --steps 200 --points 64 --output phi-m-stability.json
+    python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_stability_probe.py
+
+This diagnostic is research-only and does not promote a candidate to production.
+A model that stabilizes on a period-two cycle must **not** report fixed-point
+convergence merely because its second iterate stops moving.
