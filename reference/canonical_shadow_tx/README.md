@@ -70,3 +70,34 @@ The dedicated CI tests process death using os._exit at each of four domain write
 The workflow uploads canonical-durable-receipt.json after generating a real VM/OS/ANN/geometry batch and reopening the database to verify its persisted transaction. Performance, durability and forensic guarantees are limited by the SQLite filesystem, operating system and storage flush semantics; the CI process-kill test does **not** emulate sudden physical power loss.
 
 **Next production blockers:** Adapters must implement independent prepare/apply/recovery ownership and either a distributed commit protocol with explicit read visibility guarantees or a saga with compensating actions; the single-DB reference cannot provide cross-service atomic visibility. Further work needs authenticated initiators, hostile-input fuzzing, long-running concurrency tests, a durable WAL recovery strategy for all backends, independent external evidence and a human security review before changes to live services.
+
+
+## Phase 5: independent participant files and durable coordinator decisions
+
+The next bounded reference is implemented in multiprocess.py. It stores **four independent shadow domain copies in four SQLite files**, and a fifth SQLite file contains an authoritative *coordinator decision*.
+
+The protocol implements **eventually recoverable committed intent**:
+
+    coordinator PREPARING
+        -> each local participant PREPARED (fenced by token and epoch)
+        -> coordinator PREPARED
+        -> explicitly authorized coordinator COMMIT_DECIDED [durably logged]
+        -> participant A applies
+        -> participant B applies
+        -> participant C applies
+        -> participant D applies
+        -> coordinator COMPLETE
+
+If a process fails **before** COMMIT_DECIDED, restart recovery aborts the unfinished prepared candidates; no participant has applied new state. If a process fails **after** the durable decision, recovery replays remaining idempotent participant applies and only then marks the operation COMPLETE. Coordinator-issued monotonic fencing tokens and per-participant epoch checks reject stale candidates. One unresolved transaction is allowed at a time.
+
+**Critical isolation limitation:** Between COMMIT_DECIDED and COMPLETE, direct reads of each participant can see different state versions. This is **not atomic cross-process visibility**, and the code does not offer distributed ACID, consensus, an authenticated RPC transport, compensating transactions, leases, leader election, or a proof of recovery under arbitrary malicious failure. The coordinator's explicit coordinated_read(txid) gate refuses intermediate states, but cannot prevent raw participant reads. A participant can be left permanently unapplied if its database disappears: recovery fails closed rather than forging completion. All participants are *shadow SQLite files*, not live VM/OS/ANN services. SQLite WAL=FULL is configured but physical power-loss guarantees are outside CI.
+
+### Reproduce the reference
+
+    python -m unittest discover -s reference/canonical_shadow_tx -p test_multiprocess.py -v
+
+The GitHub workflow runs separate-participant regression tests (real training-checkpoint observations plus SQLite persistence), process-kill after the coordinator decision and after successive participant applications, interrupted prepare, stale-fence rejection, corrupt participant evidence, missing participant and proof that raw uncoordinated readers can see partial state. It produces a JSON receipt after restarting recovery following a deliberately interrupted first participant application.
+
+**Operational safety:** No code under src/jarvisx or any live API endpoint is changed. The coordinator's approve=True is a local guard, not an authenticated identity check. No real-world financial, vehicle, medical, hardware or host-control operations are connected.
+
+To achieve an actual production-grade distributed transaction, separately owned services must implement durable prepare/commit/recover, authenticated RPC, arbitrated leadership/fencing, transactionally isolated reads or explicitly documented sagas, durable failure evidence, recovery under network partitions, and external independent safety review. Issue #425 remains open for that work.
