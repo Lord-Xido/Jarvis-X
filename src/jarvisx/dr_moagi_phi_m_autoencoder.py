@@ -59,8 +59,8 @@ class TrainConfig:
             ("warmup", 0.0, 1.0), ("grad_clip", 1e-6, 100.0),
             ("ema_decay", 0.0, 0.999999),
         ):
-            value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
+            float_value = getattr(self, name)
+            if isinstance(float_value, bool) or not isinstance(float_value, (int, float)) or not math.isfinite(float_value) or not low <= float_value <= high:
                 raise ValueError(f"{name} must be finite and bounded")
         if self.batch > self.train_samples:
             raise ValueError("batch exceeds training set")
@@ -151,7 +151,7 @@ def _evaluate(model: PhiMAutoEncoder, data: Any, batch: int, device: str) -> flo
             x = chunk.to(device)
             y, _ = model(x)
             total += float(F.mse_loss(y, x, reduction="sum").item())
-    return total / data.numel()
+    return float(total / int(data.numel()))
 
 
 def _weights(model: Any) -> dict[str, Any]:
@@ -241,7 +241,8 @@ def load_model(path: Path) -> PhiMAutoEncoder:
     if not isinstance(state, dict) or any(not isinstance(v, torch.Tensor) for v in state.values()):
         raise ValueError("expected tensor state_dict")
     model.load_state_dict(state, strict=True)
-    return model.eval()
+    model.eval()
+    return model
 
 
 @torch.no_grad()
