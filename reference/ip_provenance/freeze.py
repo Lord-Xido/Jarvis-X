@@ -72,7 +72,7 @@ def capture() -> dict:
     entries: list[dict] = []
     leaves: list[bytes] = []
     total_bytes = 0
-    previous: bytes | None = None
+    records: list[tuple[bytes, bytes, bytes, bytes]] = []
     for row in raw_listing.split(b"\x00"):
         if not row:
             continue
@@ -81,10 +81,14 @@ def capture() -> dict:
             mode, kind, oid = meta.split(b" ")
         except ValueError as exc:
             raise RuntimeError("invalid Git tree listing") from exc
-        if (kind != b"blob" or mode not in (b"100644", b"100755", b"120000")
-                or len(oid) != 40 or not path
-                or (previous is not None and path <= previous)):
-            raise RuntimeError("unsupported, duplicate or disordered frozen Git object")
+        if kind != b"blob" or mode not in (b"100644", b"100755", b"120000") or len(oid) != 40 or not path:
+            raise RuntimeError("unsupported frozen Git tree object")
+        records.append((path, mode, kind, oid))
+    records.sort(key=lambda item: item[0])  # Unambiguous raw-byte ordering.
+    previous: bytes | None = None
+    for path, mode, kind, oid in records:
+        if previous is not None and path == previous:
+            raise RuntimeError("duplicate frozen Git tree path")
         previous = path
         # Resolve object by immutable OID. No symlink is followed.
         data = _git("cat-file", "blob", oid.decode("ascii"))
