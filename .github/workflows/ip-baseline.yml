@@ -62,6 +62,7 @@ jobs:
           assert p['exact_contraction']['steps_executed_exactly'] == 1000
           assert p['exact_contraction']['rational_proof'] == 'PASS'
           assert p['codec']['bit_identical_reconstruction'] is True
+          assert p['codec']['atlas_anchor_verified'] is True
           assert p['production_deployment'] == 'BLOCKED'
           print(json.dumps({
             'status': 'PASS',
