@@ -1,11 +1,19 @@
 name: Recursive 3D ANN integrity
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/recursive-3d-ann/**'
+      - '.github/workflows/recursive-3d-ann.yml'
   pull_request:
     paths:
       - 'apps/recursive-3d-ann/**'
       - '.github/workflows/recursive-3d-ann.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   reference-inference:
@@ -16,7 +24,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install CPU dependencies
+      - name: Install inference test dependencies
         run: python -m pip install -r apps/recursive-3d-ann/requirements.txt
-      - name: Verify embedded model and 1,000-stream round trip
-        run: python -m pytest -q apps/recursive-3d-ann/test_runtime.py
+      - name: Run isolated ANN reference and integrity tests
+        # The repository's global pytest addopts require pytest-cov/60% Jarvis-X
+        # package coverage, which does not apply to this standalone app.
+        # Override those options; do not skip or suppress test failures.
+        run: python -m pytest -q -o addopts='' apps/recursive-3d-ann/test_runtime.py
+      - name: Execute the trained model and 1,000-stream pipeline
+        run: |
+          python apps/recursive-3d-ann/runtime.py --streams 1000 --iterations 8 --output /tmp/ann-inference.json > /tmp/ann-inference-stdout.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('/tmp/ann-inference.json').read_text())
+          assert data['generated_tokens'] == 64000
+          assert data['residual_roundtrip_exact'] is True
+          assert data['finite_latent'] is True
+          assert data['storage_floor']['compressed_without_model_weights'] is False
+          assert data['pipeline_wall_seconds_excluding_json'] > 0
+          print('Bounded CPU inference evidence:', json.dumps({
+              k: data[k] for k in ('generated_tokens', 'decoder_accuracy',
+                                   'generation_only_tokens_per_second',
+                                   'pipeline_tokens_per_second_excluding_json')
+          }, sort_keys=True))
+          PY

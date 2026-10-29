@@ -11,7 +11,7 @@ Open [`index.html`](./index.html) in a modern desktop browser. It has its 27-sym
 ```bash
 python -m pip install -r apps/recursive-3d-ann/requirements.txt
 python apps/recursive-3d-ann/runtime.py --streams 1000 --seed 20261029 --iterations 8 --output /tmp/recursive-ann-run.json
-python -m pytest -q apps/recursive-3d-ann/test_runtime.py
+python -m pytest -q -o addopts='' apps/recursive-3d-ann/test_runtime.py
 ```
 
 `runtime.py` extracts and shape-checks pretrained weights embedded in `index.html`, recreates the PyTorch model, samples 64 positions per stream, executes the 3D encoder/decoder, iterates an inward latent feedback operator, and measures reconstruction accuracy and generation-only wall time. `test_runtime.py` verifies the PyTorch reconstruction against the reference embedded in the HTML and tests a complete 1,000 × 64 run.
@@ -54,7 +54,9 @@ The trained decoder is **lossy**. For token IDs that fit in 8 bits, separately r
 | Inward iterations | 8 |
 | Short CPU generation-only sample rate | ~2.08 million synthetic tokens/s |
 
-The rate excludes model training, 3D reconstruction, serialization and rendering; it is not a sustained production benchmark or a large-language-model throughput claim. The browser uses precomputed one-token probability distributions to accelerate its tiny vocabulary. The `4³ → 2³ → 1³ → 2³ → 4³` geometry is **data representation**, not physical 3D computing hardware. Refer to [`reference_results.json`](./reference_results.json) for the captured original benchmark, not a fresh measurement on every machine.
+The rate excludes model training, 3D reconstruction, serialization and rendering; it is not a sustained production benchmark or a large-language-model throughput claim. The CPU runtime now also reports measured pipeline wall time (including model loading, generation, autoencoding, feedback and residual verification, excluding JSON serialization), together with latent/residual byte-accounting. For 64 8-bit token IDs, the 24 FP32 latent elements plus 64 residual bytes cost at least 160 bytes before model weights, so lossless compression has not been demonstrated. Inward trajectories report separate one-step and two-step residual norms; neither constitutes a formal convergence proof.
+
+**Dedicated CI:** `recursive-3d-ann.yml` overrides the repository-wide pytest coverage options for the isolated application and runs the complete test suite and 1,000-stream inference receipt on pull requests and pushes to `main`. The check must pass before the ANN is considered verified; it is not an automatic proof of full-system integration. The browser uses precomputed one-token probability distributions to accelerate its tiny vocabulary. The `4³ → 2³ → 1³ → 2³ → 4³` geometry is **data representation**, not physical 3D computing hardware. Refer to [`reference_results.json`](./reference_results.json) for the captured original benchmark, not a fresh measurement on every machine.
 
 ## File map
 
