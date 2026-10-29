@@ -139,3 +139,53 @@ Install:
 Local Python 3.13.5 / NumPy 2.3.5 benchmark of 48-point quadrature vs analytic integration (median of 15 warm runs, time 1.5) measured roughly 8.3x at N=64, 9.3x at N=512, 10.8x at N=2048, and 9.6x at N=4096. Absolute differences: gradients ~4e-15 and Hessians ~6e-14 in these cases.
 
 This is **not** evidence of 1000x speedup, global acceleration across all parameters, speed on GPU/C++, or a claim of universally exact floating-point output. These numbers apply only to this local configuration. Model verification is distinct from external physical validation.
+
+
+## Stage 2: end-to-end codebook A/B (shadow experiment)
+
+The separate dr_moagi_phi_m_codec_probe.py module imports the repository's real
+moagi_3d_geometric_intelligence.GridTokenCodec and compares three paired pipelines
+on the same deterministic corpus:
+
+1. **Baseline**: tokenize → discrete 3D token coordinates → nearest-grid decode.
+2. **Direct Phi_M**: tokenize → coordinate warp Phi_M → float32 coordinate packet
+   → nearest-grid decode. The nonlinear map can leave a different token cell.
+3. **Residual Phi_M**: tokenize → Phi_M → float32 warp + int16 quantized
+   source_coordinate-minus-warp residual → reconstruct/project to admitted [-1,1]^3
+   → nearest-grid decode. The residual is a *side channel*, not learned inversion.
+
+The fixture uses a fixed, fully populated 4,096-entry vocabulary and a seeded
+synthetic text made from 128 words (255 lexical tokens). Test a controlled range
+of sizes using the CLI:
+
+    pip install -e '.[phi_m]'
+    python -m jarvisx.dr_moagi_phi_m_codec_probe --word-count 128 --repetitions 7 --seed 20261029 --output probe.json
+    python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_codec_probe.py
+
+The measurement loop warms up imports and evaluates each path in randomized,
+paired order; it reports median *whole-pipeline* elapsed time including
+tokenization, geometric work, residual pack/recovery and lexical decoding.
+It does not report pure-kernel-only speedup as a pipeline acceleration.
+
+The baseline numeric coordinate representation uses 3 × 4-byte float32 per
+token (12 bytes). The residual path uses those 12 bytes plus 3 × 2-byte int16
+residuals (18 bytes). Both exclude dictionaries, framing, field parameters,
+and any checksums. The reported 2-byte uint16 token-ID representation is
+only a theoretical encoding lower bound, **not** a protocol already implemented
+by the current GridTokenCodec.
+
+A representative local run at 255 tokens (Python 3.13, an API-compatible
+GridTokenCodec harness, 7 timed repetitions) measured:
+- Baseline: 100% token accuracy, 3060 coordinate bytes, median ~0.483 ms.
+- Direct warp: 0% token accuracy, 3060 bytes, median ~0.806 ms.
+- Residual warp: 100% token accuracy, 4590 bytes, median ~0.860 ms.
+
+These figures are environment-specific and not a production workload or a
+general statistical throughput claim. Actual repository integration is covered
+by the companion GitHub Actions regression and archived audit artifact.
+
+**Fail-closed promotion contract:** the experimental gate will not choose the
+warped path unless it preserves exact text, uses no more bytes, and has median
+end-to-end time no greater than baseline. The default candidate is expected to
+fail the size and latency gates. No production decoder, VM, runtime state or
+existing encoder is modified by running this probe.
