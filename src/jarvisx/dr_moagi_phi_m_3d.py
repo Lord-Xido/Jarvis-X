@@ -105,10 +105,10 @@ def gradient(points: object, t: float, config: PhiMConfig = PhiMConfig()) -> np.
     return grad[0].reshape(shape)
 
 
-def integrated_gradient_hessian(
+def integrated_gradient_hessian_quadrature(
     points: object, t: float, config: PhiMConfig = PhiMConfig()
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Fixed-x Gauss-Legendre quadrature of grad(z) and Hess(z) from 0 to t."""
+    """Independent Gauss-Legendre numerical reference, O(N*Q) work and memory."""
     x, shape = _points(points, config)
     t = _time(t, config)
     if t == 0.0:
@@ -119,6 +119,101 @@ def integrated_gradient_hessian(
     g = 0.5 * t * np.einsum("q,qni->ni", weights, grad)
     h = 0.5 * t * np.einsum("q,qnij->nij", weights, hessian)
     return g.reshape(shape), h.reshape(shape[:-1] + (3, 3))
+
+
+def _complex_gaussian_moments(
+    a: float, lam: np.ndarray, t: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """I_k=integral_0^t tau**k exp(-a*tau**2+lam*tau) dtau, k=0,1,2.
+
+    erfcx form avoids subtracting exponentially large erf terms. Higher moments
+    follow the integration-by-parts recurrence. Requires SciPy for complex erfcx.
+    """
+    from scipy.special import erfcx
+
+    root = np.sqrt(a)
+    u0 = -lam / (2.0 * root)
+    u1 = root * t + u0
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        endpoint = np.exp(-a * t * t + lam * t)
+        i0 = np.sqrt(np.pi) / (2.0 * root) * (erfcx(u0) - endpoint * erfcx(u1))
+        i1 = (lam * i0 + 1.0 - endpoint) / (2.0 * a)
+        i2 = (i0 + lam * i1 - t * endpoint) / (2.0 * a)
+    return i0, i1, i2
+
+
+def integrated_gradient_hessian_analytic(
+    points: object, t: float, config: PhiMConfig = PhiMConfig()
+) -> tuple[np.ndarray, np.ndarray]:
+    """Evaluate temporal Gaussian moments in O(N), not N quadrature samples.
+
+    For moving Gaussian + sinusoidal amplitude, use complex error functions to
+    compute 0th, 1st and 2nd temporal moments of the envelope. The v=0 case
+    has a simpler exact limit. Numerically ill-conditioned near-zero velocities
+    or nonfinite intermediate moments use the quadrature safety fallback.
+    """
+    x, shape = _points(points, config)
+    t = _time(t, config)
+    if t == 0.0:
+        return np.zeros(shape), np.zeros(shape[:-1] + (3, 3))
+
+    v = np.asarray(config.velocity, dtype=np.float64)
+    d0 = x - np.asarray(config.center, dtype=np.float64)
+    s2 = config.spatial_sigma**2
+    a = float(np.dot(v, v) / (2.0 * s2))
+    c = -np.sum(d0 * d0, axis=1) / (2.0 * s2)
+    if a == 0.0:
+        duration = (
+            t if config.frequency == 0.0 else
+            t + config.modulation * (1.0 - np.cos(config.frequency * t))
+            / config.frequency
+        )
+        m0 = np.exp(c) * duration
+        m1 = np.zeros_like(m0)
+        m2 = np.zeros_like(m0)
+    else:
+        # Recurrences divide by a twice; avoid catastrophic cancellation
+        # when the moving source is effectively stationary over [0,t].
+        if np.linalg.norm(v) * t / config.spatial_sigma < 0.001:
+            return integrated_gradient_hessian_quadrature(x.reshape(shape), t, config)
+        b = d0 @ v / s2
+        try:
+            i_real = _complex_gaussian_moments(a, b, t)
+            i_complex = _complex_gaussian_moments(a, b + 1j * config.frequency, t)
+        except ImportError as exc:
+            raise ImportError("Install scipy for analytic Phi_M integration: pip install scipy") from exc
+        moments = np.exp(c)[None, :] * (
+            np.stack(i_real).real + config.modulation * np.stack(i_complex).imag
+        )
+        if not np.isfinite(moments).all():
+            return integrated_gradient_hessian_quadrature(x.reshape(shape), t, config)
+        m0, m1, m2 = moments
+
+    g = -config.amplitude / s2 * (d0 * m0[:, None] - v * m1[:, None])
+    h = config.amplitude * (
+        (d0[:, :, None] * d0[:, None, :]) * m0[:, None, None]
+        - (d0[:, :, None] * v[None, None, :] + v[None, :, None] * d0[:, None, :])
+        * m1[:, None, None]
+        + np.outer(v, v)[None, :, :] * m2[:, None, None]
+    ) / (s2 * s2) - config.amplitude * m0[:, None, None] * np.eye(3) / s2
+    return g.reshape(shape), h.reshape(shape[:-1] + (3, 3))
+
+
+def integrated_gradient_hessian(
+    points: object, t: float, config: PhiMConfig = PhiMConfig(),
+    *, method: str = "auto",
+) -> tuple[np.ndarray, np.ndarray]:
+    """Select 'analytic', 'quadrature', or 'auto' (analytic when SciPy exists)."""
+    if method not in ("auto", "analytic", "quadrature"):
+        raise ValueError("method must be auto, analytic, or quadrature")
+    if method == "quadrature":
+        return integrated_gradient_hessian_quadrature(points, t, config)
+    if method == "analytic":
+        return integrated_gradient_hessian_analytic(points, t, config)
+    try:
+        return integrated_gradient_hessian_analytic(points, t, config)
+    except ImportError:
+        return integrated_gradient_hessian_quadrature(points, t, config)
 
 
 def phi_m(points: object, t: float, config: PhiMConfig = PhiMConfig()) -> np.ndarray:
