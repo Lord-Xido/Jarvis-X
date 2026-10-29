@@ -40,11 +40,14 @@ jobs:
 
       - name: Paired 3D codec regression checks
         run: PYTHONPATH=src python -m pytest -q -o addopts='' tests/test_dr_moagi_phi_m_codec_probe.py
-      - name: End-to-end lexical 3D codec shadow benchmark
-        run: PYTHONPATH=src python -m jarvisx.dr_moagi_phi_m_codec_probe --word-count 128 --repetitions 5 --output phi-m-codec-probe.json
+      - name: End-to-end lexical 3D codec multi-size shadow benchmarks
+        run: |
+          for words in 64 128 256 512; do
+            PYTHONPATH=src python -m jarvisx.dr_moagi_phi_m_codec_probe --word-count "$words" --repetitions 7 --output "phi-m-codec-probe-${words}.json"
+          done
       - name: Save measured shadow comparison
         uses: actions/upload-artifact@v4
         with:
           name: phi-m-codec-probe-${{ matrix.python-version }}
-          path: phi-m-codec-probe.json
+          path: phi-m-codec-probe-*.json
           retention-days: 14
