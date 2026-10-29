@@ -29,6 +29,41 @@ jobs:
         run: python -m pip install -e ".[test]" -r apps/recursive-3d-ann/requirements.txt
       - name: Test candidate-first state, 4 real backends and rollback
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_bridge.py -v
+      - name: Test durable prepare, crash recovery and single-store atomicity
+        run: python -m unittest discover -s reference/canonical_shadow_tx -p test_durable.py -v
+      - name: Generate durable recovery receipt against real isolated backends
+        run: |
+          python - <<'PY'
+          import json
+          import tempfile
+          from pathlib import Path
+          from reference.canonical_shadow_tx.bridge import (
+              observe_ann, observe_geometry, observe_os, observe_vm,
+          )
+          from reference.canonical_shadow_tx.durable import DurableShadowStore, recovery_receipt
+          import torch
+          torch.set_num_threads(2)
+          frames = tuple(sorted(
+              (observe_ann(), observe_geometry(), observe_os(), observe_vm()),
+              key=lambda item: item.domain,
+          ))
+          with tempfile.TemporaryDirectory() as folder:
+              database = Path(folder) / 'durable-shadow.sqlite3'
+              with DurableShadowStore(database) as store:
+                  store.prepare('ci-verified-001', frames)
+                  assert store.epoch() == 0
+                  assert store.pending() == ('ci-verified-001',)
+                  commit = store.commit('ci-verified-001', approve=True)
+                  assert store.verify() and commit.epoch == 1
+              receipt = recovery_receipt(database, 'ci-verified-001')
+              assert receipt['verified'] is True
+              assert receipt['epoch'] == 1 and receipt['pending'] == []
+              receipt['commit_receipt'] = commit.as_dict()
+              Path('canonical-durable-receipt.json').write_text(
+                  json.dumps(receipt, indent=2, sort_keys=True) + '\n'
+              )
+              print(json.dumps(receipt, indent=2, sort_keys=True))
+          PY
       - name: Produce machine-readable independent shadow receipt
         run: |
           python -m reference.canonical_shadow_tx.bridge > canonical-shadow-receipt.json
@@ -46,5 +81,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: canonical-shadow-receipt
-          path: canonical-shadow-receipt.json
+          path: |
+            canonical-shadow-receipt.json
+            canonical-durable-receipt.json
           if-no-files-found: error
