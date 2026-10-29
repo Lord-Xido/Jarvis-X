@@ -33,12 +33,12 @@ def authorise_bearer(authorization: str | None, configured_secret: str | None) -
     The mandatory minimum length prevents deploying with a low-entropy example
     token. The operator must supply a random secret; length alone is insufficient.
     """
-    if configured_secret is None or len(configured_secret) < 32:
+    if configured_secret is None or len(configured_secret) < 32 or not configured_secret.isascii():
         return 503
     if not authorization or not authorization.startswith("Bearer "):
         return 401
     supplied = authorization[len("Bearer "):]
-    if not supplied or len(supplied) > 1024:
+    if not supplied or len(supplied) > 1024 or not supplied.isascii():
         return 401
     return 200 if hmac.compare_digest(supplied, configured_secret) else 401
 
