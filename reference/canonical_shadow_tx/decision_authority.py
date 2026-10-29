@@ -73,5 +73,5 @@ class DecisionAuthority:
 
     def check_abort(self, txid: str) -> None:
         _, _, _, status = self._record(txid)
-        if status not in ("PREPARING", "PREPARED", "ABORTED"):
-            raise PermissionError("cannot abort a durably decided transaction")
+        if status != "ABORTED":
+            raise PermissionError("abort requires a durable coordinator abort decision")
