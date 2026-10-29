@@ -447,20 +447,23 @@ class Coordinator:
         changes: dict[str, str] = {}
         rows = self.db.execute(
             "SELECT txid,status FROM tx WHERE status IN "
-            "('PREPARING','PREPARED','COMMIT_DECIDED') ORDER BY rowid"
+            "('PREPARING','PREPARED','COMMIT_DECIDED','ABORTED') ORDER BY rowid"
         ).fetchall()
         for txid, status in rows:
             if status == "COMMIT_DECIDED":
                 self._finish(txid)
                 changes[txid] = "COMPLETE"
             else:
-                # No COMMIT decision exists: no participant may have applied.
+                # ABORTED is a durable *abort decision*, not proof that every
+                # participant has acknowledged it. Persist the decision FIRST.
+                # On a crash mid-abort, replay all ABORTED rows on next start.
+                if status != "ABORTED":
+                    self._set_status(txid, status, "ABORTED")
                 for domain in DOMAINS:
                     path = self.root / (domain + ".sqlite3")
                     if path.exists():
                         with self._participant(domain) as participant:
                             participant.abort(txid)
-                self._set_status(txid, status, "ABORTED")
                 changes[txid] = "ABORTED"
         return changes
 
