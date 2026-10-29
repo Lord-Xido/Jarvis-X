@@ -24,7 +24,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 
 from reference.ip_provenance.freeze import (
     FROZEN_COMMIT, FROZEN_GIT_TREE,
-    canonical_bytes, capture, verify_against_anchor,
+    canonical_bytes, capture, verify_against_anchor, verify_manifest_digest,
 )
 
 SCHEMA = "JarvisX/IPFreeze/Ed25519DetachedSignature1"
@@ -50,6 +50,7 @@ def _verified_manifest(path: Path) -> bytes:
     raw = path.read_bytes()
     if raw != canonical_bytes(expected):
         raise ValueError("manifest is not the exact anchored frozen source inventory")
+    verify_manifest_digest(raw)
     return raw
 
 
