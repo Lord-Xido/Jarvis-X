@@ -32,6 +32,13 @@ add_executable(jarvisx-runtime
 jarvisx_include_runtime(jarvisx-runtime)
 jarvisx_harden(jarvisx-runtime)
 
+# Standalone, deterministic 1000-transition neural 3D feedback reference.
+# Kept separate from existing exact-bit fixed-point and DOCX VM contracts.
+add_executable(jarvisx-recursive3d-1000
+    src/jarvis_x_1000_loop.cpp
+)
+jarvisx_harden(jarvisx-recursive3d-1000)
+
 add_executable(jarvisx-autoencoder3d
     src/autoencoder3d_main.cpp
 )
@@ -419,3 +426,18 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/dm3d_operational.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/master_equation.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/streaming_framebuffer3d.cmake)
+
+# Neural feedback convergence is empirical; exact archive restoration and
+# deterministic 1000-step traces are tested as separate invariants.
+add_test(NAME recursive3d-1000-selftest
+    COMMAND jarvisx-recursive3d-1000 selftest)
+set_tests_properties(recursive3d-1000-selftest PROPERTIES TIMEOUT 120)
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME recursive3d-1000-end-to-end
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_recursive3d_1000.py
+            $<TARGET_FILE:jarvisx-recursive3d-1000>)
+    set_tests_properties(recursive3d-1000-end-to-end PROPERTIES TIMEOUT 120)
+endif()

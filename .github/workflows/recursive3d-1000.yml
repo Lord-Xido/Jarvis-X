@@ -1,0 +1,32 @@
+name: recursive3d-1000-reference
+
+on:
+  push:
+    paths:
+      - 'cpp_runtime/src/jarvis_x_1000_loop.cpp'
+      - 'cpp_runtime/tests/test_recursive3d_1000.py'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/recursive3d-1000.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/src/jarvis_x_1000_loop.cpp'
+      - 'cpp_runtime/tests/test_recursive3d_1000.py'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/recursive3d-1000.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run deterministic 1000-step regression
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Wconversion -Wshadow \
+            cpp_runtime/src/jarvis_x_1000_loop.cpp -o /tmp/jarvisx-recursive3d-1000
+          python3 cpp_runtime/tests/test_recursive3d_1000.py /tmp/jarvisx-recursive3d-1000
