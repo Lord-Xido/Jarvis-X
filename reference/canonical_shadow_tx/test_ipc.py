@@ -256,5 +256,123 @@ with IPCCoordinator(sys.argv[1]) as c:
         self.assertNotIn(SECRET, result.stdout + result.stderr)
 
 
+    def test_authenticated_caller_cannot_forge_prepare_without_coordinator_intent(self):
+        frame = self.frames[0]
+        peer = PeerClient(self.root, "ann", SECRET)
+        with self.assertRaises(RuntimeError):
+            peer.call("prepare", {
+                "txid": "rogue", "epoch": 0, "token": 1,
+                "frame": {"domain": frame.domain, "profile": frame.profile,
+                          "payload_hex": frame.payload.hex()},
+            })
+        self.assertIsNone(peer.call("status", {"txid": "rogue"})["status"])
+        self.assertIsNone(peer.call("state")["frame"])
+
+    def test_transport_secret_cannot_authorize_commit_or_abort_before_decision(self):
+        with self.coordinator() as coordinator:
+            coordinator.prepare("unapproved", self.frames)
+            token = coordinator._record("unapproved")[1]
+            for domain in DOMAINS:
+                with self.subTest(domain=domain):
+                    peer = PeerClient(self.root, domain, SECRET)
+                    with self.assertRaises(RuntimeError):
+                        peer.call("commit", {"txid": "unapproved", "token": token})
+                    with self.assertRaises(RuntimeError):
+                        peer.call("abort", {"txid": "unapproved"})
+                    self.assertIsNone(peer.call("state")["frame"])
+                    self.assertEqual(peer.call("status", {"txid": "unapproved"})["status"],
+                                     "PREPARED")
+            self.assertEqual(coordinator.decision_status("unapproved"), "PREPARED")
+            self.assertEqual(coordinator.recover(), {"unapproved": "ABORTED"})
+        for domain in DOMAINS:
+            peer = PeerClient(self.root, domain, SECRET)
+            self.assertIsNone(peer.call("state")["frame"])
+            self.assertEqual(peer.call("status", {"txid": "unapproved"})["status"],
+                             "ABORTED")
+
+    def test_signed_prepare_must_match_exact_durable_manifest_bytes(self):
+        with self.coordinator() as coordinator:
+            coordinator.prepare("exact-manifest", self.frames)
+            token = coordinator._record("exact-manifest")[1]
+            original = self.frames[0]
+            altered = bytes([original.payload[0] ^ 1]) + original.payload[1:]
+            peer = PeerClient(self.root, "ann", SECRET)
+            with self.assertRaises(RuntimeError):
+                peer.call("prepare", {
+                    "txid": "exact-manifest", "epoch": 0, "token": token,
+                    "frame": {"domain": "ann", "profile": original.profile,
+                              "payload_hex": altered.hex()},
+                })
+            self.assertEqual(peer.call("status", {"txid": "exact-manifest"})["status"],
+                             "PREPARED")
+            coordinator.recover()
+
+    def test_decided_commit_cannot_be_aborted_by_authenticated_bystander(self):
+        with self.coordinator() as coordinator:
+            coordinator.prepare("decided", self.frames)
+            def inject(point):
+                if point == "after_decision":
+                    raise OSError("stop after coordinator decision")
+            with self.assertRaises(OSError):
+                coordinator.approve("decided", approve=True, fault=inject)
+            token = coordinator._record("decided")[1]
+            peer = PeerClient(self.root, "ann", SECRET)
+            with self.assertRaises(RuntimeError):
+                peer.call("abort", {"txid": "decided"})
+            self.assertEqual(peer.call("status", {"txid": "decided"})["status"],
+                             "PREPARED")
+            # A matching durable decision now allows idempotent commit replay.
+            self.assertTrue(peer.call("commit", {"txid": "decided", "token": token})
+                            ["committed"])
+            self.assertEqual(coordinator.recover(), {"decided": "COMPLETE"})
+            self.assertEqual(coordinator.coordinated_read("decided"), self.frames)
+
+    def test_abort_decision_replays_after_participant_downtime(self):
+        with self.coordinator() as coordinator:
+            coordinator.prepare("abort-restart", self.frames)
+            # Persist a simulated coordinator ABORT decision before applying
+            # participant aborts, exactly the boundary recover() now uses.
+            coordinator._set_status("abort-restart", "PREPARED", "ABORTED")
+        self.stop("os")
+        with self.coordinator() as coordinator:
+            with self.assertRaises(OSError):
+                coordinator.recover()
+            self.assertEqual(coordinator.decision_status("abort-restart"), "ABORTED")
+        self.start("os")
+        with self.coordinator() as coordinator:
+            self.assertEqual(coordinator.recover(), {"abort-restart": "ABORTED"})
+            self.assertEqual(coordinator._meta()[0], 0)
+        for domain in DOMAINS:
+            peer = PeerClient(self.root, domain, SECRET)
+            self.assertIsNone(peer.call("state")["frame"])
+            self.assertEqual(peer.call("status", {"txid": "abort-restart"})["status"],
+                             "ABORTED")
+
+    def test_tampered_coordinator_decision_hash_cannot_authorize_remote_commit(self):
+        with self.coordinator() as coordinator:
+            coordinator.prepare("tampered", self.frames)
+            def stop(point):
+                if point == "after_decision":
+                    raise OSError("durable decision produced")
+            with self.assertRaises(OSError):
+                coordinator.approve("tampered", approve=True, fault=stop)
+            token = coordinator._record("tampered")[1]
+            coordinator.db.execute(
+                "UPDATE tx SET candidate_hash=? WHERE txid=?",
+                ("f" * 64, "tampered"),
+            )
+            with self.assertRaises(RuntimeError):
+                PeerClient(self.root, "ann", SECRET).call(
+                    "commit", {"txid": "tampered", "token": token}
+                )
+            self.assertEqual(coordinator.decision_status("tampered"),
+                             "COMMIT_DECIDED")
+            for domain in DOMAINS:
+                self.assertIsNone(
+                    PeerClient(self.root, domain, SECRET).call("state")["frame"]
+                )
+
+
+
 if __name__ == "__main__":
     unittest.main()
