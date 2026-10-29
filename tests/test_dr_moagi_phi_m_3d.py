@@ -117,6 +117,7 @@ def test_graph_rejects_too_many_nodes():
 
 
 def test_fast_analytic_matches_quadrature_moving_gaussian():
+    pytest.importorskip("scipy", reason="explicit analytic mode requires optional SciPy")
     from jarvisx.dr_moagi_phi_m_3d import (
         integrated_gradient_hessian_analytic,
         integrated_gradient_hessian_quadrature,
@@ -145,6 +146,7 @@ def test_nearly_stationary_source_uses_stable_reference_limit():
 
 
 def test_method_selection_is_explicit():
+    pytest.importorskip("scipy", reason="explicit analytic mode requires optional SciPy")
     from jarvisx.dr_moagi_phi_m_3d import integrated_gradient_hessian
     x = np.array([[0.4, -0.3, 0.1]])
     g_a, h_a = integrated_gradient_hessian(x, 1.2, method="analytic")
