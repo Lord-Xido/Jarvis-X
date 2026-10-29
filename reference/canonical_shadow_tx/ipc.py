@@ -23,6 +23,7 @@ import time
 
 from reference.canonical_shadow_tx.bridge import DOMAINS, DomainFrame, encoded
 from reference.canonical_shadow_tx.multiprocess import Coordinator, Participant
+from reference.canonical_shadow_tx.decision_authority import DecisionAuthority
 
 PROTOCOL = "CanonicalShadowIPC/1"
 MAX_MESSAGE = 1_048_576
@@ -226,6 +227,7 @@ class ParticipantService:
         assert isinstance(message, dict)
         action, args = message["action"], message["args"]
         p = self.participant
+        authority = DecisionAuthority(self.root, self.domain)
         if action == "state" and not args:
             version, fence, frame = p.state()
             return {"version": version, "fence": fence,
@@ -233,8 +235,9 @@ class ParticipantService:
         if action == "verify" and not args:
             return {"verified": p.verify()}
         if action == "prepare" and set(args) == {"txid", "epoch", "token", "frame"}:
-            p.prepare(args["txid"], args["epoch"], args["token"],
-                      _parse_frame(args["frame"]))
+            frame = _parse_frame(args["frame"])
+            authority.check_prepare(args["txid"], args["epoch"], args["token"], frame)
+            p.prepare(args["txid"], args["epoch"], args["token"], frame)
             return {"prepared": True}
         if action == "matches_prepared" and set(args) == {
                 "txid", "epoch", "token", "frame"}:
@@ -242,9 +245,11 @@ class ParticipantService:
                 args["txid"], args["epoch"], args["token"], _parse_frame(args["frame"])
             )}
         if action == "commit" and set(args) == {"txid", "token"}:
+            authority.check_commit(args["txid"], args["token"])
             p.commit(args["txid"], args["token"])
             return {"committed": True}
         if action == "abort" and set(args) == {"txid"}:
+            authority.check_abort(args["txid"])
             p.abort(args["txid"])
             return {"aborted": True}
         if action == "status" and set(args) == {"txid"}:
@@ -260,6 +265,8 @@ def serve(root: Path, domain: str) -> None:
     os.umask(0o077)
     root = root.resolve()
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if root.is_symlink() or not root.is_dir() or (root.stat().st_mode & 0o077):
+        raise PermissionError("IPC directory must be a private non-symlink directory")
     target = root / (domain + ".sock")
     if target.exists() or target.is_symlink():
         raise RuntimeError("existing socket path; refusing silent unlink")
