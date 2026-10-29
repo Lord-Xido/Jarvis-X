@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import time
 from pathlib import Path
@@ -95,7 +96,7 @@ def load_models(html_path: Path):
 
 @torch.inference_mode()
 def generate(model, streams: int, seed: int, temperature: float, topk: int):
-    if streams < 1 or not 0.0 < temperature or topk < 1:
+    if streams < 1 or not math.isfinite(temperature) or temperature <= 0 or topk < 1:
         raise ValueError('streams and topk must be positive, temperature > 0')
     count = model.embedding.num_embeddings
     previous = torch.zeros(streams, dtype=torch.long)
@@ -121,36 +122,66 @@ def feedback(model, ids: torch.Tensor, iterations: int = 8, gain: float = 0.25):
     initial = model.encode(ids)
     latent = initial.clone()
     history = []
+    previous = None
+    two_steps_ago = None
     for stage in range(iterations + 1):
         logits = model.decode_logits(latent)
         reconstructed = logits.argmax(-1)
         history.append({'stage': stage,
                         'accuracy': float((reconstructed == ids).float().mean()),
                         'latent_norm': float(torch.linalg.vector_norm(latent)),
-                        'delta_from_initial': float(torch.linalg.vector_norm(latent - initial))})
+                        'delta_from_initial': float(torch.linalg.vector_norm(latent - initial)),
+                        'one_step_residual_norm': None if previous is None else
+                            float(torch.linalg.vector_norm(latent - previous)),
+                        'two_step_residual_norm': None if two_steps_ago is None else
+                            float(torch.linalg.vector_norm(latent - two_steps_ago))})
         if stage < iterations:
-            latent = (1.0 - gain) * latent + gain * model.reencode_soft(logits)
-            if not torch.isfinite(latent).all():
+            candidate = (1.0 - gain) * latent + gain * model.reencode_soft(logits)
+            if not torch.isfinite(candidate).all():
                 raise ArithmeticError('nonfinite latent state')
+            two_steps_ago, previous = previous, latent
+            latent = candidate
     return initial, latent, history
 
 
 @torch.inference_mode()
 def run(html_path: Path, streams: int = 1000, seed: int = 20261029,
         temperature: float = 0.8, topk: int = 4, iterations: int = 8):
+    pipeline_start = time.perf_counter()
     predictor, autoencoder, vocabulary, reference = load_models(html_path)
     ids, generation_seconds = generate(predictor, streams, seed, temperature, topk)
+    autoencoder_start = time.perf_counter()
     logits, latent = autoencoder(ids)
     decoded = logits.argmax(-1)
     original_bytes = ids.to(torch.uint8)
     approximate_bytes = decoded.to(torch.uint8)
     residual = original_bytes ^ approximate_bytes
     lossless = bool(torch.equal(approximate_bytes ^ residual, original_bytes))
+    autoencoder_seconds = time.perf_counter() - autoencoder_start
+    feedback_start = time.perf_counter()
     _, recurrent, trajectory = feedback(autoencoder, ids[:1], iterations)
+    feedback_seconds = time.perf_counter() - feedback_start
+    pipeline_seconds = time.perf_counter() - pipeline_start
+    input_bytes = original_bytes.numel() * original_bytes.element_size()
+    latent_bytes = latent.numel() * latent.element_size()
+    residual_bytes = residual.numel() * residual.element_size()
+    payload_floor_bytes = latent_bytes + residual_bytes
     return {'kind': 'learned synthetic ANN + 3D conv autoencoder',
             'vocabulary_size': len(vocabulary), 'streams': streams,
             'generated_tokens': ids.numel(), 'generation_seconds': generation_seconds,
             'generation_only_tokens_per_second': ids.numel() / generation_seconds,
+            'autoencoder_seconds': autoencoder_seconds,
+            'feedback_single_stream_seconds': feedback_seconds,
+            'pipeline_wall_seconds_excluding_json': pipeline_seconds,
+            'pipeline_tokens_per_second_excluding_json': ids.numel() / pipeline_seconds,
+            'storage_floor': {
+                'input_token_id_bytes': input_bytes,
+                'float32_latent_bytes': latent_bytes,
+                'xor_residual_bytes': residual_bytes,
+                'payload_floor_bytes_excluding_model': payload_floor_bytes,
+                'payload_floor_ratio': payload_floor_bytes / input_bytes,
+                'compressed_without_model_weights': payload_floor_bytes < input_bytes,
+            },
             'decoder_accuracy': float((decoded == ids).float().mean()),
             'residual_roundtrip_exact': lossless,
             'latent_shape': list(latent.shape), 'finite_latent': bool(torch.isfinite(recurrent).all()),
@@ -158,7 +189,7 @@ def run(html_path: Path, streams: int = 1000, seed: int = 20261029,
             'first_stream_text': ''.join(vocabulary[i] for i in ids[0].tolist()),
             'reference_seed': reference.get('reproducible_seed'),
             'limitations': ['one-token context and 27-symbol vocabulary',
-                            'generation-only timing; no GPU benchmark',
+                            'generation-only and CPU pipeline timing; no GPU benchmark; JSON serialization excluded',
                             'XOR residual requires extra storage',
                             'no mathematically established fixed-point contraction']}
 
