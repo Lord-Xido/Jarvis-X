@@ -18,6 +18,7 @@ Repository: https://github.com/Lord-Xido/Jarvis-X
 | Cryptographic content hash | SHA-256, NOT only Git SHA-1 |
 | Fixed SHA-256 Merkle root | 14f701faa0cf515b8863d1cf09dfa36ecae8582cf1ee6ffe6f9f35ab606fbebb |
 | Canonical full manifest SHA-256 | 3d30ff365b62636bbf85206a62a07cf84b91a7f048d82165f525411804db85e0 |
+| Exhaustive 625-case 3D atlas Merkle SHA-256 | bb20575a768481761dfa65eb6e8d1353887b5b9c8b3afa5136b35fb35a5a8df6 |
 
 The archived branch is an additional reference, not an immutable protected reference. A Git branch can be forcibly moved or deleted by a sufficiently authorized actor. The **specific commit and tree objects**, together with the published SHA-256 content manifest and fixed SHA-256 Merkle root, are the verification anchors. Keep independent offline backups.
 
@@ -85,9 +86,9 @@ A full Git checkout including the frozen commit is required. From the repository
     python -m reference.ip_provenance.math_exact > ip-3d-exact-mathematics.json
     python -m unittest discover -s reference/ip_provenance -p 'test_*.py' -v
 
-The two SHA-256 values in this document are also pinned as separate files at docs/ip/2026-10-29-root.sha256 and docs/ip/2026-10-29-manifest.sha256.
+The three SHA-256 roots in this document are pinned as separate files: docs/ip/2026-10-29-root.sha256, docs/ip/2026-10-29-manifest.sha256, and docs/ip/2026-10-29-3d-atlas.sha256.
 
-CI repeats the tests, reproduces the entire full-tree SHA-256 manifest, checks both fixed anchors and archives the source-inventory and mathematical proof JSONs.
+CI repeats the tests, reproduces the entire full-tree SHA-256 manifest, checks all fixed anchors and archives the source-inventory and mathematical proof JSONs.
 
 ## 5. Optional owner-held detached digital signature
 
