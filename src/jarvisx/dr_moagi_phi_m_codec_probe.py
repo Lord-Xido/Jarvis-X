@@ -58,6 +58,7 @@ def _run_once(codec: GridTokenCodec, text: str, config: ProbeConfig, mode: str,
     n = len(x)
     if n == 0 or n > phi_config.max_points:
         raise ValueError("token count exceeds operator budget")
+    recovered: np.ndarray
     if mode == "baseline":
         packed = np.asarray(x, dtype="<f4").tobytes()
         recovered = np.frombuffer(packed, dtype="<f4").reshape(-1, 3).astype(np.float64)
