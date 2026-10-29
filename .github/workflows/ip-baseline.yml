@@ -1,0 +1,80 @@
+name: Jarvis X exact IP baseline SHA256 witness
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'reference/ip_provenance/**'
+      - 'docs/ip/**'
+      - '.github/workflows/ip-baseline.yml'
+  pull_request:
+    paths:
+      - 'reference/ip_provenance/**'
+      - 'docs/ip/**'
+      - '.github/workflows/ip-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-bitwise-ip-baseline:
+    name: Frozen Git tree / SHA256 Merkle / exact 3D math
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install signing verifier dependency
+        run: python -m pip install 'cryptography>=43.0'
+      - name: Verify deterministic Merkle, exact 3D and detached signature tests
+        env:
+          PYTHONPATH: '.:src'
+        run: python -m unittest discover -s reference/ip_provenance -p 'test_*.py' -v
+      - name: Capture every frozen Git blob in independent SHA-256 inventory
+        env:
+          PYTHONPATH: '.:src'
+        run: |
+          python -m reference.ip_provenance.freeze --out ip-frozen-baseline-manifest.json
+      - name: Require pinned SHA-256 root and bytewise identical full inventory
+        env:
+          PYTHONPATH: '.:src'
+        run: |
+          python -m reference.ip_provenance.freeze \
+            --require-anchor \
+            --verify ip-frozen-baseline-manifest.json
+      - name: Verify exact three-axis lattice, 625 states and 1000 rational iterations
+        env:
+          PYTHONPATH: '.:src'
+        run: |
+          python -m reference.ip_provenance.math_exact > ip-3d-exact-mathematics.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('ip-3d-exact-mathematics.json').read_text())
+          assert p['geometry']['signed_volume_exact'] == {'numerator': '-125', 'denominator': '3'}
+          assert p['codec']['status_configurations_exhaustively_verified'] == 625
+          assert p['exact_contraction']['steps_executed_exactly'] == 1000
+          assert p['exact_contraction']['rational_proof'] == 'PASS'
+          assert p['codec']['bit_identical_reconstruction'] is True
+          assert p['production_deployment'] == 'BLOCKED'
+          print(json.dumps({
+            'status': 'PASS',
+            'tetrahedron': p['geometry']['signed_volume_exact'],
+            'status_atlas_merkle_sha256': p['codec']['status_atlas_merkle_sha256'],
+            'iterations': 1000, 'production': 'BLOCKED'
+          }, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jarvisx-ip-frozen-source-and-3d-proof
+          path: |
+            ip-frozen-baseline-manifest.json
+            ip-3d-exact-mathematics.json
+          if-no-files-found: error
+          retention-days: 90
