@@ -134,3 +134,7 @@ def test_meta_lattice_is_protected(monkeypatch):
     response, calls = call_gate(monkeypatch, "GET", "/v1/os/meta/lattice", configured=TOKEN)
     assert response.status_code == 401
     assert not calls
+
+def test_non_ascii_configuration_fails_closed():
+    assert authorise_bearer("Bearer " + "x" * 32, "é" * 32) == 503
+    assert authorise_bearer("Bearer é", TOKEN) == 401
