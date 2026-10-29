@@ -71,6 +71,12 @@ phi_m = [
     "numpy>=1.24,<2.3",
     "scipy>=1.11,<2",
 ]
+phi_m_ae = [
+    "numpy>=1.24,<2.3",
+    "scipy>=1.11,<2",
+    "torch>=2.4",
+    "matplotlib>=3.8",
+]
 
 [project.urls]
 Homepage = "https://github.com/Lord-Xido/Jarvis-X"
