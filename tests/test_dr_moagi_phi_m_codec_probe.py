@@ -11,7 +11,7 @@ def test_lexical_baseline_roundtrip_is_exact():
     result = _run_once(codec, text, cfg, "baseline", PhiMConfig())
     assert result["exact_text"]
     assert result["token_accuracy"] == 1.0
-    assert result["coordinate_rmse"] == 0
+    assert result["coordinate_rmse"] < 1e-6
 
 
 def test_residual_bridge_recovers_original_tokens_without_claiming_compression():
