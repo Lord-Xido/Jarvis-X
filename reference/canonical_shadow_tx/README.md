@@ -38,3 +38,35 @@ A dedicated GitHub workflow validates real imported backend behavior (not mocks 
 - **Only one bounded demonstration:** Arithmetic oracle uses a known 19+23 program; OS 8³ demo; ANN stored 64-token reference; ENV1 4³ cube. A production adapter must add general program/geometry coverage, authenticated operation, version negotiation and multi-domain durable commit/rollback protocols before authority promotion.
 
 The src/jarvisx imports, live control-plane routes, persistence, and model weights are unchanged. This is a forward-compatible research bridge, not a production migration.
+
+
+## Phase 4: Durable SQLite shadow-store laboratory (ADR-016 issue #425)
+
+The companion implementation in durable.py is a **single SQLite database** with WAL journaling and synchronous=FULL. It persists four typed backend snapshots, prepared proposals, atomic commit receipts and a verifiable hash chain.
+
+**Semantic boundary:** SQLite commits the four coordinator-owned logical namespaces together because all writes occur inside ONE SQLite transaction. It does **not** commit live VM, OS, ANN or other independently owned process state. The observed backend instances remain isolated and ephemeral. This is a bounded *single-store* transaction laboratory, not cross-process ACID, two-phase commit, distributed consensus or an automatic migration.
+
+### State machine and sequence
+
+    NEW -> PREPARED (durably persisted candidate, current state untouched)
+    PREPARED -> COMMITTED (explicit approval, epoch/hash check, one SQL transaction)
+    PREPARED -> ABORTED (explicit abort, no current-state changes)
+    COMMITTED -> COMMITTED (retry returns the same receipt)
+    PREPARED + concurrent epoch advance -> STALE (manual abort/reprepare needed)
+
+- prepare(txid, frames) verifies the same four independent backend outputs as CanonicalShadowTx/1, records candidate bytes, source epoch/hash and versioned geometry profiles. At most 32 transactions may be outstanding.
+- commit(txid, approve=True) uses BEGIN IMMEDIATE, validates and rechecks candidate evidence, writes every domain inside one SQL transaction, appends a receipt, moves the epoch and commits the WAL in one SQLite transaction. An exception or process termination before COMMIT rolls the whole database transaction back on reopen.
+- Crashes **after** SQLite COMMIT may prevent return to caller but not the durable decision; a retry using the same transaction ID returns the stored receipt.
+- abort(txid) rejects a pending proposal and persists the decision. Prepared records are deliberately **not** replayed/committed automatically on restart, because approval authority may have changed.
+- Every open executes SQLite quick_check and verifies the current snapshots, before/after hash chain, commit sequence and receipt metadata. Corrupt state or journal causes a fail-closed exception. SHA-256 is an integrity checksum, not proof against a malicious local administrator who can rewrite both data and hashes.
+- Concurrent SQLite writers are serialized by BEGIN IMMEDIATE. Changes between prepare and commit are rejected as stale (epoch and state hash compare-and-swap).
+
+The dedicated CI tests process death using os._exit at each of four domain writes, before SQL COMMIT and after SQL COMMIT; reopens the same database and proves either **all four** coordinator-owned snapshots committed or **none** did. Fault injection also tests a simulated I/O exception, stale writers, bad manifests, manual abort and tampered journal/state.
+
+**Reproduction:**
+
+    python -m unittest discover -s reference/canonical_shadow_tx -p test_durable.py -v
+
+The workflow uploads canonical-durable-receipt.json after generating a real VM/OS/ANN/geometry batch and reopening the database to verify its persisted transaction. Performance, durability and forensic guarantees are limited by the SQLite filesystem, operating system and storage flush semantics; the CI process-kill test does **not** emulate sudden physical power loss.
+
+**Next production blockers:** Adapters must implement independent prepare/apply/recovery ownership and either a distributed commit protocol with explicit read visibility guarantees or a saga with compensating actions; the single-DB reference cannot provide cross-service atomic visibility. Further work needs authenticated initiators, hostile-input fuzzing, long-running concurrency tests, a durable WAL recovery strategy for all backends, independent external evidence and a human security review before changes to live services.
