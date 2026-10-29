@@ -258,7 +258,7 @@ It does not provide a shell-command execution primitive.
 Run:
 
 ```bash
-jarvisx-dr-moagi-os serve --host 0.0.0.0 --port 10000
+jarvisx-dr-moagi-os serve --host 127.0.0.1 --port 10000
 ```
 
 | Endpoint | Purpose |
@@ -310,7 +310,7 @@ maintaining a hidden browser-side simulation of OS state.
 docker build -f deploy/dr_moagi_os/Dockerfile -t jarvisx-dr-moagi-os .
 
 docker run --rm \
-  -p 10000:10000 \
+  -p 127.0.0.1:10000:10000 \
   -v jarvisx-state:/var/lib/jarvisx \
   -e JARVISX_STATE_DIR=/var/lib/jarvisx \
   jarvisx-dr-moagi-os

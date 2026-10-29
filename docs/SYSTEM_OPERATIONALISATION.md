@@ -9,14 +9,14 @@ After installing the package, the single entrypoint is:
 ```bash
 jarvisx-operationalize doctor
 jarvisx-operationalize smoke
-jarvisx-operationalize serve --host 0.0.0.0 --port 10000
+jarvisx-operationalize serve --host 127.0.0.1 --port 10000
 ```
 
 `doctor` verifies that the canonical Python control-plane surfaces are importable.
 `smoke` performs bounded deterministic execution across the transactional VM,
 Dr Moagi OS kernel, verification journal, and FastAPI control plane. It does not
 claim external deployment, hardware acceleration, or unmeasured performance.
-`serve` launches the authoritative bounded Dr Moagi OS HTTP control plane.
+`serve` launches the bounded Dr Moagi OS HTTP control plane on loopback by default. **The current main-branch API lacks built-in operator authentication.** Never publish its control port to an untrusted network; passing an explicit public `--host` is unsafe until reviewed authentication and transport safeguards are installed. The Docker image intentionally listens on all interfaces *inside the container* to allow health checks and locally published ports; host publishing must remain `127.0.0.1`. Loopback is a defence-in-depth default, not a security certification.
 
 ## Container deployment
 
@@ -24,7 +24,7 @@ The repository root `Dockerfile` is the canonical production image:
 
 ```bash
 docker build -t jarvisx .
-docker run --rm -p 10000:10000 jarvisx
+docker run --rm -p 127.0.0.1:10000:10000 jarvisx
 ```
 
 For persistent state and hardened local orchestration:
