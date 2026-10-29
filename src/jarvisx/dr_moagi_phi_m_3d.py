@@ -4,7 +4,7 @@ Phi_M(x,t) = tanh(alpha*cos(omega*||x||)*x + integral_0^t grad_x z(x,tau) dtau).
 The source image does not specify z or sigma. This module explicitly chooses a
 moving Gaussian scalar potential z and componentwise tanh. The graph bridge is
 candidate-only: existing authoritative geometric runtimes are never mutated.
-Requires NumPy (pip install -e '.[graphics]').
+Requires NumPy; SciPy enables acceleration (pip install -e '.[phi_m]').
 """
 
 from __future__ import annotations
@@ -96,13 +96,13 @@ def _gaussian(
 def potential(points: object, t: float, config: PhiMConfig = PhiMConfig()) -> np.ndarray:
     x, shape = _points(points, config)
     z, _, _ = _gaussian(x, np.array([_time(t, config)]), config)
-    return z[0].reshape(shape[:-1])
+    return np.asarray(z[0].reshape(shape[:-1]), dtype=np.float64)
 
 
 def gradient(points: object, t: float, config: PhiMConfig = PhiMConfig()) -> np.ndarray:
     x, shape = _points(points, config)
     _, grad, _ = _gaussian(x, np.array([_time(t, config)]), config)
-    return grad[0].reshape(shape)
+    return np.asarray(grad[0].reshape(shape), dtype=np.float64)
 
 
 def integrated_gradient_hessian_quadrature(
@@ -222,13 +222,13 @@ def phi_m(points: object, t: float, config: PhiMConfig = PhiMConfig()) -> np.nda
     g, _ = integrated_gradient_hessian(x, t, config)
     r = np.linalg.norm(x, axis=1, keepdims=True)
     u = config.alpha * np.cos(config.omega * r) * x + g
-    return np.tanh(u).reshape(shape)
+    return np.asarray(np.tanh(u).reshape(shape), dtype=np.float64)
 
 
 def spatial_jacobian(
     points: object, t: float, config: PhiMConfig = PhiMConfig()
 ) -> np.ndarray:
-    """Analytic d(Phi_M)/d(x) of the quadrature-defined numerical map."""
+    """Analytic d(Phi_M)/d(x), using the selected field-integral backend."""
     x, shape = _points(points, config)
     g, h = integrated_gradient_hessian(x, t, config)
     r = np.linalg.norm(x, axis=1)
@@ -241,7 +241,7 @@ def spatial_jacobian(
     u = scale[:, None] * x + g
     y = np.tanh(u)
     jacobian = (1.0 - y**2)[:, :, None] * du
-    return jacobian.reshape(shape[:-1] + (3, 3))
+    return np.asarray(jacobian.reshape(shape[:-1] + (3, 3)), dtype=np.float64)
 
 
 def temporal_derivative(
@@ -249,7 +249,7 @@ def temporal_derivative(
 ) -> np.ndarray:
     """d(Phi_M)/dt = (1-Phi_M**2) * grad_x z(x,t), up to quadrature error."""
     y = phi_m(points, t, config)
-    return (1.0 - y**2) * gradient(points, t, config)
+    return np.asarray((1.0 - y**2) * gradient(points, t, config), dtype=np.float64)
 
 
 def static_source_integral(
@@ -266,7 +266,7 @@ def static_source_integral(
                 t + config.modulation * (1 - np.cos(config.frequency * t))
                 / config.frequency)
     z0 = config.amplitude * np.exp(-np.sum(d * d, axis=1) / (2.0 * s2))
-    return (-z0[:, None] * d / s2 * duration).reshape(shape)
+    return np.asarray((-z0[:, None] * d / s2 * duration).reshape(shape), dtype=np.float64)
 
 
 def graph_candidate(
