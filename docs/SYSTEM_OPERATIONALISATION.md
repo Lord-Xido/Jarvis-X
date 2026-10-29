@@ -16,7 +16,7 @@ jarvisx-operationalize serve --host 127.0.0.1 --port 10000
 `smoke` performs bounded deterministic execution across the transactional VM,
 Dr Moagi OS kernel, verification journal, and FastAPI control plane. It does not
 claim external deployment, hardware acceleration, or unmeasured performance.
-`serve` launches the bounded Dr Moagi OS HTTP control plane on loopback by default. **The current main-branch API lacks built-in operator authentication.** Never publish its control port to an untrusted network; passing an explicit public `--host` is unsafe until reviewed authentication and transport safeguards are installed. The Docker image intentionally listens on all interfaces *inside the container* to allow health checks and locally published ports; host publishing must remain `127.0.0.1`. Loopback is a defence-in-depth default, not a security certification.
+`serve` launches the bounded Dr Moagi OS HTTP control plane on loopback by default. Protected `/v1/os/` state reads and all state-changing HTTP methods require `Authorization: Bearer <token>` with `JARVISX_OS_CONTROL_TOKEN` configured in the service environment. Missing or short configuration disables protected controls (HTTP 503), and absent/invalid credentials return HTTP 401. Keep the host port published to `127.0.0.1`, and use TLS, network restrictions and secret rotation before any remote access. The Docker image intentionally listens on all interfaces **inside the container** for its locally published port. The legacy third-party-script browser viewer cannot safely store the operator token; use an authenticated API client for protected actions. This is a scoped control gate, not full application security certification.
 
 ## Container deployment
 
@@ -30,7 +30,7 @@ docker run --rm -p 127.0.0.1:10000:10000 jarvisx
 For persistent state and hardened local orchestration:
 
 ```bash
-docker compose -f compose.dr-moagi-os.yml up --build
+JARVISX_OS_CONTROL_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" docker compose -f compose.dr-moagi-os.yml up --build
 ```
 
 The service exposes `/healthz` on port 10000 and runs as an unprivileged user.

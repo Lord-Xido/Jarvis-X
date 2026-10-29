@@ -403,6 +403,7 @@ DR_MOAGI_OS_HTML = r"""<!DOCTYPE html>
         <input type="range" id="glow-slider" min="1.0" max="8.0" step="0.2" value="4.2">
       </div>
 
+      <div class="section-note" role="status">Security: mutating controls and state reads require an authenticated API client. This page loads third-party scripts and must not receive your operator token. Controls shown below cannot execute protected operations.</div>
       <button class="btn btn-primary btn-wide" id="execute-btn">⚡ EXECUTE VERIFIED OS STEP</button>
       <button class="btn btn-meta btn-wide" id="meta-btn">∞ TURN SYSTEM INWARD / OPTIMIZE</button>
       <div class="btn-grid">

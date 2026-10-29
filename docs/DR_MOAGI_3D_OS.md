@@ -281,6 +281,36 @@ jarvisx-dr-moagi-os serve --host 127.0.0.1 --port 10000
 | `POST /v1/os/import` | Verify/import exact DMOS2 packet |
 | `GET /metrics` | Prometheus-compatible gauges |
 
+### Security and authenticated operation
+
+The operating-control HTTP API now **fails closed** for state-changing HTTP
+methods (POST, PUT, PATCH, DELETE) and state-related API reads except explicitly public capability/status telemetry. Set the environment variable `JARVISX_OS_CONTROL_TOKEN` to a randomly
+generated string of at least 32 characters **before** starting the service.
+An unset or short token produces HTTP 503 for protected endpoints; missing or
+invalid credentials return HTTP 401. Example for a local development shell:
+
+```bash
+export JARVISX_OS_CONTROL_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+jarvisx-dr-moagi-os serve --host 127.0.0.1 --port 10000
+curl -H "Authorization: Bearer $JARVISX_OS_CONTROL_TOKEN" -X POST http://127.0.0.1:10000/v1/os/boot
+```
+
+Docker Compose requires `JARVISX_OS_CONTROL_TOKEN` to be set in the launching
+environment and binds the host port to **127.0.0.1**; Docker internally binds
+`0.0.0.0` to serve container networking. Do not expose an unauthenticated public
+reverse proxy or log the token. For remote access, use TLS, network restrictions
+and managed secret rotation. Treat `/v1/os/status`, `/metrics` and other
+unprotected read paths as telemetry that may be sensitive; limit network reachability.
+
+**Browser compatibility:** the legacy Three.js page loads third-party JavaScript,
+so the operator bearer token is intentionally **not** injected into that page.
+The page may display unauthenticated aggregate telemetry, but protected
+mutations and raw snapshots and meta-lattice reads require a separately authenticated API client.
+A future self-hosted, reviewed UI is needed before enabling browser mutations.
+
+This is a scoped access gate, **not** a complete identity/RBAC, rate-limiting,
+DoS protection, or hostile-input security assessment.
+
 ## 11. CLI
 
 Local execution:
@@ -313,6 +343,7 @@ docker run --rm \
   -p 127.0.0.1:10000:10000 \
   -v jarvisx-state:/var/lib/jarvisx \
   -e JARVISX_STATE_DIR=/var/lib/jarvisx \
+  -e JARVISX_OS_CONTROL_TOKEN \
   jarvisx-dr-moagi-os
 ```
 
