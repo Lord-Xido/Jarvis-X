@@ -151,3 +151,45 @@ The participant service now also rejects a group/world-accessible Unix socket di
 The first command emits a machine-readable JSON readiness inventory; the second **exits with code 2** because the required real-world production evidence is absent. CI checks this fail-closed behavior and uploads canonical-production-readiness.json alongside the shadow and recovery receipts. The build may be green while production deployment remains **BLOCKED**.
 
 A production release still requires independently owned live VM/OS/ANN adapters, genuine atomic read isolation or explicit compensating sagas, operator identity and authorization, leader fencing across host/network failures, storage power-loss qualification, signed release/operations/incident runbooks and external security assessment. See issue #425. **Do not close #425 or label these references production-grade solely because the existing CI passes.**
+
+
+## Phase 8: actual 3D geometric observability and mathematical verification
+
+The executable spatial witness in geometry_witness.py binds the *existing isolated* four-domain transaction coordinator to a **non-coplanar tetrahedral 3D state representation**. This is an observability/verification transform, not a new backend or a distributed atomicity guarantee.
+
+### Exact voxel geometry and bit-level reconstruction
+
+Each participant is pinned to one immutable lattice coordinate in an 8 × 8 × 8 U8 volume:
+
+| Domain | (x, y, z) |
+| --- | --- |
+| ANN | (1,1,1) |
+| ENV1 geometry | (6,6,1) |
+| OS | (6,1,6) |
+| CodexVM | (1,6,6) |
+
+The signed tetrahedron volume has magnitude 250/6 lattice-cubic units, nonzero, so these vertices span three independent spatial axes. For each domain index i in canonical ordered sequence (ANN, geometry, OS, VM), encode the state with byte 8*i + state_code + 1, where state codes are ABSENT=0, PREPARED=1, COMMITTED=2, ABORTED=3, UNREACHABLE=4. The other 508 voxels remain zero; invalid nonzero voxels are rejected at reconstruction.
+
+Exact X-fastest addressing is L(x,y,z) = x + 8*y + 64*z. The status lattice occupies 512 bytes. Encapsulation via the existing 84-byte SHA-256 checked DM3D-ENV1 header yields a **596-byte** binary output. A Morton-to-row-major-to-Morton roundtrip and full per-vertex inverse reconstruction are validated on every encoding. SHA-256 protects against accidental byte corruption, not against a malicious party that can replace both data and hashes.
+
+### Bounded 1000 inward steps without false computational claims
+
+Represent each domain's observed commit progress as z(0) = 1 for COMMITTED, 1/2 for PREPARED, and 0 otherwise. Define visual contraction toward the all-committed reference point:
+
+    z(k+1) = (z(k) + 1) / 2
+    z(k)   = 1 - 2^(-k) [1 - z(0)]
+    E(k)   = sum_i (1 - z_i(k))^2 = E(0) / 4^k
+    0 <= k <= 1000
+
+This is a closed-form **display-only** contraction with a mathematical fixed point; it does NOT execute 1000 ANN updates, automatically commit participants, converge a transactional system, accelerate hardware, or establish a learned encoder/decoder. The boolean logical_commit_fixed_point is true only when the **observed participant states** actually report COMMITTED across all four domains. For incomplete commits, geometrically approaching the all-committed visual target never elevates the transaction's completion status.
+
+### Real end-to-end stage evidence
+
+    python -m unittest discover -s reference/canonical_shadow_tx -p test_geometry_witness.py -v
+    python -m reference.canonical_shadow_tx.geometry_smoke --out canonical-geometry3d-evidence
+
+The smoke path runs the real isolated VM, sparse OS, trained synthetic ANN and 3D geometry observers. It then prepares four SQLite participants, interrupts after ANN applies, reads a **partially committed** 3D witness, and restarts coordinator replay to complete. It generates a JSON + binary ENV1 + isometric SVG triplet for PREPARED, COMMIT_DECIDED, and COMPLETE, along with summary.json. A separate signed Unix-socket subprocess test exercises exactly the same geometric witness through the authenticated participant-process boundary.
+
+The witness checks actual durable transaction status, participant-domain state hashes/profiles, epochs, monotonic fencing tokens, envelope inversion and canonical candidate manifest. Intermediate stages can have valid structural evidence, but complete=false remains mandatory. The raw-state reads are not transactionally isolated across independent processes; only coordinator-gated COMPLETE is eligible for a completed commit receipt.
+
+**Safety:** Geometry snapshots are read-only. No production services, financial controls, vehicles, clinical patient records, live credentials or hardware devices are connected. The existing fail-closed production readiness gate remains BLOCKED and issue #425 must remain open until the independent production evidence is available.
