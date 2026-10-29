@@ -267,6 +267,7 @@ def serve(root: Path, domain: str) -> None:
 
     class Handler(socketserver.StreamRequestHandler):
         def handle(self) -> None:
+            self.request.settimeout(3.0)
             try:
                 message = self.rfile.readline(MAX_MESSAGE + 1)
                 if not message.endswith(b"\n") or len(message) > MAX_MESSAGE:
