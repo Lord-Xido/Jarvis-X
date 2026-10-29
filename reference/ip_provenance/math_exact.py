@@ -10,6 +10,7 @@ import hashlib
 from fractions import Fraction
 from itertools import product
 import json
+from pathlib import Path
 from math import prod
 from typing import Any
 
@@ -21,6 +22,7 @@ DOMAINS = ("ann", "geometry", "os", "vm")
 VERTICES = ((1, 1, 1), (6, 6, 1), (6, 1, 6), (1, 6, 6))
 STATES = ("ABSENT", "PREPARED", "COMMITTED", "ABORTED", "UNREACHABLE")
 STEPS = 1000
+ATLAS_ROOT_FILE = Path(__file__).resolve().parents[2] / "docs" / "ip" / "2026-10-29-3d-atlas.sha256"
 
 
 def determinant(u: tuple[int, ...], v: tuple[int, ...],
@@ -125,6 +127,14 @@ def audit_3d() -> dict[str, Any]:
         number += 1
     if number != 5**4:
         raise AssertionError("not all 3D status combinations were tested")
+    atlas_root = merkle(packet_hashes)
+    if not ATLAS_ROOT_FILE.is_file():
+        raise RuntimeError("exact 3D status atlas SHA-256 anchor missing")
+    expected_root = ATLAS_ROOT_FILE.read_text("ascii").strip().lower()
+    if len(expected_root) != 64 or any(c not in "0123456789abcdef" for c in expected_root):
+        raise RuntimeError("invalid frozen 3D status atlas SHA-256 anchor")
+    if atlas_root != expected_root:
+        raise RuntimeError("exact 3D state atlas changed from cryptographic baseline")
     return {
         "schema": "JarvisX/IPFreeze/3DMathExact1",
         "source_commit": FROZEN_COMMIT,
@@ -141,7 +151,8 @@ def audit_3d() -> dict[str, Any]:
             "distinct_domain_codes": 20,
             "status_configurations_exhaustively_verified": number,
             "bit_identical_reconstruction": True,
-            "status_atlas_merkle_sha256": merkle(packet_hashes),
+            "status_atlas_merkle_sha256": atlas_root,
+            "atlas_anchor_verified": True,
         },
         "exact_contraction": exact_recurrence(),
         "verification_scope": (
