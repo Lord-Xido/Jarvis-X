@@ -1,0 +1,50 @@
+name: Canonical four-surface shadow transaction
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'reference/canonical_shadow_tx/**'
+      - '.github/workflows/canonical-shadow-tx.yml'
+  pull_request:
+    paths:
+      - 'reference/canonical_shadow_tx/**'
+      - '.github/workflows/canonical-shadow-tx.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-real-backend-conformance:
+    name: VM / OS / ANN / 3D shadow commit integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and reference ANN dependencies
+        run: python -m pip install -e ".[test]" -r apps/recursive-3d-ann/requirements.txt
+      - name: Test candidate-first state, 4 real backends and rollback
+        run: python -m unittest discover -s reference/canonical_shadow_tx -p test_bridge.py -v
+      - name: Produce machine-readable independent shadow receipt
+        run: |
+          python -m reference.canonical_shadow_tx.bridge > canonical-shadow-receipt.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('canonical-shadow-receipt.json').read_text())
+          assert result['backend_domains'] == ['ann', 'geometry', 'os', 'vm']
+          assert result['epoch'] == 1
+          assert result['gates']['external_evidence'] == 'NOT_APPLICABLE'
+          assert result['receipt'] == 'verified'
+          assert result['authority'] == 'shadow-only/in-memory'
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: canonical-shadow-receipt
+          path: canonical-shadow-receipt.json
+          if-no-files-found: error
