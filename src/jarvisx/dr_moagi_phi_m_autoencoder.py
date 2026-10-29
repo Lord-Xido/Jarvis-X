@@ -54,13 +54,13 @@ class TrainConfig:
             value = getattr(self, name)
             if type(value) is not int or not low <= value <= high:
                 raise ValueError(f"{name} out of range")
-        for name, low, high in (
+        for name, low_f, high_f in (
             ("lr", 1e-8, 1.0), ("min_lr", 1e-9, self.lr),
             ("warmup", 0.0, 1.0), ("grad_clip", 1e-6, 100.0),
             ("ema_decay", 0.0, 0.999999),
         ):
             float_value = getattr(self, name)
-            if isinstance(float_value, bool) or not isinstance(float_value, (int, float)) or not math.isfinite(float_value) or not low <= float_value <= high:
+            if isinstance(float_value, bool) or not isinstance(float_value, (int, float)) or not math.isfinite(float_value) or not low_f <= float_value <= high_f:
                 raise ValueError(f"{name} must be finite and bounded")
         if self.batch > self.train_samples:
             raise ValueError("batch exceeds training set")
