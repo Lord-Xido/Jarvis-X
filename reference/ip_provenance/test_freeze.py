@@ -48,6 +48,7 @@ class TestIPFreeze(unittest.TestCase):
             report["codec"]["status_configurations_exhaustively_verified"], 625
         )
         self.assertTrue(report["codec"]["bit_identical_reconstruction"])
+        self.assertTrue(report["codec"]["atlas_anchor_verified"])
         self.assertEqual(len(report["codec"]["status_atlas_merkle_sha256"]), 64)
         self.assertEqual(report["production_deployment"], "BLOCKED")
         self.assertEqual(report["external_evidence"], "NOT_APPLICABLE")
