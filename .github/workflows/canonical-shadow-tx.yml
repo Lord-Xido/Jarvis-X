@@ -35,6 +35,28 @@ jobs:
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_multiprocess.py -v
       - name: Test authenticated local participant processes and crash recovery
         run: python -m unittest discover -s reference/canonical_shadow_tx -p test_ipc.py -v
+      - name: Fail-closed production readiness and decision-authority gate
+        run: |
+          python -m unittest discover -s reference/canonical_shadow_tx -p test_release_gate.py -v
+          python -m reference.canonical_shadow_tx.release_gate --commit "$GITHUB_SHA" > canonical-production-readiness.json
+          python - <<'PY'
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+          evidence = json.loads(Path('canonical-production-readiness.json').read_text())
+          assert evidence['production_readiness'] == 'BLOCKED'
+          assert evidence['production_deployment_allowed'] is False
+          assert len(evidence['required_unverified']) == 8
+          attempt = subprocess.run(
+              [sys.executable, '-m', 'reference.canonical_shadow_tx.release_gate',
+               '--require-production'],
+              text=True, capture_output=True, check=False,
+          )
+          assert attempt.returncode == 2, (attempt.stdout, attempt.stderr)
+          assert json.loads(attempt.stdout)['production_readiness'] == 'BLOCKED'
+          print(json.dumps(evidence, indent=2, sort_keys=True))
+          PY
       - name: Check authenticated process smoke receipt
         run: |
           python - <<'PY'
@@ -207,4 +229,5 @@ jobs:
             canonical-durable-receipt.json
             canonical-separate-participants-receipt.json
             canonical-authenticated-process-receipt.json
+            canonical-production-readiness.json
           if-no-files-found: error
