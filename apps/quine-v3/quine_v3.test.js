@@ -73,3 +73,7 @@ test('original V3 transformation is not a fixed-point quine', () => {
   assert.notEqual(transformed, sample);
   assert.equal(R(D(sample)), sample);
 });
+
+test('quine verifier rejects untrusted executable source', () => {
+  assert.throws(() => verifyQuine('process.exit(1)', 1), TypeError);
+});
