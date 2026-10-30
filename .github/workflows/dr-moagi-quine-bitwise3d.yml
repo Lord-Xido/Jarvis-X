@@ -1,0 +1,27 @@
+name: Dr Moagi quine bitwise 3D reference
+on:
+  push:
+    paths:
+      - 'apps/quine-bitwise3d/**'
+      - 'docs/DR_MOAGI_REACT_ARTIFACT10_QUINE_BITWISE_BRIDGE.md'
+      - '.github/workflows/dr-moagi-quine-bitwise3d.yml'
+  pull_request:
+    paths:
+      - 'apps/quine-bitwise3d/**'
+      - 'docs/DR_MOAGI_REACT_ARTIFACT10_QUINE_BITWISE_BRIDGE.md'
+      - '.github/workflows/dr-moagi-quine-bitwise3d.yml'
+jobs:
+  bitwise-reference:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Test reversible 3D source codec and fixed-point receipts
+        run: node --test apps/quine-bitwise3d/quine_bitwise3d.test.js
+      - name: Verify 1,000-cycle bundled classical quine
+        run: node apps/quine-bitwise3d/quine_bitwise3d.js
