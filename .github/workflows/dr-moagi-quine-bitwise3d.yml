@@ -4,11 +4,13 @@ on:
     paths:
       - 'apps/quine-bitwise3d/**'
       - 'docs/DR_MOAGI_REACT_ARTIFACT10_QUINE_BITWISE_BRIDGE.md'
+      - 'docs/DR_MOAGI_1000_CUBED_INWARD_ENGINE.md'
       - '.github/workflows/dr-moagi-quine-bitwise3d.yml'
   pull_request:
     paths:
       - 'apps/quine-bitwise3d/**'
       - 'docs/DR_MOAGI_REACT_ARTIFACT10_QUINE_BITWISE_BRIDGE.md'
+      - 'docs/DR_MOAGI_1000_CUBED_INWARD_ENGINE.md'
       - '.github/workflows/dr-moagi-quine-bitwise3d.yml'
 jobs:
   bitwise-reference:
@@ -22,6 +24,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Test reversible 3D source codec and fixed-point receipts
-        run: node --test apps/quine-bitwise3d/quine_bitwise3d.test.js
+        run: node --test apps/quine-bitwise3d/quine_bitwise3d.test.js apps/quine-bitwise3d/inward1000.test.js
+      - name: Verify inward 1000-cubed loop and deep audits
+        run: node apps/quine-bitwise3d/inward1000.js
       - name: Verify 1,000-cycle bundled classical quine
         run: node apps/quine-bitwise3d/quine_bitwise3d.js
