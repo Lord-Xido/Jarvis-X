@@ -12,6 +12,7 @@ const assert = require('node:assert/strict');
 const quineSource = '(function quine(){return "("+quine.toString()+")()"})()';
 
 function verifyQuine(source, iterations = 1000) {
+  if (source !== quineSource) throw new TypeError('Only the bundled quine source is supported');
   assert(Number.isSafeInteger(iterations) && iterations >= 1);
   let current = source;
   for (let i = 0; i < iterations; i++) {
