@@ -1,0 +1,34 @@
+name: JARVIS X v6 Secure Archive
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/jarvisx_v6_secure/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/jarvisx-v6-secure.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cpp_runtime/jarvisx_v6_secure/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/jarvisx-v6-secure.yml'
+jobs:
+  crypto-codec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libssl-dev python3
+      - name: Configure
+        run: cmake -S cpp_runtime/jarvisx_v6_secure -B build/v6-secure -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/v6-secure --parallel 2
+      - name: Security regressions
+        run: ctest --test-dir build/v6-secure --output-on-failure
+      - name: Verify root integration
+        run: |
+          cmake -S cpp_runtime -B build/v6-root -DJARVISX_BUILD_V6_SECURE=ON -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          cmake --build build/v6-root --target jarvisx-v6-secure --parallel 2
+          ctest --test-dir build/v6-root -R jarvisx-v6-secure-regressions --output-on-failure
