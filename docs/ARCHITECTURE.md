@@ -37,6 +37,18 @@ Required properties:
 - rejection of malformed inputs;
 - round-trip tests for every persistent format.
 
+### Verified ROM processing integration
+
+The standalone DM3D ROM is a bounded, candidate-first vertical slice through
+representation, 3D encoding, signed-residual correction and exact reconstruction.
+It operates independently of the canonical register-VM ISA. Its execution fuel,
+active-tile bound and conservative tile-work budget must be enforced before
+candidate state is committed. This implementation does not supersede ADR-016
+typed-state integration, nor does a latent-only size ratio count as a complete
+lossless compression ratio. See
+[DM3D system conformance](DM3D_SYSTEM_CONFORMANCE.md) and the common
+[empirical evidence](EMPIRICAL_VALIDATION.md) gate.
+
 ### Layer 1 — Execution
 
 Responsibilities:
