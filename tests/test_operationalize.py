@@ -19,6 +19,8 @@ def test_operational_smoke_executes_transaction_os_and_api() -> None:
     assert by_name["transactional-runtime"].ok
     assert by_name["dr-moagi-os-cycle"].ok
     assert by_name["control-plane-api"].ok
+    assert by_name["dm3d-rom-evidence"].ok
+    assert "rollback=True" in by_name["dm3d-rom-evidence"].detail
 
 
 def test_operational_cli_returns_zero_for_healthy_smoke(capsys) -> None:
