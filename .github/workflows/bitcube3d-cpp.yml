@@ -1,0 +1,30 @@
+name: BitCube3D C++ SDK
+on:
+  pull_request:
+    paths:
+      - "native/bitcube3d/**"
+      - ".github/workflows/bitcube3d-cpp.yml"
+  push:
+    branches: [main]
+    paths:
+      - "native/bitcube3d/**"
+      - ".github/workflows/bitcube3d-cpp.yml"
+permissions:
+  contents: read
+jobs:
+  cpp:
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S native/bitcube3d -B build/bitcube3d -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/bitcube3d --parallel 2
+      - name: Test
+        run: ctest --test-dir build/bitcube3d --output-on-failure
