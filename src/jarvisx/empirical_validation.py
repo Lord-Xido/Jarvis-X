@@ -22,6 +22,22 @@ from typing import Callable, Iterable
 
 from .assembler import Assembler
 from .core import CodexVM
+from .dm3d_rom import (
+    AXIS_BYTES,
+    LATENT_BYTES,
+    OP_CORRECT,
+    OP_DECODE,
+    OP_ENCODE,
+    OP_FILL_TILE,
+    OP_HALT,
+    OP_JUMP,
+    OP_RESIDUAL,
+    OP_VERIFY,
+    TILE_BYTES,
+    DM3DVM,
+    build_rom,
+    pack_instruction,
+)
 from .dr_moagi_billion_field import BillionFieldConfig, SparseBillionField
 from .fractal_octree import build_fractal_octree
 from .fractional_smoothing_3d import (
@@ -398,6 +414,78 @@ def _fractional_numerics_check() -> ValidationCheck:
     )
 
 
+def dm3d_rom_conformance_check() -> ValidationCheck:
+    """Exercise encode/decode closure and reject an unbounded candidate atomically."""
+    key = (0, 0, 0)
+    vm = DM3DVM(trace=False, max_steps=16, max_active_tiles=2, max_tile_sweeps=24)
+    program = build_rom(
+        [
+            pack_instruction(OP_FILL_TILE, *key, p0=2),
+            pack_instruction(OP_ENCODE, *key, p0=8),
+            pack_instruction(OP_DECODE, *key),
+            pack_instruction(OP_RESIDUAL, *key),
+            pack_instruction(OP_CORRECT, *key),
+            pack_instruction(OP_VERIFY, *key, flags=1),
+            pack_instruction(OP_HALT),
+        ]
+    )
+    result = vm.run(program)
+    original = bytes(vm.volume.get(key))
+    decoded = bytes(vm.corrected[key])
+    exact = decoded == original and result.verified_exact == 1
+    state_before = hashlib.sha256(original).hexdigest()
+    stats_before = asdict(vm.stats)
+    pc_before = vm.pc
+    jump_rejected = False
+    try:
+        vm.run(
+            build_rom(
+                [
+                    pack_instruction(OP_FILL_TILE, 1, 0, 0, p0=1),
+                    pack_instruction(OP_JUMP, p0=1),
+                ]
+            )
+        )
+    except RuntimeError as exc:
+        jump_rejected = "step budget exhausted" in str(exc)
+    state_preserved = (
+        list(vm.volume.tiles) == [key]
+        and hashlib.sha256(vm.volume.get(key)).hexdigest() == state_before
+        and asdict(vm.stats) == stats_before
+        and vm.pc == pc_before
+    )
+
+    return ValidationCheck(
+        name="dm3d_rom_transactional_closure",
+        claim="Sparse 3D ROM decoding restores exact bytes and rejected executions cannot mutate committed state.",
+        protocol=(
+            "Encode and decode one 64^3 tile with residual correction; compare every byte, "
+            "then execute a self-looping ROM with an attempted tile mutation and require "
+            "fuel exhaustion plus exact incumbent-state preservation."
+        ),
+        passed=exact and jump_rejected and state_preserved,
+        metrics={
+            "virtual_byte_positions": AXIS_BYTES**3,
+            "resident_tiles": len(vm.volume.tiles),
+            "source_tile_bytes": TILE_BYTES,
+            "quantized_latent_bytes": LATENT_BYTES,
+            "signed_residual_entries": len(vm.resid[key]),
+            "full_byte_reconstruction": exact,
+            "self_loop_rejected": jump_rejected,
+            "incumbent_state_preserved": state_preserved,
+            "committed_instructions": result.instructions,
+            "committed_tile_sweeps": result.tile_sweeps,
+            "source_sha256": state_before,
+        },
+        boundary=(
+            "The 10^27 coordinate extent is virtual. The test materializes one tile; "
+            "the 512-byte latent excludes full signed residuals and metadata, so it "
+            "does not establish a 512:1 lossless compression ratio. A resource-bounded "
+            "Python interpreter is not an OS security sandbox."
+        ),
+    )
+
+
 def run_validation(
     *,
     repetitions: int = 64,
@@ -416,6 +504,7 @@ def run_validation(
         _sparse_transaction_check(),
         _fractal_geometry_check(octree_max_depth),
         _fractional_numerics_check(),
+        dm3d_rom_conformance_check(),
     )
     return ValidationReport(
         schema_version="jarvisx.empirical-validation.v1",
