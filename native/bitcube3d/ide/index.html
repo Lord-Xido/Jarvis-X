@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BitCube3D | Virtual Bit SDK & IDE</title>
+<style>
+:root{color-scheme:dark;--bg:#080e1a;--panel:#101a2b;--panel2:#111f34;--line:#263955;--ink:#eaf1ff;--muted:#95a8bf;--accent:#70dbf5;--good:#88e2ad;--purple:#b6a2ff}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;color:var(--ink)}
+body{background:radial-gradient(ellipse at 20% 0%,#112642 0%,transparent 45%),var(--bg)}
+header{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px max(24px,calc((100vw - 1480px)/2));border-bottom:1px solid #213451}
+.brand{display:flex;align-items:center;gap:13px}.logo{width:45px;height:45px;display:grid;place-items:center;background:linear-gradient(135deg,#234e8a,#224662);border:1px solid #5cb2da;border-radius:12px;color:#a5efff;font-weight:800;font-size:21px;box-shadow:0 0 40px #3fcdfc24}
+.title{font-size:22px;font-weight:750;letter-spacing:-.04em}.sub{margin-top:3px;font-size:12px;color:var(--muted)}.pill{color:var(--good);font-size:11px;letter-spacing:.07em;text-transform:uppercase;border:1px solid #2a775d;background:#17382e;border-radius:100px;padding:8px 11px;white-space:nowrap}
+main{max-width:1480px;padding:20px 24px 26px;margin:0 auto}.lede{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:18px;flex-wrap:wrap}.lede h1{font-size:clamp(20px,2.1vw,30px);letter-spacing:-.04em;margin:0 0 5px}.lede p{color:var(--muted);margin:0;font-size:13px;max-width:780px;line-height:1.6}.meta{font:11px ui-monospace,SFMono-Regular,Consolas,monospace;color:#a7bdd5}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}.metric{background:linear-gradient(160deg,#15243a,#0e192a);border:1px solid #2b405b;border-radius:13px;padding:14px 17px}.metric span{display:block;color:var(--muted);font-size:11px;margin-bottom:9px;letter-spacing:.06em;text-transform:uppercase}.metric strong{font-size:25px;letter-spacing:-.05em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.metric small{font-size:11px;color:#7f94ae;margin-left:5px}
+.workspace{display:grid;grid-template-columns:minmax(350px,.95fr) minmax(400px,1.05fr);gap:14px}.panel{min-width:0;border:1px solid var(--line);border-radius:14px;background:#101b2c;overflow:hidden}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 17px;border-bottom:1px solid var(--line);min-height:51px}.panel-head strong{font-size:13px}.tag{font:10px ui-monospace,monospace;color:#8ab7d7;text-transform:uppercase;letter-spacing:.07em}.editor{display:block;border:0;outline:0;width:100%;height:390px;resize:vertical;min-height:220px;background:#0a1322;color:#c6ddfa;font:13px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;padding:18px 20px;tab-size:2;white-space:pre;caret-color:var(--accent)}.toolbar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--line)}button,.upload{border:1px solid #344d6a;background:#1b2a3f;color:#e9f3ff;border-radius:8px;padding:9px 13px;cursor:pointer;font-size:12px;font-weight:650;font-family:inherit;transition:background .15s}button:hover,.upload:hover{background:#2b4561}button.primary{background:#126a81;border-color:#379ab7;color:white}button.primary:hover{background:#19849e}.upload input{display:none}.console{margin:0;background:#08111d;color:#9bcea8;padding:16px 18px;height:160px;overflow-y:auto;white-space:pre-wrap;font:11.5px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;border-top:1px solid var(--line)}.view{width:100%;height:390px;display:block;touch-action:none;cursor:grab}.view:active{cursor:grabbing}.hint{border-top:1px solid var(--line);padding:13px 16px;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.help{padding:17px 19px;color:var(--muted);font-size:12px;line-height:1.65;border-top:1px solid var(--line)}.help h3{margin:0 0 9px;font-size:12px;color:#d8e5f5}.cmd{display:inline-block;color:#add8f6;border:1px solid #344b64;background:#16283e;padding:2px 6px;border-radius:4px;font:11px ui-monospace,monospace;margin-right:5px}.foot{font-size:12px;color:#879bb2;margin-top:16px;line-height:1.7}.note{color:#f2d9a6}
+@media(max-width:900px){.workspace{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.view{height:380px}.editor{height:330px}header{padding:18px 16px}main{padding:18px 14px}.metric strong{font-size:22px}}
+@media(max-width:470px){.toolbar button,.toolbar .upload{flex-grow:1;text-align:center}.metrics{gap:8px}.metric{padding:11px}.metric strong{font-size:20px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">B³</div><div><div class="title">BitCube3D <span style="font-weight:400;color:#8eafcc">/ IDE</span></div><div class="sub">Dr Moagi • 3D sparse-bit iteration engine</div></div></div>
+  <div class="pill">● LOCAL / OFFLINE</div>
+</header>
+<main>
+<div class="lede"><div><h1>10<sup>9</sup> × 10<sup>9</sup> × 10<sup>9</sup> virtual bit space</h1><p>Binary-addressable 3D geometry, reversible XOR lifting, forward/inverse iterations and interoperable B3D1 snapshots. Memory is allocated only for nonzero 16³ bricks.</p></div><div class="meta">B3D1 / 16³ BRICKS / UINT32 XYZ</div></div>
+<section class="metrics" aria-label="Engine statistics">
+  <div class="metric"><span>Set bits</span><strong id="countBits">0</strong></div>
+  <div class="metric"><span>Active bricks</span><strong id="countBricks">0</strong></div>
+  <div class="metric"><span>Raw brick payload</span><strong id="countMemory">0 B</strong></div>
+  <div class="metric"><span>Outstanding encoding rounds</span><strong id="countRounds">0</strong></div>
+</section>
+<div class="workspace">
+  <section class="panel"><div class="panel-head"><strong>BitCube Script</strong><span class="tag">editable DSL · Ctrl+Enter</span></div>
+    <textarea id="editor" class="editor" spellcheck="false" aria-label="BitCube program editor"></textarea>
+    <div class="toolbar"><button id="run" class="primary">▶ Run program</button><button id="step">Step line</button><button id="reset">Reset state</button><button id="demo">Example</button><button id="export">Export .b3d</button><label class="upload" for="import">Import .b3d<input id="import" type="file" accept=".b3d,application/octet-stream"></label></div>
+    <div class="panel-head"><strong>Execution console</strong><span id="time" class="tag">0 ms</span></div><pre id="console" class="console" aria-live="polite"></pre>
+  </section>
+  <section class="panel"><div class="panel-head"><strong>3D active-voxel projector</strong><span class="tag">interactive drag / rotate</span></div>
+    <canvas id="view" class="view" aria-label="Interactive 3D projection of active voxels"></canvas>
+    <div class="hint"><span id="renderCount">0 set-bit centers rendered</span><span>X <span style="color:#ff8f9b">●</span> Y <span style="color:#69d6aa">●</span> Z <span style="color:#84aeff">●</span></span></div>
+    <div class="help"><h3>Executable instructions</h3>
+      <div><span class="cmd">SET x y z 1</span> <span class="cmd">CLEAR x y z</span> <span class="cmd">FLIP x y z</span> <span class="cmd">GET x y z</span></div>
+      <div style="margin-top:7px"><span class="cmd">BOX x0 y0 z0 x1 y1 z1 [bit]</span> <span class="cmd">SPHERE x y z radius</span></div>
+      <div style="margin-top:7px"><span class="cmd">ENCODE n</span> <span class="cmd">DECODE n</span> <span class="cmd">VERIFY n</span> <span class="cmd">STATS</span></div>
+      <p>Forward pass: for each axis X → Y → Z, XOR corresponding low/high bit pairs at strides 1, 2, 4, 8. Inverse pass applies the same XOR operations in reverse order. The result is exactly reversible, not inherently compressive.</p>
+      <p class="note">Visual display samples at most 3,500 set voxels and auto-fits their bounds. Rendering scale is not physical storage or processing throughput.</p>
+    </div>
+  </section>
+</div>
+<p class="foot">All computation runs on this device; no server or external JavaScript library is required. The browser IDE interprets BitCube Script; the companion C++ SDK provides native execution. Snapshots are lossless but are neither encrypted nor authenticated. Memory metrics show raw active-brick payload and exclude hash-table and program overhead.</p>
+</main>
+<script>
+/* BitCube3D v1 — no dependencies; runs both as a browser global and a Node CommonJS module.
+ * Coordinates: 0..999999999 on each of 3 axes, 1 bit per voxel.
+ * Format: B3D1 / LE / 16^3 packed bricks; interoperability with C++ SDK.
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  if (root) root.BitCube3D = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+  const SIDE = 1000000000, EDGE = 16, BYTES = 512, MAX_ROUNDS = 10000;
+  const popcount = (() => {
+    const p = new Uint8Array(256);
+    for (let i = 1; i < 256; i++) p[i] = p[i >>> 1] + (i & 1);
+    return p;
+  })();
+  const u32 = (v, what = 'integer') => {
+    if (!Number.isSafeInteger(v) || v < 0 || v > 0xffffffff) throw Error(`${what} must be a uint32`);
+    return v;
+  };
+  function coord(x, y, z) {
+    for (const v of [x, y, z])
+      if (!Number.isSafeInteger(v) || v < 0 || v >= SIDE)
+        throw Error('coordinates must be integers in [0, 999999999]');
+  }
+  const bit = (bytes, i) => (bytes[i >>> 3] >>> (i & 7)) & 1;
+  const flip = (bytes, i) => { bytes[i >>> 3] ^= 1 << (i & 7); };
+  const isEmpty = b => !b.some(v => v !== 0);
+  function pass(bytes, axis, stride) {
+    const delta = axis === 0 ? stride : axis === 1 ? 16 * stride : 256 * stride;
+    for (let z = 0; z < EDGE; z++) for (let y = 0; y < EDGE; y++) for (let x = 0; x < EDGE; x++) {
+      const v = axis === 0 ? x : axis === 1 ? y : z;
+      if (v & stride) continue;
+      const i = x + 16 * y + 256 * z;
+      if (bit(bytes, i)) flip(bytes, i + delta);
+    }
+  }
+  class Engine {
+    constructor() { this.blocks = new Map(); }
+    static key(bx, by, bz) { return `${bx},${by},${bz}`; }
+    static unpack(key) { return key.split(',').map(Number); }
+    static address(x, y, z) {
+      coord(x, y, z);
+      return [Engine.key(Math.floor(x / 16), Math.floor(y / 16), Math.floor(z / 16)),
+              (x % 16) + 16 * ((y % 16) + 16 * (z % 16))];
+    }
+    clone() {
+      const e = new Engine();
+      for (const [k, b] of this.blocks) e.blocks.set(k, Uint8Array.from(b));
+      return e;
+    }
+    equals(other) {
+      if (this.blocks.size !== other.blocks.size) return false;
+      for (const [key, b] of this.blocks) {
+        const o = other.blocks.get(key);
+        if (!o) return false;
+        for (let i = 0; i < BYTES; ++i) if (o[i] !== b[i]) return false;
+      }
+      return true;
+    }
+    get(x, y, z) {
+      const [key, i] = Engine.address(x, y, z);
+      const b = this.blocks.get(key);
+      return b ? bit(b, i) : 0;
+    }
+    set(x, y, z, value = 1) {
+      const [key, i] = Engine.address(x, y, z);
+      const truth = value === true || value === 1;
+      if (!truth && value !== false && value !== 0) throw Error('bit value must be 0 or 1');
+      let b = this.blocks.get(key);
+      if (!b && !truth) return;
+      if (!b) { b = new Uint8Array(BYTES); this.blocks.set(key, b); }
+      if (truth) b[i >>> 3] |= 1 << (i & 7);
+      else b[i >>> 3] &= ~(1 << (i & 7));
+      if (!truth && isEmpty(b)) this.blocks.delete(key);
+    }
+    flip(x, y, z) { this.set(x, y, z, 1 - this.get(x, y, z)); }
+    forward(rounds = 1) {
+      u32(rounds, 'rounds');
+      if (rounds > MAX_ROUNDS) throw Error('rounds exceed safety cap of 10000');
+      for (let r = 0; r < rounds; ++r)
+        for (const b of this.blocks.values())
+          for (let axis = 0; axis < 3; ++axis)
+            for (const stride of [1, 2, 4, 8]) pass(b, axis, stride);
+    }
+    inverse(rounds = 1) {
+      u32(rounds, 'rounds');
+      if (rounds > MAX_ROUNDS) throw Error('rounds exceed safety cap of 10000');
+      for (let r = 0; r < rounds; ++r)
+        for (const b of this.blocks.values())
+          for (const axis of [2, 1, 0])
+            for (const stride of [8, 4, 2, 1]) pass(b, axis, stride);
+    }
+    get activeBricks() { return this.blocks.size; }
+    get activeBits() {
+      let n = 0;
+      for (const b of this.blocks.values()) for (const c of b) n += popcount[c];
+      return n;
+    }
+    get payloadBytes() { return BYTES * this.blocks.size; }
+    sortedBricks() {
+      return [...this.blocks.entries()].map(([key, data]) => ({ xyz: Engine.unpack(key), data }))
+        .sort((a, b) => a.xyz[0] - b.xyz[0] || a.xyz[1] - b.xyz[1] || a.xyz[2] - b.xyz[2]);
+    }
+    toBytes(rounds = 0) {
+      u32(rounds, 'rounds');
+      const count = this.blocks.size;
+      const result = new Uint8Array(20 + count * 524);
+      result.set([66, 51, 68, 49], 0);
+      const view = new DataView(result.buffer);
+      view.setUint32(4, SIDE, true);
+      view.setUint32(8, rounds, true);
+      view.setBigUint64(12, BigInt(count), true);
+      let offset = 20;
+      for (const {xyz, data} of this.sortedBricks()) {
+        for (let axis = 0; axis < 3; ++axis) view.setUint32(offset + 4 * axis, xyz[axis], true);
+        result.set(data, offset + 12);
+        offset += 524;
+      }
+      return result;
+    }
+    static fromBytes(buffer, maxBricks = 50000) {
+      // Normalize Node Buffer to a genuine Uint8Array: Buffer.slice() shares memory.
+      const data = buffer instanceof Uint8Array
+        ? new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+        : new Uint8Array(buffer);
+      if (data.byteLength < 20 || [66, 51, 68, 49].some((c, i) => data[i] !== c))
+        throw Error('Not a B3D1 snapshot');
+      const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+      if (view.getUint32(4, true) !== SIDE) throw Error('unsupported side length');
+      const rounds = view.getUint32(8, true);
+      if (rounds > MAX_ROUNDS) throw Error('round metadata exceeds browser cap 10000');
+      const countBig = view.getBigUint64(12, true);
+      if (countBig > BigInt(maxBricks)) throw Error('file exceeds browser import cap of ' + maxBricks + ' bricks');
+      const count = Number(countBig);
+      if (data.byteLength !== 20 + count * 524) throw Error('B3D1 length/count mismatch');
+      const engine = new Engine();
+      for (let i = 0, offset = 20; i < count; i++, offset += 524) {
+        const xyz = [0, 1, 2].map(j => view.getUint32(offset + j * 4, true));
+        if (xyz.some(v => v >= SIDE / EDGE)) throw Error('out-of-bounds brick coordinate');
+        const key = Engine.key(...xyz);
+        const b = data.slice(offset + 12, offset + 524);
+        if (isEmpty(b) || engine.blocks.has(key)) throw Error('empty/duplicate brick in file');
+        engine.blocks.set(key, b);
+      }
+      return {engine, rounds};
+    }
+    // Iterate set voxel centers; bounded for interactive rendering.
+    samples(max = 3500) {
+      const pts = [];
+      for (const [key, b] of this.blocks) {
+        const [bx, by, bz] = Engine.unpack(key);
+        for (let i = 0; i < 4096; ++i) {
+          if (!bit(b, i)) continue;
+          pts.push([bx * 16 + i % 16, by * 16 + Math.floor(i / 16) % 16,
+                    bz * 16 + Math.floor(i / 256)]);
+          if (pts.length >= max) return pts;
+        }
+      }
+      return pts;
+    }
+  }
+  return { Engine, SIDE, EDGE, BYTES, MAX_ROUNDS, pass };
+});
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const {Engine, SIDE} = BitCube3D;
+  const $ = id => document.getElementById(id);
+  let engine = new Engine(), rounds = 0, cursor = 0, yaw = -0.67, pitch = 0.46;
+  let logLines = [], lastMs = 0, sample = [], originalActive = 0;
+  const canvas = $('view'), ctx = canvas.getContext('2d');
+  const script = $('editor');
+  const demo = `# A native binary-compatible 3D bit program\n# Each coordinate lies in 0..999999999\nSPHERE 8 8 8 6\nBOX 20 2 2 25 7 7\nSET 999999999 999999999 999999999 1\nVERIFY 7\nENCODE 3\nDECODE 3\nSTATS`;
+  const formatter = new Intl.NumberFormat('en-US');
+  function info(message, bad = false) {
+    logLines.push((bad ? '✕ ' : '› ') + message);
+    if (logLines.length > 180) logLines = logLines.slice(-180);
+    $('console').textContent = logLines.join('\n');
+    $('console').scrollTop = $('console').scrollHeight;
+  }
+  function integer(raw, label) {
+    if (raw === undefined || !/^\d+$/.test(raw)) throw Error(`${label}: expected nonnegative integer`);
+    const n = Number(raw);
+    if (!Number.isSafeInteger(n)) throw Error(`${label}: integer too large`);
+    return n;
+  }
+  function coord(n) {
+    if (n >= SIDE) throw Error('coordinate outside virtual cube');
+    return n;
+  }
+  function parseCoord(args, index) {
+    return [coord(integer(args[index], 'x')), coord(integer(args[index + 1], 'y')),
+      coord(integer(args[index + 2], 'z'))];
+  }
+  function bitValue(s) {
+    if (s !== '0' && s !== '1') throw Error('expected bit 0 or 1');
+    return Number(s);
+  }
+  function roundCount(s) {
+    const n = integer(s, 'round count');
+    if (n > 1000) throw Error('IDE per-command limit is 1000 rounds');
+    return n;
+  }
+  function execute(line) {
+    const tokens = line.replace(/#.*/, '').trim().split(/\s+/);
+    if (tokens[0] === '') return;
+    const cmd = tokens.shift().toUpperCase();
+    const len = n => { if (tokens.length !== n) throw Error(`${cmd}: expected ${n} arguments, got ${tokens.length}`); };
+    let c;
+    switch (cmd) {
+      case 'RESET': len(0); engine = new Engine(); rounds = 0; info('workspace reset'); break;
+      case 'SET': len(4); c = parseCoord(tokens, 0); engine.set(...c, bitValue(tokens[3])); break;
+      case 'CLEAR': len(3); c = parseCoord(tokens, 0); engine.set(...c, 0); break;
+      case 'FLIP': len(3); c = parseCoord(tokens, 0); engine.flip(...c); break;
+      case 'GET': len(3); c = parseCoord(tokens, 0); info(`GET ${c.join(' ')} = ${engine.get(...c)}`); break;
+      case 'BOX': {
+        if (tokens.length !== 6 && tokens.length !== 7) throw Error('BOX: x0 y0 z0 x1 y1 z1 [bit]');
+        const a = parseCoord(tokens, 0), b = parseCoord(tokens, 3);
+        if (a.some((v, i) => v > b[i])) throw Error('BOX: min must be <= max');
+        const volume = (b[0]-a[0]+1)*(b[1]-a[1]+1)*(b[2]-a[2]+1);
+        if (volume > 150000) throw Error('BOX exceeds 150,000-voxel IDE guard');
+        const v = tokens.length === 7 ? bitValue(tokens[6]) : 1;
+        for (let z = a[2]; z <= b[2]; ++z)
+          for (let y = a[1]; y <= b[1]; ++y)
+            for (let x = a[0]; x <= b[0]; ++x) engine.set(x, y, z, v);
+        info(`BOX modified ${volume.toLocaleString()} voxels`);
+        break;
+      }
+      case 'SPHERE': {
+        len(4);
+        const [cx, cy, cz] = parseCoord(tokens, 0), radius = integer(tokens[3], 'radius');
+        if (radius > 30) throw Error('SPHERE radius capped at 30 in the browser');
+        let n = 0;
+        for (let z=-radius;z<=radius;z++) for(let y=-radius;y<=radius;y++) for(let x=-radius;x<=radius;x++) {
+          if(x*x+y*y+z*z>radius*radius) continue;
+          const p=[cx+x,cy+y,cz+z];
+          if(p.every(v=>v>=0 && v<SIDE)) {engine.set(...p,1); n++;}
+        }
+        info(`SPHERE set ${n.toLocaleString()} voxel positions`);
+        break;
+      }
+      case 'ENCODE': {
+        len(1); const n=roundCount(tokens[0]);
+        if (rounds + n > 10000) throw Error('total round metadata limit exceeded');
+        engine.forward(n); rounds += n; info(`encoded ${n} rounds`); break;
+      }
+      case 'DECODE': {
+        len(1); const n=roundCount(tokens[0]);
+        if (n > rounds) throw Error(`only ${rounds} outstanding encoded rounds`);
+        engine.inverse(n); rounds -= n; info(`decoded ${n} rounds`); break;
+      }
+      case 'VERIFY': {
+        len(1); const n=roundCount(tokens[0]);
+        const test=engine.clone(); test.forward(n); test.inverse(n);
+        if(!test.equals(engine)) throw Error('roundtrip identity failed');
+        info(`PASS  D^${n}(E^${n}(state)) == state`); break;
+      }
+      case 'STATS': len(0); info(`${engine.activeBricks} bricks / ${engine.activeBits} set bits / ${rounds} encoded rounds`); break;
+      default: throw Error(`Unknown command: ${cmd}`);
+    }
+  }
+  function refresh() {
+    $('countBits').textContent = formatter.format(engine.activeBits);
+    $('countBricks').textContent = formatter.format(engine.activeBricks);
+    $('countMemory').textContent = formatter.format(engine.payloadBytes) + ' B';
+    $('countRounds').textContent = formatter.format(rounds);
+    $('time').textContent = lastMs.toFixed(2) + ' ms';
+    sample = engine.samples(3500);
+    originalActive = engine.activeBits;
+    $('renderCount').textContent = `${formatter.format(sample.length)} / ${formatter.format(originalActive)} set-bit centers rendered`;
+    render();
+  }
+  function runAll() {
+    engine=new Engine(); rounds=0; cursor=0; logLines=[];
+    const lines=script.value.split(/\r?\n/);
+    const start=performance.now();
+    try {
+      for (; cursor<lines.length;cursor++) {
+        try { execute(lines[cursor]); }
+        catch (e) {throw Error(`line ${cursor+1}: ${e.message}`);}
+      }
+      info(`program completed: ${lines.length} lines`);
+    } catch(e) { info(e.message, true); }
+    lastMs=performance.now()-start;
+    refresh();
+  }
+  function step() {
+    const lines=script.value.split(/\r?\n/);
+    if (cursor>=lines.length) {info('end of program'); return;}
+    const start=performance.now();
+    try {execute(lines[cursor]);cursor++;} catch(e) {info(`line ${cursor+1}: ${e.message}`,true);}
+    lastMs=performance.now()-start;refresh();
+  }
+  function download() {
+    try {
+      const bytes = engine.toBytes(rounds);
+      const blob = new Blob([bytes], {type:'application/octet-stream'});
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href=url; a.download=`bitcube3d-r${rounds}.b3d`;a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+      info(`exported ${formatter.format(bytes.byteLength)} bytes, B3D1`);
+    } catch(e){info(e.message,true);}
+  }
+  function resize() {
+    const rect=canvas.getBoundingClientRect();
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.max(1,Math.round(rect.width*dpr));
+    canvas.height=Math.max(1,Math.round(rect.height*dpr));
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    render();
+  }
+  function render() {
+    const w=canvas.clientWidth, h=canvas.clientHeight;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='#0b1221';ctx.fillRect(0,0,w,h);
+    const siny=Math.sin(yaw),cosy=Math.cos(yaw),sinp=Math.sin(pitch),cosp=Math.cos(pitch);
+    const transform=p=>{
+      const x=p[0]*cosy-p[2]*siny, z=p[0]*siny+p[2]*cosy;
+      return [x, p[1]*cosp-z*sinp,p[1]*sinp+z*cosp];
+    };
+    const middle=(w*0.5), midh=h*0.51;
+    const scale=Math.min(w,h)*0.30;
+    const projection=p=>{
+      const a=transform(p),depth=3.8/(3.8+a[2]*0.13);
+      return [middle+a[0]*scale*depth, midh-a[1]*scale*depth, a[2]];
+    };
+    const edges=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
+    const verts=[];
+    for(let i=0;i<8;i++)verts.push(projection([(i&1)?1:-1,(i&2)?1:-1,(i&4)?1:-1]));
+    ctx.lineWidth=1;ctx.strokeStyle='rgba(100,148,205,.25)';
+    for(const [a,b] of edges){ctx.beginPath();ctx.moveTo(...verts[a].slice(0,2));ctx.lineTo(...verts[b].slice(0,2));ctx.stroke();}
+    const axisColors=['#ff8f9b','#69d6aa','#84aeff'];
+    for(let i=0;i<3;i++){
+      let v=[0,0,0];v[i]=1.25;
+      const a=projection([0,0,0]),b=projection(v);
+      ctx.strokeStyle=axisColors[i];ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+      ctx.font='11px ui-monospace, monospace';ctx.fillStyle=axisColors[i];
+      ctx.fillText(['X','Y','Z'][i],b[0]+5,b[1]-5);
+    }
+    if(!sample.length){ctx.textAlign='center';ctx.fillStyle='#71839b';ctx.font='14px system-ui';ctx.fillText('Run a 3D program to populate active voxels',middle,midh);ctx.textAlign='left';return;}
+    const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+    for(const p of sample)for(let j=0;j<3;j++){min[j]=Math.min(min[j],p[j]);max[j]=Math.max(max[j],p[j]);}
+    const center=min.map((v,i)=>(v+max[i])/2),range=Math.max(1,...max.map((v,i)=>v-min[i]));
+    const points=sample.map(p=>{
+      const n=p.map((v,i)=>(v-center[i])*2/range);
+      return projection(n);
+    }).sort((a,b)=>b[2]-a[2]);
+    for(const p of points){const depth=Math.max(0.35,Math.min(1.2,(3-p[2])*0.27));
+      ctx.fillStyle=`rgba(92,202,242,${depth})`;
+      ctx.beginPath();ctx.arc(p[0],p[1],Math.max(1.5,2.4*depth),0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='#899cb5';ctx.font='11px ui-monospace,monospace';
+    ctx.fillText('Drag to rotate • bounds auto-fit sampled active voxels',14,h-16);
+  }
+  let dragging=false,lastX=0,lastY=0;
+  canvas.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener('pointerup',()=>dragging=false);
+  canvas.addEventListener('pointercancel',()=>dragging=false);
+  canvas.addEventListener('pointermove',e=>{
+    if(!dragging)return;
+    yaw+=(e.clientX-lastX)*.007;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-lastY)*.007));
+    lastX=e.clientX;lastY=e.clientY;render();
+  });
+  $('run').addEventListener('click',runAll);
+  $('step').addEventListener('click',step);
+  $('reset').addEventListener('click',()=>{engine=new Engine();rounds=cursor=0;logLines=[];lastMs=0;info('workspace cleared');refresh();});
+  $('export').addEventListener('click',download);
+  $('import').addEventListener('change',async e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    try{
+      const loaded=Engine.fromBytes(await file.arrayBuffer());
+      engine=loaded.engine;rounds=loaded.rounds;cursor=0;
+      info(`imported ${file.name} (${file.size} bytes), rounds=${rounds}`);refresh();
+    }catch(ex){info('import failed: '+ex.message,true);}
+    e.target.value='';
+  });
+  $('demo').addEventListener('click',()=>{script.value=demo;runAll();});
+  script.addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runAll();}
+    if(e.key==='Tab'){e.preventDefault(); const start=script.selectionStart;script.setRangeText('  ',start,script.selectionEnd,'end');}
+  });
+  window.addEventListener('resize',resize);
+  script.value=demo;
+  resize();runAll();
+})();
+
+</script>
+</body>
+</html>

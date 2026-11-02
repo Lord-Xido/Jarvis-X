@@ -423,3 +423,7 @@ Academic and technical users can cite the project using [`CITATION.cff`](CITATIO
 ## License
 
 Jarvis-X is released under the [MIT License](LICENSE).
+
+## Native BitCube3D C++ coding SDK
+
+The standalone sparse 3D bit runtime, C++17 libraries, CLI/DSL programmer, offline IDE and native test instructions are in [native/bitcube3d](native/bitcube3d/README.md). This optional subsystem does not change the main Jarvis-X entry points.
