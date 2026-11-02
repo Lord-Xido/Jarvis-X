@@ -50,6 +50,11 @@ LATENT_EDGE = 8
 LATENT_BYTES = LATENT_EDGE**3
 TILES_PER_AXIS = (AXIS_BYTES + TILE_EDGE - 1) // TILE_EDGE
 
+# Limits for this standalone ROM interpreter, independent of the canonical register VM.
+DEFAULT_MAX_STEPS = 4_096
+DEFAULT_MAX_ACTIVE_TILES = 8
+DEFAULT_MAX_TILE_SWEEPS = 128
+
 HEADER_STRUCT = struct.Struct("<8sIQIIIQQ16s")
 HEADER_SIZE = HEADER_STRUCT.size
 INSTR_STRUCT = struct.Struct("<BBHIIIIIII")
@@ -249,6 +254,7 @@ class VMStats:
     instructions: int = 0
     verifies: int = 0
     verified_exact: int = 0
+    tile_sweeps: int = 0
 
 
 class SparseVolume:
@@ -270,7 +276,30 @@ class SparseVolume:
 
 
 class DM3DVM:
-    def __init__(self, trace: bool = True) -> None:
+    """Bounded, candidate-first 3D ROM interpreter.
+
+    A failed ROM leaves committed tiles, latents, residuals, PC and statistics
+    unchanged. This is in-process transactionality, not hostile-code isolation.
+    """
+
+    def __init__(
+        self,
+        trace: bool = True,
+        *,
+        max_steps: int = DEFAULT_MAX_STEPS,
+        max_active_tiles: int = DEFAULT_MAX_ACTIVE_TILES,
+        max_tile_sweeps: int = DEFAULT_MAX_TILE_SWEEPS,
+    ) -> None:
+        for name, value in (
+            ("max_steps", max_steps),
+            ("max_active_tiles", max_active_tiles),
+            ("max_tile_sweeps", max_tile_sweeps),
+        ):
+            if type(value) is not int or value < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        self.max_steps = max_steps
+        self.max_active_tiles = max_active_tiles
+        self.max_tile_sweeps = max_tile_sweeps
         self.volume = SparseVolume()
         self.latent: Dict[TileKey, bytearray] = {}
         self.recon: Dict[TileKey, bytearray] = {}
@@ -287,19 +316,72 @@ class DM3DVM:
                 raise ValueError(f"tile coordinate {key} outside virtual 1GB^3 cube")
 
     def run(self, rom: bytes) -> VMStats:
+        """Execute on isolated state; promote only after successful completion."""
+        if not isinstance(rom, bytes):
+            raise TypeError("ROM must be immutable bytes")
+        if len(self.volume.tiles) > self.max_active_tiles:
+            raise RuntimeError("existing resident tiles exceed the execution budget")
+        candidate = DM3DVM(
+            trace=self.trace,
+            max_steps=self.max_steps,
+            max_active_tiles=self.max_active_tiles,
+            max_tile_sweeps=self.max_tile_sweeps,
+        )
+        candidate.volume.tiles = {key: bytearray(tile) for key, tile in self.volume.tiles.items()}
+        candidate.latent = {key: bytearray(tile) for key, tile in self.latent.items()}
+        candidate.recon = {key: bytearray(tile) for key, tile in self.recon.items()}
+        candidate.resid = {key: list(values) for key, values in self.resid.items()}
+        candidate.corrected = {key: bytearray(tile) for key, tile in self.corrected.items()}
+        candidate.stats = VMStats(
+            self.stats.instructions,
+            self.stats.verifies,
+            self.stats.verified_exact,
+            self.stats.tile_sweeps,
+        )
+        candidate._execute(rom)
+        self.volume = candidate.volume
+        self.latent = candidate.latent
+        self.recon = candidate.recon
+        self.resid = candidate.resid
+        self.corrected = candidate.corrected
+        self.pc = candidate.pc
+        self.stats = candidate.stats
+        return self.stats
+
+    def _execute(self, rom: bytes) -> None:
         header = parse_header(rom)
         code_offset = int(header["code_offset"])
         count = int(header["instr_count"])
         code_end = code_offset + count * INSTR_SIZE
-        if code_end > len(rom):
-            raise ValueError("ROM code section truncated")
+        if code_end != len(rom):
+            raise ValueError("ROM code section has invalid length")
+        if count > self.max_steps:
+            raise RuntimeError("ROM program exceeds instruction budget")
 
         self.pc = 0
+        steps = 0
+        tile_sweeps = 0
         while self.pc < count:
+            if steps >= self.max_steps:
+                raise RuntimeError("ROM execution step budget exhausted")
+            steps += 1
             off = code_offset + self.pc * INSTR_SIZE
             fields = INSTR_STRUCT.unpack_from(rom, off)
             op, flags, _, x, y, z, p0, p1, p2, p3 = fields
             key = (x, y, z)
+            # Conservatively account for a full tile traversal per bulky opcode.
+            # REFINE may perform multiple traversals depending on its parameters.
+            sweeps = 0
+            if op in (
+                OP_FILL_TILE, OP_ENCODE, OP_DECODE, OP_RESIDUAL, OP_CORRECT, OP_VERIFY
+            ):
+                sweeps = 1
+            elif op == OP_REFINE:
+                sweeps = min(64, int(p0 or 4))
+            if tile_sweeps + sweeps > self.max_tile_sweeps:
+                raise RuntimeError("ROM tile-work budget exhausted")
+            tile_sweeps += sweeps
+            self.stats.tile_sweeps += sweeps
             self.stats.instructions += 1
 
             if self.trace:
@@ -314,6 +396,8 @@ class DM3DVM:
                 pass
             elif op == OP_FILL_TILE:
                 self._check_tile_coord(key)
+                if key not in self.volume.tiles and len(self.volume.tiles) >= self.max_active_tiles:
+                    raise RuntimeError("ROM active-tile budget exhausted")
                 self.volume.put(key, deterministic_tile(x, y, z, p0))
             elif op == OP_ENCODE:
                 self._check_tile_coord(key)
@@ -383,7 +467,7 @@ class DM3DVM:
             if advance:
                 self.pc += 1
 
-        return self.stats
+        return None
 
 
 def pack_instruction(
@@ -428,6 +512,14 @@ def parse_header(rom: bytes) -> Dict[str, object]:
     )
     if magic != MAGIC:
         raise ValueError("bad ROM magic")
+    if version != VERSION:
+        raise ValueError("unsupported ROM version")
+    if (axis, tile, latent) != (AXIS_BYTES, TILE_EDGE, LATENT_EDGE):
+        raise ValueError("unsupported ROM geometry")
+    if code_offset != HEADER_SIZE:
+        raise ValueError("invalid ROM instruction offset")
+    if code_offset + count * INSTR_SIZE != len(rom):
+        raise ValueError("invalid ROM instruction section length")
     return {
         "magic": magic.decode("ascii"),
         "version": version,
@@ -505,6 +597,9 @@ def main(argv: List[str] | None = None) -> int:
     p_run = sub.add_parser("run", help="execute a ROM image")
     p_run.add_argument("path")
     p_run.add_argument("--quiet", action="store_true")
+    p_run.add_argument("--max-steps", type=int, default=DEFAULT_MAX_STEPS)
+    p_run.add_argument("--max-active-tiles", type=int, default=DEFAULT_MAX_ACTIVE_TILES)
+    p_run.add_argument("--max-tile-sweeps", type=int, default=DEFAULT_MAX_TILE_SWEEPS)
 
     p_demo = sub.add_parser("demo", help="build and execute a demo ROM")
     p_demo.add_argument("path", nargs="?", default="dr_moagi_3d_1gb3.rom")
@@ -525,7 +620,13 @@ def main(argv: List[str] | None = None) -> int:
     if args.cmd == "run":
         rom = Path(args.path).read_bytes()
         print(json.dumps(parse_header(rom), indent=2))
-        print(DM3DVM(trace=not args.quiet).run(rom))
+        vm = DM3DVM(
+            trace=not args.quiet,
+            max_steps=args.max_steps,
+            max_active_tiles=args.max_active_tiles,
+            max_tile_sweeps=args.max_tile_sweeps,
+        )
+        print(vm.run(rom))
         return 0
     if args.cmd == "demo":
         path = Path(args.path)
