@@ -23,6 +23,9 @@ The command exits with status `0` only when every required check passes. The JSO
 | Sparse transactional field | Reverse observation insertion order, replay a checkpoint and force an invalid candidate | State/journal digests remain equal; checkpoint restores; rejected persistent state rolls back | `src/jarvisx/dr_moagi_billion_field.py` | `1000³` is virtual address-space extent; active coordinates alone are materialized |
 | Recursive octree geometry | Materialize depths 0–6 and compare measured metrics with closed forms | Nodes `(4^(D+1)-1)/3`, leaves `4^D`, volume `2^-D` at every depth | `src/jarvisx/fractal_octree.py` | Geometric self-similarity does not by itself prove long-memory quality |
 | Fractional numerical invariants | Smooth a `4×4×4` impulse and compare split versus combined spectral steps | Mass drift `<1e-9`; variance and gradient energy decrease; semigroup error `<1e-10`; trace is canonical | `src/jarvisx/fractional_smoothing_3d.py` | Small-grid direct-DFT correctness is not production FFT performance or calibrated physics |
+| DM3D ROM transactional closure | Round-trip one 64³ source tile through quantized latent, signed residual, correction and VERIFY; force a self-looping candidate | Exact byte recovery; step-budget rejection; complete incumbent-state and counter preservation | `src/jarvisx/dm3d_rom.py`, `tests/test_dm3d_rom.py` | 10²⁷ byte addresses are virtual; full residual costs are excluded from the 512-byte latent; not a trained ANN, full compression proof or OS sandbox |
+
+For the bounded pipeline contract, see [DM3D system conformance](DM3D_SYSTEM_CONFORMANCE.md). The same ROM check is reused by the repository-wide operational smoke gate.
 
 ## Machine-readable report
 
