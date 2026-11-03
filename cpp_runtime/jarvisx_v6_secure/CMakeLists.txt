@@ -1,0 +1,18 @@
+# JARVIS X v6 secure archive — optional independent module.
+cmake_minimum_required(VERSION 3.16)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(jarvisx_v6_secure LANGUAGES CXX)
+  enable_testing()
+endif()
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+add_executable(jarvisx-v6-secure src/secure_aead.cpp)
+set_target_properties(jarvisx-v6-secure PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
+target_link_libraries(jarvisx-v6-secure PRIVATE OpenSSL::Crypto)
+if(MSVC)
+  message(FATAL_ERROR "JARVIS X v6 secure archive currently requires POSIX key-file and filesystem semantics")
+else()
+  target_compile_options(jarvisx-v6-secure PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+add_test(NAME jarvisx-v6-secure-regressions
+  COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/security_smoke.sh $<TARGET_FILE:jarvisx-v6-secure>)
+set_tests_properties(jarvisx-v6-secure-regressions PROPERTIES TIMEOUT 120)

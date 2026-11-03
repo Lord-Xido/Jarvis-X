@@ -419,3 +419,9 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/dm3d_operational.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/master_equation.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/streaming_framebuffer3d.cmake)
+
+# Optional JX6AEAD1 AES-256-GCM envelope (distinct from DM3D secure codec PR #383).
+option(JARVISX_BUILD_V6_SECURE "Build optional JARVIS X v6 authenticated archive codec" OFF)
+if(JARVISX_BUILD_V6_SECURE)
+    add_subdirectory(jarvisx_v6_secure)
+endif()
