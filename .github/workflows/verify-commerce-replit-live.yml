@@ -2,6 +2,9 @@ name: Verify published Jarvis X retail and wholesale demo
 on:
   push:
     branches: [verify/commerce-live-20261103]
+  pull_request:
+    paths:
+      - '.github/workflows/verify-commerce-replit-live.yml'
   workflow_dispatch:
 
 permissions:
