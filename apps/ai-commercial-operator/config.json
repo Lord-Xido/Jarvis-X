@@ -1,0 +1,109 @@
+{
+  "currency": "ZAR",
+  "period": "week",
+  "mode": "simulation",
+  "starting_cash_zar": 2000000,
+  "opening_receivables_zar": 0,
+  "weekly_marketing_budget_zar": 80000,
+  "weekly_platform_fixed_cash_zar": 120000,
+  "minimum_cash_reserve_zar": 500000,
+  "compute_request_capacity_week": 22000,
+  "requests_per_active_account_week": 100,
+  "cash_collection_fraction_week": 0.7,
+  "variable_compute_cost_zar_per_request": 0.25,
+  "support_cash_zar_per_active_account_week": 18,
+  "model_max_relative_mae": 0.45,
+  "model_max_naive_mae_ratio": 1.25,
+  "markets": [
+    {
+      "id": "local",
+      "label": "Johannesburg pilot",
+      "market_baseline_new_week": 4,
+      "active_accounts": 12,
+      "qualified_prospects_remaining": 220,
+      "base_weekly_price_zar": 650,
+      "place_reach": 0.64,
+      "product_quality_index": 1.05,
+      "affordability_index": 0.8,
+      "sentiment": 0.12,
+      "weekly_churn": 0.02,
+      "marketing_menu_zar": [
+        0,
+        1500,
+        4000
+      ]
+    },
+    {
+      "id": "national",
+      "label": "South Africa",
+      "market_baseline_new_week": 12,
+      "active_accounts": 37,
+      "qualified_prospects_remaining": 1500,
+      "base_weekly_price_zar": 590,
+      "place_reach": 0.54,
+      "product_quality_index": 1.02,
+      "affordability_index": 0.7,
+      "sentiment": 0.08,
+      "weekly_churn": 0.02,
+      "marketing_menu_zar": [
+        0,
+        5000,
+        11000
+      ]
+    },
+    {
+      "id": "regional",
+      "label": "Southern Africa",
+      "market_baseline_new_week": 18,
+      "active_accounts": 19,
+      "qualified_prospects_remaining": 6000,
+      "base_weekly_price_zar": 500,
+      "place_reach": 0.42,
+      "product_quality_index": 0.98,
+      "affordability_index": 0.6,
+      "sentiment": 0.05,
+      "weekly_churn": 0.025,
+      "marketing_menu_zar": [
+        0,
+        8000,
+        18000
+      ]
+    },
+    {
+      "id": "continental",
+      "label": "Pan-African",
+      "market_baseline_new_week": 27,
+      "active_accounts": 8,
+      "qualified_prospects_remaining": 25000,
+      "base_weekly_price_zar": 450,
+      "place_reach": 0.28,
+      "product_quality_index": 0.95,
+      "affordability_index": 0.52,
+      "sentiment": 0.03,
+      "weekly_churn": 0.03,
+      "marketing_menu_zar": [
+        0,
+        12000,
+        25000
+      ]
+    },
+    {
+      "id": "global",
+      "label": "International",
+      "market_baseline_new_week": 35,
+      "active_accounts": 4,
+      "qualified_prospects_remaining": 150000,
+      "base_weekly_price_zar": 760,
+      "place_reach": 0.13,
+      "product_quality_index": 1.03,
+      "affordability_index": 0.72,
+      "sentiment": 0.07,
+      "weekly_churn": 0.035,
+      "marketing_menu_zar": [
+        0,
+        20000,
+        40000
+      ]
+    }
+  ]
+}
