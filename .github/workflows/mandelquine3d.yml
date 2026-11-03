@@ -1,0 +1,34 @@
+name: Mandelquine3D C++ inward verification
+on:
+  pull_request:
+    paths:
+      - "cpp_runtime/mandelquine3d/**"
+      - ".github/workflows/mandelquine3d.yml"
+  push:
+    branches: [main]
+    paths:
+      - "cpp_runtime/mandelquine3d/**"
+      - ".github/workflows/mandelquine3d.yml"
+permissions:
+  contents: read
+jobs:
+  cpp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and verify inward-loop C++20 engine
+        working-directory: cpp_runtime/mandelquine3d
+        run: CXX=${{ matrix.compiler }} bash run_all.sh
+      - name: Publish numerical audit traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mandelquine3d-${{ matrix.compiler }}-audit
+          path: cpp_runtime/mandelquine3d/audit_outputs/
+          if-no-files-found: ignore
+          retention-days: 7
