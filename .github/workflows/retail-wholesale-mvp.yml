@@ -1,0 +1,60 @@
+name: Jarvis X Retail Wholesale Commerce MVP
+on:
+  pull_request:
+    paths:
+      - 'apps/retail-wholesale-mvp/**'
+      - '.github/workflows/retail-wholesale-mvp.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/retail-wholesale-mvp/**'
+      - '.github/workflows/retail-wholesale-mvp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests-and-http-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/retail-wholesale-mvp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax
+        run: python -m compileall -q .
+      - name: Unit tests
+        run: python -m unittest -v test_engine
+      - name: HTTP health, demo and rejection
+        run: |
+          PORT=9090 python server.py >/tmp/jx-commerce.log 2>&1 &
+          echo $! >/tmp/jx-commerce.pid
+          trap 'kill "$(cat /tmp/jx-commerce.pid)" 2>/dev/null || true' EXIT
+          python - <<'PY'
+          import json, time, urllib.request, urllib.error
+          base="http://127.0.0.1:9090"
+          for _ in range(40):
+              try:
+                  with urllib.request.urlopen(base+"/healthz",timeout=1) as r:
+                      assert json.load(r)["ok"] is True
+                      break
+              except Exception:
+                  time.sleep(.15)
+          else: raise AssertionError("service failed to start")
+          with urllib.request.urlopen(base+"/api/demo",timeout=5) as r:
+              obj=json.load(r)
+              assert obj["plan"]["execution_enabled"] is False
+              assert len(obj["plan"]["products"])==3
+          req=urllib.request.Request(base+"/api/plan",data=b'{"products":[{"customer_email":"no"}]}',headers={"Content-Type":"application/json"},method="POST")
+          try:
+              urllib.request.urlopen(req,timeout=5)
+              raise AssertionError("invalid payload accepted")
+          except urllib.error.HTTPError as exc:
+              assert exc.code==400
+          print("HTTP smoke tests passed")
+          PY
