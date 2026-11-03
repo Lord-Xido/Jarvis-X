@@ -7,7 +7,7 @@ file transport: `plaintext -> 8×8×8 XOR-lifting -> AES-256-GCM encryption ->
 file`, and `file -> GCM authentication/decryption -> inverse XOR-lifting ->
 byte-identical plaintext`.
 
-The toroidal aspect is the *periodic 8×8×8 logical indexing model*; the transform
+The toroidal aspect is *periodic-boundary XOR coupling on an 8×8×8 lattice*; the transform
 is a reversible XOR lifting rather than a learned neural network, a torus
 embedding, an error-reducing ANN, or a compressor. The former lossy toroidal
 ANN remains a separate experimental model; this codec does not claim to preserve
@@ -47,15 +47,15 @@ last source tile is zero padded before reversible lifting and encryption; the
 plaintext size in the authenticated header removes padding after decryption.
 The format is **not compressed** and grows by between 44 and 555 bytes.
 
-The decoder first writes to a mode-0600 temporary file in the destination
-directory, checks the GCM tag, then exclusively publishes the result using a
-hard link. Failed authentication removes the temporary output and does not
-publish a destination file. Local users/processes with the *same OS identity*
-may be able to read the temporary plaintext before verification. This is a
-local-file prototype, not hardened against hostile same-UID processes,
-filesystem race attacks or untrusted symlinked path components. A production
-version should authenticate before writing any plaintext to disk, harden path
-handling and subject its implementation to independent security review.
+The decoder authenticates the full ciphertext **before writing any plaintext**,
+then decrypts in a second pass, rechecks the tag, and exclusively publishes a
+mode-0600 output via an atomic POSIX hard link. Failed authentication removes
+the temporary output and never publishes a destination. Both passes must read
+the same stable source file: a same-UID adversary might change an input between
+passes and inspect the second-pass temporary plaintext before rejection. This is
+a local prototype, not hardened against hostile same-UID processes, untrusted
+symlinked paths or concurrent mutation. Production use needs descriptor-bound
+file access and independent security review.
 
 ## Security boundary
 
