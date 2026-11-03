@@ -124,7 +124,8 @@ export function createBridgeServer({ bin = binaryPath, page = resolve(directory,
       if (!closed) res.write('event: engine-end\ndata: ' + JSON.stringify({ code, message: stderr }) + '\n\n');
       cleanup();
     });
-    req.on('close', cleanup);
+    // IncomingMessage 'close' may mean the GET request was read, not that the SSE client disconnected.
+    res.on('close', cleanup);
   });
   server.on('close', () => { for (const child of processes) child.kill('SIGTERM'); });
   return server;
