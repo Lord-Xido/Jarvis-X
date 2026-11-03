@@ -242,6 +242,17 @@ void stream_json(const Config& c, unsigned pace_ms) {
     std::array<double,3> angles{{0,0,0}};
     std::vector<Vec3> mesh;
     mesh.reserve(c.grid*c.grid);
+    // Precompute fixed torus samples once; no trig calls in the frame loop.
+    // Excluded from per-frame compute_seconds; accounted for as setup cost.
+    std::vector<Vec4> source_grid;
+    source_grid.reserve(c.grid*c.grid);
+    for (std::size_t i=0;i<c.grid;++i) {
+        const double u=2*pi*static_cast<double>(i)/static_cast<double>(c.grid);
+        for(std::size_t j=0;j<c.grid;++j) {
+            const double v=2*pi*static_cast<double>(j)/static_cast<double>(c.grid);
+            source_grid.push_back(parametric_point(u,v,c));
+        }
+    }
     const double target_norm2 = c.radius1*c.radius1+c.radius2*c.radius2;
     const double scaled_dt = c.dt*c.time_scale;
     std::cout << std::setprecision(12);
@@ -254,23 +265,20 @@ void stream_json(const Config& c, unsigned pace_ms) {
         double norm_error=0;
         double min_denom=std::numeric_limits<double>::infinity();
         mesh.clear();
-        for (std::size_t i=0;i<c.grid;++i) {
-            const double u=2*pi*static_cast<double>(i)/static_cast<double>(c.grid);
-            for(std::size_t j=0;j<c.grid;++j) {
-                const double v=2*pi*static_cast<double>(j)/static_cast<double>(c.grid);
-                const Vec4 p=multiply(matrix,parametric_point(u,v,c));
+        for (const Vec4& base : source_grid) {
+                const Vec4 p=multiply(matrix,base);
                 norm_error=std::max(norm_error,std::abs(norm2(p)-target_norm2));
                 min_denom=std::min(min_denom,c.projection_radius-p.w);
                 const Vec3 q=project(p,c);
                 if (!(std::isfinite(q.x)&&std::isfinite(q.y)&&std::isfinite(q.z)))
                     throw std::runtime_error("nonfinite projection in streamed frame");
                 mesh.push_back(q);
-            }
         }
         if(!(min_denom>0 && std::isfinite(norm_error) && std::isfinite(orth_error)))
             throw std::runtime_error("invalid streamed geometry invariant");
         const double compute_s=std::max(
             std::chrono::duration<double>(Clock::now()-started).count(),1e-12);
+        const auto serialization_started=Clock::now();
         std::ostringstream line;
         line << std::setprecision(12)
              << "{\"protocol\":\"jx-clifford-frame-v1\",\"frame\":" << frame
@@ -290,7 +298,9 @@ void stream_json(const Config& c, unsigned pace_ms) {
             if(i) line << ',';
             line << mesh[i].x << ',' << mesh[i].y << ',' << mesh[i].z;
         }
-        line << "]}";
+        const double json_encode_s=std::max(
+            std::chrono::duration<double>(Clock::now()-serialization_started).count(),0.0);
+        line << "],\"json_encode_seconds\":" << json_encode_s << '}';
         std::cout << line.str() << '\n' << std::flush;
         if(!std::cout) return; // transport disconnected
         if(pace_ms) std::this_thread::sleep_for(std::chrono::milliseconds(pace_ms));
