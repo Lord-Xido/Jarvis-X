@@ -40,7 +40,7 @@ q      = projection_radius * (p'.x,p'.y,p'.z) / (projection_radius - p'.w)
 
 The projection radius must be strictly greater than `sqrt(R1²+R2²)`. This mapping is a pole-safe **perspective projection** of the 4D torus, not the classical unit-S³ stereographic projection.
 
-The C++ engine measures its geometry-compute time for each frame and transmits the result. It **does not** measure overall application latency, network throughput, or GPU compute. Browser FPS is separately measured by animation frames. The simulated-time multiplier only changes rotation phase per update; it cannot substantiate a computation speedup. The original illustrative spin, energy and stability gauges have been replaced with calculated invariants.
+The C++ engine precomputes the fixed 4D torus sample grid once, then applies a fresh orthogonal rotation matrix and perspective projection to each cached sample per frame. The engine measures **per-frame geometry computation**, excluding one-time grid precomputation, and separately reports \`json_encode_seconds\` (time to construct the JSON payload, excluding the last timing field and stdout transport). It **does not** measure overall application latency, network throughput, or GPU compute. Browser FPS is separately measured by animation frames. The simulated-time multiplier only changes rotation phase per update; it cannot substantiate a computation speedup. The original illustrative spin, energy and stability gauges have been replaced with calculated invariants.
 
 ## Run direct backend protocol
 
@@ -53,4 +53,8 @@ Each output line is one valid JSON object. Node's SSE bridge wraps these lines w
 
 ## Security and limitations
 
-For **local development only**. The Node server spawns a C++ child with fixed arguments and validated speed inputs, uses no shell, bounds simultaneous streams and line sizes, and exposes no public listener. Do not deploy it directly to a public address without authentication, resource controls, and reverse-proxy hardening. The Three.js scripts are currently loaded from third-party CDNs. The browser and Node integration tests do not establish GPU performance or end-to-end frame timing; production performance assessment must collect real render, serialization, transport and compute timings on the target hardware.
+For **local development only**. The Node server spawns a C++ child with fixed arguments and validated speed inputs, uses no shell, bounds simultaneous streams and line sizes, and exposes no public listener. Do not deploy it directly to a public address without authentication, resource controls, and reverse-proxy hardening. The Three.js scripts are currently loaded from third-party CDNs. The browser runs a deterministic, independent 4D -> 3D projector against 32 sampled vertices in each received frame; it refuses to render numerically invalid or mismatched packets. This is a **sampled geometric self-consistency check**, not an authenticated checksum, learned self-correction, or proof that all vertices are correct. Browser frame-application time includes parsing-side verification and CPU-side position-array update; it does not include GPU draw completion. The browser and Node integration tests do not establish GPU performance or complete end-to-end frame latency; production assessment needs measured transport and GPU timing on the target hardware.
+
+## Current merge context
+
+This integration was first merged as PR #453 into the feature branch of PR #452 **after** PR #452 had already merged into \`main\`. The subsequent permeation PR ports the bridge into \`main\` and adds independent numerical frame verification and cached torus precomputation.
