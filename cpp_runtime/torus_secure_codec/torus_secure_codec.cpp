@@ -51,10 +51,25 @@ void lift_axis(Block& b, int axis, int stride) {
         b[idx(x,y,z)] ^= b[idx(xx,yy,zz)];
     }
 }
+void torus_seam(Block& b, int axis) {
+    // Periodic boundary edge (0 <-> 7) on each of the three spatial axes.
+    // XOR is self-inverse; reverse axis order during decoding.
+    for (int z=0;z<8;++z) for(int y=0;y<8;++y) for(int x=0;x<8;++x) {
+        const int coord = axis==0 ? x : axis==1 ? y : z;
+        if (coord!=0) continue;
+        int xx=x, yy=y, zz=z;
+        if (axis==0) xx=7;
+        if (axis==1) yy=7;
+        if (axis==2) zz=7;
+        b[idx(x,y,z)] ^= b[idx(xx,yy,zz)];
+    }
+}
 void encode3d(Block& b) {
     for (int axis=0;axis<3;++axis) for(int stride : {1,2,4}) lift_axis(b,axis,stride);
+    for (int axis=0;axis<3;++axis) torus_seam(b,axis);
 }
 void decode3d(Block& b) {
+    for (int axis=2;axis>=0;--axis) torus_seam(b,axis);
     for (int axis=2;axis>=0;--axis) for(int stride : {4,2,1}) lift_axis(b,axis,stride);
 }
 std::uint64_t get64(const unsigned char* p) {
@@ -159,7 +174,7 @@ void encrypt_file(const fs::path& src,const fs::path& dest,const fs::path& key_p
         encode3d(block);
         Block ciphertext{};
         require(EVP_EncryptUpdate(c.p,ciphertext.data(),&got,block.data(),TILE)==1 && got==TILE,"encryption failed");
-        out.write(ciphertext.data(),got);
+        out.write(ciphertext.data(),static_cast<std::size_t>(got));
     }
     unsigned char tail[16]{};
     require(EVP_EncryptFinal_ex(c.p,tail,&got)==1 && got==0,"GCM finalize failed");
@@ -167,6 +182,29 @@ void encrypt_file(const fs::path& src,const fs::path& dest,const fs::path& key_p
     require(EVP_CIPHER_CTX_ctrl(c.p,EVP_CTRL_GCM_GET_TAG,TAG,tag.data())==1,"tag retrieval failed");
     out.write(tag.data(),tag.size());
     out.commit(dest);
+}
+void authenticate_before_write(std::ifstream& in, const Head& h, const Key& key, std::uint64_t n) {
+    // First pass: verify the complete tag before creating any plaintext file.
+    Cipher c;
+    require(EVP_DecryptInit_ex(c.p,EVP_aes_256_gcm(),nullptr,nullptr,nullptr)==1,"preauth setup failed");
+    require(EVP_CIPHER_CTX_ctrl(c.p,EVP_CTRL_GCM_SET_IVLEN,12,nullptr)==1,"preauth IV failed");
+    require(EVP_DecryptInit_ex(c.p,nullptr,nullptr,key.data(),h.data()+16)==1,"preauth key failed");
+    int got=0;
+    require(EVP_DecryptUpdate(c.p,nullptr,&got,h.data(),HEADER)==1,"preauth AAD failed");
+    for (std::uint64_t off=0;off<padded(n);off+=TILE) {
+        Block ciphertext{}, discarded{};
+        exact_read(in,ciphertext.data(),TILE);
+        require(EVP_DecryptUpdate(c.p,discarded.data(),&got,ciphertext.data(),TILE)==1 && got==TILE,"preauth failed");
+        OPENSSL_cleanse(discarded.data(),discarded.size());
+    }
+    std::array<unsigned char,TAG> tag{};
+    exact_read(in,tag.data(),TAG);
+    require(EVP_CIPHER_CTX_ctrl(c.p,EVP_CTRL_GCM_SET_TAG,TAG,tag.data())==1,"preauth tag failed");
+    unsigned char tail[16]{};
+    require(EVP_DecryptFinal_ex(c.p,tail,&got)==1 && got==0,"AUTHENTICATION FAILED: wrong key or tampered file");
+    in.clear();
+    in.seekg(static_cast<std::streamoff>(HEADER),std::ios::beg);
+    require(static_cast<bool>(in),"cannot rewind authenticated input");
 }
 void decrypt_file(const fs::path& src,const fs::path& dest,const fs::path& key_path) {
     require(src!=dest,"input and output are identical");
@@ -179,6 +217,7 @@ void decrypt_file(const fs::path& src,const fs::path& dest,const fs::path& key_p
     require(padded(n)<=std::numeric_limits<std::uint64_t>::max()-HEADER-TAG,"file length overflow");
     require(fs::file_size(src)==HEADER+padded(n)+TAG,"encrypted length mismatch");
     SecretKey key=load_key(key_path);
+    authenticate_before_write(in,h,key.bytes,n);
     Cipher c;
     require(EVP_DecryptInit_ex(c.p,EVP_aes_256_gcm(),nullptr,nullptr,nullptr)==1,"AES-GCM setup failed");
     require(EVP_CIPHER_CTX_ctrl(c.p,EVP_CTRL_GCM_SET_IVLEN,12,nullptr)==1,"nonce length rejected");
@@ -206,7 +245,7 @@ void decrypt_file(const fs::path& src,const fs::path& dest,const fs::path& key_p
 void selftest() {
     for(int length : {0,1,7,511,512,513,1025}) {
         Block b{};
-        for(std::size_t i=0;i<TILE;++i)b[i]=static_cast<unsigned char>((i*97+length)&255);
+        for(std::size_t i=0;i<TILE;++i)b[i]=static_cast<unsigned char>((i*97+static_cast<std::size_t>(length))&255);
         Block saved=b;encode3d(b);decode3d(b);
         require(b==saved,"3D lifting inverse mismatch");
     }
