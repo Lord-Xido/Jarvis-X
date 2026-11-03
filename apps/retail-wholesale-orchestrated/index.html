@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#091322"><title>Jarvis X — Orchestrated Commerce OS</title>
+<style>
+:root{color-scheme:dark;--bg:#07111c;--card:#101f30;--edge:#2a3d51;--muted:#a1b3c5;--green:#67e7c2;--pink:#ffa57b;--white:#f0f6fc;--blue:#93b8ff}*{box-sizing:border-box}html{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--white)}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 78% -12%,#1a515c77,transparent 39%),radial-gradient(ellipse at 3% 47%,#162c5577,transparent 43%),var(--bg)}button,select,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:2px}a{color:var(--blue)}.shell{max-width:1540px;margin:auto;padding:28px clamp(16px,3vw,42px) 44px}.top{display:flex;align-items:start;justify-content:space-between;gap:16px;flex-wrap:wrap}.eyebrow{color:var(--green);font-size:11px;text-transform:uppercase;font-weight:800;letter-spacing:2.5px}.headline{font-size:clamp(27px,4.4vw,48px);letter-spacing:-2.2px;line-height:1.08;margin:10px 0 11px;font-weight:820}.description{font-size:13px;color:var(--muted);max-width:730px;line-height:1.65;margin:0}.actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.btn{background:#163343;border:1px solid #396577;border-radius:10px;color:#d9f6f1;padding:10px 14px;font-weight:680;font-size:12px}.btn:hover{background:#214d5a}.btn-ghost{background:#182333;border-color:#3c5268}.live{display:flex;align-items:center;gap:8px;background:#123e38;border:1px solid #317565;border-radius:100px;color:#a2ffe6;font-weight:750;font-size:11px;padding:9px 13px}.live i{width:7px;height:7px;background:#74f5c8;border-radius:50%;box-shadow:0 0 0 4px #74f5c81b}.alert{margin:21px 0 18px;padding:13px 16px;background:#30241a;border:1px solid #725439;color:#f7d4ad;font-size:12px;line-height:1.6;border-radius:12px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.card{border:1px solid var(--edge);border-radius:16px;background:linear-gradient(150deg,#142439 0%,#101e2e 75%);padding:19px;min-width:0;box-shadow:0 14px 35px #00000019}.kpi .label{color:var(--muted);font-size:12px}.kpi strong{font-size:clamp(23px,2.2vw,31px);letter-spacing:-1px;display:block;margin:13px 0 8px}.kpi small{font-size:11px;color:#7ccec1}.rows{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:15px;margin-top:16px}.rows-even{grid-template-columns:1fr 1fr}.section-title{margin:0 0 7px;font-size:17px;font-weight:770;letter-spacing:-.3px}.subtitle{color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 17px}.headerline{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}.tag{font-size:11px;padding:6px 9px;background:#183a3c;border:1px solid #32766b;border-radius:8px;color:#a3f6dc}.tag-warning{background:#40291f;border-color:#7a4b30;color:#ffbf92}canvas{display:block;width:100%;height:250px}#warehouse{height:190px}.smallrows{display:grid;gap:10px}.minor{color:#96aabd;font-size:11px}.full-row{display:flex;justify-content:space-between;align-items:center;gap:11px;border-bottom:1px solid #2b3d50;padding:11px 0;font-size:12px}.full-row:last-child{border-bottom:0}.full-row strong{font-size:13px;white-space:nowrap}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{min-width:0}.field label{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#c4d4e4;font-size:12px;margin-bottom:8px}.field output{font-size:12px;color:var(--green);font-variant-numeric:tabular-nums;font-weight:750}input[type=range]{display:block;width:100%;accent-color:#65d4b6;cursor:pointer}select,input[type=number]{background:#0b1928;color:#e9f5ff;border:1px solid #365067;border-radius:10px;padding:10px 11px;min-width:0;width:100%}.field select{font-size:13px}.sectionline{height:1px;background:#2a4055;margin:20px 0}.tablebox{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:13px 9px;white-space:nowrap;border-bottom:1px solid #253a4b;text-align:left}th{color:#9eb2c4;font-weight:620;font-size:11px}td{color:#e2edf8}td:last-child,th:last-child{text-align:right}.risk{color:#ffbf92}.good{color:#77e7c0}.warninglist{margin:8px 0;padding-left:19px;color:#f4c49f;font-size:12px;line-height:1.8}.help{color:#90a6b8;font-size:11px;line-height:1.6}.hide{display:none!important}.notice{border:1px solid #325666;border-radius:12px;padding:12px 13px;background:#132d3d;color:#c2e3e6;font-size:12px;line-height:1.55}.floatright{margin-left:auto}.resultbar{display:grid;gap:12px}.resultbar .full-row{padding:4px 0 11px}.scope{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:15px}.scope span{color:#acbdcc;font-size:11px}.scope b{color:#78dec2;font-size:12px}.foot{font-size:11px;color:#89a0b2;line-height:1.65;margin-top:24px}.err{color:#ffbba7}.info{color:var(--green)}#import-file{display:none}#activity{min-height:17px;margin:7px 0 0;font-size:11px;color:#bdd5e8}.tabbar{display:flex;gap:8px;margin:17px 0 0}.tabbtn{border:1px solid #334b5e;background:#142437;color:#abc2d4;padding:9px 13px;border-radius:9px;font-size:12px}.tabbtn.sel{background:#194b4a;color:#acffe0;border-color:#4c9986}.forecastmeta{display:flex;flex-wrap:wrap;gap:9px}.mini-stat{font-size:11px;background:#0c1d2c;border:1px solid #2d4559;border-radius:8px;padding:7px 9px;color:#bdd1e0}
+@media(max-width:1100px){.rows,.rows-even{grid-template-columns:1fr}}@media(max-width:760px){.kpis{grid-template-columns:1fr 1fr}.kpi strong{font-size:23px}.form-grid{grid-template-columns:1fr}.card{padding:15px}.shell{padding:19px 13px 30px}.actions .btn{padding:8px 11px}}
+@media(max-width:400px){.kpis{gap:7px}.kpi{padding:12px}.kpi strong{font-size:19px}.headline{letter-spacing:-1.2px}.actions{gap:6px}}
+</style></head><body><div class="shell">
+<header class="top"><div><div class="eyebrow">Jarvis X / Commerce OS / Local → Global</div><h1 class="headline">Live Market Intelligence</h1><p class="description">Four Ps · Demand forecasting · Wholesale and retail · Warehouse inventory · Capital allocation. All calculations run in this browser, using a deterministic model.</p></div><div class="actions"><span class="live"><i></i> LOCAL ENGINE ACTIVE</span><button class="btn btn-ghost" id="reset">↺ Reset</button><button class="btn" id="export">↓ Export plan</button></div></header>
+<div class="alert">SIMULATION ONLY — Synthetic products and financial values. Forecasts and procurement recommendations are not verified real-world outcomes. No account, server connection, purchase, payment or advertisement is executed.</div>
+<section class="kpis" aria-label="Live key performance indicators">
+ <div class="card kpi"><span class="label">Forecast 7-day sales revenue</span><strong id="k-revenue">—</strong><small>Wholesale + retail blended</small></div>
+ <div class="card kpi"><span class="label">Gross contribution after campaigns</span><strong id="k-contribution">—</strong><small>Less marketing and fixed overhead</small></div>
+ <div class="card kpi"><span class="label">Forecast ending cash</span><strong id="k-cash">—</strong><small>Collections minus cash commitments</small></div>
+ <div class="card kpi"><span class="label">Proposed replenishment</span><strong id="k-orders">—</strong><small>Approval required before purchasing</small></div>
+</section>
+<div class="rows"><section class="card"><div class="headerline"><div><h2 class="section-title">Demand intelligence</h2><p class="subtitle">56 daily synthetic sales observations, 7-day forecast and chronological backtest</p></div><span class="tag" id="selected-sku-label">—</span></div><canvas id="demand" role="img" aria-label="Daily demand history and projected future demand"></canvas><div class="forecastmeta"><div class="mini-stat" id="metric-mae">Rolling MAE —</div><div class="mini-stat" id="metric-baseline">Naive MAE —</div><div class="mini-stat" id="metric-week">Next-week demand —</div></div></section>
+<section class="card"><div class="headerline"><div><h2 class="section-title">3D stock geometry</h2><p class="subtitle">Isometric product stocks relative to allocated outbound sales</p></div><span class="tag">x / y / z</span></div><canvas id="warehouse" role="img" aria-label="3D isometric warehouse inventories"></canvas><div class="full-row"><span class="minor">Allocated physical sales</span><strong id="allocated-sales">—</strong></div><div class="full-row"><span class="minor">Fulfilment throughput</span><strong id="dist-used">—</strong></div><div class="full-row"><span class="minor">Expansion decision</span><strong id="scale-gate">—</strong></div></section></div>
+<div class="rows rows-even"><section class="card"><h2 class="section-title">Product · Place · Price · Promotion</h2><p class="subtitle">Change a control to recalculate the planning cycle immediately.</p><div class="form-grid">
+<div class="field"><label for="tier">Deployment scale <output>MARKET</output></label><select id="tier"><option value="0">Local pilot</option><option value="1">South Africa</option><option value="2">Southern Africa</option><option value="3">Pan-African</option><option value="4">Global</option></select></div>
+<div class="field"><label for="sku">Active product <output>SKU</output></label><select id="sku"></select></div>
+<div class="field"><label for="retail">Price · Retail <output id="v-retail"></output></label><input id="retail" type="range" min="60" max="600" step="5"></div>
+<div class="field"><label for="wholesale">Price · Wholesale <output id="v-wholesale"></output></label><input id="wholesale" type="range" min="40" max="550" step="5"></div>
+<div class="field"><label for="reach">Place · Market reach <output id="v-reach"></output></label><input id="reach" type="range" min="10" max="100" step="5"></div>
+<div class="field"><label for="mix">Place · Wholesale sales mix <output id="v-mix"></output></label><input id="mix" type="range" min="0" max="100" step="5"></div>
+<div class="field"><label for="promo">Promotion · Proposed budget <output id="v-promo"></output></label><input id="promo" type="range" min="0" max="20000" step="250"></div>
+<div class="field"><label for="onHand">Product · Physical on-hand units <output id="v-onHand"></output></label><input id="onHand" type="range" min="0" max="2000" step="10"></div>
+</div><div class="sectionline"></div><h2 class="section-title">Capital and capacity constraints</h2><div class="form-grid">
+<div class="field"><label for="cash">Opening cash (ZAR)</label><input id="cash" type="number" min="0" max="100000000" step="5000"></div>
+<div class="field"><label for="minReserve">Minimum cash reserve</label><input id="minReserve" type="number" min="0" max="100000000" step="1000"></div>
+<div class="field"><label for="productionCap">Procurement production capacity (units)</label><input id="productionCap" type="number" min="0" max="10000000" step="100"></div>
+<div class="field"><label for="distributionCap">Distribution capacity (units/week)</label><input id="distributionCap" type="number" min="0" max="10000000" step="100"></div>
+</div><div class="scope"><span>Operational mode:</span><b>Approve proposals only</b><span>•</span><span>Marketing response not causally estimated</span></div></section>
+<section class="card"><h2 class="section-title">Financial reconciliation and safeguards</h2><p class="subtitle">Operating contribution is not the same as collected cash.</p><div id="finance" class="resultbar"></div><div class="sectionline"></div><h2 class="section-title">Expansion gate</h2><div class="notice"><strong id="decision">—</strong><div id="gate-detail" class="help" style="margin-top:5px"></div></div><ul id="warnings" class="warninglist"></ul><div class="sectionline"></div><h2 class="section-title">Local data operations</h2><div class="actions"><label class="btn btn-ghost" for="import-file">↑ Import daily SKU CSV</label><input id="import-file" type="file" accept=".csv,text/csv"><button id="sample" class="btn btn-ghost">↓ Sample CSV</button></div><p class="help">CSV header: <code>sku,date,units</code>, 28–365 dated rows per SKU. No customer names or transaction identifiers. Imported records stay in this browser.</p><p id="activity" aria-live="polite">Ready.</p></section></div>
+<section class="card" style="margin-top:16px"><div class="headerline"><div><h2 class="section-title">Warehouse-to-market allocation ledger</h2><p class="subtitle">Every stock movement, order and cash proposal is constrained by physical inventory and funding.</p></div><span class="tag">4 PRODUCTS</span></div><div class="tablebox"><table><thead><tr><th>Product / SKU</th><th>On hand</th><th>Reserved</th><th>7-day demand</th><th>Saleable allocation</th><th>Proposed reorder</th><th>Expected revenue</th><th>Forecast quality</th></tr></thead><tbody id="ledger"></tbody></table></div></section>
+
+<section class="card" id="auto-console" style="margin-top:17px">
+<div class="headerline"><div><div class="eyebrow">MULTICYCLE AUTONOMOUS SIMULATION</div>
+<h2 class="section-title" style="margin-top:8px">End-to-end AI Commerce Orchestrator</h2>
+<p class="subtitle">Forecast → procurement → lead-time delivery → simulated sales → receivables → cash → feedback → audit.</p></div><span class="tag tag-warning">NO LIVE EXECUTION</span></div>
+<div class="form-grid">
+ <div class="field"><label for="auto-weeks">Simulation horizon <output id="auto-weeks-value">12 weeks</output></label><input id="auto-weeks" type="range" min="1" max="52" step="1" value="12"></div>
+ <div class="field"><label for="auto-seed">Replay seed</label><input id="auto-seed" type="number" min="0" max="4294967295" step="1" value="20261103"></div>
+</div>
+<div class="actions" style="margin:17px 0"><button class="btn" id="auto-run">▶ Run complete orchestration</button><button class="btn btn-ghost" id="auto-export">↓ Export 12-week audit JSON</button></div>
+<div class="kpis">
+ <div class="card kpi"><span class="label">Cumulative simulated revenue</span><strong id="a-revenue">—</strong><small>Accrual revenue, not collected cash</small></div>
+ <div class="card kpi"><span class="label">Cumulative operating contribution</span><strong id="a-profit">—</strong><small>After COGS, marketing, overhead</small></div>
+ <div class="card kpi"><span class="label">Last-week closing cash</span><strong id="a-cash">—</strong><small>Receivables modelled separately</small></div>
+ <div class="card kpi"><span class="label">Expansion gate HOLD weeks</span><strong id="a-hold">—</strong><small>Human approval required to expand</small></div>
+</div>
+<div class="rows rows-even">
+ <div><h3 class="section-title">Cash and operating contribution trajectories</h3><canvas id="auto-chart" aria-label="Simulated weekly cash and operating contribution chart" role="img" style="height:235px"></canvas><div class="forecastmeta"><span class="mini-stat" style="color:#61d6b6">● Closing cash</span><span class="mini-stat" style="color:#ffb782">● Weekly operating contribution</span></div></div>
+ <div><h3 class="section-title">Audited operational activity</h3><div class="full-row"><span class="minor">Virtual events</span><strong id="a-events">—</strong></div><div class="full-row"><span class="minor">Procurement / shipment</span><strong id="a-shipped">—</strong></div><div class="full-row"><span class="minor">Forecast unmet demand</span><strong id="a-fails">—</strong></div><div class="notice" style="margin-top:14px">A HOLD blocks commercial expansion. Virtual product replenishment is simulated for sensitivity analysis, but never executed in a real warehouse or payment system.</div></div>
+</div>
+<div class="sectionline"></div><h3 class="section-title">Week-by-week accounting and allocation</h3>
+<div class="tablebox"><table><thead><tr><th>Week</th><th>Expansion</th><th>Revenue</th><th>Contribution</th><th>Closing cash</th><th>Shipped</th><th>Order proposals</th><th>Unmet</th></tr></thead><tbody id="auto-body"></tbody></table></div>
+<h3 class="section-title" style="margin-top:18px">Risk escalation ledger</h3><ul id="auto-risks" class="warninglist"></ul>
+<p id="auto-activity" class="info" aria-live="polite">Ready to execute local-only simulation.</p>
+<p class="help">The synthetic operating loop neither sends customer data externally nor touches bank accounts, store inventory, marketing platforms or production systems. The rolling-average model is not a deployed artificial neural network.</p>
+</section>
+
+<p class="foot">Jarvis X Commerce OS v1.0. Deterministic weighted 7/14/28-day baseline, not a trained ANN. Demand may be censored by stockouts. Synthetic geographic multipliers are for stress testing only. Marketing spend does not assume incremental lift. New orders are not available for same-week sales. Data is not transmitted to any server.</p>
+</div><script>/* Jarvis X Commerce v1.0 — deterministic, local-only reference model.
+   All forecasts and unit economics are proposals, not trade or order execution. */
+const finite = (x,name,min=0,max=1e12) => {
+  if(typeof x!== 'number' || !Number.isFinite(x) || x<min || x>max) throw Error(`${name} must be finite, ${min}–${max}`);
+  return x;
+};
+const integer=(x,name,min=0,max=1e9)=>{ finite(x,name,min,max); if(!Number.isInteger(x))throw Error(`${name} must be an integer`);return x;};
+const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const round=n=>Math.round((n+Number.EPSILON)*100)/100;
+const TIERS = Object.freeze([
+ {name:'Local pilot',factor:1,overhead:1800},
+ {name:'South Africa',factor:3,overhead:8000},
+ {name:'Southern Africa',factor:7,overhead:26000},
+ {name:'Pan-African',factor:15,overhead:85000},
+ {name:'Global',factor:30,overhead:250000}
+]);
+function makeDemo(){
+ const catalog=[
+  ['WATER-FILTER','Water filtration cartridge',43,420,28,80,185,150,.32,.87,7,13],
+  ['SOLAR-LAMP','Solar lantern',20,240,12,115,275,225,.42,.72,12,31],
+  ['CLEANING-KIT','Household cleaning kit',63,740,45,52,145,119,.26,.93,4,17],
+  ['FIRST-AID','First aid replenishment kit',14,160,20,130,295,245,.38,.77,10,23]
+ ];
+ return {tier:0,cash:125000,minReserve:12000,marketingCap:18000,distributionCap:2000,productionCap:1200,collectionFraction:.75,
+   products:catalog.map(([sku,name,base,onHand,reserved,cost,retail,wholesale,mix,reach,lead,seed])=>({
+     sku,name,daily:Array.from({length:56},(_,i)=>Math.max(0,Math.round(base*(1+.14*Math.sin(2*Math.PI*i/7))*(1+.0015*i)+(((i*17+seed*19)%13)-6)*.38))),
+     onHand,reserved,incoming:0,unitCost:cost,retail,wholesale,mix,reach,promo:sku==='WATER-FILTER'?1500:500,
+     lead,review:7,stockoutDays:[]
+   }))};
+}
+function validate(src){
+ if(!src || typeof src!=='object' || !Array.isArray(src.products) ||src.products.length<1||src.products.length>12)throw Error('Expected 1–12 products');
+ integer(src.tier,'tier',0,4);
+ finite(src.cash,'cash',0,1e9);finite(src.minReserve,'minReserve',0,1e9);
+ finite(src.marketingCap,'marketingCap',0,1e9);
+ integer(src.distributionCap,'distributionCap',0,1e8);integer(src.productionCap,'productionCap',0,1e8);
+ finite(src.collectionFraction,'collectionFraction',0,1);
+ const ids=new Set();
+ for(const p of src.products){
+  if(!/^[A-Z0-9-]{1,32}$/.test(p.sku)||ids.has(p.sku))throw Error('Invalid or duplicate SKU');ids.add(p.sku);
+  if(typeof p.name!=='string'||p.name.length>60)throw Error('Invalid product name');
+  if(!Array.isArray(p.daily)||p.daily.length<28||p.daily.length>365)throw Error('Daily history must be 28–365 values');
+  p.daily.forEach((v,i)=>integer(v,`daily[${i}]`,0,1e6));
+  integer(p.onHand,'onHand',0,1e8); integer(p.reserved,'reserved',0,p.onHand);
+  integer(p.incoming,'incoming',0,1e8);finite(p.unitCost,'unitCost',.01,1e7);
+  finite(p.retail,'retail',.01,1e8);finite(p.wholesale,'wholesale',.01,1e8);
+  finite(p.mix,'mix',0,1);finite(p.reach,'reach',0,1);
+  finite(p.promo,'promo',0,1e8);integer(p.lead,'lead',1,90);integer(p.review,'review',1,90);
+  if(!Array.isArray(p.stockoutDays) ||p.stockoutDays.some(x=>!Number.isInteger(x)||x<0||x>=p.daily.length))throw Error('Invalid stockout indexes');
+ }
+}
+function forecast(p){
+ const history=p.daily,errors=[],baselineErrors=[];
+ const out=new Set(p.stockoutDays);
+ for(let t=28;t<history.length;t++){
+  if(out.has(t) || Array.from({length:28},(_,i)=>t-i-1).some(i=>out.has(i)))continue;
+  const prev=history.slice(0,t);
+  const pred=.5*mean(prev.slice(-7))+.3*mean(prev.slice(-14))+.2*mean(prev.slice(-28));
+  errors.push(Math.abs(pred-history[t]));
+  baselineErrors.push(Math.abs(mean(prev.slice(-7))-history[t]));
+ }
+ const day=.5*mean(history.slice(-7))+.3*mean(history.slice(-14))+.2*mean(history.slice(-28));
+ const latest=history.slice(-28);const std=Math.sqrt(mean(latest.map(v=>(v-mean(latest))**2)));
+ const safety=Math.ceil(1.645*std*Math.sqrt(p.lead+p.review));
+ return {day,mae:errors.length?mean(errors):null,baselineMae:baselineErrors.length?mean(baselineErrors):null,
+    safety,calibrated:errors.length>=7&&!out.size,sd:std,censored:!!out.size};
+}
+function calculate(source){
+ const src=structuredClone(source);validate(src);const tier=TIERS[src.tier];
+ const products=src.products.map(p=>{
+  const f=forecast(p),wDemand=f.day*7*p.reach*tier.factor;
+  const target=Math.ceil(f.day*(p.lead+p.review)*p.reach*tier.factor+f.safety);
+  const position=p.onHand-p.reserved+p.incoming;
+  return {...p,forecast:round(f.day*p.reach*tier.factor),weeklyDemand:round(wDemand),safety:f.safety,
+   mae:f.mae===null?null:round(f.mae),baselineMae:f.baselineMae===null?null:round(f.baselineMae),
+   reliable:f.calibrated,censored:f.censored,orderUpTo:target,position,
+   requested:Math.max(0,target-position),sellingPrice:round(p.retail*(1-p.mix)+p.wholesale*p.mix),
+   available:p.onHand-p.reserved,proposed:0,sold:0,revenue:0,cogs:0,grossMargin:0};
+ });
+ const proposedMarketing=round(products.reduce((s,p)=>s+p.promo,0));
+ const marketingHold=proposedMarketing>src.marketingCap;
+ const freeCash=Math.max(0,src.cash-src.minReserve-tier.overhead-proposedMarketing);
+ let remainingCash=freeCash,production=src.productionCap,delivery=src.distributionCap;
+ const priority=[...products].sort((a,b)=>{
+  const score=x=>Math.max(0,x.sellingPrice-x.unitCost)*x.weeklyDemand/Math.max(1,x.available+x.incoming);
+  return score(b)-score(a)||a.sku.localeCompare(b.sku);
+ });
+ for(const p of priority){
+  const units=Math.min(p.requested,production,Math.floor((remainingCash+1e-8)/p.unitCost));
+  p.proposed=Math.max(0,units);production-=p.proposed;remainingCash-=p.proposed*p.unitCost;
+ }
+ for(const p of priority){
+  const units=Math.min(p.available,Math.floor(p.weeklyDemand),delivery);
+  p.sold=Math.max(0,units);delivery-=p.sold;
+  p.revenue=round(p.sold*p.sellingPrice);p.cogs=round(p.sold*p.unitCost);
+  p.grossMargin=round(p.revenue-p.cogs);
+ }
+ const sum=k=>round(products.reduce((s,p)=>s+p[k],0));
+ const revenue=sum('revenue'),cogs=sum('cogs'),procurement=round(products.reduce((s,p)=>s+p.proposed*p.unitCost,0));
+ const collections=round(revenue*src.collectionFraction);
+ const contribution=round(revenue-cogs-proposedMarketing-tier.overhead);
+ const closingCash=round(src.cash-procurement-proposedMarketing-tier.overhead+collections);
+ const paidThisWeek=round(procurement+proposedMarketing+tier.overhead);
+ const issues=[];
+ if(marketingHold)issues.push('Promotional requests exceed campaign budget; do not execute marketing.');
+ if(src.cash-paidThisWeek<src.minReserve)issues.push('Minimum pre-collection cash reserve would be breached.');
+ if(closingCash<src.minReserve)issues.push('Closing cash forecast below required reserve.');
+ if(contribution<=0)issues.push('Operating contribution is not positive.');
+ if(products.some(p=>!p.reliable))issues.push('Forecast validation insufficient or stockout-censored history.');
+ if(products.some(p=>p.weeklyDemand>p.available))issues.push('Expected stockouts: new procurement is not assumed available this week.');
+ if(delivery===0)issues.push('Distribution capacity limit has been reached.');
+ const scaleGate=issues.length===0?'REVIEW_READY':'HOLD';
+ return {tier:tier.name,factor:tier.factor,products,issues,scaleGate,
+  totals:{revenue,cogs,grossMargin:round(revenue-cogs),contribution,cash:closingCash,collections,
+   receivables:round(revenue-collections),procurement,marketing:proposedMarketing,
+   overhead:tier.overhead,unitsSold:products.reduce((s,p)=>s+p.sold,0),unitsOrdered:products.reduce((s,p)=>s+p.proposed,0),
+   supplyCapacityUsed:src.distributionCap-delivery,availableCashForProcurement:round(freeCash)},
+  executionEnabled:false,requiresHumanApproval:true,synthetic:true,
+  methods:'7/14/28-day weighted moving-average; stockout censor and rolling MAE; no causal marketing/price elasticity'};
+}
+
+/**
+ * Jarvis X Commerce OS: deterministic, finite-horizon, multi-step simulation.
+ * It calls the SAME reference 4P engine as the interactive dashboard.
+ * All warehouse orders and shipments are VIRTUAL, not authorised actions.
+ * No HTTP, credentials, payments, advertising, or external integrations.
+ */
+
+
+const sum = (arr) => arr.reduce((a,b)=>a+b,0);
+const money2 = n => Math.round((n+Number.EPSILON)*100)/100;
+const safeWeek = v => Number.isInteger(v) && v>=1 && v<=52;
+const safeSeed = v => Number.isInteger(v) && v>=0 && v<=0xffffffff;
+const invariant = (ok,msg) => {if(!ok) throw new Error('SIM_INVARIANT: '+msg)};
+const rngFrom = seed => {let x=(seed>>>0)||0x6d2b79f5;return ()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296}};
+
+/** @param {{weeks?:number,seed?:number,initial?:object}} options */
+function simulateOperations(options={}) {
+  const weeks=options.weeks??12, seed=options.seed??20261103;
+  if(!safeWeek(weeks)||!safeSeed(seed)) throw Error('weeks must be 1..52 and seed a uint32');
+  const rng=rngFrom(seed),state=structuredClone(options.initial??makeDemo());
+  // Validate input before touching state. The model can accept only aggregate SKU fields.
+  calculate(state);
+  let cash=state.cash, priorCash=state.cash, virtualOut=0;
+  const receivables=[], pending=[], weeksData=[], events=[];
+  let accumulatedContribution=0,accumulatedRevenue=0,accumulatedCOGS=0;
+  const log=(week,type,payload)=>events.push({seq:events.length+1,week,type,...payload,simulated:true,externalExecution:false});
+  for(let week=1;week<=weeks;week++) {
+    let receivedQty=0, collectedPrior=0;
+    // Step A: only due virtual deliveries become on-hand goods.
+    for(let i=pending.length-1;i>=0;i--) if(pending[i].dueWeek<=week) {
+      const shipment=pending.splice(i,1)[0],p=state.products.find(p=>p.sku===shipment.sku);
+      invariant(!!p,'shipment SKU');
+      p.incoming-=shipment.qty;p.onHand+=shipment.qty;receivedQty+=shipment.qty;
+      log(week,'RECEIVE_VIRTUAL', {sku:shipment.sku,units:shipment.qty,sourceWeek:shipment.placedWeek});
+    }
+    // Step B: prior weekly credit settles before new procurement planning.
+    for(let i=receivables.length-1;i>=0;i--) if(receivables[i].dueWeek<=week) {
+      const receipt=receivables.splice(i,1)[0];collectedPrior=money2(collectedPrior+receipt.amount);
+      log(week,'COLLECT_VIRTUAL_AR',{amountZAR:receipt.amount,invoiceWeek:receipt.invoiceWeek});
+    }
+    cash=money2(cash+collectedPrior);
+    const cashAtPlan=cash;
+    state.cash=cash;
+    // Step C: forecast, profitability, constrained cash allocation and expansion gate.
+    const plan=calculate(state);
+    log(week,'FORECAST_AND_OPTIMISE',{
+      expansionGate:plan.scaleGate,proposedProcurementZAR:plan.totals.procurement,
+      forecastRevenueZAR:plan.totals.revenue,issueCount:plan.issues.length
+    });
+    const authorisedReal=!!plan.executionEnabled;
+    invariant(!authorisedReal,'real-world actions are prohibited');
+    // Step D: simulated procurement commits cash now, enters pending delivery queue.
+    let procurementPaid=0,newOrdered=0;
+    for(const q of plan.products) if(q.proposed>0) {
+      const p=state.products.find(p=>p.sku===q.sku);
+      const amount=money2(q.proposed*q.unitCost);
+      pending.push({sku:q.sku,qty:q.proposed,dueWeek:week+Math.max(1,Math.ceil(q.lead/7)),placedWeek:week});
+      p.incoming+=q.proposed;
+      procurementPaid=money2(procurementPaid+amount);newOrdered+=q.proposed;
+      log(week,'VIRTUAL_ORDER_PROPOSAL',{sku:q.sku,units:q.proposed,cashCommitmentZAR:amount,
+        dueWeek:week+Math.max(1,Math.ceil(q.lead/7)),approvedExternally:false});
+    }
+    invariant(Math.abs(procurementPaid-plan.totals.procurement)<0.02,'procurement reconciliation');
+    const requestedMarketing=plan.totals.marketing;
+    const marketing=requestedMarketing<=state.marketingCap?requestedMarketing:0;
+    const overhead=plan.totals.overhead;
+    if(marketing!==requestedMarketing)log(week,'MARKETING_BUDGET_BLOCKED',{requestedZAR:requestedMarketing,actualZAR:0});
+    const paid=money2(procurementPaid+marketing+overhead);
+    // Step E: realise deterministic *synthetic* orders from a separate seeded demand process.
+    let remainingDelivery=state.distributionCap;
+    let revenue=0,cogs=0,unitsSold=0,unmet=0;
+    const allocated=[];
+    const demandPriority=[...plan.products].sort((a,b)=>{
+      const score=p=>Math.max(0,p.sellingPrice-p.unitCost)*p.weeklyDemand/Math.max(1,p.available);
+      return score(b)-score(a)||a.sku.localeCompare(b.sku);
+    });
+    for(const q of demandPriority) {
+      const p=state.products.find(p=>p.sku===q.sku);
+      const multiplier=0.86+0.28*rng();
+      const syntheticDemand=Math.max(0,Math.round(q.weeklyDemand*multiplier));
+      const physicallyAvailable=p.onHand-p.reserved;
+      const sold=Math.max(0,Math.min(syntheticDemand,physicallyAvailable,remainingDelivery));
+      const shortfall=syntheticDemand-sold;
+      invariant(sold<=physicallyAvailable && sold<=remainingDelivery,'no negative physical inventory');
+      p.onHand-=sold;remainingDelivery-=sold;
+      const saleZAR=money2(sold*q.sellingPrice),soldCOGS=money2(sold*q.unitCost);
+      revenue=money2(revenue+saleZAR);cogs=money2(cogs+soldCOGS);
+      unitsSold+=sold;unmet+=shortfall;
+      allocated.push({sku:q.sku,forecastUnits:Math.round(q.weeklyDemand),demandUnits:syntheticDemand,
+        soldUnits:sold,shortfallUnits:shortfall,endingOnHand:p.onHand,saleZAR,cogsZAR:soldCOGS});
+      // Add seven daily *observed* stock sales to the next training window.
+      const originalLen=p.daily.length;
+      const base=Math.floor(sold/7),extra=sold%7;
+      const newObs=Array.from({length:7},(_,i)=>base+(i<extra?1:0));
+      p.daily.push(...newObs);
+      if(shortfall>0) for(let i=0;i<7;i++)p.stockoutDays.push(originalLen+i);
+      if(p.daily.length>365){const trim=p.daily.length-365;p.daily=p.daily.slice(trim);
+        p.stockoutDays=p.stockoutDays.filter(i=>i>=trim).map(i=>i-trim);
+      }
+      log(week,'SIMULATED_SALE',{sku:q.sku,units:sold,unmetUnits:shortfall,
+        salesZAR:saleZAR,cogsZAR:soldCOGS});
+    }
+    // Step F: collect current invoices partially, maintain future dated receivables.
+    const collectedNow=money2(revenue*state.collectionFraction);
+    const newlyReceivable=money2(revenue-collectedNow);
+    if(newlyReceivable>0)receivables.push({invoiceWeek:week,dueWeek:week+1,amount:newlyReceivable});
+    const closingCash=money2(cashAtPlan-paid+collectedNow);
+    const contribution=money2(revenue-cogs-marketing-overhead);
+    const outstandingAR=money2(sum(receivables.map(x=>x.amount)));
+    const inventoryValue=money2(sum(state.products.map(p=>p.onHand*p.unitCost)));
+    const weekly={week,openingCashZAR:priorCash,priorCollectionsZAR:collectedPrior,
+      availableCashZAR:cashAtPlan,forecastRevenueZAR:plan.totals.revenue,
+      realisedRevenueZAR:revenue,realisedCOGSZAR:cogs,operatingContributionZAR:contribution,
+      procurementPaidZAR:procurementPaid,marketingZAR:marketing,overheadZAR:overhead,
+      collectedCurrentZAR:collectedNow,closingCashZAR:closingCash,
+      outstandingReceivablesZAR:outstandingAR,inventoryBookCostZAR:inventoryValue,
+      unitsSold,unitsOrdered:newOrdered,unitsReceived:receivedQty,unmetDemandUnits:unmet,
+      expansionGate:plan.scaleGate,issues:plan.issues,products:allocated,externalActions:0};
+    invariant(Math.abs(closingCash-(priorCash+collectedPrior-procurementPaid-marketing-overhead+collectedNow))<.03,'cash accounting');
+    invariant(unitsSold<=state.distributionCap,'delivery throughput');
+    invariant(state.products.every(p=>p.onHand>=p.reserved&&p.incoming>=0),'inventory accounting');
+    invariant(Math.abs(revenue-(collectedNow+newlyReceivable))<.02,'credit sales accounting');
+    events.push({seq:events.length+1,week,type:'WEEK_RECONCILED',
+      cashZAR:closingCash,receivablesZAR:outstandingAR,inventoryZAR:inventoryValue,
+      simulated:true,externalExecution:false});
+    cash=closingCash;priorCash=closingCash;
+    accumulatedContribution=money2(accumulatedContribution+contribution);
+    accumulatedRevenue=money2(accumulatedRevenue+revenue);
+    accumulatedCOGS=money2(accumulatedCOGS+cogs);
+    weeksData.push(weekly);
+  }
+  const endingState={cashZAR:cash,inventoryValueZAR:money2(sum(state.products.map(p=>p.onHand*p.unitCost))),
+    receivablesZAR:money2(sum(receivables.map(p=>p.amount))),pendingShipments:structuredClone(pending),
+    onHand:state.products.map(p=>({sku:p.sku,units:p.onHand,alreadyReserved:p.reserved,incoming:p.incoming}))};
+  const summary={simulationWeeks:weeks,seed,startingCashZAR:options.initial?.cash??125000,
+    endingCashZAR:cash,accrualRevenueZAR:accumulatedRevenue,cogsZAR:accumulatedCOGS,
+    cumulativeOperatingContributionZAR:accumulatedContribution,
+    unitsSold:sum(weeksData.map(w=>w.unitsSold)),unitsOrdered:sum(weeksData.map(w=>w.unitsOrdered)),
+    unitsReceived:sum(weeksData.map(w=>w.unitsReceived)),
+    unmetDemandUnits:sum(weeksData.map(w=>w.unmetDemandUnits)),
+    expansionHoldWeeks:weeksData.filter(w=>w.expansionGate==='HOLD').length,
+    events:events.length,externalActionsExecuted:virtualOut,
+    endingState};
+  invariant(virtualOut===0,'no real-world execution');
+  return {schema:'jarvis-x-commerce-orchestration/v1',mode:'SYNTHETIC_SIMULATION_ONLY',
+    generatedBy:'deterministic 7/14/28-day reference model, not trained ANN',
+    externalExecutionEnabled:false,requiresHumanApproval:true,
+    assumptions:['Weekly simulation; actual demand is an independent deterministic synthetic draw.',
+      'Virtual procurement is paid at placement and received after lead-time weeks.',
+      '75% (configurable) of invoices collected immediately; remainder next week.',
+      'Inventory COGS is recognised in operating contribution, but not subtracted again from cash.',
+      'No tax, wages beyond fixed overhead, loan amortisation, FX movements, supplier terms or cash financing.',
+      'Forecasting uses stockout-censored sales; validation HOLD is not a live purchasing authorisation.'],
+    summary, weeks:weeksData, events};
+}
+</script><script>'use strict';
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR',maximumFractionDigits:0}).format(n);
+const num=n=>new Intl.NumberFormat('en-ZA',{maximumFractionDigits:0}).format(n);
+let current=makeDemo();let activeIndex=0;let plan=null;
+const selected=()=>current.products[activeIndex];
+function populate(){
+ $('sku').replaceChildren();
+ current.products.forEach((p,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=p.sku+' · '+p.name;$('sku').append(o)});
+ $('sku').value=String(activeIndex);
+ $('tier').value=String(current.tier);
+ ['cash','minReserve','productionCap','distributionCap'].forEach(k=>$(k).value=String(current[k]));
+ syncControls();
+}
+function syncControls(){
+ const p=selected();
+ for(const [id,key,percent] of [['retail','retail',false],['wholesale','wholesale',false],['reach','reach',true],['mix','mix',true],['promo','promo',false],['onHand','onHand',false]]){
+  const el=$(id),v=p[key]*(percent?100:1);el.max=String(Math.max(Number(el.max),Math.ceil(v/10)*10));el.value=String(v);
+ }labels();
+}
+function labels(){
+ for(const id of ['retail','wholesale','reach','mix','promo','onHand']){
+ const v=Number($(id).value);$('v-'+id).textContent=(id==='reach'||id==='mix')?v+'%':id==='retail'||id==='wholesale'||id==='promo'?money(v):num(v)+' units';
+ }
+}
+function setActivity(message,error=false){$('activity').textContent=message;$('activity').className=error?'err':'info'}
+function recalc(){
+ try{plan=calculate(current);render();setActivity('Plan updated locally. No orders, payments, advertising or external changes executed.')}catch(e){setActivity('Input rejected: '+e.message,true)}
+}
+function render(){
+ const t=plan.totals,p=plan.products.find(p=>p.sku===selected().sku);
+ $('k-revenue').textContent=money(t.revenue);$('k-contribution').textContent=money(t.contribution);
+ $('k-contribution').style.color=t.contribution>=0?'#7be8c3':'#ffb68b';
+ $('k-cash').textContent=money(t.cash);$('k-cash').style.color=t.cash>=0?'#f0f6fc':'#ffb68b';
+ $('k-orders').textContent=num(t.unitsOrdered)+' units';
+ $('selected-sku-label').textContent=p.sku;
+ $('metric-mae').textContent='Rolling MAE: '+(p.mae===null?'N/A':p.mae.toFixed(2)+' units/day');
+ $('metric-baseline').textContent='7-day baseline MAE: '+(p.baselineMae===null?'N/A':p.baselineMae.toFixed(2)+' units/day');
+ $('metric-week').textContent='Next-week demand: '+num(p.weeklyDemand)+' units';
+ $('allocated-sales').textContent=num(t.unitsSold)+' units';
+ $('dist-used').textContent=num(t.supplyCapacityUsed)+' / '+num(current.distributionCap);
+ $('scale-gate').textContent=plan.scaleGate;
+ $('scale-gate').className=plan.scaleGate==='HOLD'?'risk':'good';
+ $('decision').textContent=plan.scaleGate==='HOLD'?'HOLD — do not expand or execute':'REVIEW READY — authorisation still required';
+ $('gate-detail').textContent=plan.scaleGate==='HOLD'?'One or more commercial or physical viability checks failed.':'Preliminary scenario has no blocking alerts; this does not constitute investment approval.';
+ $('warnings').replaceChildren();if(plan.issues.length){plan.issues.forEach(w=>{const li=document.createElement('li');li.textContent=w;$('warnings').append(li)})}
+ else{const li=document.createElement('li');li.textContent='No flags under synthetic scenario assumptions.';$('warnings').append(li)}
+ const finance=[['Recognised sales revenue',t.revenue],['Cost of goods sold',-t.cogs],['Gross margin',t.grossMargin],['Proposed campaign spending',-t.marketing],['Weekly operating overhead',-t.overhead],['Operating contribution',t.contribution],['New inventory procurement',-t.procurement],['Customer cash collected',t.collections],['New accounts receivable',t.receivables],['Forecast closing cash',t.cash]];
+ $('finance').replaceChildren();finance.forEach(([name,n])=>{const row=document.createElement('div');row.className='full-row';const label=document.createElement('span');label.textContent=name;const value=document.createElement('strong');value.textContent=money(n);if(n<0)value.className='risk';row.append(label,value);$('finance').append(row)});
+ $('ledger').replaceChildren();plan.products.forEach(p=>{const tr=document.createElement('tr');const values=[p.name+' / '+p.sku,num(p.onHand),num(p.reserved),num(p.weeklyDemand),num(p.sold),num(p.proposed),money(p.revenue),p.reliable?'Backtested':'Needs review'];values.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===7)td.className=p.reliable?'good':'risk';tr.append(td)});$('ledger').append(tr)});
+ drawDemand(selected(),p);drawWarehouse(plan.products);
+}
+function chartSetup(id){const c=$(id),dpr=window.devicePixelRatio||1;const w=Math.max(250,c.clientWidth),h=c.clientHeight;c.width=Math.floor(w*dpr);c.height=Math.floor(h*dpr);const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);return {ctx,w,h}}
+function drawDemand(prod,p){const {ctx,w,h}=chartSetup('demand'),values=prod.daily.slice(-28),projected=p.forecast,yMax=Math.max(projected,...values,1)*1.28;
+ const left=36,right=12,top=15,bottom=34,plotH=h-top-bottom;
+ const x=i=>left+(w-left-right)*i/34;
+ const y=v=>h-bottom-(v/yMax)*plotH;
+ ctx.font='11px ui-sans-serif,system-ui';ctx.strokeStyle='#31465c';ctx.fillStyle='#9aacc1';ctx.lineWidth=1;
+ for(let k=0;k<=4;k++){const val=(yMax/4)*k,yy=y(val);ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillText(String(Math.round(val)),3,yy+3)}
+ ctx.strokeStyle='#69e6bf';ctx.lineWidth=2.5;ctx.beginPath();values.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.stroke();
+ ctx.fillStyle='#60d0b820';ctx.fillRect(x(28),top,x(34)-x(28),plotH);
+ ctx.strokeStyle='#ffb684';ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(x(27),y(values.at(-1)));ctx.lineTo(x(28),y(projected));ctx.lineTo(x(34),y(projected));ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle='#9eaec0';ctx.fillText('Day −28',left,h-8);ctx.fillText('Forecast →',w-95,h-8);ctx.fillText('Today',x(27)-12,h-8);
+}
+function cube(ctx,x,y,size,height,fill){
+ const sx=size,sy=size*.40;
+ function polygon(points,color){ctx.beginPath();ctx.moveTo(...points[0]);for(const p of points.slice(1))ctx.lineTo(...p);ctx.closePath();ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#9de7d027';ctx.lineWidth=1;ctx.stroke()}
+ polygon([[x,y-height],[x+sx,y-height-sy],[x+sx*2,y-height],[x+sx,y-height+sy]],fill[0]);
+ polygon([[x,y-height],[x+sx,y-height+sy],[x+sx,y+sy],[x,y]],fill[1]);
+ polygon([[x+sx,y-height+sy],[x+sx*2,y-height],[x+sx*2,y],[x+sx,y+sy]],fill[2]);
+}
+function drawWarehouse(items){const {ctx,w,h}=chartSetup('warehouse');const n=items.length;const itemW=w/n;
+ ctx.strokeStyle='#315064';ctx.beginPath();ctx.moveTo(10,h-32);ctx.lineTo(w-10,h-32);ctx.stroke();
+ items.forEach((p,i)=>{
+  const x=(i+.5)*itemW,scale=Math.max(14,Math.min(96,(p.available/Math.max(1,...items.map(q=>q.available)))*95)),size=Math.min(20,itemW*.24);
+  cube(ctx,x-size,h-42,size,scale,['#3dcbac','#206b76','#174f6a']);
+  const over=Math.min(scale,scale*p.sold/Math.max(1,p.available));
+  if(over>3)cube(ctx,x-size,h-42,size,over,['#cbe8a2','#648f73','#416b65']);
+  ctx.textAlign='center';ctx.fillStyle='#afc7d8';ctx.font='10px ui-sans-serif,system-ui';ctx.fillText(p.sku.substring(0,11),x,h-13);
+  ctx.fillStyle='#6ce6bd';ctx.fillText(num(p.available)+' u',x,h-2);
+ });ctx.textAlign='left';
+}
+for(const id of ['retail','wholesale','reach','mix','promo','onHand']){$(id).addEventListener('input',e=>{const p=selected(),key=id;const v=Number(e.target.value);p[key]=(key==='reach'||key==='mix')?v/100:v;labels();recalc()})}
+$('tier').addEventListener('change',e=>{current.tier=Number(e.target.value);recalc()});
+$('sku').addEventListener('change',e=>{activeIndex=Number(e.target.value);syncControls();recalc()});
+for(const id of ['cash','minReserve','productionCap','distributionCap']){$(id).addEventListener('change',e=>{const n=Number(e.target.value);if(!Number.isFinite(n)||n<0||!Number.isInteger(n)){setActivity('Invalid nonnegative whole-number input for '+id,true);return}current[id]=n;recalc()})}
+$('reset').addEventListener('click',()=>{current=makeDemo();activeIndex=0;populate();recalc()});
+function download(name,type,data){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),500)}
+$('export').addEventListener('click',()=>{if(!plan)return;download('jarvis-x-commercial-proposal.json','application/json',JSON.stringify({generatedLocally:true,model:'deterministic synthetic reference',plan},null,2))});
+function calendarDate(i){const d=new Date(Date.UTC(2026,0,1+i));return d.toISOString().slice(0,10)}
+$('sample').addEventListener('click',()=>{let rows=['sku,date,units'];for(const p of current.products)for(let i=0;i<p.daily.length;i++)rows.push([p.sku,calendarDate(i),p.daily[i]].join(','));download('synthetic_daily_sales.csv','text/csv',rows.join('\n'))});
+$('import-file').addEventListener('change',async e=>{
+ const f=e.target.files?.[0];if(!f)return;
+ try{
+ if(f.size>160000)throw Error('CSV exceeds 160 kB');const raw=await f.text();const lines=raw.trim().split(/\r?\n/);
+ if(lines[0].trim()!=='sku,date,units')throw Error('Header must be sku,date,units');
+ const groups=new Map();
+ for(const ln of lines.slice(1)){
+  const cols=ln.split(',').map(x=>x.trim());if(cols.length!==3)throw Error('Each row needs exactly three columns');
+  const [sku,date,s]=cols;if(!current.products.some(p=>p.sku===sku))throw Error('Unknown product SKU: '+sku);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T00:00:00Z')))throw Error('Invalid ISO date');
+  if(!/^\d+$/.test(s)||Number(s)>1000000)throw Error('Invalid unit count');
+  if(!groups.has(sku))groups.set(sku,new Map());if(groups.get(sku).has(date))throw Error('Duplicate date for '+sku);
+  groups.get(sku).set(date,Number(s));
+ }
+ for(const [sku,group] of groups){const entries=[...group.entries()].sort(([a],[b])=>a.localeCompare(b));if(entries.length<28||entries.length>365)throw Error('Each imported SKU requires 28–365 rows');
+  for(let i=1;i<entries.length;i++)if(Date.parse(entries[i][0]) - Date.parse(entries[i-1][0])!==86400000)throw Error('Daily observations must be consecutive');
+  current.products.find(p=>p.sku===sku).daily=entries.map(e=>e[1]);
+ }
+ recalc();setActivity('Imported '+groups.size+' aggregate product histories. Values remain in this browser.');
+ }catch(err){setActivity('CSV rejected: '+err.message,true)}finally{e.target.value=''}
+});
+window.addEventListener('resize',()=>{if(plan){const p=plan.products.find(p=>p.sku===selected().sku);drawDemand(selected(),p);drawWarehouse(plan.products)}});
+populate();recalc();
+
+'use strict';
+let latestOrchestration=null;
+const fmtMoney=n=>new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR',maximumFractionDigits:0}).format(n);
+function runOperatingCycle(){
+ try{
+  const weeks=Number(document.getElementById('auto-weeks').value);
+  const seed=Number(document.getElementById('auto-seed').value);
+  latestOrchestration=simulateOperations({weeks,seed,initial:current});
+  renderAutoRun(latestOrchestration);
+  document.getElementById('auto-activity').textContent=`${weeks} synthetic cycles reconciled; ${latestOrchestration.summary.events} auditable events. No external actions performed.`;
+ }catch(e){document.getElementById('auto-activity').textContent='Orchestration rejected: '+e.message}
+}
+function renderAutoRun(r){
+ const summary=r.summary;
+ const mapping={
+  'a-revenue':fmtMoney(summary.accrualRevenueZAR),
+  'a-profit':fmtMoney(summary.cumulativeOperatingContributionZAR),
+  'a-cash':fmtMoney(summary.endingCashZAR),
+  'a-hold':`${summary.expansionHoldWeeks} / ${summary.simulationWeeks}`,
+  'a-events':`${summary.events} reconciled entries`,
+  'a-shipped':`${summary.unitsReceived.toLocaleString('en-ZA')} arrived / ${summary.unitsOrdered.toLocaleString('en-ZA')} ordered`,
+  'a-fails':`${summary.unmetDemandUnits.toLocaleString('en-ZA')} unfulfilled units`
+ };
+ for(const [id,text] of Object.entries(mapping))document.getElementById(id).textContent=text;
+ const table=document.getElementById('auto-body');table.replaceChildren();
+ r.weeks.forEach(w=>{
+   const tr=document.createElement('tr');
+   const cells=[w.week,w.expansionGate,fmtMoney(w.realisedRevenueZAR),fmtMoney(w.operatingContributionZAR),
+     fmtMoney(w.closingCashZAR),w.unitsSold,w.unitsOrdered,w.unmetDemandUnits];
+   cells.forEach((v,i)=>{const td=document.createElement('td');td.textContent=String(v);if(i===1)td.className=w.expansionGate==='HOLD'?'risk':'good';tr.append(td)});
+   table.append(tr);
+ });
+ drawAutoTimeline(r.weeks);
+ const risks=document.getElementById('auto-risks');risks.replaceChildren();
+ const entries=r.weeks.filter(w=>w.expansionGate==='HOLD');
+ if(entries.length){
+  for(const w of entries.slice(-5)){const li=document.createElement('li');li.textContent=`Week ${w.week}: ${w.issues.slice(0,2).join(' • ')}`;risks.append(li)}
+ }else{const li=document.createElement('li');li.textContent='No simulated expansion holds; live expansion still requires approval.';risks.append(li)}
+}
+function drawAutoTimeline(weeks){
+ const c=document.getElementById('auto-chart');if(!c)return;
+ const dpr=window.devicePixelRatio||1,w=Math.max(300,c.getBoundingClientRect().width),h=235;
+ c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);
+ const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ const left=54,right=16,top=19,bottom=37,values=weeks.flatMap(p=>[p.closingCashZAR,p.operatingContributionZAR]);
+ const vmax=Math.max(1,...values)*1.10,vmin=Math.min(0,...values)*1.08;
+ const x=i=>left+(w-left-right)*i/Math.max(1,weeks.length-1);
+ const y=v=>h-bottom-(v-vmin)/(vmax-vmin)*(h-top-bottom);
+ ctx.strokeStyle='#34475a';ctx.fillStyle='#b7c8d8';ctx.font='10px system-ui';
+ for(let i=0;i<=4;i++){const v=vmin+(vmax-vmin)*i/4,Y=y(v);ctx.beginPath();ctx.moveTo(left,Y);ctx.lineTo(w-right,Y);ctx.stroke();ctx.fillText(Math.round(v/1000)+'k',5,Y+4)}
+ const lines=[['closingCashZAR','#61d6b6'],['operatingContributionZAR','#ffb782']];
+ for(const [key,color] of lines){ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.beginPath();weeks.forEach((p,i)=>{if(i===0)ctx.moveTo(x(i),y(p[key]));else ctx.lineTo(x(i),y(p[key]))});ctx.stroke()}
+ ctx.fillStyle='#bed1e0';ctx.fillText('Week 1',left,h-10);ctx.fillText('Week '+weeks.length,w-90,h-10);
+}
+document.getElementById('auto-run').addEventListener('click',runOperatingCycle);
+document.getElementById('auto-export').addEventListener('click',()=>{
+ if(!latestOrchestration)return;
+ const blob=new Blob([JSON.stringify(latestOrchestration,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
+ a.download='jarvis_x_full_orchestration.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),500);
+});
+document.getElementById('auto-weeks').addEventListener('change',e=>{
+ document.getElementById('auto-weeks-value').textContent=e.target.value+' weeks';
+});
+runOperatingCycle();
+</script></body></html>

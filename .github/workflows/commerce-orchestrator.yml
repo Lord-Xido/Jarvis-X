@@ -1,0 +1,48 @@
+name: Jarvis X Closed-loop Commerce Orchestrator
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/retail-wholesale-orchestrated/**'
+      - '.github/workflows/commerce-orchestrator.yml'
+  pull_request:
+    paths:
+      - 'apps/retail-wholesale-orchestrated/**'
+      - '.github/workflows/commerce-orchestrator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-simulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/retail-wholesale-orchestrated
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source syntax
+        run: |
+          node --check engine.mjs
+          node --check orchestrator.mjs
+          node --check run.mjs
+          node --check verify_audit.mjs
+      - name: Financial conservation and governance tests
+        run: node --test test_orchestrator.mjs
+      - name: Closed-loop execution, export and ledger verification
+        run: |
+          node run.mjs --weeks 12 --seed 20261103 --output "$RUNNER_TEMP/jx-ops"
+          node verify_audit.mjs "$RUNNER_TEMP/jx-ops"
+          node - <<'JS'
+          const fs=require('node:fs'),p=require('node:path');
+          const dir=process.env.RUNNER_TEMP;
+          const r=JSON.parse(fs.readFileSync(p.join(dir,'jx-ops','orchestration.json')));
+          if(r.weeks.length!==12 || r.summary.externalActionsExecuted!==0)process.exit(1);
+          if(!r.weeks.some(x=>x.expansionGate==='HOLD'))process.exit(1);
+          console.log('Verified deterministic proposal-only operating cycle.');
+          JS
