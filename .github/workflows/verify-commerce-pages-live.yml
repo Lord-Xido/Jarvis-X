@@ -1,0 +1,64 @@
+name: Verify live commerce Pages application
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-commerce-pages-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify real GitHub Pages HTTP responses
+        env:
+          BASE: https://lord-xido.github.io/Jarvis-X/commerce/
+        run: |
+          python3 - <<'PY'
+          import os,time,urllib.request,sys
+          base=os.environ["BASE"]
+          def check(path,markers):
+              last=""
+              for attempt in range(5):
+                  try:
+                      req=urllib.request.Request(base+path,headers={"User-Agent":"JarvisX-Commerce-External-Smoke"})
+                      with urllib.request.urlopen(req,timeout=15) as r:
+                          content=r.read(250000).decode("utf-8","replace")
+                          print(path,"HTTP",r.status,"len",len(content),"type",r.headers.get("Content-Type"),flush=True)
+                          if r.status==200 and all(m in content for m in markers):
+                              print("PASS:",path,flush=True);return
+                          last="bad markers / response"
+                  except Exception as e:
+                      last=str(e);print(path,"attempt",attempt+1,str(e)[:200],flush=True)
+                  time.sleep(6)
+              raise AssertionError(path+" failed: "+last)
+          check("",["Demand & Inventory Command","static_engine.mjs","installStaticAPI"])
+          check("static_engine.mjs",["export function computePlan","export function syntheticDemo","export function installStaticAPI"])
+          print("LIVE PUBLIC STATIC ASSETS: PASS")
+          PY
+      - name: Browser DOM smoke (when Chrome exists)
+        env:
+          BASE: https://lord-xido.github.io/Jarvis-X/commerce/
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            timeout 50s google-chrome --headless --no-sandbox --disable-gpu \
+              --disable-dev-shm-usage --virtual-time-budget=10000 \
+              --dump-dom "$BASE" > /tmp/jx-commerce-dom.html 2>/tmp/jx-commerce-chrome.err
+            python3 - <<'PY'
+          from pathlib import Path
+          html=Path("/tmp/jx-commerce-dom.html").read_text()
+          import re
+          sales=re.search(r'<strong id="m-sales">([^<]*)',html)
+          revenue=re.search(r'<strong id="m-revenue">([^<]*)',html)
+          print("Rendered sales:",sales.group(1) if sales else "MISSING")
+          print("Rendered revenue:",revenue.group(1) if revenue else "MISSING")
+          assert sales and "units" in sales.group(1) and "—" not in sales.group(1)
+          assert revenue and "R" in revenue.group(1) and "—" not in revenue.group(1)
+          print("Browser JavaScript and onload calculation: PASS")
+          PY
+          else
+            echo "Chrome binary unavailable: HTTP assets verified; browser DOM not independently certified."
+          fi
