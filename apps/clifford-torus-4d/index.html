@@ -45,6 +45,7 @@
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="/frame_verifier.js"></script>
 </head>
 <body>
   <div id="view" aria-label="Live 3D perspective projection of a 4D Clifford torus"></div>
@@ -72,6 +73,10 @@
       <div class="stat"><span>Max 4D norm² error</span><strong id="norm-error">—</strong></div>
       <div class="stat"><span>Matrix orthogonality error</span><strong id="orth-error">—</strong></div>
       <div class="stat"><span>Projection denominator min</span><strong id="denom">—</strong></div>
+      <div class="stat"><span>Sampled projection error</span><strong id="projection-error">—</strong></div>
+      <div class="stat"><span>Independent sample checks</span><strong id="sample-checks">—</strong></div>
+      <div class="stat"><span>C++ JSON encode (ms)</span><strong id="json-ms">—</strong></div>
+      <div class="stat"><span>Browser frame apply (ms)</span><strong id="apply-ms">—</strong></div>
       <div id="error" role="status"></div>
     </section>
   </footer>
@@ -100,6 +105,7 @@
     scene.add(guide);
 
     let source = null, paused = false, grid = 0, geometry = null, lines = null;
+    let lastFrame = -1;
     let framesRendered = 0, lastSecond = performance.now();
     const material = new THREE.LineBasicMaterial({ color:0x49efff, transparent:true, opacity:.85 });
     const format = (v) => Number(v).toLocaleString('en-US', { maximumFractionDigits:2 });
@@ -123,11 +129,21 @@
       scene.add(lines);
     }
     function acceptFrame(f) {
-      if (f.protocol !== 'jx-clifford-frame-v1' || !Number.isInteger(f.grid) ||
-          f.grid < 2 || f.grid > 64 || !Array.isArray(f.vertices) ||
-          f.vertices.length !== f.grid * f.grid * 3) return;
+      const started = performance.now();
+      const check = JarvisXFrameVerifier.verifyFrame(f, 32);
+      if (!check.ok) {
+        // Fail closed: never render an unverified or malformed geometry packet.
+        $('error').textContent = check.error;
+        $('status').textContent = 'VERIFICATION FAILED';
+        paused = true;
+        $('toggle').textContent = 'Resume';
+        if (source) source.close();
+        source = null;
+        return;
+      }
+      if (f.frame <= lastFrame) return;
+      lastFrame = f.frame;
       if (!geometry || grid !== f.grid) makeGeometry(f.grid);
-      if (!f.vertices.every(Number.isFinite)) return;
       geometry.getAttribute('position').array.set(f.vertices);
       geometry.getAttribute('position').needsUpdate = true;
       $('frame').textContent = format(f.frame);
@@ -137,12 +153,17 @@
       $('norm-error').textContent = scientific(f.max_norm2_error);
       $('orth-error').textContent = scientific(f.orthogonality_error);
       $('denom').textContent = format(f.min_projection_denominator);
+      $('projection-error').textContent = scientific(check.maxError);
+      $('sample-checks').textContent = check.checked;
+      $('json-ms').textContent = format(1000 * f.json_encode_seconds);
+      $('apply-ms').textContent = format(performance.now() - started);
       $('error').textContent = '';
     }
     function connect() {
       if (source) source.close();
       if (paused) return;
       $('status').textContent = 'CONNECTING';
+      lastFrame = -1;
       source = new EventSource('/events?time_scale=' + encodeURIComponent($('speed').value));
       source.onopen = () => { $('status').textContent = 'LIVE • C++'; };
       source.onmessage = (event) => {
