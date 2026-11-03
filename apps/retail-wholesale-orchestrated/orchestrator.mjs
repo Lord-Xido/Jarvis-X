@@ -22,6 +22,7 @@ export function simulateOperations(options={}) {
   // Validate input before touching state. The model can accept only aggregate SKU fields.
   calculate(state);
   let cash=state.cash, priorCash=state.cash, virtualOut=0;
+  let terminalHalt=null;
   const receivables=[], pending=[], weeksData=[], events=[];
   let accumulatedContribution=0,accumulatedRevenue=0,accumulatedCOGS=0;
   const log=(week,type,payload)=>events.push({seq:events.length+1,week,type,...payload,simulated:true,externalExecution:false});
@@ -129,11 +130,20 @@ export function simulateOperations(options={}) {
     accumulatedRevenue=money2(accumulatedRevenue+revenue);
     accumulatedCOGS=money2(accumulatedCOGS+cogs);
     weeksData.push(weekly);
+    // A negative cash balance implies missing financing, not an overdraft licence.
+    // Stop rather than injecting credit or passing an invalid cash balance to the next model step.
+    if(closingCash<0){
+      terminalHalt={week,code:'HALT_UNFUNDED_CASH_DEFICIT',unfundedCashZAR:money2(-closingCash)};
+      log(week,'HALT_UNFUNDED_CASH_DEFICIT',{unfundedCashZAR:terminalHalt.unfundedCashZAR,
+        requiresHumanIntervention:true});
+      break;
+    }
   }
   const endingState={cashZAR:cash,inventoryValueZAR:money2(sum(state.products.map(p=>p.onHand*p.unitCost))),
     receivablesZAR:money2(sum(receivables.map(p=>p.amount))),pendingShipments:structuredClone(pending),
     onHand:state.products.map(p=>({sku:p.sku,units:p.onHand,alreadyReserved:p.reserved,incoming:p.incoming}))};
-  const summary={simulationWeeks:weeks,seed,startingCashZAR:options.initial?.cash??125000,
+  const summary={simulationWeeks:weeksData.length,requestedWeeks:weeks,seed,
+    completedRequestedHorizon:terminalHalt===null,terminalHalt,startingCashZAR:options.initial?.cash??125000,
     endingCashZAR:cash,accrualRevenueZAR:accumulatedRevenue,cogsZAR:accumulatedCOGS,
     cumulativeOperatingContributionZAR:accumulatedContribution,
     unitsSold:sum(weeksData.map(w=>w.unitsSold)),unitsOrdered:sum(weeksData.map(w=>w.unitsOrdered)),
@@ -150,6 +160,7 @@ export function simulateOperations(options={}) {
       'Virtual procurement is paid at placement and received after lead-time weeks.',
       '75% (configurable) of invoices collected immediately; remainder next week.',
       'Inventory COGS is recognised in operating contribution, but not subtracted again from cash.',
+      'A negative cash forecast ends the simulation immediately; no credit facilities are invented.',
       'No tax, wages beyond fixed overhead, loan amortisation, FX movements, supplier terms or cash financing.',
       'Forecasting uses stockout-censored sales; validation HOLD is not a live purchasing authorisation.'],
     summary, weeks:weeksData, events};

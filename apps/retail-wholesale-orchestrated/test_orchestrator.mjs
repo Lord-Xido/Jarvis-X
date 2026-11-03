@@ -66,3 +66,17 @@ test("no mutation of source and baseline remains reproducible",()=>{
  assert.deepEqual(d,snap);
  assert.deepEqual(calculate(makeDemo()),calculate(makeDemo()));
 });
+
+test("all geographic tiers halt cleanly rather than invent overdraft financing",()=>{
+ for(let tier=0;tier<5;tier++){
+  const d=makeDemo();d.tier=tier;
+  const r=run({initial:d});
+  assert.ok(r.summary.simulationWeeks>=1&&r.summary.simulationWeeks<=12);
+  assert.equal(r.summary.externalActionsExecuted,0);
+  if(r.summary.terminalHalt){
+   assert.equal(r.summary.terminalHalt.code,"HALT_UNFUNDED_CASH_DEFICIT");
+   assert.ok(r.summary.terminalHalt.unfundedCashZAR>0);
+   assert.equal(r.summary.completedRequestedHorizon,false);
+  }else assert.equal(r.summary.completedRequestedHorizon,true);
+ }
+});

@@ -19,3 +19,7 @@ Business logic conserves physical stock, batches replenishment with lead times, 
 Synthetic scenario outputs are **not** commercial traction, real customer ROI, or production security evidence. Live commercial integration requires permissioned data, tenant isolation, explicit scoped approval, cybersecurity/privacy review, and separate supervised production adapters.
 
 The existing shared GitHub Pages deployment may be disabled at the repository level; this artifact remains independently usable offline.
+
+## Geographic stress tests
+
+Run `node apps/retail-wholesale-orchestrated/scale_test.mjs`. All five scale tiers are synthetic; an unfunded cash deficit now halts that scenario instead of assuming credit. Do not infer global market feasibility from a multipliers-only scenario.
