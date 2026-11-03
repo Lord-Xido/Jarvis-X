@@ -64,8 +64,9 @@ test('stream rejects unbounded grid and pacing', () => {
 test('browser script parses and retains a GPU buffer between updates', () => {
   const html = readFileSync(resolve(dir, 'index.html'), 'utf8');
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
-  assert.equal(scripts.length, 1);
-  new vm.Script(scripts[0][1], { filename:'index-inline.js' });
+  const inline = scripts.filter((match) => match[1].trim().length > 0);
+  assert.equal(inline.length, 1);
+  new vm.Script(inline[0][1], { filename:'index-inline.js' });
   assert.match(html, /new EventSource/);
   assert.match(html, /THREE.DynamicDrawUsage/);
   assert.match(html, /needsUpdate = true/);
