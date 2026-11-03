@@ -1,0 +1,85 @@
+{
+  "schema": "jarvisx.bitcube3d.b3d1.golden.v1",
+  "format": "B3D1",
+  "side": 1000000000,
+  "brick_edge": 16,
+  "brick_bytes": 512,
+  "vectors": [
+    {
+      "name": "empty",
+      "rounds": 0,
+      "bits": [],
+      "expected_bricks": 0,
+      "expected_bytes": 20,
+      "sha256": "73f4830b677386321d31aecdea3d3869e80bfea4d93997000a26e8072aadcb36"
+    },
+    {
+      "name": "corner_and_seam",
+      "rounds": 0,
+      "bits": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          15,
+          15,
+          15
+        ],
+        [
+          16,
+          0,
+          0
+        ],
+        [
+          999999999,
+          999999999,
+          999999999
+        ]
+      ],
+      "expected_bricks": 3,
+      "expected_bytes": 1592,
+      "sha256": "17a9843b01c9b881e415419231595b3b93d609dfa1ff3bd9008ca7495cc4bb80"
+    },
+    {
+      "name": "mixed_rounds",
+      "rounds": 7,
+      "bits": [
+        [
+          32,
+          16,
+          1
+        ],
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          15,
+          0,
+          0
+        ],
+        [
+          8,
+          9,
+          10
+        ],
+        [
+          16,
+          16,
+          16
+        ],
+        [
+          999999999,
+          0,
+          0
+        ]
+      ],
+      "expected_bricks": 4,
+      "expected_bytes": 2116,
+      "sha256": "0d95a83b261afb699556f32cf80afac58032753bdb113fd6e4b53edecaec9574"
+    }
+  ]
+}
