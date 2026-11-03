@@ -216,6 +216,21 @@ def _hyper3d_smoke() -> str:
     )
 
 
+def _dm3d_rom_smoke() -> str:
+    """Reuse the canonical evidence protocol instead of maintaining a second oracle."""
+    from .empirical_validation import dm3d_rom_conformance_check
+
+    check = dm3d_rom_conformance_check()
+    if not check.passed:
+        raise RuntimeError("DM3D ROM reconstruction or transactional rollback failed")
+    return (
+        f"exact={check.metrics['full_byte_reconstruction']} "
+        f"rollback={check.metrics['incumbent_state_preserved']} "
+        f"active_tiles={check.metrics['resident_tiles']} "
+        f"source_sha256={check.metrics['source_sha256']}"
+    )
+
+
 def run_smoke() -> OperationalReport:
     """Execute bounded end-to-end checks without external network dependencies."""
 
@@ -227,6 +242,7 @@ def run_smoke() -> OperationalReport:
             _capture("dr-moagi-os-cycle", _os_smoke),
             _capture("control-plane-api", _api_smoke),
             _capture("hyper3d-runtime", _hyper3d_smoke),
+            _capture("dm3d-rom-evidence", _dm3d_rom_smoke),
         )
     )
     return OperationalReport(mode="smoke", checks=tuple(checks))

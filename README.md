@@ -12,6 +12,17 @@ The project investigates how large virtual state spaces, geometric representatio
 
 > **Current status:** alpha research software. The repository contains a stable reference VM foundation, validated sparse and numerical components, bounded C++ research runtimes, and canonical architectural specifications whose full cross-backend migration is still in progress. See [Project Status](docs/PROJECT_STATUS.md) for the authoritative capability boundary.
 
+## Integrated 3D ROM verification slice
+
+The [DM3D system-wide conformance contract](docs/DM3D_SYSTEM_CONFORMANCE.md)
+specifies one executable reference pipeline: sparse 64³-byte input, quantized
+8³ latent, exact signed-residual restoration, ROM fuel accounting, bounded
+resident tiles, and isolated candidate execution with rollback. Its
+[empirical validation](docs/EMPIRICAL_VALIDATION.md) is reused by
+`jarvisx-operationalize smoke --json`. This is a bounded reference, not
+production isolation, verified 512:1 lossless compression, or full
+cross-backend migration.
+
 ## Canonical Dr Moagi attribution and provenance
 
 The named **Dr Moagi 3D Ephemeral-Notion Intelligence Framework v1.1** is attributed in this repository to **Matladi Maxwell Moagi (Lord-Xido)**. Its authoritative provenance, defining equations, reality-coupled verification rule and attribution boundary are recorded in [`docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md).

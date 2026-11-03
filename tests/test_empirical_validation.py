@@ -15,8 +15,8 @@ def test_empirical_validation_passes_and_is_json_native(tmp_path) -> None:
     assert report.passed
     assert payload["schema_version"] == "jarvisx.empirical-validation.v1"
     assert payload["summary"] == {
-        "checks_passed": 5,
-        "checks_total": 5,
+        "checks_passed": 6,
+        "checks_total": 6,
         "passed": True,
     }
     assert {check["name"] for check in payload["checks"]} == {
@@ -25,6 +25,7 @@ def test_empirical_validation_passes_and_is_json_native(tmp_path) -> None:
         "sparse_field_transactionality",
         "fractal_octree_closed_form",
         "fractional_smoothing_invariants",
+        "dm3d_rom_transactional_closure",
     }
 
 
@@ -75,3 +76,18 @@ def test_validation_rejects_non_empirical_parameters() -> None:
         run_validation(repetitions=1)
     with pytest.raises(ValueError, match="non-negative"):
         run_validation(octree_max_depth=-1)
+
+
+def test_dm3d_rom_receipt_distinguishes_virtual_extent_from_resident_state() -> None:
+    from jarvisx.empirical_validation import dm3d_rom_conformance_check
+
+    result = dm3d_rom_conformance_check()
+    assert result.passed
+    assert result.metrics["virtual_byte_positions"] == 10**27
+    assert result.metrics["resident_tiles"] == 1
+    assert result.metrics["full_byte_reconstruction"] is True
+    assert result.metrics["self_loop_rejected"] is True
+    assert result.metrics["incumbent_state_preserved"] is True
+    assert result.metrics["source_tile_bytes"] == 64**3
+    assert result.metrics["quantized_latent_bytes"] == 8**3
+    assert result.metrics["signed_residual_entries"] == 64**3

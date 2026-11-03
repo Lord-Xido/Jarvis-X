@@ -162,7 +162,7 @@ def _frames_to_bytes(frames: Sequence[Frame], total_length: int, digest: str) ->
         if frame.real_bytes != expected:
             raise ValueError("frame length mismatch")
         out.extend(frame.decode())
-    if len(out) != total_length or sha256(out) != digest:
+    if len(out) != total_length or sha256(bytes(out)) != digest:
         raise ValueError("payload SHA-256 verification failed")
     return bytes(out)
 
