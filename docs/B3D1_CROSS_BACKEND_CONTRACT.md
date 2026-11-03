@@ -91,6 +91,31 @@ cmake --build build/bitcube3d -j
 ctest --test-dir build/bitcube3d --output-on-failure
 ```
 
+## Observational wall-clock benchmark (not a comparable kernel speedup)
+
+`native/bitcube3d/tests/b3d1_benchmark.py` generates 512 occupied bit
+positions in exactly eight `16^3` bricks, applies two rounds, independently
+writes the B3D1 snapshot through Python and the native DSL/CLI, compares the
+entire byte sequence, then inverts the file to verify that all source bits
+are recovered exactly. It repeats execution after warm-up and emits a JSON
+receipt recording full binary length, SHA-256, exactness, medians and observed
+active input bits/second.
+
+The two timing scopes are intentionally disclosed and **not equivalent**:
+- Python time includes reference encoding and in-memory serialization.
+- Native C++ CLI time includes process startup, DSL command interpretation,
+  native encoding and file I/O.
+
+CI publishes one observed JSON artifact per compiler. Reported numbers
+depend on the GitHub runner and are not stable hardware benchmarks or evidence
+of CPU/GPU speedup. No virtual-address cardinality is used as a count of
+physically processed bits.
+
+```bash
+python native/bitcube3d/tests/b3d1_benchmark.py \
+  build/bitcube3d/bitcube3d-cpp --output artifacts/b3d1-observed.json
+```
+
 ## Explicit exclusions
 
 The present work is **bitplane interoperability**, not a trained ANN,
