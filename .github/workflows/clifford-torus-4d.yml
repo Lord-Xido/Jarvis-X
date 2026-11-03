@@ -1,0 +1,34 @@
+name: Clifford Torus 4D C++ Verification
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/src/clifford_torus_4d_main.cpp'
+      - 'cpp_runtime/CMakeLists.txt'
+      - 'docs/CLIFFORD_TORUS_4D.md'
+      - '.github/workflows/clifford-torus-4d.yml'
+  push:
+    paths:
+      - 'cpp_runtime/src/clifford_torus_4d_main.cpp'
+      - 'cpp_runtime/CMakeLists.txt'
+      - 'docs/CLIFFORD_TORUS_4D.md'
+      - '.github/workflows/clifford-torus-4d.yml'
+jobs:
+  geometry-and-telemetry:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure standalone optional module
+        run: >
+          cmake -S cpp_runtime -B build/clifford4d
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
+          -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          -DJARVISX_BUILD_CLIFFORD_TORUS_4D=ON
+      - name: Build strictly
+        run: cmake --build build/clifford4d --target jarvisx-clifford-torus4d --parallel 2
+      - name: Check geometry and queue invariants
+        run: ctest --test-dir build/clifford4d -R '^clifford-torus-4d-' --output-on-failure

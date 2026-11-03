@@ -419,3 +419,22 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/dm3d_operational.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/master_equation.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/streaming_framebuffer3d.cmake)
+
+# Isolated 4D torus projection/telemetry reference. Disabled in default builds.
+option(JARVISX_BUILD_CLIFFORD_TORUS_4D "Build bounded Clifford torus 4D projection and telemetry" OFF)
+if(JARVISX_BUILD_CLIFFORD_TORUS_4D)
+    find_package(Threads REQUIRED)
+    add_executable(jarvisx-clifford-torus4d
+        src/clifford_torus_4d_main.cpp
+    )
+    target_link_libraries(jarvisx-clifford-torus4d PRIVATE Threads::Threads)
+    jarvisx_harden(jarvisx-clifford-torus4d)
+    add_test(NAME clifford-torus-4d-invariants
+        COMMAND jarvisx-clifford-torus4d --self-test)
+    add_test(NAME clifford-torus-4d-bounded-smoke
+        COMMAND jarvisx-clifford-torus4d --frames 16 --grid 16
+            --queue-capacity 4 --time-scale 1000000)
+    set_tests_properties(
+        clifford-torus-4d-invariants clifford-torus-4d-bounded-smoke
+        PROPERTIES TIMEOUT 20)
+endif()

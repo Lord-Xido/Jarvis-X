@@ -321,3 +321,17 @@ invariants in CTest.
 
 See
 [`docs/DR_MOAGI_3D_RECURSIVE_AUTOCODEC_MASTER_EQUATION.md`](../docs/DR_MOAGI_3D_RECURSIVE_AUTOCODEC_MASTER_EQUATION.md).
+
+
+## Optional 4D Clifford torus projection and telemetry
+
+Enable `-DJARVISX_BUILD_CLIFFORD_TORUS_4D=ON` to compile
+`jarvisx-clifford-torus4d`, a bounded C++17 geometric simulator
+with a thread-safe telemetry queue. It verifies rotation orthogonality,
+4D norm preservation and safe 3D perspective projection.
+`--time-scale` advances simulated time, **not** real computation speed.
+The emitted flux index is a geometric diagnostic, not evidence of AI
+inference or measured physical energy. Run `--self-test` or CTest
+`clifford-torus-4d-*` to verify the implementation.
+
+See [Clifford Torus 4D](../docs/CLIFFORD_TORUS_4D.md).
