@@ -40,6 +40,7 @@ globalThis.JarvisXFrameVerifier = (() => {
         !finite(frame.time_scale) || frame.time_scale <= 0 ||
         !finite(frame.simulated_s) || frame.simulated_s < 0 ||
         !finite(frame.compute_seconds) || frame.compute_seconds <= 0 ||
+        !finite(frame.json_encode_seconds) || frame.json_encode_seconds < 0 ||
         !finite(frame.measured_vertices_per_s) || frame.measured_vertices_per_s <= 0 ||
         !finite(frame.max_norm2_error) || frame.max_norm2_error < 0 ||
         !finite(frame.orthogonality_error) || frame.orthogonality_error < 0 ||
