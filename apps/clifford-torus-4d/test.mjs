@@ -40,6 +40,7 @@ test('C++ produces bounded, numerically valid 3D vertices over NDJSON', () => {
     assert.ok(f.orthogonality_error < 1e-12);
     assert.ok(f.min_projection_denominator > 0);
     assert.ok(f.compute_seconds > 0);
+    assert.ok(f.json_encode_seconds >= 0);
     assert.ok(f.measured_vertices_per_s > 0);
     assert.equal(f.simulated_s, (i + 1) * 15000);
   }
@@ -54,6 +55,29 @@ test('C++ produces bounded, numerically valid 3D vertices over NDJSON', () => {
   const expected = [x * scale, y * scale, scale];
   for (let i = 0; i < 3; i++)
     assert.ok(Math.abs(frames[0].vertices[i] - expected[i]) < 1e-8);
+});
+
+test('independent 4D validator accepts C++ geometry and rejects corrupted coordinates', () => {
+  const verifierSource = readFileSync(resolve(dir, 'frame_verifier.js'), 'utf8');
+  const isolated = {};
+  vm.runInNewContext(verifierSource, isolated, { filename:'frame_verifier.js' });
+  const verify = isolated.JarvisXFrameVerifier.verifyFrame;
+  const result = run('--stream-json', '--frames', '1', '--grid', '36',
+    '--time-scale', '1000000', '--pace-ms', '0');
+  assert.equal(result.status, 0, result.stderr);
+  const frame = JSON.parse(result.stdout.trim());
+  const valid = verify(frame, 64);
+  assert.equal(valid.ok, true, valid.error);
+  assert.equal(valid.checked, 64);
+  assert.ok(valid.maxError < 5e-8);
+  const tampered = { ...frame, vertices:[...frame.vertices] };
+  // Change a sampled vertex deliberately, forcing the verifier to fail closed.
+  tampered.vertices[0] += 0.15;
+  const invalid = verify(tampered, 64);
+  assert.equal(invalid.ok, false);
+  assert.match(invalid.error, /Projection mismatch/);
+  assert.equal(verify({ ...frame, json_encode_seconds: NaN }).ok, false);
+  assert.equal(verify({ ...frame, max_norm2_error: 1 }).ok, false);
 });
 
 test('stream rejects unbounded grid and pacing', () => {
@@ -86,6 +110,10 @@ test('HTTP bridge serves page, health and an actual C++ SSE frame', async () => 
     const home = await fetch(base);
     assert.equal(home.status, 200);
     assert.match(await home.text(), /JARVIS X :: CLIFFORD 4D/);
+    const verifier = await fetch(base + '/frame_verifier.js');
+    assert.equal(verifier.status, 200);
+    assert.match(verifier.headers.get('content-type'), /application\/javascript/);
+    assert.match(await verifier.text(), /verifyFrame/);
     const invalid = await fetch(base + '/events?time_scale=NaN');
     assert.equal(invalid.status, 400);
     const invalid2 = await fetch(base + '/events?time_scale=0');
@@ -114,6 +142,7 @@ test('HTTP bridge serves page, health and an actual C++ SSE frame', async () => 
     assert.equal(frame.protocol, 'jx-clifford-frame-v1');
     assert.equal(frame.grid, 36);
     assert.equal(frame.vertices.length, 36 * 36 * 3);
+    assert.ok(frame.json_encode_seconds >= 0);
   } finally {
     await new Promise((resolveClose) => server.close(resolveClose));
   }
