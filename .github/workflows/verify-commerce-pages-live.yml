@@ -13,6 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
+      - name: Diagnose Pages configuration and recent deployment runs
+        run: |
+          python3 - <<'PY'
+          import json,urllib.request,urllib.error
+          base="https://api.github.com/repos/Lord-Xido/Jarvis-X"
+          paths=["/pages","/actions/workflows/dmvx-matrix-pages.yml/runs?per_page=8"]
+          for p in paths:
+              req=urllib.request.Request(base+p,headers={"User-Agent":"JX-Commerce-Pages-Diagnostics","Accept":"application/vnd.github+json"})
+              try:
+                  with urllib.request.urlopen(req,timeout=10) as r: data=json.load(r)
+                  if p=="/pages":
+                      print("PAGES META",json.dumps(data)[:1800],flush=True)
+                  else:
+                      print("PAGES RUNS",json.dumps([{"id":x.get("id"),"event":x.get("event"),"status":x.get("status"),"conclusion":x.get("conclusion"),"head_sha":x.get("head_sha"),"url":x.get("html_url")} for x in data.get("workflow_runs",[])])[:3000],flush=True)
+              except urllib.error.HTTPError as e:
+                  print("DIAGNOSTIC",p,"HTTP",e.code,e.read(350).decode("utf8","replace"),flush=True)
+          PY
       - name: Verify real GitHub Pages HTTP responses
         env:
           BASE: https://lord-xido.github.io/Jarvis-X/commerce/
