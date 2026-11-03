@@ -47,6 +47,16 @@ export function createBridgeServer({ bin = binaryPath, page = resolve(directory,
       res.end(html);
       return;
     }
+    if (url.pathname === '/frame_verifier.js') {
+      const js = readFileSync(resolve(directory, 'frame_verifier.js'));
+      res.writeHead(200, {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      });
+      res.end(js);
+      return;
+    }
     if (url.pathname !== '/events') {
       res.writeHead(404);
       res.end('Not found');
