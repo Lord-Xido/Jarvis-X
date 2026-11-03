@@ -23,7 +23,7 @@ def benchmark(cli: Path, repetitions: int = 3) -> dict[str, object]:
         raise ValueError("repetitions must be between 1 and 20")
 
     # 8 source bricks, repeatable spatial occupancy, never a synthetic 'full 10^27' run.
-    points = sorted({(i % 32, (i * 7) % 32, (i * 11) % 32) for i in range(512)})
+    points = [(x, y, z) for z in range(0, 32, 4) for y in range(0, 32, 4) for x in range(0, 32, 4)]
     rounds = 2
     expected = sorted(points)
     python_times: list[float] = []
