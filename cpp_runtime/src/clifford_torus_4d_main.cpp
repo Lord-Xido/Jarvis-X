@@ -13,6 +13,7 @@
 #include <limits>
 #include <mutex>
 #include <queue>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -228,6 +229,74 @@ Summary simulate(const Config& c) {
     return summary;
 }
 
+
+/*
+ * NDJSON frame protocol for the optional local visualizer.
+ * One complete finite projected mesh per line, plus actual measured compute
+ * throughput. Simulated time_scale is explicitly NOT a compute speedup.
+ */
+void stream_json(const Config& c, unsigned pace_ms) {
+    validate(c);
+    if (c.grid > 64) throw std::invalid_argument("stream grid must be <=64");
+    if (pace_ms > 1000) throw std::invalid_argument("pace-ms must be <=1000");
+    std::array<double,3> angles{{0,0,0}};
+    std::vector<Vec3> mesh;
+    mesh.reserve(c.grid*c.grid);
+    const double target_norm2 = c.radius1*c.radius1+c.radius2*c.radius2;
+    const double scaled_dt = c.dt*c.time_scale;
+    std::cout << std::setprecision(12);
+    for (std::size_t frame=0;frame<c.frames;++frame) {
+        const auto started=Clock::now();
+        angles[0]=std::remainder(angles[0]+0.012*scaled_dt,2*pi);
+        angles[1]=std::remainder(angles[1]+0.008*scaled_dt,2*pi);
+        const Matrix4 matrix=rotation_matrix(angles);
+        const double orth_error=orthogonality_error(matrix);
+        double norm_error=0;
+        double min_denom=std::numeric_limits<double>::infinity();
+        mesh.clear();
+        for (std::size_t i=0;i<c.grid;++i) {
+            const double u=2*pi*static_cast<double>(i)/static_cast<double>(c.grid);
+            for(std::size_t j=0;j<c.grid;++j) {
+                const double v=2*pi*static_cast<double>(j)/static_cast<double>(c.grid);
+                const Vec4 p=multiply(matrix,parametric_point(u,v,c));
+                norm_error=std::max(norm_error,std::abs(norm2(p)-target_norm2));
+                min_denom=std::min(min_denom,c.projection_radius-p.w);
+                const Vec3 q=project(p,c);
+                if (!(std::isfinite(q.x)&&std::isfinite(q.y)&&std::isfinite(q.z)))
+                    throw std::runtime_error("nonfinite projection in streamed frame");
+                mesh.push_back(q);
+            }
+        }
+        if(!(min_denom>0 && std::isfinite(norm_error) && std::isfinite(orth_error)))
+            throw std::runtime_error("invalid streamed geometry invariant");
+        const double compute_s=std::max(
+            std::chrono::duration<double>(Clock::now()-started).count(),1e-12);
+        std::ostringstream line;
+        line << std::setprecision(12)
+             << "{\"protocol\":\"jx-clifford-frame-v1\",\"frame\":" << frame
+             << ",\"simulated_s\":" << (static_cast<double>(frame)+1)*scaled_dt
+             << ",\"time_scale\":" << c.time_scale << ",\"dt\":" << c.dt
+             << ",\"grid\":" << c.grid
+             << ",\"radii\":[" << c.radius1 << ',' << c.radius2 << ']'
+             << ",\"projection_radius\":" << c.projection_radius
+             << ",\"angles\":[" << angles[0] << ',' << angles[1] << ',' << angles[2] << ']'
+             << ",\"compute_seconds\":" << compute_s
+             << ",\"measured_vertices_per_s\":" << static_cast<double>(mesh.size())/compute_s
+             << ",\"max_norm2_error\":" << norm_error
+             << ",\"orthogonality_error\":" << orth_error
+             << ",\"min_projection_denominator\":" << min_denom
+             << ",\"vertices\":[";
+        for(std::size_t i=0;i<mesh.size();++i) {
+            if(i) line << ',';
+            line << mesh[i].x << ',' << mesh[i].y << ',' << mesh[i].z;
+        }
+        line << "]}";
+        std::cout << line.str() << '\n' << std::flush;
+        if(!std::cout) return; // transport disconnected
+        if(pace_ms) std::this_thread::sleep_for(std::chrono::milliseconds(pace_ms));
+    }
+}
+
 void require(bool test, const char* msg) {if(!test) throw std::runtime_error(msg);}
 void self_test() {
     Config c; validate(c);
@@ -261,11 +330,13 @@ void self_test() {
 int main(int argc,char** argv) {
     using namespace jarvisx::clifford;
     try {
-        Config c; bool test=false;
+        Config c; bool test=false, streaming=false; unsigned pace_ms=33;
         for(int i=1;i<argc;++i) {
             const std::string opt=argv[i];
             auto value=[&]() -> std::string { if(++i>=argc) throw std::invalid_argument("missing option value: "+opt); return argv[i]; };
             if(opt=="--self-test") test=true;
+            else if(opt=="--stream-json") streaming=true;
+            else if(opt=="--pace-ms") { const auto n=std::stoull(value()); if(n>1000) throw std::invalid_argument("pace-ms must be <=1000"); pace_ms=static_cast<unsigned>(n); }
             else if(opt=="--frames") c.frames=std::stoull(value());
             else if(opt=="--grid") c.grid=std::stoull(value());
             else if(opt=="--dt") c.dt=std::stod(value());
@@ -274,6 +345,7 @@ int main(int argc,char** argv) {
             else throw std::invalid_argument("unknown argument: "+opt);
         }
         if(test) { self_test(); return 0; }
+        if(streaming) { stream_json(c,pace_ms); return 0; }
         const auto s=simulate(c);
         std::cout<<std::setprecision(9)
             <<"Clifford torus 4D -> 3D perspective telemetry\n"

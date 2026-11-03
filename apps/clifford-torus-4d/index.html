@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>JARVIS X | Live 4D Clifford Torus</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-monospace,SFMono-Regular,Consolas,monospace; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#020711; color:#d5faff; }
+    #view { position:absolute; inset:0; }
+    #view canvas { display:block; }
+    .panel { background:rgba(4,14,29,.9); border:1px solid #205b72; box-shadow:0 0 18px #01354b77;
+             border-radius:12px; padding:16px; backdrop-filter:blur(8px); }
+    header { position:absolute; top:18px; left:18px; max-width:min(440px,calc(100vw - 36px)); z-index:2; }
+    h1 { margin:0 0 4px; font-size:17px; letter-spacing:.1em; color:#5ae6f2; }
+    .subtitle { color:#8eb5c6; font-size:12px; line-height:1.6; }
+    .tag { display:inline-block; font-size:11px; padding:3px 8px; border-radius:20px; border:1px solid #22617c;
+           margin-top:10px; color:#9bdbed; }
+    footer { position:absolute; bottom:18px; left:18px; right:18px; z-index:2; display:flex;
+             align-items:flex-end; justify-content:space-between; gap:12px; pointer-events:none; }
+    footer > * { pointer-events:auto; }
+    .controls { width:300px; max-width:100%; }
+    .metrics { width:335px; max-width:100%; }
+    label { display:block; margin:10px 0 7px; font-size:11px; color:#94e0e9; }
+    input[type=range] { width:100%; accent-color:#31dfe8; }
+    .buttons { display:flex; gap:8px; margin-top:11px; }
+    button { background:#123345; color:#b6f8ff; padding:9px 14px; flex:1; border:1px solid #28748c;
+             border-radius:7px; cursor:pointer; }
+    button:hover { background:#1a4e65; }
+    .stat { display:flex; justify-content:space-between; gap:12px; border-bottom:1px solid #1b3f50;
+            padding:6px 0; font-size:11px; }
+    .stat span:first-child { color:#83a5b5; }
+    .stat strong { color:#92fff0; text-align:right; }
+    .label { font-size:11px; letter-spacing:.09em; font-weight:bold; color:#8acddf; }
+    #error { color:#ffb7a1; padding-top:6px; font-size:11px; min-height:18px; }
+    @media(max-width:760px) {
+      header { font-size:11px; padding:12px; }
+      footer { flex-direction:column; align-items:stretch; bottom:10px; left:10px; right:10px; }
+      .controls,.metrics { width:100%; }
+      .metrics { display:grid; grid-template-columns:1fr 1fr; column-gap:12px; }
+      .metrics .label,.metrics #error { grid-column:1/-1; }
+      .stat { font-size:10px; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div id="view" aria-label="Live 3D perspective projection of a 4D Clifford torus"></div>
+  <header class="panel">
+    <h1>JARVIS X :: CLIFFORD 4D</h1>
+    <div class="subtitle">Actual C++ projected vertices → local SSE bridge → Three.js GPU buffer</div>
+    <span class="tag" id="status">CONNECTING</span>
+    <span class="tag">T² = S¹ × S¹ ⊂ ℝ⁴</span>
+  </header>
+  <footer>
+    <section class="panel controls">
+      <div class="label">STREAM CONTROLS</div>
+      <label for="speed">Simulated-time multiplier: <output id="speed-label">1,000,000×</output></label>
+      <input id="speed" type="range" min="1" max="2000000" step="1000" value="1000000">
+      <div class="buttons"><button id="toggle">Pause</button><button id="reset-view">Reset camera</button></div>
+      <div class="subtitle" style="margin-top:9px">Time multiplier is not CPU/GPU acceleration. Measurements reflect C++ geometry compute time.</div>
+    </section>
+    <section class="panel metrics" aria-live="polite">
+      <div class="label">LIVE ENGINE DIAGNOSTICS</div>
+      <div class="stat"><span>Frame</span><strong id="frame">—</strong></div>
+      <div class="stat"><span>Projected vertices</span><strong id="vertices">—</strong></div>
+      <div class="stat"><span>C++ compute vertices/s</span><strong id="throughput">—</strong></div>
+      <div class="stat"><span>Browser render FPS</span><strong id="fps">—</strong></div>
+      <div class="stat"><span>Simulated time (s)</span><strong id="sim-time">—</strong></div>
+      <div class="stat"><span>Max 4D norm² error</span><strong id="norm-error">—</strong></div>
+      <div class="stat"><span>Matrix orthogonality error</span><strong id="orth-error">—</strong></div>
+      <div class="stat"><span>Projection denominator min</span><strong id="denom">—</strong></div>
+      <div id="error" role="status"></div>
+    </section>
+  </footer>
+  <script>
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020711);
+    scene.fog = new THREE.FogExp2(0x020711, 0.027);
+    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 250);
+    camera.position.set(7, 4.5, 10);
+    const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    $('view').appendChild(renderer.domElement);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    scene.add(new THREE.AmbientLight(0xd8faff, .9));
+    const light = new THREE.PointLight(0x51eaff, 1.7, 30);
+    light.position.set(8,9,7); scene.add(light);
+    const axes = new THREE.AxesHelper(4);
+    axes.material.transparent = true; axes.material.opacity = .42;
+    scene.add(axes);
+    const guide = new THREE.Mesh(new THREE.SphereGeometry(4.4, 32, 22),
+      new THREE.MeshBasicMaterial({ color:0x137f9c, wireframe:true, transparent:true, opacity:.07 }));
+    scene.add(guide);
+
+    let source = null, paused = false, grid = 0, geometry = null, lines = null;
+    let framesRendered = 0, lastSecond = performance.now();
+    const material = new THREE.LineBasicMaterial({ color:0x49efff, transparent:true, opacity:.85 });
+    const format = (v) => Number(v).toLocaleString('en-US', { maximumFractionDigits:2 });
+    const scientific = (v) => Number(v).toExponential(2);
+    function makeGeometry(side) {
+      if (lines) { scene.remove(lines); geometry.dispose(); }
+      grid = side;
+      geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(side * side * 3);
+      const attribute = new THREE.BufferAttribute(positions,3);
+      attribute.setUsage(THREE.DynamicDrawUsage);
+      geometry.setAttribute('position', attribute);
+      const indices = [];
+      for (let i = 0; i < side; ++i) for (let j = 0; j < side; ++j) {
+        const n = i * side + j;
+        indices.push(n, ((i + 1) % side) * side + j);
+        indices.push(n, i * side + ((j + 1) % side));
+      }
+      geometry.setIndex(indices);
+      lines = new THREE.LineSegments(geometry, material);
+      scene.add(lines);
+    }
+    function acceptFrame(f) {
+      if (f.protocol !== 'jx-clifford-frame-v1' || !Number.isInteger(f.grid) ||
+          f.grid < 2 || f.grid > 64 || !Array.isArray(f.vertices) ||
+          f.vertices.length !== f.grid * f.grid * 3) return;
+      if (!geometry || grid !== f.grid) makeGeometry(f.grid);
+      if (!f.vertices.every(Number.isFinite)) return;
+      geometry.getAttribute('position').array.set(f.vertices);
+      geometry.getAttribute('position').needsUpdate = true;
+      $('frame').textContent = format(f.frame);
+      $('vertices').textContent = format(f.grid * f.grid);
+      $('throughput').textContent = format(f.measured_vertices_per_s);
+      $('sim-time').textContent = format(f.simulated_s);
+      $('norm-error').textContent = scientific(f.max_norm2_error);
+      $('orth-error').textContent = scientific(f.orthogonality_error);
+      $('denom').textContent = format(f.min_projection_denominator);
+      $('error').textContent = '';
+    }
+    function connect() {
+      if (source) source.close();
+      if (paused) return;
+      $('status').textContent = 'CONNECTING';
+      source = new EventSource('/events?time_scale=' + encodeURIComponent($('speed').value));
+      source.onopen = () => { $('status').textContent = 'LIVE • C++'; };
+      source.onmessage = (event) => {
+        try { acceptFrame(JSON.parse(event.data)); }
+        catch { $('error').textContent = 'Invalid frame payload'; }
+      };
+      source.addEventListener('engine-error', () => {
+        $('status').textContent = 'ENGINE ERROR';
+        $('error').textContent = 'C++ stream failed. Inspect server logs.';
+      });
+      source.onerror = () => { if (!paused) $('status').textContent = 'RECONNECTING'; };
+    }
+    $('speed').addEventListener('input', () => {
+      $('speed-label').textContent = format($('speed').value) + '×';
+    });
+    $('speed').addEventListener('change', connect);
+    $('toggle').addEventListener('click', () => {
+      paused = !paused;
+      $('toggle').textContent = paused ? 'Resume' : 'Pause';
+      $('status').textContent = paused ? 'PAUSED' : 'CONNECTING';
+      if (paused) { if (source) source.close(); source = null; }
+      else connect();
+    });
+    $('reset-view').addEventListener('click', () => {
+      camera.position.set(7,4.5,10);
+      controls.target.set(0,0,0);
+      controls.update();
+    });
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+    addEventListener('beforeunload', () => {
+      if (source) source.close();
+      if (geometry) geometry.dispose();
+      material.dispose();
+      guide.geometry.dispose();
+      guide.material.dispose();
+      renderer.dispose();
+    });
+    function animate(now) {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene,camera);
+      framesRendered++;
+      if (now - lastSecond >= 1000) {
+        $('fps').textContent = format(1000 * framesRendered / (now - lastSecond));
+        framesRendered = 0;
+        lastSecond = now;
+      }
+    }
+    connect();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
