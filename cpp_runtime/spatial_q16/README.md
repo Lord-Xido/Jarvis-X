@@ -69,3 +69,41 @@ A frame occupies 4128 bytes for 4096 bytes of input: 32 bytes of expansion. This
 ## Source
 
 The C++ implementation is in this directory. Selftest covers overflow, coordinates, replay, CRC failure, and 36 round trips.
+
+
+## Permeate: deterministic coupled 3D tile wavefront
+
+The original voxel-based sweep reprocessed individual tiles up to 1000 times
+in one iteration near a corner. This mode instead performs a **26-neighbor**
+(Chebyshev-distance) tile-space wavefront, starting with a voxel coordinate
+that is mapped to its containing 10x10x10 tile.
+
+Each tile is initialized, receives 1/4 of the previous-shell parent's Q16.16
+field (3/4 of its own baseline), and is advanced exactly once. Parent
+coordinates step one tile toward the source on each differing axis and are
+guaranteed to lie in the preceding shell. The source injects a unit signal in
+latent field index zero. Other field indices begin at 0.5.
+
+    ./spatial_q16 permeate 500 500 500 1
+    # shells=2, unique_tiles=27, parent_transfers=26, covered_voxels=27000
+    ./spatial_q16 permeate 999 999 999 1 8
+    # shells=2, unique_tiles=8, parent_transfers=7, covered_voxels=8000
+
+The radius is measured **in tiles** and ranges from 0..99, inclusive;
+shell zero is the seed. The default allocation budget is **20,000 pages**,
+which is checked *before* allocating any pages; an optional final CLI
+argument overrides it up to the one-million-page logical maximum.
+Each page holds at least 8192 bytes of arrays, so large budgets can consume
+substantial RAM. The current mode materializes all visited pages and is a
+prototype, not a large-scale streaming sparse executor.
+
+The run's unique tile count is the number of physical tile instances;
+"covered voxels" is exactly 1000 times that count, not a claim that every
+voxel has been independently evaluated. Numerical propagation in the latent
+field is implemented; no trainable ANN and no real-byte encode/decode are
+performed by this specific wavefront command. The separate encode/decode
+subcommands remain exact and reversible.
+
+The output is wavefront completion, *not* a mathematical guarantee of
+numerical convergence. For a fixed-point stopping criterion use the separate
+"demo" mode and inspect the reported "converged" flag.
