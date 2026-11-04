@@ -1,4 +1,4 @@
-name: JX3D v11 native CPU integration
+name: JX3D v11 native 3D neural reference
 on:
   pull_request:
     paths:
@@ -8,20 +8,17 @@ on:
     paths:
       - 'experiments/jx3d_v11/**'
       - '.github/workflows/jx3d-v11-native.yml'
+permissions:
+  contents: read
 jobs:
-  native:
+  native-reference:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Verify source archive and extract
+      - name: Compile C++20 regression test with warnings as errors
         run: |
-          sha256sum -c experiments/jx3d_v11/SHA256SUMS.txt
-          mkdir -p "$RUNNER_TEMP/jx3d_v11"
-          tar -xJf experiments/jx3d_v11/jx3d_v11_source.tar.xz -C "$RUNNER_TEMP/jx3d_v11"
-      - name: Run native and HTTP regression tests
-        run: |
-          cd "$RUNNER_TEMP/jx3d_v11"
-          bash run_tests.sh
+          g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
+            experiments/jx3d_v11/tests/reference.cpp -o /tmp/jx3d_v11_reference
+      - name: Execute 3D bitwise, ANN and routing regression
+        run: /tmp/jx3d_v11_reference
