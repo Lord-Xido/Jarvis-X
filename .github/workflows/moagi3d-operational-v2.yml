@@ -1,0 +1,39 @@
+name: Moagi3D Operational v2 C++17
+
+on:
+  pull_request:
+    paths:
+      - "cpp_runtime/moagi3d_operational_v2/**"
+      - ".github/workflows/moagi3d-operational-v2.yml"
+  push:
+    paths:
+      - "cpp_runtime/moagi3d_operational_v2/**"
+      - ".github/workflows/moagi3d-operational-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake libssl-dev python3
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S cpp_runtime/moagi3d_operational_v2 -B /tmp/moagi3d-ci -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build /tmp/moagi3d-ci --parallel 2
+      - name: Test
+        run: ctest --test-dir /tmp/moagi3d-ci --output-on-failure
+      - name: Byte-exact demo
+        run: |
+          mkdir -p /tmp/moagi-demo
+          /tmp/moagi3d-ci/moagi3d demo /tmp/moagi-demo/result
+          cmp /tmp/moagi-demo/result.raw /tmp/moagi-demo/result.decoded.raw
