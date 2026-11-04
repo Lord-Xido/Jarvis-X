@@ -1,0 +1,51 @@
+name: JX3D sparse cloud bytecode smoke
+on:
+  pull_request:
+    paths:
+      - 'cloud_runtime/**'
+      - '.github/workflows/jx3d-sparse-cloud-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sparse-3d-roundtrip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile portable C++17 codec
+        run: g++ -O2 -std=c++17 -Wall -Wextra -Wpedantic cloud_runtime/jx3d.cpp -o /tmp/jx3d
+      - name: Train, encode, decode and byte-verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/jx3d-cloud
+          /tmp/jx3d generate /tmp/jx3d-cloud/input.tiles 64
+          /tmp/jx3d train /tmp/jx3d-cloud/input.tiles /tmp/jx3d-cloud/model.bin
+          /tmp/jx3d encode /tmp/jx3d-cloud/input.tiles /tmp/jx3d-cloud/stream.jx3d /tmp/jx3d-cloud/model.bin
+          /tmp/jx3d decode /tmp/jx3d-cloud/stream.jx3d /tmp/jx3d-cloud/decoded.tiles
+          /tmp/jx3d verify /tmp/jx3d-cloud/input.tiles /tmp/jx3d-cloud/decoded.tiles
+          cmp /tmp/jx3d-cloud/input.tiles /tmp/jx3d-cloud/decoded.tiles
+          sha256sum /tmp/jx3d-cloud/input.tiles /tmp/jx3d-cloud/decoded.tiles
+      - name: Verify corrupted stream fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/jx3d-cloud/stream.jx3d')
+          buf = bytearray(p.read_bytes())
+          buf[len(buf) // 2] ^= 1
+          Path('/tmp/jx3d-cloud/corrupt.jx3d').write_bytes(buf)
+          PY
+          if /tmp/jx3d decode /tmp/jx3d-cloud/corrupt.jx3d /tmp/jx3d-cloud/invalid.tiles; then
+            echo 'FAIL: corrupted stream was accepted'
+            exit 1
+          fi
+          echo 'PASS: corrupted stream rejected'
+      - name: Report storage and cloud runner footprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          wc -c /tmp/jx3d-cloud/{input.tiles,stream.jx3d,decoded.tiles}
+          uname -a
