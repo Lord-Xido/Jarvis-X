@@ -1,0 +1,43 @@
+name: Spatial Q16 Reference Kernel
+on:
+  push:
+    branches:
+      - feature/spatial-q16-pagecodec-20261104
+    paths:
+      - "cpp_runtime/spatial_q16/**"
+      - ".github/workflows/spatial-q16.yml"
+  pull_request:
+    paths:
+      - "cpp_runtime/spatial_q16/**"
+      - ".github/workflows/spatial-q16.yml"
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test with GCC and UBSan
+        run: |
+          cmake -S cpp_runtime/spatial_q16 -B build/spatial-q16-gcc -DSPATIAL_Q16_SANITIZERS=ON -DCMAKE_CXX_COMPILER=g++
+          cmake --build build/spatial-q16-gcc -j2
+          ctest --test-dir build/spatial-q16-gcc --output-on-failure
+      - name: Build and test with Clang and UBSan
+        run: |
+          cmake -S cpp_runtime/spatial_q16 -B build/spatial-q16-clang -DSPATIAL_Q16_SANITIZERS=ON -DCMAKE_CXX_COMPILER=clang++
+          cmake --build build/spatial-q16-clang -j2
+          ctest --test-dir build/spatial-q16-clang --output-on-failure
+      - name: File round trip and corruption rejection
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess
+          exe = 'build/spatial-q16-gcc/spatial_q16'
+          src = pathlib.Path('/tmp/jx-src.bin')
+          src.write_bytes(bytes(i % 256 for i in range(4096)))
+          subprocess.run([exe, 'encode', str(src), '/tmp/jx-frame.bin', '500', '500', '500', '30'], check=True)
+          subprocess.run([exe, 'decode', '/tmp/jx-frame.bin', '/tmp/jx-out.bin'], check=True)
+          assert src.read_bytes() == pathlib.Path('/tmp/jx-out.bin').read_bytes()
+          damaged = bytearray(pathlib.Path('/tmp/jx-frame.bin').read_bytes())
+          damaged[-1] ^= 1
+          pathlib.Path('/tmp/jx-damaged.bin').write_bytes(damaged)
+          bad = subprocess.run([exe, 'decode', '/tmp/jx-damaged.bin', '/tmp/jx-bad.bin'])
+          assert bad.returncode != 0
+          PY
