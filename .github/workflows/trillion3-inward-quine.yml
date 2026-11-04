@@ -1,0 +1,28 @@
+name: Trillion3 inward quine C++20 verification
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/trillion3_inward_quine/**'
+      - '.github/workflows/trillion3-inward-quine.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cpp_runtime/trillion3_inward_quine/**'
+      - '.github/workflows/trillion3-inward-quine.yml'
+permissions:
+  contents: read
+jobs:
+  source-and-contraction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact quine, 10k probes, radial bound and invalid inputs
+        working-directory: cpp_runtime/trillion3_inward_quine
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: bash verify.sh
