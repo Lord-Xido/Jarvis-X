@@ -1,32 +1,42 @@
-# Jarvis-X Native 3D Operational Engine v11 (isolated candidate)
+# Jarvis-X v11 — 3D Neural Encoding Reference Kernel
 
-This directory integrates the verified local `JarvisX_3D_Operational_v11` CPU prototype as a **source-only vendored archive** so existing Jarvis-X runtime branches and builds remain unaffected.
+**Scope:** an isolated, readable, compilable C++20 integration slice from the locally verified `JarvisX_3D_Operational_v11` prototype. This pull request deliberately does **not** overwrite existing Jarvis-X native, cloud, or dashboard modules.
 
-## Reproduce
+## Run the real CPU reference
+
+From the repository root:
 
 ```bash
-mkdir -p /tmp/jx3d_v11
-tar -xJf experiments/jx3d_v11/jx3d_v11_source.tar.xz -C /tmp/jx3d_v11
-cd /tmp/jx3d_v11
-bash run_tests.sh
-python3 serve.py
-# Browser: http://127.0.0.1:8765
+g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
+  experiments/jx3d_v11/tests/reference.cpp -o /tmp/jx3d_v11_reference
+/tmp/jx3d_v11_reference
 ```
 
-Requires Python 3.10+ and a C++20 compiler. No third-party Python/Node dependencies.
+The test uses an actual 10×10×10 grid, true adjacent **2×2×2** spatial tiles, and a shared 76-parameter 8→4→8 trainable neural transform. Every test has a deterministic seed; the independent breadth-first-search implementation is the pathfinding oracle for 600 random cases.
 
-## Verified prototype scope
+### Mathematics
 
-- Native 3D Q8 lattice and six-face-neighbor stable stencil
-- True 2×2×2 spatial tiling; 76-parameter shared 8→4→8 neural model and training
-- Q8 bitplanes and bit-transition counters; byte-exact XOR residual decoding + CRC32
-- A* routing, delayed voxel fault recovery; local HTTP and WebGL projection interface
-- Local validation: native codec / ANN / fault tests, 600 path comparisons, six HTTP tests
+For voxel `i = x + D(y + Dz)` with healthy six-face-neighbors:
 
-**Not claimed:** trillion-parameter trained model, hardware-level photonics, physical power measurements, cloud rollout, production network security, compression gain or browser rendering certification.
+```text
+psi_next[i] = clamp(0.78*psi[i] + 0.18*mean(face_neighbors) + 0.04*source[i], 0, 1)
+z = tanh(W_enc*x_tile + b_enc)          # 8 -> 4
+z_q = round(127.5 * (z + 1))            # four 8-bit latent symbols
+x_hat = sigmoid(W_dec*(z_q/127.5 - 1) + b_dec)
+residual = x_Q8 XOR predicted_Q8
+decoded_Q8 = predicted_Q8 XOR residual  # exactly source Q8
+```
 
-**Note:** archive is used for a minimal, isolated GitHub integration. Extract before reviewing source. The source of truth is the v11 source distribution, not the original static OS v9 dashboard. Release excludes native binaries, `__pycache__`, large original v9 static export, and generated samples.
+For fixed topology and identical sources, the lattice map has an `L∞` Lipschitz bound `≤0.96`; injected faults or changing sources are outside that bound. Exact reconstruction is for **Q8 bytes**, not original continuous float values. Retaining explicit residual bytes can increase file size.
 
-### Source integrity
+## Included in this PR
 
-The uncompressed tar contains `src/`, `serve.py`, `web/`, `tests/`, `run_tests.sh`, `benchmark.py`, `README.md` and `VALIDATION_REPORT.md`. SHA-256 hash of the compressed tar is recorded in `SHA256SUMS.txt`. The CI workflow extracts and compiles it on Ubuntu for verification.
+- `src/jx_ann.hpp`: the exact deterministic 76-parameter shared ANN header from the local v11 release.
+- `tests/reference.cpp`: executable 3D tiling/inverse, training-loss decrease, latent-plus-XOR roundtrip, eight bitplanes, contractivity and 600 A*/BFS comparisons.
+- `.github/workflows/jx3d-v11-native.yml`: isolated CPU compile and regression gate.
+
+The checked-in ANN header has Git blob SHA `3899d6bae481810142111415988d4780b0a3e701`, matching the locally tested v11 source.
+
+## Explicitly *not* integrated here
+
+The full standalone v11 distribution also contains a larger C++ core, snapshots with CRC32, a local Python HTTP service, a browser UI and further integration tests. Those components remain in the separately supplied v11 ZIP; this PR does **not** claim that it deploys that complete application. Hardware electron transport, GPU/optical acceleration, distributed cloud execution, a trillion-parameter ANN, and production security are not implemented by this reference. Introduce the remaining subsystems only with source-visible commits and CI gates.
