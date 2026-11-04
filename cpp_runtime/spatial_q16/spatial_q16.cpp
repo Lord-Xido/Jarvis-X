@@ -131,6 +131,15 @@ struct RunSummary {
     std::size_t active_pages = 0;
     bool converged = false;
 };
+
+struct WavefrontSummary {
+    std::uint32_t shells = 0;
+    std::uint64_t unique_tiles = 0;
+    std::uint64_t covered_voxels = 0;
+    std::uint64_t parent_transfers = 0;
+    std::uint32_t max_delta_raw = 0;
+};
+
 class DrMoagiSpatialEngine {
     std::unordered_map<SpatialCoord3D, std::unique_ptr<BytecodePage>,
                        SpatialCoordHash> memory_arena_;
@@ -181,6 +190,86 @@ public:
         result.active_pages = memory_arena_.size();
         return result;
     }
+
+    // 26-neighbor (Chebyshev metric) breadth-first wavefront in tile space.
+    // Every reachable tile is visited exactly once. A deterministic parent
+    // on the previous shell contributes one quarter of its latent field.
+    // This is numerical state transfer, not learned neural inference.
+    WavefrontSummary permeate_tiles(const SpatialCoord3D& voxel_origin,
+                                    std::uint32_t max_shell_radius,
+                                    std::size_t page_budget = 20000) {
+        validate(voxel_origin);
+        if (max_shell_radius >= 100)
+            throw std::out_of_range("wavefront radius must be <= 99 tiles");
+        if (!memory_arena_.empty())
+            throw std::logic_error("wavefront requires a fresh engine");
+        const SpatialCoord3D seed{voxel_origin.x / 10U,
+                                  voxel_origin.y / 10U,
+                                  voxel_origin.z / 10U};
+        const auto lo = [](std::uint32_t v, std::uint32_t r) {
+            return v > r ? v - r : 0U;
+        };
+        const auto hi = [](std::uint32_t v, std::uint32_t r) {
+            return std::min(99U, v + r);
+        };
+        const std::uint64_t xcount = hi(seed.x, max_shell_radius) -
+                                     lo(seed.x, max_shell_radius) + 1U;
+        const std::uint64_t ycount = hi(seed.y, max_shell_radius) -
+                                     lo(seed.y, max_shell_radius) + 1U;
+        const std::uint64_t zcount = hi(seed.z, max_shell_radius) -
+                                     lo(seed.z, max_shell_radius) + 1U;
+        const std::uint64_t requested = xcount * ycount * zcount;
+        if (page_budget == 0 || requested > page_budget)
+            throw std::length_error("wavefront exceeds the page budget");
+        const auto toward = [](std::uint32_t c, std::uint32_t s) {
+            return c > s ? c - 1U : (c < s ? c + 1U : c);
+        };
+        const Fixed16_16 three_quarters = Fixed16_16::from_ratio(3, 4);
+        const Fixed16_16 one_quarter = Fixed16_16::from_ratio(1, 4);
+        WavefrontSummary result{};
+        for (std::uint32_t r = 0; r <= max_shell_radius; ++r) {
+            for (std::uint32_t x = lo(seed.x, r); x <= hi(seed.x, r); ++x)
+                for (std::uint32_t y = lo(seed.y, r); y <= hi(seed.y, r); ++y)
+                    for (std::uint32_t z = lo(seed.z, r); z <= hi(seed.z, r); ++z) {
+                        const std::uint32_t dist = std::max({
+                            x > seed.x ? x - seed.x : seed.x - x,
+                            y > seed.y ? y - seed.y : seed.y - y,
+                            z > seed.z ? z - seed.z : seed.z - z
+                        });
+                        if (dist != r) continue;
+                        const SpatialCoord3D c{x,y,z};
+                        auto& active = page(c);
+                        if (r == 0) {
+                            // Signal injection at source; all other weights are 0.5.
+                            active.latent_weights[0] = Fixed16_16::from_ratio(1,1);
+                        } else {
+                            const SpatialCoord3D parent{
+                                toward(x, seed.x), toward(y, seed.y),
+                                toward(z, seed.z)
+                            };
+                            // Parent is guaranteed to be in shell r-1.
+                            const auto& prior = page(parent);
+                            for (std::size_t i = 0; i < LATENTS; ++i)
+                                active.latent_weights[i] =
+                                    active.latent_weights[i] * three_quarters +
+                                    prior.latent_weights[i] * one_quarter;
+                            ++result.parent_transfers;
+                        }
+                        result.max_delta_raw = std::max(
+                            result.max_delta_raw, evolve_page(active, c, stack_));
+                        ++result.unique_tiles;
+                    }
+            ++result.shells;
+            ++iteration_counter_;
+            // Global feedback advances once per wavefront shell, not once per voxel.
+            stack_.psi_state = stack_.psi_state * stack_.phi_filter;
+        }
+        result.covered_voxels = result.unique_tiles * 1000ULL;
+        if (result.unique_tiles != requested)
+            throw std::logic_error("wavefront visited an unexpected tile count");
+        return result;
+    }
+
     const SystemStackState& stack() const { return stack_; }
     std::size_t active_pages() const { return memory_arena_.size(); }
 };
@@ -348,6 +437,34 @@ inline void selftest() {
     try { (void)decode(invalid); }
     catch (const std::out_of_range&) { rejected = true; }
     check(rejected, "out-of-range coordinate rejected");
+
+    // Unique-tile wavefront: 3^3 at an interior seed, 2^3 at a boundary.
+    DrMoagiSpatialEngine wave;
+    const auto ws = wave.permeate_tiles({500,500,500}, 1, 27);
+    check(ws.shells == 2 && ws.unique_tiles == 27, "interior wavefront count");
+    check(ws.parent_transfers == 26 && ws.covered_voxels == 27000,
+          "unique transfers and coverage");
+    BytecodePage independent;
+    (void)evolve_page(independent, {51,50,50}, SystemStackState{});
+    check(wave.page({51,50,50}).latent_weights[0].raw() !=
+          independent.latent_weights[0].raw(), "real neighbor field transfer");
+    DrMoagiSpatialEngine replay_wave;
+    const auto wr = replay_wave.permeate_tiles({500,500,500}, 1, 27);
+    check(wr.unique_tiles == 27 &&
+          replay_wave.page({51,50,50}).latent_weights[0].raw() ==
+              wave.page({51,50,50}).latent_weights[0].raw(),
+          "wavefront deterministic replay");
+    DrMoagiSpatialEngine corner_wave;
+    const auto cs = corner_wave.permeate_tiles({999,999,999}, 1, 8);
+    check(cs.unique_tiles == 8 && cs.parent_transfers == 7,
+          "corner clipping and unique tile visits");
+    bool budget_rejected = false;
+    try {
+        DrMoagiSpatialEngine too_large;
+        (void)too_large.permeate_tiles({500,500,500}, 2, 100);
+    } catch (const std::length_error&) { budget_rejected = true; }
+    check(budget_rejected, "pre-allocation page budget");
+
     std::cout << "PASS Q16.16 overflow, topology, convergence, 36 page "
                  "round trips, replay and corruption detection\n";
 }
@@ -372,6 +489,28 @@ int main(int argc, char** argv) {
                       << " omega=" << e.stack().omega_memory.to_double() << "\n";
             return 0;
         }
+
+        if ((argc == 6 || argc == 7) &&
+            std::string(argv[1]) == "permeate") {
+            const SpatialCoord3D voxel{
+                parse_uint(argv[2], DIM-1),
+                parse_uint(argv[3], DIM-1),
+                parse_uint(argv[4], DIM-1)
+            };
+            const auto radius = parse_uint(argv[5], 99U);
+            const auto budget = argc == 7 ?
+                parse_uint(argv[6], 1000000U) : 20000U;
+            DrMoagiSpatialEngine e;
+            const auto result = e.permeate_tiles(voxel, radius, budget);
+            std::cout << "shells=" << result.shells
+                      << " unique_tiles=" << result.unique_tiles
+                      << " covered_voxels=" << result.covered_voxels
+                      << " parent_transfers=" << result.parent_transfers
+                      << " max_delta_raw=" << result.max_delta_raw
+                      << " psi=" << e.stack().psi_state.to_double()
+                      << "\n";
+            return 0;
+        }
         if (argc == 8 && std::string(argv[1]) == "encode") {
             const auto bytes = read_file(argv[2], PAGE_BYTES);
             PageBytes input{};
@@ -392,6 +531,7 @@ int main(int argc, char** argv) {
         std::cerr << "Usage:\n"
                   << "  spatial_q16 selftest\n"
                   << "  spatial_q16 demo [iterations 0..512]\n"
+                  << "  spatial_q16 permeate X Y Z RADIUS_TILES [PAGE_BUDGET]\n"
                   << "  spatial_q16 encode INPUT_4096_BYTES OUTPUT.jxq16 X Y Z ROUNDS\n"
                   << "  spatial_q16 decode INPUT.jxq16 OUTPUT_4096_BYTES\n";
         return 2;
