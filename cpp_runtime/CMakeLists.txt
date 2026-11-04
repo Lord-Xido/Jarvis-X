@@ -438,3 +438,9 @@ if(JARVISX_BUILD_CLIFFORD_TORUS_4D)
         clifford-torus-4d-invariants clifford-torus-4d-bounded-smoke
         PROPERTIES TIMEOUT 20)
 endif()
+
+# Opt-in PERMEATE C++20 codec; other native runtimes remain C++17.
+option(JARVISX_BUILD_PERMEATE_3D "Build bounded C++20 3D ANN PERMEATE tile codec" OFF)
+if(JARVISX_BUILD_PERMEATE_3D)
+    add_subdirectory(permeate3d)
+endif()
