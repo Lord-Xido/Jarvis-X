@@ -1,4 +1,4 @@
-name: JX3D v11 native 3D neural reference
+name: JX3D v11 native 3D reference and runtime
 on:
   pull_request:
     paths:
@@ -16,9 +16,29 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Compile C++20 regression test with warnings as errors
+      - name: Compile C++20 reference with warnings as errors
         run: |
           g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
             experiments/jx3d_v11/tests/reference.cpp -o /tmp/jx3d_v11_reference
-      - name: Execute 3D bitwise, ANN and routing regression
+      - name: Execute reference ANN and routing regression
         run: /tmp/jx3d_v11_reference
+  native-http-dashboard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and test full C++20 native engine plus HTTP API
+        working-directory: experiments/jx3d_v11/runtime
+        run: |
+          bash ./run_tests.sh
+          g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
+            tests/test_core.cpp src/jx_core.cpp -o /tmp/jx3d_v11_strict
+          /tmp/jx3d_v11_strict
+      - name: Validate Python and browser JavaScript
+        working-directory: experiments/jx3d_v11/runtime
+        run: |
+          python3 -m py_compile serve.py benchmark.py tests/test_http.py
+          node --check web/app.js
