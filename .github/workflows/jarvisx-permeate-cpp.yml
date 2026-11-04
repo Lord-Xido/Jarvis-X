@@ -1,0 +1,40 @@
+name: Jarvis-X PERMEATE C++20 conformance
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/permeate3d/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/jarvisx-permeate-cpp.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cpp_runtime/permeate3d/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - '.github/workflows/jarvisx-permeate-cpp.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure standalone codec
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S cpp_runtime/permeate3d -B build/permeate3d -DCMAKE_BUILD_TYPE=Release
+      - name: Compile
+        run: cmake --build build/permeate3d --parallel 2
+      - name: Neural, geometric and corruption conformance
+        run: ctest --test-dir build/permeate3d --output-on-failure
+      - name: Root CMake opt-in integration
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: |
+          cmake -S cpp_runtime -B build/root-permeate -DJARVISX_BUILD_PERMEATE_3D=ON -DJARVISX_BUILD_GL_VISUALIZER=OFF
+          cmake --build build/root-permeate --target jarvisx-permeate3d --parallel 2
+          ctest --test-dir build/root-permeate -R '^permeate3d-smoke$' --output-on-failure
