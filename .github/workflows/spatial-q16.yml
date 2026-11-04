@@ -25,6 +25,11 @@ jobs:
           cmake -S cpp_runtime/spatial_q16 -B build/spatial-q16-clang -DSPATIAL_Q16_SANITIZERS=ON -DCMAKE_CXX_COMPILER=clang++
           cmake --build build/spatial-q16-clang -j2
           ctest --test-dir build/spatial-q16-clang --output-on-failure
+      - name: Unique-tile wavefront smoke tests
+        run: |
+          build/spatial-q16-gcc/spatial_q16 permeate 500 500 500 1 27
+          build/spatial-q16-gcc/spatial_q16 permeate 999 999 999 1 8
+          build/spatial-q16-clang/spatial_q16 permeate 500 500 500 1 27
       - name: File round trip and corruption rejection
         run: |
           python3 - <<'PY'
