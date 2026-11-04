@@ -1,0 +1,50 @@
+name: JX3D 1TiB sparse streaming cloud gate
+
+on:
+  pull_request:
+    paths:
+      - "cloud_runtime/tib/**"
+      - ".github/workflows/jx3d-1tib-cloud.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sparse-tib-codec:
+    name: Build, regression, 1GiB cloud benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: cloud_runtime/tib
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile both C++17 codec executables
+        run: make all
+      - name: Run 11 bounded streaming regressions
+        run: make test
+      - name: Validate shard plan without launching large jobs
+        run: |
+          python3 plan_shards.py --workers 32 --groups 2 --output shards.jsonl
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          rows = [json.loads(line) for line in Path('shards.jsonl').read_text().splitlines()]
+          assert len(rows) == 2
+          assert [r['first_tile_id'] for r in rows] == [0, 1024]
+          assert all(r['tile_count'] == 1024 for r in rows)
+          print('PASS: two logical 1 GiB shard plans; no shards provisioned')
+          PY
+      - name: Actually execute 1 GiB on GitHub cloud CPU
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./jx3d_1tib --start 0 --tiles 1024 --corrupt-test | tee /tmp/jx3d-1tib-cloud.log
+          grep -F 'verified_reconstruction=PASS' /tmp/jx3d-1tib-cloud.log
+          grep -F 'corruption_test=PASS' /tmp/jx3d-1tib-cloud.log
+          grep -F 'tiles=1024' /tmp/jx3d-1tib-cloud.log
+      - name: Print runner information
+        run: |
+          uname -a
+          echo "1TiB addressing is virtual; only 1GiB physically processed"
