@@ -1,0 +1,27 @@
+name: JX3D v11 native CPU integration
+on:
+  pull_request:
+    paths:
+      - 'experiments/jx3d_v11/**'
+      - '.github/workflows/jx3d-v11-native.yml'
+  push:
+    paths:
+      - 'experiments/jx3d_v11/**'
+      - '.github/workflows/jx3d-v11-native.yml'
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source archive and extract
+        run: |
+          sha256sum -c experiments/jx3d_v11/SHA256SUMS.txt
+          mkdir -p "$RUNNER_TEMP/jx3d_v11"
+          tar -xJf experiments/jx3d_v11/jx3d_v11_source.tar.xz -C "$RUNNER_TEMP/jx3d_v11"
+      - name: Run native and HTTP regression tests
+        run: |
+          cd "$RUNNER_TEMP/jx3d_v11"
+          bash run_tests.sh
