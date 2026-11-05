@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#070e1d" />
+  <meta name="description" content="JARVIS-X executable 3D voxel codec, recursive refinement and WebGL viewer." />
+  <title>JARVIS-X | 3D World Web Engine</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brandmark">Ξ</span><div><strong>JARVIS-X</strong><small>3D WORLD WEB ENGINE · v1.0</small></div></div>
+    <div class="status"><span class="pulse" id="pulse"></span><span id="connection">Connecting to runtime…</span></div>
+  </header>
+  <main class="layout">
+    <section class="intro">
+      <div class="eyebrow">PROGRAMMABLE CLOUD / LOCAL RUNTIME</div>
+      <h1>Recursive 3D <em>encode → decode</em> engine</h1>
+      <p>Generate or upload voxel data. Compress it into a portable latent+residual packet, decode it, verify its integrity, feed the result into the next 3D evolution cycle, and inspect the actual reconstructed field in WebGL.</p>
+    </section>
+    <aside class="controls panel">
+      <div class="section-head"><span class="section-tag">01 / CONFIGURE</span><span class="subtle">JX3D CODEC</span></div>
+      <h2>Runtime controls</h2>
+      <label for="geometry">Source geometry</label>
+      <select id="geometry"><option value="mandelbulb">Mandelbulb fractal</option><option value="torus">Toroidal manifold</option><option value="sphere">Sphere density field</option><option value="waves">Interference wave field</option></select>
+      <div class="split"><div><label for="dimension">Voxel dimensions</label><select id="dimension"><option>16</option><option>24</option><option selected>32</option><option>40</option><option>48</option><option>64</option></select></div><div><label for="mode">Coding mode</label><select id="mode"><option value="lossless">Lossless</option><option value="preview">Preview (lossy)</option></select></div></div>
+      <label for="cycles">Inward recursion cycles <output id="cycles-label">4</output></label>
+      <input type="range" id="cycles" min="1" max="8" step="1" value="4" />
+      <label for="alpha">3D diffusion factor α <output id="alpha-label">0.20</output></label>
+      <input type="range" id="alpha" min="0" max="0.5" step="0.05" value="0.20" />
+      <label for="seed">Deterministic seed</label>
+      <input id="seed" type="number" min="0" max="1000000" value="7" />
+      <button id="run" class="primary"><span id="run-label">▶ Execute 3D pipeline</span></button>
+      <div class="separator"></div>
+      <div class="section-tag">02 / IMPORT · EXPORT</div>
+      <p class="hint">Load a <code>.jx3d</code> packet to decode or a raw uint8 voxel cube to encode.</p>
+      <label class="file-button" for="file">↑ Load packet / raw cube</label>
+      <input id="file" type="file" accept=".jx3d,.raw,.bin,application/octet-stream" hidden />
+      <button class="secondary" id="download" disabled>↓ Export verified .jx3d</button>
+      <div class="notice" id="notice" role="status" aria-live="polite">Ready to execute an actual 3D encode/decode cycle.</div>
+    </aside>
+    <section class="viewport panel">
+      <div class="section-head"><span class="section-tag">03 / GEOMETRIC FIELD</span><span class="subtle" id="render-state">WEBGL2</span></div>
+      <div class="viewport-head"><div><h2>Reconstructed 3D state</h2><p>Actual decoded voxel values · drag to orbit · scroll to zoom</p></div><button id="spin" class="text-button">⏸ Pause orbit</button></div>
+      <div class="gl-wrap"><canvas id="viewport" aria-label="Interactive three-dimensional voxel visualization"></canvas><div class="view-overlay"><span>3D SPATIAL STATE</span><span id="point-count">— voxels visible</span></div><div class="coordinate">X / Y / Z</div></div>
+      <div class="view-bottom"><label for="threshold">Iso-threshold <output id="threshold-label">100</output></label><input id="threshold" type="range" min="10" max="245" value="100" step="5" /><button id="reset-view" class="small-button">Reset camera</button></div>
+    </section>
+    <section class="metrics">
+      <div class="metric panel"><div class="metric-label">ROUND-TRIP ERROR</div><strong id="error">—</strong><small id="integrity">Awaiting verification</small></div>
+      <div class="metric panel"><div class="metric-label">COMPRESSED STATE</div><strong id="compressed">—</strong><small id="raw">Raw memory —</small></div>
+      <div class="metric panel"><div class="metric-label">COMPRESSION FACTOR</div><strong id="ratio">—</strong><small>Raw bytes / packet bytes</small></div>
+      <div class="metric panel"><div class="metric-label">RECURSIVE PASSES</div><strong id="passes">—</strong><small id="verified">Integrity not yet checked</small></div>
+    </section>
+    <section class="telemetry panel">
+      <div class="section-head"><span class="section-tag">04 / VERIFICATION LEDGER</span><span class="subtle">SHA-256 · EACH CYCLE</span></div>
+      <h2>Inward computational orbit</h2>
+      <div class="flow-line"><span>INPUT</span><b>→</b><span>COARSE LATENT</span><b>→</b><span>XOR RESIDUAL</span><b>→</b><span>DECODE</span><b>→</b><span>VERIFY</span><b>↻</b></div>
+      <div class="chart-header"><span>Compression factor by iteration</span><span id="chart-label">Awaiting data</span></div>
+      <canvas id="chart" height="136"></canvas>
+      <div class="table-scroll"><table><thead><tr><th>Cycle</th><th>Packet</th><th>Ratio</th><th>MSE</th><th>Time</th><th>SHA-256</th><th>Proof</th></tr></thead><tbody id="ledger"><tr><td colspan="7" class="empty">Run the pipeline to populate the verification ledger.</td></tr></tbody></table></div>
+    </section>
+    <section class="slice panel">
+      <div class="section-head"><span class="section-tag">05 / SPATIAL INSPECTION</span><span class="subtle">XY CROSS-SECTION</span></div>
+      <h2>Latent volume inspection</h2>
+      <canvas id="slice" width="256" height="256" aria-label="XY slice through decoded voxel data"></canvas>
+      <label for="slice-pos">Z plane <output id="slice-label">16</output></label>
+      <input id="slice-pos" type="range" min="0" max="31" value="16" />
+      <p class="hint">The rendered volume and cross-section are computed from decoder output, not from a static illustration.</p>
+      <div class="digest"><div>DECODED STATE DIGEST</div><span id="digest">—</span></div>
+    </section>
+    <footer><span>JARVIS-X / DR MOAGI 3D WEB RUNTIME</span><span>Real computation · bounded memory · reproducible input · local or Docker hosting</span></footer>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

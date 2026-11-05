@@ -1,0 +1,38 @@
+name: JX3D World Web Engine
+on:
+  push:
+    paths:
+      - 'apps/jx3d-world-web/**'
+      - '.github/workflows/jx3d-world-web.yml'
+  pull_request:
+    paths:
+      - 'apps/jx3d-world-web/**'
+      - '.github/workflows/jx3d-world-web.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/jx3d-world-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Browser script syntax
+        run: node --check static/app.js
+      - name: Build C++20 native codec
+        run: |
+          cmake -S cpp -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j2
+      - name: Python-C++ interoperability tests
+        env:
+          JX3D_NATIVE: build/jx3d
+        run: python -m unittest discover -s tests -p 'test_native_interop.py' -v
