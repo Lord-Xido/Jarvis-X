@@ -13,10 +13,40 @@ the default browser.
 - text-to-speech generation with MP3 playback and download;
 - asynchronous video-job submission, polling, playback, and MP4 download;
 - local browser-profile conversation history;
-- configurable model identifiers and assistant instructions.
+- configurable model identifiers and assistant instructions;
+- DM–vΩΞ³D+ Core Lattice research view with inward Q16.16 latent-state visualization,
+  ping-pong recurrent buffers, audio resonance, a secure chat-session mirror, and measured
+  browser-side telemetry.
 
 Availability of individual media endpoints depends on the selected OpenAI project,
 model access, account limits, and API evolution.
+
+## DM–vΩΞ³D+ Core Lattice
+
+The **Core Lattice** navigation view is a research visualization layered on the same local
+runtime as Multimodal Chat. It does not create another provider connection and does not
+contain an API key. Prompts transmitted from the Core Lattice are handed to the existing
+`/api/chat` route, so provider credentials remain in the loopback-only Windows process.
+
+The Core Lattice separates four classes of information:
+
+- **authoritative runtime data:** chat requests and responses returned by the local runtime;
+- **measured browser telemetry:** render FPS, normalized codec reconstruction MSE, and a
+  per-transition non-expansion check around the fixed-point `tanh` transform;
+- **simulated research visualization:** the 3D lattice projection, inward/outward phase
+  animation, latent shells, and audio resonance;
+- **symbolic topology:** the transfinite-style core namespace shown in the header.
+
+The symbolic topology is not a claim that an infinite or transfinite number of physical
+processors exists or is active. Likewise, register-local or ping-pong state feedback does
+not imply zero elapsed hardware latency, zero thermal dissipation, or electron-level
+actuation.
+
+The browser codec uses signed Q16.16 state lanes with saturating 32-bit bounds. Q16.16
+multiplication uses a `BigInt` intermediate before the 16-bit rescale so large products do
+not silently lose integer precision in JavaScript's floating-point number representation.
+The recurrent state uses two `Int32Array` buffers and swaps their roles at the latch
+boundary rather than copying the next state over the active state.
 
 ## Capability boundary
 
@@ -58,7 +88,9 @@ produce byte-identical executables.
    `%LOCALAPPDATA%\JarvisXMultimodal`.
 3. It starts a service bound to `127.0.0.1` and opens a tokenized local URL.
 4. Open Settings, enter the project API key, and select **Validate and save**.
-5. Use **Close engine** in the interface to stop the runtime.
+5. Use **Core Lattice** for the DM–vΩΞ³D+ research visualization, or the other navigation
+   views for multimodal chat and media workflows.
+6. Use **Close engine** in the interface to stop the runtime.
 
 ## Validation
 
