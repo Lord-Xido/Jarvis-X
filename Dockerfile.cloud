@@ -1,0 +1,30 @@
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    JARVISX_STATE_DB=/var/lib/jarvisx/state.db \
+    JARVISX_OBJECT_ROOT=/var/lib/jarvisx/objects \
+    JARVISX_LATTICE_SHAPE=16,16,16
+
+WORKDIR /app
+
+COPY pyproject.toml README.md LICENSE ./
+COPY src ./src
+
+RUN python -m pip install --upgrade pip \
+    && python -m pip install . \
+    && addgroup --system jarvisx \
+    && adduser --system --ingroup jarvisx --home /nonexistent --no-create-home jarvisx \
+    && mkdir -p /var/lib/jarvisx/objects \
+    && chown -R jarvisx:jarvisx /var/lib/jarvisx
+
+EXPOSE 8080
+VOLUME ["/var/lib/jarvisx"]
+
+USER jarvisx
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=2).read()"
+
+CMD ["uvicorn", "jarvisx.cloud.api:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
