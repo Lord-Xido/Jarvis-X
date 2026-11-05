@@ -1,0 +1,24 @@
+name: G3M geometric bytecode plan
+
+on:
+  push:
+    paths:
+      - 'experiments/g3m_geometric_isa/**'
+      - '.github/workflows/g3m-geometric-isa.yml'
+  pull_request:
+    paths:
+      - 'experiments/g3m_geometric_isa/**'
+      - '.github/workflows/g3m-geometric-isa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bytecode-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run deterministic emitter, C++17 disassembler and negative tests
+        run: python3 experiments/g3m_geometric_isa/bytecode/tests/test_plan.py

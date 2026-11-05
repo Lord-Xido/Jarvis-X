@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.18)
+project(g3m_engine LANGUAGES CXX)
+find_package(Torch REQUIRED)
+add_executable(g3m g3m.cpp)
+set_target_properties(g3m PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+target_link_libraries(g3m PRIVATE "${TORCH_LIBRARIES}")
+target_compile_options(g3m PRIVATE -O0 -g0 -Wall -Wextra -Wpedantic)

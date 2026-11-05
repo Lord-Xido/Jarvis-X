@@ -1,0 +1,8 @@
+# G3M generated artifacts; do not commit model weights or binaries.
+**/build/
+**/g3m_disasm
+**/*.pt
+**/*.f32
+**/*.g3mb
+**/__pycache__/
+**/*.pyc
