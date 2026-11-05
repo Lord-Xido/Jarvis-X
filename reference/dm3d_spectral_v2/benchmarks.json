@@ -1,0 +1,129 @@
+{
+  "method": "same C++17 binary -O3, cpu compute_ms per program, medians from independent process runs; warmup not guaranteed, cross-task overhead excluded",
+  "results": [
+    {
+      "side": 16,
+      "cells": 4096,
+      "steps_requested": 40,
+      "workers": 48,
+      "swarm": {
+        "ms_runs": [
+          5.447398,
+          6.346694,
+          6.172009,
+          5.419975,
+          6.397827
+        ],
+        "median_ms": 6.172009,
+        "loss": 0.008319640344045,
+        "evaluations": 1920
+      },
+      "auto": {
+        "ms_runs": [
+          0.402853,
+          0.489483,
+          0.423478,
+          0.415856,
+          0.439612
+        ],
+        "median_ms": 0.423478,
+        "loss": 0.008319640344035,
+        "evaluations": 1
+      },
+      "speedup": 14.574568218419847,
+      "objective_difference_abs": 1.0000680839006293e-14
+    },
+    {
+      "side": 32,
+      "cells": 32768,
+      "steps_requested": 40,
+      "workers": 48,
+      "swarm": {
+        "ms_runs": [
+          54.860298,
+          48.780222,
+          49.319013,
+          48.500976,
+          48.190537
+        ],
+        "median_ms": 48.780222,
+        "loss": 0.002257327756482,
+        "evaluations": 1920
+      },
+      "auto": {
+        "ms_runs": [
+          4.819285,
+          4.35308,
+          3.928207,
+          3.835359,
+          4.285464
+        ],
+        "median_ms": 4.285464,
+        "loss": 0.002257327756476,
+        "evaluations": 1
+      },
+      "speedup": 11.382716550646558,
+      "objective_difference_abs": 5.9999748225347815e-15
+    },
+    {
+      "side": 64,
+      "cells": 262144,
+      "steps_requested": 40,
+      "workers": 48,
+      "swarm": {
+        "ms_runs": [
+          428.202956,
+          432.401783,
+          431.728154,
+          406.950293,
+          431.812158
+        ],
+        "median_ms": 431.728154,
+        "loss": 0.00057697449552,
+        "evaluations": 1920
+      },
+      "auto": {
+        "ms_runs": [
+          40.530528,
+          44.439918,
+          41.773339,
+          42.714781,
+          40.47081
+        ],
+        "median_ms": 41.773339,
+        "loss": 0.0005769744955129,
+        "evaluations": 1
+      },
+      "speedup": 10.33501664781932,
+      "objective_difference_abs": 7.100006346738574e-15
+    },
+    {
+      "side": 128,
+      "cells": 2097152,
+      "steps_requested": 40,
+      "workers": 48,
+      "swarm": {
+        "ms_runs": [
+          4484.49538,
+          4712.028463,
+          4416.007439
+        ],
+        "median_ms": 4484.49538,
+        "loss": 0.0001450665486018,
+        "evaluations": 1920
+      },
+      "auto": {
+        "ms_runs": [
+          400.164972,
+          390.100768,
+          402.690657
+        ],
+        "median_ms": 400.164972,
+        "loss": 0.0001450665485933,
+        "evaluations": 1
+      },
+      "speedup": 11.20661650515478,
+      "objective_difference_abs": 8.500009507014794e-15
+    }
+  ]
+}
