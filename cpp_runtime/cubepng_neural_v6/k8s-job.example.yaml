@@ -1,0 +1,39 @@
+# Template only: NOT applied. Replace placeholders; use a verified immutable image digest.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cubepng-neural-v6-example
+  namespace: cubepng
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        fsGroup: 65532
+      containers:
+        - name: codec
+          image: ghcr.io/lord-xido/jarvis-x-cubepng@sha256:REPLACE_WITH_VERIFIED_IMAGE_DIGEST
+          imagePullPolicy: IfNotPresent
+          args: ["encode", "/data/input.png", "/data/output.jx6", "--mode", "file", "--strategy", "adaptive", "--max-mib", "256"]
+          resources:
+            requests: {cpu: "250m", memory: "128Mi", ephemeral-storage: "128Mi"}
+            limits: {cpu: "2", memory: "512Mi", ephemeral-storage: "1Gi"}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - name: datasets
+              mountPath: /data
+      volumes:
+        - name: datasets
+          persistentVolumeClaim:
+            claimName: REPLACE_WITH_EXISTING_PVC
