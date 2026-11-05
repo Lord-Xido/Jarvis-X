@@ -1,0 +1,9 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pt
+*.bin
+*.sqlite
+run/
+demo/
+demo_*/
