@@ -1,0 +1,2 @@
+numpy>=1.26,<2.3
+# Optional: Pillow>=10; opencv-python>=4.8 (media adapters)

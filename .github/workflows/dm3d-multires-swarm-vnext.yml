@@ -1,0 +1,60 @@
+name: DM3D Multiresolution ANN Swarm Reference
+
+on:
+  pull_request:
+    paths:
+      - "reference/dm3d_multires_swarm_vnext/**"
+      - ".github/workflows/dm3d-multires-swarm-vnext.yml"
+  push:
+    paths:
+      - "reference/dm3d_multires_swarm_vnext/**"
+      - ".github/workflows/dm3d-multires-swarm-vnext.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reference:
+    name: NumPy reference / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: reference/dm3d_multires_swarm_vnext
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: reference/dm3d_multires_swarm_vnext/requirements.txt
+      - name: Install numerical dependency
+        run: python -m pip install -r requirements.txt
+      - name: Verify Python syntax
+        run: python -m compileall -q dr_moagi_vnext.py evolve_architecture.py dr_moagi_inward_intelligence.py test_vnext.py test_evolver.py
+      - name: Run bounded regression suite
+        run: python -m unittest -v test_vnext test_evolver
+      - name: Run end-to-end independent decode
+        shell: bash
+        run: |
+          python dr_moagi_vnext.py --edge 8 --tiles 4 --levels 2 --hidden 6 --steps 5 --target-mse 0.02 --out smoke
+          python dr_moagi_vnext.py --decode smoke/encoded.dm3d.npz --out smoke_decode
+          python - <<'PY'
+          import json
+          import numpy as np
+          from pathlib import Path
+          p = Path('smoke')
+          d = json.loads((p/'summary.json').read_text())
+          with np.load(p/'reconstructed.npz', allow_pickle=False) as f:
+              reference = f['decoded']
+          with np.load('smoke_decode/decoded_only.npz', allow_pickle=False) as f:
+              independent = f['decoded']
+          assert np.array_equal(reference, independent)
+          assert np.isfinite(reference).all()
+          assert d['geometry']['materialized_voxels'] == 2048
+          assert d['packet_bytes'] > 0
+          print("Independent decoder parity PASS")
+          PY
