@@ -36,7 +36,7 @@ jobs:
         env:
           JX_CPP_BIN: ${{ github.workspace }}/build/ae3d_v4/jxae3d
         run: |
-          python -m pytest -q cpp_runtime/ae3d_v4/cloud_accel/tests/test_accel.py
+          python -m pytest -o addopts='' -q cpp_runtime/ae3d_v4/cloud_accel/tests/test_accel.py
           python -m compileall -q cpp_runtime/ae3d_v4/cloud_accel
       - name: Benchmark and verify predicted-byte parity (no speed thresholds)
         run: |
