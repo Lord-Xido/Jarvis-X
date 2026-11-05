@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DM-vΩΞ+ Operational Core Kernel</title>
+<style>
+  :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #02040a; color: #dffcff; }
+  canvas { width: 100%; height: 100%; display: block; background:
+    radial-gradient(circle at 50% 50%, rgba(27,54,96,.28), transparent 46%),
+    linear-gradient(#030714,#010208); }
+  .hud {
+    position: fixed; inset: 14px auto auto 14px; width: min(420px, calc(100vw - 28px));
+    padding: 14px 16px 12px; border: 1px solid rgba(88,220,255,.42);
+    background: rgba(2,9,19,.78); backdrop-filter: blur(12px);
+    box-shadow: 0 0 28px rgba(0,188,255,.12), inset 0 0 22px rgba(0,188,255,.04);
+    border-radius: 12px;
+  }
+  .title { font-weight: 800; letter-spacing: .06em; font-size: 14px; }
+  .sub { margin-top: 4px; color: #78dff4; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  .grid { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; margin-top: 13px; }
+  label { color: #bfeef7; font-size: 12px; }
+  input[type="range"] { width: 160px; accent-color: #53d7ff; }
+  .value { min-width: 56px; text-align: right; color: #ffbf55; font-variant-numeric: tabular-nums; font-size: 12px; }
+  .metric { color: #90aeba; font-size: 11px; }
+  .metric b { color: #e8fbff; font-weight: 600; }
+  .status { margin-top: 10px; min-height: 17px; color: #75f1bb; font-size: 11px; }
+  .equation {
+    position: fixed; left: 14px; bottom: 14px; max-width: min(760px, calc(100vw - 28px));
+    padding: 10px 13px; border-left: 2px solid #d46cff; background: rgba(4,5,14,.68);
+    color: #a9cbd5; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .equation strong { color: #f2f9ff; }
+  @media (max-width: 640px) {
+    .hud { width: calc(100vw - 20px); left: 10px; top: 10px; }
+    .equation { left: 10px; bottom: 10px; max-width: calc(100vw - 20px); font-size: 9px; }
+    input[type="range"] { width: 130px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<section class="hud" aria-label="DM-vOmegaXi controls">
+  <div class="title">DR MOAGI INTELLIGENCE ENGINE · DM-vΩΞ+</div>
+  <div class="sub">Ψ → Φ → Λ → Ω → Θ · recursive 3D inward kernel</div>
+  <div class="grid">
+    <label for="delta">Δ context / inward strength</label>
+    <div><input id="delta" type="range" min="0.05" max="2.40" step="0.01" value="0.73"><span class="value" id="deltaV"></span></div>
+
+    <label for="hbar">ℏ semantic stability threshold</label>
+    <div><input id="hbar" type="range" min="0.00" max="0.95" step="0.01" value="0.18"><span class="value" id="hbarV"></span></div>
+
+    <label for="point">point scale</label>
+    <div><input id="point" type="range" min="0.7" max="5.0" step="0.1" value="2.2"><span class="value" id="pointV"></span></div>
+
+    <label for="speed">orbital speed</label>
+    <div><input id="speed" type="range" min="0.00" max="1.30" step="0.01" value="0.32"><span class="value" id="speedV"></span></div>
+
+    <span class="metric">resident samples</span><span class="metric"><b id="samples"></b></span>
+    <span class="metric">contraction coefficient e<sup>-Δ</sup></span><span class="metric"><b id="alpha"></b></span>
+    <span class="metric">recursive depth</span><span class="metric"><b>12 GPU iterations / vertex</b></span>
+  </div>
+  <div class="status" id="status">initializing WebGL2…</div>
+</section>
+
+<div class="equation">
+  <strong>Φ<sub>q</sub>(p)=w p + q⃗×p</strong> ·
+  <strong>Λ<sub>Δ</sub>(p)=c + e<sup>-Δ</sup>(Φ<sub>q</sub>(p)-c)</strong> ·
+  for normalized q and Δ&gt;0, ‖DΛ‖≤e<sup>-Δ</sup>&lt;1 ⇒ unique inward fixed point.
+</div>
+
+<script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
+precision highp float;
+
+layout(location = 0) in vec3 a_spatialVertex;
+layout(location = 1) in vec4 a_quaternionToken;
+
+uniform mat4 u_viewProjection;
+uniform float u_time;
+uniform float u_deltaContext;
+uniform float u_hbarSemantic;
+uniform float u_pointScale;
+
+out vec3 v_cognitiveState;
+out float v_stability;
+out float v_iterationEnergy;
+
+// Φ: normalized quaternion-description map.
+// For q=(v,w), Φ_q(p)=w p + v×p. With ||q||=1 this map is non-expansive.
+vec3 phiDescription(vec3 pos, vec4 token) {
+    vec4 q = normalize(token);
+    return q.w * pos + cross(q.xyz, pos);
+}
+
+// Ψ-Φ-Λ stack: an affine contraction around a moving semantic attractor.
+// The attractor is fixed during each draw evaluation; recursion is explicit.
+vec3 executePsiPhiLambdaStack(vec3 pos, vec4 token, float deltaCtx,
+                              out float stability, out float energy) {
+    vec4 q = normalize(token);
+    float alpha = clamp(exp(-max(deltaCtx, 0.0001)), 0.0, 0.9999);
+
+    vec3 attractor = 0.16 * q.xyz * vec3(
+        sin(u_time * 0.37 + q.w * 2.0),
+        cos(u_time * 0.29 + q.x * 2.0),
+        sin(u_time * 0.23 + q.y * 2.0)
+    );
+
+    vec3 state = pos;
+    energy = 0.0;
+    stability = 1.0;
+
+    for (int k = 0; k < 12; ++k) {
+        vec3 spatialDescription = phiDescription(state, q);
+        float localStability =
+            smoothstep(u_hbarSemantic, 1.0, length(spatialDescription));
+
+        vec3 nextState =
+            attractor + alpha * (spatialDescription - attractor);
+
+        energy += length(nextState - state);
+        stability *= mix(0.92, 1.0, localStability);
+        state = nextState;
+    }
+
+    energy /= 12.0;
+    return state;
+}
+
+void main() {
+    float stability;
+    float energy;
+    vec3 cognitiveState = executePsiPhiLambdaStack(
+        a_spatialVertex, a_quaternionToken, u_deltaContext, stability, energy);
+
+    v_cognitiveState = cognitiveState;
+    v_stability = stability;
+    v_iterationEnergy = energy;
+
+    gl_Position = u_viewProjection * vec4(cognitiveState, 1.0);
+    gl_PointSize = u_pointScale * (1.0 + 2.2 * stability);
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+
+in vec3 v_cognitiveState;
+in float v_stability;
+in float v_iterationEnergy;
+
+uniform float u_time;
+
+out vec4 fragColor;
+
+void main() {
+    vec2 d = gl_PointCoord * 2.0 - 1.0;
+    float r2 = dot(d, d);
+    if (r2 > 1.0) discard;
+
+    // Sign-preserving spectrum map. Unlike smoothstep(0,1,x), negative states
+    // remain visible instead of collapsing to black.
+    vec3 shaped = (2.25 * v_cognitiveState) / (1.0 + abs(2.25 * v_cognitiveState));\n    vec3 spectrum = 0.5 + 0.5 * shaped;
+    float pulse = 0.82 + 0.18 * sin(
+        u_time * 2.0 + v_iterationEnergy * 18.0 + dot(v_cognitiveState, vec3(3.1, 4.7, 5.9)));
+
+    vec3 cyan = vec3(0.12, 0.84, 1.0);
+    vec3 magenta = vec3(0.95, 0.20, 1.0);
+    vec3 amber = vec3(1.0, 0.58, 0.12);
+    vec3 color = mix(cyan, magenta, spectrum.y);
+    color = mix(color, amber, spectrum.x * spectrum.z * 0.62);
+    color *= pulse * mix(0.38, 1.25, v_stability);
+
+    float alpha = (1.0 - smoothstep(0.05, 1.0, r2)) * mix(0.30, 0.92, v_stability);
+    fragColor = vec4(color, alpha);
+}
+</script>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("gl");
+  const gl = canvas.getContext("webgl2", {
+    alpha: false,
+    antialias: true,
+    depth: true,
+    powerPreference: "high-performance"
+  });
+  const status = document.getElementById("status");
+
+  if (!gl) {
+    status.textContent = "WebGL2 is unavailable on this browser/device.";
+    status.style.color = "#ff7f8d";
+    return;
+  }
+
+  const vertexSource = document.getElementById("vertex-shader").textContent;
+  const fragmentSource = document.getElementById("fragment-shader").textContent;
+
+  function compile(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(shader) || "unknown shader compile error";
+      gl.deleteShader(shader);
+      throw new Error(log);
+    }
+    return shader;
+  }
+
+  function link(vs, fs) {
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      const log = gl.getProgramInfoLog(program) || "unknown program link error";
+      gl.deleteProgram(program);
+      throw new Error(log);
+    }
+    return program;
+  }
+
+  let program;
+  try {
+    program = link(
+      compile(gl.VERTEX_SHADER, vertexSource),
+      compile(gl.FRAGMENT_SHADER, fragmentSource)
+    );
+  } catch (error) {
+    status.textContent = "Shader failure: " + error.message;
+    status.style.color = "#ff7f8d";
+    return;
+  }
+
+  const GRID = 24;
+  const positions = [];
+  const quaternions = [];
+
+  for (let z = 0; z < GRID; ++z) {
+    for (let y = 0; y < GRID; ++y) {
+      for (let x = 0; x < GRID; ++x) {
+        const px = (x / (GRID - 1) - 0.5) * 2.0;
+        const py = (y / (GRID - 1) - 0.5) * 2.0;
+        const pz = (z / (GRID - 1) - 0.5) * 2.0;
+        positions.push(px, py, pz);
+
+        // Deterministic unit quaternion token derived from the spatial address.
+        let qx = Math.sin((x + 1) * 0.37 + z * 0.11);
+        let qy = Math.cos((y + 1) * 0.31 + x * 0.07);
+        let qz = Math.sin((z + 1) * 0.29 + y * 0.13);
+        let qw = Math.cos((x + y + z + 3) * 0.17);
+        const inv = 1 / Math.hypot(qx, qy, qz, qw);
+        qx *= inv; qy *= inv; qz *= inv; qw *= inv;
+        quaternions.push(qx, qy, qz, qw);
+      }
+    }
+  }
+
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+
+  const posBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+  const quatBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quatBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(quaternions), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+
+  gl.bindVertexArray(null);
+
+  const uViewProjection = gl.getUniformLocation(program, "u_viewProjection");
+  const uTime = gl.getUniformLocation(program, "u_time");
+  const uDelta = gl.getUniformLocation(program, "u_deltaContext");
+  const uHbar = gl.getUniformLocation(program, "u_hbarSemantic");
+  const uPoint = gl.getUniformLocation(program, "u_pointScale");
+
+  function identity() {
+    return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+  }
+
+  function multiply(a, b) {
+    const out = new Float32Array(16);
+    for (let c = 0; c < 4; ++c) {
+      for (let r = 0; r < 4; ++r) {
+        out[c * 4 + r] =
+          a[0 * 4 + r] * b[c * 4 + 0] +
+          a[1 * 4 + r] * b[c * 4 + 1] +
+          a[2 * 4 + r] * b[c * 4 + 2] +
+          a[3 * 4 + r] * b[c * 4 + 3];
+      }
+    }
+    return out;
+  }
+
+  function perspective(fovy, aspect, near, far) {
+    const f = 1 / Math.tan(fovy / 2);
+    const out = new Float32Array(16);
+    out[0] = f / aspect;
+    out[5] = f;
+    out[10] = (far + near) / (near - far);
+    out[11] = -1;
+    out[14] = (2 * far * near) / (near - far);
+    return out;
+  }
+
+  function rotationY(a) {
+    const c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]);
+  }
+
+  function rotationX(a) {
+    const c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]);
+  }
+
+  function translation(z) {
+    const out = identity();
+    out[14] = z;
+    return out;
+  }
+
+  const delta = document.getElementById("delta");
+  const hbar = document.getElementById("hbar");
+  const point = document.getElementById("point");
+  const speed = document.getElementById("speed");
+  const deltaV = document.getElementById("deltaV");
+  const hbarV = document.getElementById("hbarV");
+  const pointV = document.getElementById("pointV");
+  const speedV = document.getElementById("speedV");
+  const alpha = document.getElementById("alpha");
+  document.getElementById("samples").textContent = (positions.length / 3).toLocaleString();
+
+  function updateReadouts() {
+    const d = Number(delta.value);
+    deltaV.textContent = d.toFixed(2);
+    hbarV.textContent = Number(hbar.value).toFixed(2);
+    pointV.textContent = Number(point.value).toFixed(1);
+    speedV.textContent = Number(speed.value).toFixed(2);
+    alpha.textContent = Math.exp(-d).toFixed(4);
+  }
+  [delta, hbar, point, speed].forEach(el => el.addEventListener("input", updateReadouts));
+  updateReadouts();
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+    const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    gl.viewport(0, 0, w, h);
+  }
+
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  gl.clearColor(0.004, 0.008, 0.025, 1.0);
+
+  status.textContent = "WebGL2 shader linked · recursive kernel active";
+
+  const t0 = performance.now();
+  function frame(now) {
+    resize();
+    const t = (now - t0) * 0.001;
+    const aspect = canvas.width / canvas.height;
+    const proj = perspective(Math.PI / 3.1, aspect, 0.05, 30.0);
+    const modelView = multiply(
+      translation(-3.4),
+      multiply(
+        rotationY(t * Number(speed.value)),
+        rotationX(-0.42 + 0.10 * Math.sin(t * 0.23))
+      )
+    );
+    const viewProjection = multiply(proj, modelView);
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(program);
+    gl.bindVertexArray(vao);
+    gl.uniformMatrix4fv(uViewProjection, false, viewProjection);
+    gl.uniform1f(uTime, t);
+    gl.uniform1f(uDelta, Number(delta.value));
+    gl.uniform1f(uHbar, Number(hbar.value));
+    gl.uniform1f(uPoint, Number(point.value));
+    gl.drawArrays(gl.POINTS, 0, positions.length / 3);
+    gl.bindVertexArray(null);
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
