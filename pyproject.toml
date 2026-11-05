@@ -77,6 +77,10 @@ phi_m_ae = [
     "torch>=2.4",
     "matplotlib>=3.8",
 ]
+dm-v3-prime = [
+    "numpy>=1.26",
+    "torch>=2.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/Lord-Xido/Jarvis-X"
