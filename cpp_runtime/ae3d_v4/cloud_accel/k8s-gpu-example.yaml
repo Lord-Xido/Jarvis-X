@@ -1,0 +1,50 @@
+# GPU reference template only: not deployed, not CUDA benchmarked or production approved.
+# Supply approved immutable image, API Secret, model PVC, GPU device plugin, TLS ingress and rate limits.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jx-ae3d-v5-gpu
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: jx-ae3d-v5-gpu}
+  template:
+    metadata:
+      labels: {app: jx-ae3d-v5-gpu}
+    spec:
+      containers:
+        - name: neural-codec
+          image: REPLACE_WITH_APPROVED_GPU_IMAGE@sha256:REPLACE_WITH_DIGEST
+          ports: [{containerPort: 8080}]
+          env:
+            - name: JX_ACCEL_DEVICE
+              value: cuda
+            - name: JX_MODEL_PATH
+              value: /models/model.jxmodel
+            - name: JX_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jx-ae3d-v5-secret
+                  key: api-key
+          resources:
+            requests: {cpu: '1', memory: '2Gi', nvidia.com/gpu: '1'}
+            limits: {cpu: '4', memory: '8Gi', nvidia.com/gpu: '1'}
+          volumeMounts:
+            - {name: model, mountPath: /models, readOnly: true}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: model
+          persistentVolumeClaim:
+            claimName: REPLACE_WITH_READ_ONLY_MODEL_PVC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jx-ae3d-v5-gpu
+spec:
+  selector: {app: jx-ae3d-v5-gpu}
+  ports: [{port: 8080, targetPort: 8080}]

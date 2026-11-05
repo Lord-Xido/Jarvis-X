@@ -1,0 +1,20 @@
+services:
+  ae3d:
+    build:
+      context: ..
+      dockerfile: cloud_accel/Dockerfile.cpu
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      JX_API_KEY: ${JX_API_KEY:?Set JX_API_KEY}
+      JX_MODEL_PATH: /models/model.jxmodel
+      JX_ACCEL_DEVICE: cpu
+      JX_BATCH_BLOCKS: '4096'
+    volumes:
+      - ${JX_MODEL_FILE:?Set JX_MODEL_FILE}:/models/model.jxmodel:ro
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
