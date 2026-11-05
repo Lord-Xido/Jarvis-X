@@ -1,0 +1,31 @@
+name: AE3D v4 C++17 isolated
+
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/ae3d_v4/**'
+      - '.github/workflows/ae3d-v4.yml'
+  push:
+    paths:
+      - 'cpp_runtime/ae3d_v4/**'
+      - '.github/workflows/ae3d-v4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S cpp_runtime/ae3d_v4 -B build/ae3d_v4 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+      - name: Compile
+        run: cmake --build build/ae3d_v4 --parallel 2
+      - name: Native and CLI verification
+        run: ctest --test-dir build/ae3d_v4 --output-on-failure
