@@ -1,0 +1,29 @@
+name: 3D-RADE Evolution Runtime
+
+on:
+  push:
+    paths:
+      - 'apps/3d-rade-swarm/evolution.html'
+      - 'apps/3d-rade-swarm/EVOLUTION.md'
+      - 'apps/3d-rade-swarm/tests/**'
+      - '.github/workflows/3d-rade-evolution.yml'
+  pull_request:
+    paths:
+      - 'apps/3d-rade-swarm/evolution.html'
+      - 'apps/3d-rade-swarm/EVOLUTION.md'
+      - 'apps/3d-rade-swarm/tests/**'
+      - '.github/workflows/3d-rade-evolution.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate 3D evolutionary runtime invariants
+        run: python apps/3d-rade-swarm/tests/test_evolution_static.py
