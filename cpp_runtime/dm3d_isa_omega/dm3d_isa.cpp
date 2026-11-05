@@ -652,6 +652,7 @@ void bench(size_t count){
 }
 } // namespace dm3d
 
+#ifndef DM3D_OMEGA_NO_MAIN
 int main(int argc,char** argv){
     using namespace dm3d;
     try{
@@ -693,3 +694,5 @@ int main(int argc,char** argv){
         return 0;
     }catch(const std::exception& e){std::cerr<<"ERROR: "<<e.what()<<'\n';return 1;}
 }
+
+#endif // DM3D_OMEGA_NO_MAIN

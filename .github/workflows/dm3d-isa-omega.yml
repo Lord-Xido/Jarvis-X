@@ -22,15 +22,15 @@ jobs:
         cxx: [g++, clang++]
     steps:
       - uses: actions/checkout@v4
-      - name: Build with CMake
+      - name: Build original and v2 engines with CMake
         env:
           CXX: ${{ matrix.cxx }}
         run: |
-          cmake -S cpp_runtime/dm3d_isa_omega -B /tmp/dm3d-isa-build -DCMAKE_BUILD_TYPE=Release
+          cmake -S cpp_runtime/dm3d_isa_omega -B /tmp/dm3d-isa-build -DCMAKE_BUILD_TYPE=Release -DDM3D_ENABLE_CUDA=OFF
           cmake --build /tmp/dm3d-isa-build -j2
-      - name: CTest
+      - name: Run original and v2 CTest validation
         run: ctest --test-dir /tmp/dm3d-isa-build --output-on-failure
-      - name: End-to-end byte-exact reconstruction
+      - name: Reproduce original byte-exact round trip
         env:
           CXX: ${{ matrix.cxx }}
         run: |
