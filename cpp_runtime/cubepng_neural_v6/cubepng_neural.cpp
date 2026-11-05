@@ -253,9 +253,9 @@ public:
 };
 class PngWriter {
  FILE* f_=nullptr;png_structp png_=nullptr;png_infop info_=nullptr;
- U32 w_,h_;std::size_t rowBytes_;Bytes row_;std::size_t used_=0;U32 rows_=0;
+ U32 h_;std::size_t rowBytes_;Bytes row_;std::size_t used_=0;U32 rows_=0;
 public:
- PngWriter(const std::string& path,U32 w,U32 h):w_(w),h_(h),rowBytes_(std::size_t(w)*4),row_(rowBytes_){
+ PngWriter(const std::string& path,U32 w,U32 h):h_(h),rowBytes_(std::size_t(w)*4),row_(rowBytes_){
   req(w>0&&h>0,"Zero image dimensions");f_=std::fopen(path.c_str(),"wb");req(f_!=nullptr,"Cannot write PNG");
   png_=png_create_write_struct(PNG_LIBPNG_VER_STRING,nullptr,nullptr,nullptr);req(png_!=nullptr,"PNG writer init failed");
   info_=png_create_info_struct(png_);req(info_!=nullptr,"PNG writer info failed");
