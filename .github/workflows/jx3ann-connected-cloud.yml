@@ -1,0 +1,90 @@
+name: JX3ANN connected cloud verification
+on:
+  pull_request:
+    paths:
+      - 'cloud_runtime/tib/**'
+      - 'experiments/jx3d_v11/**'
+      - '.github/workflows/jx3ann-connected-cloud.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: jx3ann-connected-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bytecode-one-gib:
+    name: Cloud CPU / 1 GiB streaming bytecode
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: cloud_runtime/tib
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile C++17 engines
+        run: make all
+      - name: Run native regression
+        run: make test
+      - name: Process real 1 GiB synthetic byte stream and reject corruption
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./jx3d_1tib --start 0 --tiles 1024 --corrupt-test | tee "$RUNNER_TEMP/jx3ann-1gib.log"
+          grep -F 'verified_reconstruction=PASS' "$RUNNER_TEMP/jx3ann-1gib.log"
+          grep -F 'corruption_test=PASS' "$RUNNER_TEMP/jx3ann-1gib.log"
+          grep -F 'tiles=1024' "$RUNNER_TEMP/jx3ann-1gib.log"
+          python3 - <<'PY'
+          import json, os, pathlib, platform
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'jx3ann-cloud-bytecode.json'
+          out.write_text(json.dumps({'workload':'1024 1-MiB synthetic tiles','bytes':1073741824,
+             'backend':'GitHub Actions hosted CPU','gpu_executed':False,
+             'engine':'cloud_runtime/tib/jx3d_1tib','result':'PASS','host':platform.platform()},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jx3ann-1gib-cloud-cpu-evidence
+          path: |
+            ${{ runner.temp }}/jx3ann-1gib.log
+            ${{ runner.temp }}/jx3ann-cloud-bytecode.json
+          retention-days: 14
+
+  native-ann:
+    name: Cloud CPU / C++20 neural reference
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile strict native ANN reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror             experiments/jx3d_v11/tests/reference.cpp -o "$RUNNER_TEMP/jx3ann-native"
+      - name: Run ANN geometric and routing checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/jx3ann-native" | tee "$RUNNER_TEMP/jx3ann-native.log"
+      - name: Run full native runtime and HTTP tests
+        working-directory: experiments/jx3d_v11/runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash ./run_tests.sh | tee "$RUNNER_TEMP/jx3ann-runtime.log"
+      - name: Log accelerator availability without claiming GPU execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L; then
+            echo "GPU_VISIBLE=YES; CUDA equivalence NOT executed by this workflow" | tee "$RUNNER_TEMP/gpu-inventory.txt"
+          else
+            echo "GPU_VISIBLE=NO; GitHub-hosted runner is CPU-only" | tee "$RUNNER_TEMP/gpu-inventory.txt"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jx3ann-native-ann-cloud-evidence
+          path: |
+            ${{ runner.temp }}/jx3ann-native.log
+            ${{ runner.temp }}/jx3ann-runtime.log
+            ${{ runner.temp }}/gpu-inventory.txt
+          retention-days: 14
