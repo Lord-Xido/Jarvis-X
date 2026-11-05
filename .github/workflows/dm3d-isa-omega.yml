@@ -1,0 +1,38 @@
+name: DM3D ISA Omega C++20
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/dm3d_isa_omega/**'
+      - '.github/workflows/dm3d-isa-omega.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cpp_runtime/dm3d_isa_omega/**'
+      - '.github/workflows/dm3d-isa-omega.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference-vm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with CMake
+        env:
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -S cpp_runtime/dm3d_isa_omega -B /tmp/dm3d-isa-build -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/dm3d-isa-build -j2
+      - name: CTest
+        run: ctest --test-dir /tmp/dm3d-isa-build --output-on-failure
+      - name: End-to-end byte-exact reconstruction
+        env:
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cd cpp_runtime/dm3d_isa_omega
+          bash ./run_all.sh
