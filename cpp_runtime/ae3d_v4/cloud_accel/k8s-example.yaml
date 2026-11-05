@@ -1,0 +1,64 @@
+# EXAMPLE ONLY. Before deployment: configure a trusted container image, immutable
+# model checkpoint, real K8s secret, TLS ingress and network security policies.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jx-ae3d-v5
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: jx-ae3d-v5}
+  template:
+    metadata:
+      labels: {app: jx-ae3d-v5}
+    spec:
+      containers:
+        - name: codec
+          image: REPLACE_WITH_APPROVED_PRIVATE_IMAGE@sha256:REPLACE_WITH_DIGEST
+          ports: [{containerPort: 8080}]
+          env:
+            - name: JX_ACCEL_DEVICE
+              value: cpu
+            - name: JX_MODEL_PATH
+              value: /models/model.jxmodel
+            - name: JX_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jx-ae3d-v5-secret
+                  key: api-key
+          volumeMounts:
+            - {name: model, mountPath: /models, readOnly: true}
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+          resources:
+            requests: {cpu: '500m', memory: '1Gi'}
+            limits: {cpu: '2', memory: '4Gi'}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: model
+          persistentVolumeClaim:
+            claimName: REPLACE_WITH_READ_ONLY_MODEL_PVC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jx-ae3d-v5
+spec:
+  selector: {app: jx-ae3d-v5}
+  ports: [{port: 8080, targetPort: 8080}]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jx-ae3d-v5-hpa
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: jx-ae3d-v5}
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 65}
