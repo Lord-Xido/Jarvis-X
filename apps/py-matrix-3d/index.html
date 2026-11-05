@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PY-MATRIX 3D :: 1M LOC Mega-Code Engine</title>
+<style>
+:root{--bg:#02050b;--panel:#07101bcc;--cyan:#31e7ff;--purple:#8b5cf6;--gold:#ffd166;--text:#e5edf6;--dim:#8192a6;--ok:#41f19a}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block}.hud{position:fixed;z-index:2;background:var(--panel);backdrop-filter:blur(12px);border:1px solid #31e7ff44;border-radius:12px;box-shadow:0 12px 50px #0008}.top{left:18px;right:18px;top:18px;padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand b{display:block;color:var(--cyan);letter-spacing:.16em;font-size:15px}.brand span{display:block;color:var(--dim);margin-top:4px;font-size:11px}.controls{display:flex;gap:8px;flex-wrap:wrap}button,input{font:inherit;color:var(--text);background:#020812;border:1px solid #31e7ff55;border-radius:7px;padding:8px 10px;outline:none}button{cursor:pointer}button:hover{border-color:var(--cyan)}input{width:130px}.metrics{left:18px;right:18px;bottom:18px;padding:13px 16px;display:grid;grid-template-columns:repeat(7,minmax(90px,1fr));gap:12px}.m span{display:block;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.09em}.m b{display:block;color:var(--cyan);margin-top:4px;font-size:12px}.side{right:18px;top:92px;width:300px;padding:14px 16px;line-height:1.5}.side h3{margin:0 0 8px;color:var(--gold);font-size:12px}.eq{color:#b8c7d9}.ok{color:var(--ok)!important}.warn{color:var(--gold)!important}@media(max-width:900px){.metrics{grid-template-columns:repeat(3,1fr)}.side{display:none}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="hud top">
+  <div class="brand"><b>PY-MATRIX 3D :: 1M LOC MEGA-CODE ENGINE</b><span>DM-vΩΞ⁺ baseline · Ψ-Φ-Λ-Ω-Θ cognitive stack · bounded research surface</span></div>
+  <div class="controls"><input id="line" type="number" min="1" max="1000000" value="48201" aria-label="line number"><button id="go">Fly to LOC</button><button id="toggle">Pause</button><button id="reset">Reset View</button></div>
+</div>
+<div class="hud side">
+  <h3>KINETIC EXECUTION TOPOLOGY</h3>
+  <div class="eq">AST → Φ spatial index → Ω instanced cluster matrix → Ψ 1 Hz wave → Λ coherence gate → Θ focus vector</div>
+  <p>Line lookup is arithmetic, not a scan: <b>cluster=(LOC−1)//4000</b>.</p>
+  <p>Each cluster is a <b>20×20×10</b> local lattice. Only 250 cluster instances are rendered; one million line objects are not allocated.</p>
+  <p>60 FPS is a measured target. Browser scheduling is not treated as a real-time guarantee.</p>
+</div>
+<div class="hud metrics">
+  <div class="m"><span>Virtual LOC</span><b>1,000,000</b></div>
+  <div class="m"><span>Ω Clusters</span><b id="cluster">250 / active 0</b></div>
+  <div class="m"><span>Ψ Pulse</span><b id="pulse">1.000 Hz</b></div>
+  <div class="m"><span>Λ Coherence</span><b id="coherence" class="ok">0.9998 target</b></div>
+  <div class="m"><span>Measured FPS</span><b id="fps">--</b></div>
+  <div class="m"><span>Selected LOC</span><b id="selected">48,201</b></div>
+  <div class="m"><span>Θ Cell</span><b id="cell">(0,10,0)</b></div>
+</div>
+<script>
+'use strict';
+const TOTAL_LOC=1000000, CLUSTER_COUNT=250, LOC_PER_CLUSTER=4000;
+const GRID_X=20, GRID_Y=20, GRID_Z=10, PULSE_HZ=1.0, COHERENCE_TARGET=0.9998;
+const GOLDEN_ANGLE=Math.PI*(3-Math.sqrt(5));
+const canvas=document.getElementById('gl');
+const gl=canvas.getContext('webgl2',{antialias:true,powerPreference:'high-performance'});
+if(!gl){document.body.innerHTML='<pre style="padding:24px">WebGL2 is required for the PY-MATRIX 3D research surface.</pre>';throw new Error('WebGL2 unavailable');}
+const vs=`#version 300 es
+precision highp float;
+uniform float uTime,uYaw,uPitch,uZoom,uAspect,uFocus;
+out float vPulse;out float vFocus;
+const float PI=3.141592653589793;
+void main(){
+ float i=float(gl_InstanceID); float theta=i*2.399963229728653; float r=3.2+i*0.020;
+ vec3 p=vec3(r*cos(theta),(i-124.5)*0.035,r*sin(theta));
+ float pulse=0.5+0.5*cos(2.0*PI*(uTime-i/32.0));
+ float cy=cos(uYaw),sy=sin(uYaw),cp=cos(uPitch),sp=sin(uPitch);
+ vec3 q=vec3(cy*p.x-sy*p.z,p.y,sy*p.x+cy*p.z);
+ q=vec3(q.x,cp*q.y-sp*q.z,sp*q.y+cp*q.z);
+ float depth=max(5.0,uZoom+q.z); float persp=uZoom/depth;
+ gl_Position=vec4((q.x*persp)/(6.8*uAspect),(q.y*persp)/6.8,clamp(q.z/30.0,-0.9,0.9),1.0);
+ vFocus=1.0-step(0.5,abs(i-uFocus)); vPulse=pulse;
+ gl_PointSize=mix(4.0+7.0*pulse,19.0,vFocus);
+}`;
+const fs=`#version 300 es
+precision highp float;in float vPulse;in float vFocus;out vec4 outColor;
+void main(){vec2 d=gl_PointCoord-0.5;if(dot(d,d)>0.25)discard;vec3 a=vec3(0.10,0.78,1.0),b=vec3(0.60,0.25,1.0),g=vec3(1.0,0.82,0.25);vec3 c=mix(mix(a,b,vPulse),g,vFocus);outColor=vec4(c,mix(0.58,1.0,vFocus));}`;
+function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s}
+const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vs));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fs));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));gl.useProgram(program);
+const U={};for(const n of ['uTime','uYaw','uPitch','uZoom','uAspect','uFocus'])U[n]=gl.getUniformLocation(program,n);
+const vao=gl.createVertexArray();gl.bindVertexArray(vao);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.clearColor(0.008,0.02,0.045,1);
+let running=true,yaw=0.0,pitch=-0.16,zoom=14.0,focusCluster=12,selectedLine=48201,last=performance.now(),fpsEMA=60;
+function locate(line){line=Math.max(1,Math.min(TOTAL_LOC,Math.trunc(line)));const z=line-1,c=Math.floor(z/LOC_PER_CLUSTER),local=z%LOC_PER_CLUSTER;return{line,cluster:c,local,x:local%GRID_X,y:Math.floor(local/GRID_X)%GRID_Y,z:Math.floor(local/(GRID_X*GRID_Y))}}
+function selectLine(line){const a=locate(line);selectedLine=a.line;focusCluster=a.cluster;document.getElementById('line').value=a.line;document.getElementById('selected').textContent=a.line.toLocaleString();document.getElementById('cell').textContent=`(${a.x},${a.y},${a.z})`;document.getElementById('cluster').textContent=`250 / active ${a.cluster}`;}
+document.getElementById('go').onclick=()=>selectLine(Number(document.getElementById('line').value));
+document.getElementById('toggle').onclick=()=>{running=!running;document.getElementById('toggle').textContent=running?'Pause':'Resume'};
+document.getElementById('reset').onclick=()=>{yaw=0;pitch=-0.16;zoom=14;selectLine(48201)};
+let dragging=false,px=0,py=0;canvas.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!dragging)return;yaw+=(e.clientX-px)*0.006;pitch=Math.max(-1.2,Math.min(1.2,pitch+(e.clientY-py)*0.006));px=e.clientX;py=e.clientY});canvas.addEventListener('pointerup',()=>dragging=false);canvas.addEventListener('wheel',e=>{zoom=Math.max(7,Math.min(28,zoom+e.deltaY*0.01));e.preventDefault()},{passive:false});
+function resize(){const d=Math.min(devicePixelRatio||1,2),w=Math.floor(innerWidth*d),h=Math.floor(innerHeight*d);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h)}}
+function frame(now){resize();const dt=Math.max(0.0001,(now-last)/1000);last=now;const f=1/dt;fpsEMA=fpsEMA*0.92+f*0.08;if(running)yaw+=dt*0.08;gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.bindVertexArray(vao);gl.uniform1f(U.uTime,now/1000*PULSE_HZ);gl.uniform1f(U.uYaw,yaw);gl.uniform1f(U.uPitch,pitch);gl.uniform1f(U.uZoom,zoom);gl.uniform1f(U.uAspect,canvas.width/canvas.height);gl.uniform1f(U.uFocus,focusCluster);gl.drawArraysInstanced(gl.POINTS,0,1,CLUSTER_COUNT);document.getElementById('fps').textContent=`${fpsEMA.toFixed(1)} ${fpsEMA>=60?'target':'measured'}`;document.getElementById('fps').className=fpsEMA>=60?'ok':'warn';requestAnimationFrame(frame)}
+selectLine(selectedLine);requestAnimationFrame(frame);
+</script>
+</body>
+</html>
