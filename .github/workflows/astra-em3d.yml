@@ -1,0 +1,76 @@
+name: Astra EM3D native simulation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'native/astra_em3d/**'
+      - 'docs/ASTRA_SWARM_EM3D.md'
+      - '.github/workflows/astra-em3d.yml'
+  pull_request:
+    paths:
+      - 'native/astra_em3d/**'
+      - 'docs/ASTRA_SWARM_EM3D.md'
+      - '.github/workflows/astra-em3d.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-3d-field-codec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile with GCC and OpenMP
+        run: |
+          g++ -O2 -std=c++17 -Wall -Wextra -Wpedantic -fopenmp \
+            native/astra_em3d/astra_em3d.cpp -o astra_em3d
+      - name: Run solver, codec and stability invariants
+        run: ./astra_em3d --self-test
+      - name: Generate 3D runtime trace and receipt
+        run: |
+          ./astra_em3d --samples 128 --grid 20 --steps 6 --threads 2 \
+            --receipt artifacts/astra-em3d.json --trace artifacts/astra-em3d.csv
+      - name: Verify evidence and numerical boundary
+        run: |
+          python - <<'PY'
+          import csv, json, math
+          from pathlib import Path
+          j=json.loads(Path('artifacts/astra-em3d.json').read_text())
+          assert j['provenance']=='synthetic-numerical-simulation'
+          assert j['symbolic_population_executed'] is False
+          assert j['trained_neural_network'] is False
+          assert j['verification']=={'divergence_constraints': True,'torus_constraint': True,'finite_metrics': True}
+          assert 0 < j['final_truth_mse'] < j['initial_truth_mse']
+          assert j['max_div_e'] < 1e-8 and j['max_div_b'] < 1e-8 and j['max_div_j'] < 1e-8
+          assert j['max_torus_defect'] < 1e-7
+          assert j['em_energy'] > 0 and j['latent_field_rms'] > 0
+          assert all(math.isfinite(j[k]) for k in ('final_truth_mse','em_energy','latent_field_rms'))
+          with Path('artifacts/astra-em3d.csv').open(newline='') as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==6*128
+          assert set(('x','y','z','Ex','Ey','Ez','Bx','By','Bz')) <= set(rows[0])
+          print('Verified sampled Maxwell simulation and 3D telemetry receipt')
+          PY
+      - name: Verify source-free neutral simulation
+        run: |
+          ./astra_em3d --samples 32 --grid 12 --steps 3 --source 0 \
+            --trace none --receipt artifacts/astra-no-source.json
+          python - <<'PY'
+          import json
+          with open('artifacts/astra-no-source.json') as f: x=json.load(f)
+          assert x['em_energy']==0 and x['latent_field_rms']==0
+          assert x['max_div_e']==0 and x['max_div_b']==0
+          PY
+      - name: Upload bounded synthetic evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: astra-em3d-${{ github.sha }}
+          path: |
+            artifacts/astra-em3d.json
+            artifacts/astra-em3d.csv
+            artifacts/astra-no-source.json
+          retention-days: 30
+          if-no-files-found: error

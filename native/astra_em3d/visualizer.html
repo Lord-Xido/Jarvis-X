@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Astra EM3D | Toroidal field inspector</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;background:#060c14;color:#e4f3fc}
+*{box-sizing:border-box}body{margin:0}header{padding:14px 18px;border-bottom:1px solid #22374d;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}h1{font-size:17px;margin:0;color:#b6f0ff}small{color:#9ab0bf}
+main{display:grid;grid-template-columns:minmax(0,1fr) 280px;height:calc(100dvh - 63px)}canvas{width:100%;height:100%;display:block;background:radial-gradient(ellipse at 50% 44%,#10253a,#04070d 66%)}aside{padding:15px;background:#091522;border-left:1px solid #22374d;overflow:auto}label{font-size:13px;display:block;margin:12px 0 6px;color:#afd0e3}input[type=range],input[type=file]{width:100%}button{background:#1d6684;color:white;border:1px solid #4b9cb4;padding:8px 12px;border-radius:8px;cursor:pointer}button:hover{background:#2486a9}.group{display:flex;gap:7px;flex-wrap:wrap}output,pre{font:12px ui-monospace,monospace;color:#c1deeb}pre{white-space:pre-wrap;line-height:1.6}input[type=checkbox]{accent-color:#00d8ed}p{font-size:12px;line-height:1.5;color:#98b2c4}
+@media(max-width:760px){main{height:auto;grid-template-columns:1fr}canvas{height:55dvh}aside{border-left:0;border-top:1px solid #22374d}}
+</style></head><body>
+<header><div><h1>ASTRA EM3D — geometric field inspector</h1><small>Standalone 3D projection · synthetic field simulation, not hardware telemetry</small></div><small id="status">Preview (procedural; load a CSV for runtime evidence)</small></header>
+<main><canvas id="scene" aria-label="Interactive 3D torus and sampled electromagnetic vectors"></canvas>
+<aside><label>Load Astra trace CSV</label><input type="file" id="csv" accept=".csv,text/csv"><p>Use the CSV emitted by <code>astra_em3d --trace</code>. Files stay in your browser.</p>
+<label>Frame <output id="frameLabel">1</output></label><input id="frame" type="range" value="1" min="1" max="8">
+<div class="group" style="margin-top:8px"><button id="play">Pause</button><button id="reset">Reset camera</button></div>
+<label>Horizontal rotation <output id="yawVal"></output></label><input id="yaw" type="range" min="-180" max="180" value="35">
+<label>Vertical rotation <output id="pitchVal"></output></label><input id="pitch" type="range" min="-85" max="85" value="23">
+<label>Zoom <output id="zoomVal"></output></label><input id="zoom" type="range" min="40" max="200" value="100">
+<label><input id="vectors" type="checkbox" checked> Draw E-field vectors (cyan) and B-field vectors (gold)</label>
+<label><input id="rotate" type="checkbox"> Automatic orbit</label>
+<pre id="meta"></pre><p>Render coordinates are sampled points on a 2D torus embedded in 3D. Vector lengths are display-normalized and are not measured in physical screen units.</p></aside></main>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
+const id=x=>document.getElementById(x),PI=Math.PI;
+let frames=new Map(),nFrames=8,playing=true,tick=0;
+function demo(){frames=new Map();for(let s=1;s<=8;s++){let pts=[];for(let i=0;i<128;i++){
+ let a=2*PI*i/128+.07*s,b=2*PI*((i*31)%128)/128;
+ let x=(10+2*Math.cos(b))*Math.cos(a),y=(10+2*Math.cos(b))*Math.sin(a),z=2*Math.sin(b);
+ pts.push({p:[x,y,z],E:[.09*Math.cos(a+s*.3),.09*Math.sin(a+s*.3),.025*Math.sin(b)],B:[-.07*Math.sin(a),.07*Math.cos(a),.015*Math.cos(b)]});
+ }frames.set(s,pts)}nFrames=8;}
+demo();
+function parseCSV(text){const lines=text.trim().split(/\r?\n/);if(lines.length<2)throw Error('No trace records');
+const columns=lines[0].split(',').map(x=>x.trim());const expected=['step','agent','x','y','z','Ex','Ey','Ez','Bx','By','Bz'];
+if(expected.some((c,i)=>columns[i]!==c))throw Error('Unexpected columns: '+columns.join(','));
+let out=new Map();for(let li=1;li<lines.length;li++){const v=lines[li].split(',').map(Number);
+if(v.length!==11||v.some(x=>!Number.isFinite(x)))throw Error('Invalid numeric data on line '+(li+1));
+let step=v[0];if(!out.has(step))out.set(step,[]);
+out.get(step).push({p:v.slice(2,5),E:v.slice(5,8),B:v.slice(8,11)});
+}if(!out.size)throw Error('No valid frames');return new Map([...out].sort((a,b)=>a[0]-b[0]));}
+id('csv').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;
+try{let parsed=parseCSV(await file.text());frames=parsed;nFrames=frames.size;id('frame').min=1;id('frame').max=nFrames;id('frame').value=1;
+id('status').textContent='Loaded '+file.name+' ('+nFrames+' frames)';render();}catch(error){id('status').textContent='Load failed: '+error.message;}});
+id('play').onclick=()=>{playing=!playing;id('play').textContent=playing?'Pause':'Play'};
+id('reset').onclick=()=>{id('yaw').value=35;id('pitch').value=23;id('zoom').value=100;render()};
+for(const name of ['frame','yaw','pitch','zoom','vectors','rotate'])id(name).addEventListener('input',render);
+function resize(){const d=Math.min(devicePixelRatio||1,2);const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
+if(canvas.width!==Math.round(w*d)||canvas.height!==Math.round(h*d)){canvas.width=Math.round(w*d);canvas.height=Math.round(h*d)}
+ctx.setTransform(d,0,0,d,0,0);return {w,h};}
+function render(){const {w,h}=resize(),yaw=+id('yaw').value*PI/180,pitch=+id('pitch').value*PI/180,zoom=+id('zoom').value/100;
+ctx.clearRect(0,0,w,h);id('yawVal').textContent=id('yaw').value+'°';id('pitchVal').textContent=id('pitch').value+'°';id('zoomVal').textContent=id('zoom').value+'%';
+const proj=p=>{let x=p[0]*Math.cos(yaw)-p[1]*Math.sin(yaw),y=p[0]*Math.sin(yaw)+p[1]*Math.cos(yaw),z=p[2];
+const v=y*Math.cos(pitch)-z*Math.sin(pitch),depth=y*Math.sin(pitch)+z*Math.cos(pitch);let scale=Math.min(w/30,h/27)*zoom*(32/(32+depth));
+return [w/2+x*scale,h/2+v*scale,depth,scale];};
+ctx.lineWidth=.9;
+for(let minor=0;minor<13;minor++){const b=minor*2*PI/13;ctx.strokeStyle='rgba(70,160,202,.27)';ctx.beginPath();for(let j=0;j<=100;j++){
+const a=2*PI*j/100,p=proj([(10+2*Math.cos(b))*Math.cos(a),(10+2*Math.cos(b))*Math.sin(a),2*Math.sin(b)]);
+if(!j)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);}ctx.stroke()}
+for(let major=0;major<28;major++){const a=major*2*PI/28;ctx.strokeStyle='rgba(45,119,173,.27)';ctx.beginPath();for(let j=0;j<=28;j++){
+const b=2*PI*j/28,p=proj([(10+2*Math.cos(b))*Math.cos(a),(10+2*Math.cos(b))*Math.sin(a),2*Math.sin(b)]);
+if(!j)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);}ctx.stroke()}
+let fi=+id('frame').value,steps=[...frames.keys()];fi=Math.min(steps.length,Math.max(1,fi));id('frameLabel').textContent=steps[fi-1];
+let points=(frames.get(steps[fi-1])||[]).map(row=>({...row,d:proj(row.p)})).sort((a,b)=>b.d[2]-a.d[2]);
+for(const item of points){const [x,y,depth,scale]=item.d;ctx.beginPath();ctx.fillStyle=depth<0?'#7bf0ff':'#32badc';ctx.arc(x,y,Math.max(1.5,2.1*zoom),0,2*PI);ctx.fill();
+if(id('vectors').checked)for(const [v,color] of [[item.E,'#26dfe8'],[item.B,'#f9d267']]){
+ let mag=Math.hypot(...v);if(mag<1e-12)continue;let vis=Math.min(2.6,Math.max(.15,mag*90));
+ let end=proj(item.p.map((u,k)=>u+v[k]/mag*vis));ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.1;ctx.moveTo(x,y);ctx.lineTo(end[0],end[1]);ctx.stroke();
+}}
+id('meta').textContent='Agents in frame: '+points.length+'\n'+'Torus radii: R=10, r=2\n'+'Coordinates: 3D projected to 2D\n'+'Data: '+(id('status').textContent.startsWith('Loaded')?'runtime CSV':'procedural demo');
+}
+function animate(){tick++;if(playing&&tick%36===0){id('frame').value=(+id('frame').value%nFrames)+1;render()}
+if(id('rotate').checked&&tick%2===0){id('yaw').value=(+id('yaw').value+1>180?-180:+id('yaw').value+1);render()}
+requestAnimationFrame(animate)}window.addEventListener('resize',render);render();requestAnimationFrame(animate);
+})();
+</script></body></html>
