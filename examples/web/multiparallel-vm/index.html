@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiparallel VM Reference Visualization</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: #010104; color: #00ffcc; font-family: "Courier New", monospace; }
+    #canvas-container { width: 100vw; height: 100vh; }
+    .panel {
+      position: absolute;
+      z-index: 10;
+      padding: 14px;
+      border-radius: 7px;
+      background: rgba(2, 2, 10, 0.91);
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+    #hud {
+      top: 18px;
+      left: 18px;
+      width: min(470px, calc(100vw - 36px));
+      border: 1px solid #00ffcc;
+      box-shadow: 0 0 32px rgba(0, 255, 204, 0.26);
+    }
+    #bytecode-panel {
+      left: 18px;
+      bottom: 18px;
+      max-width: min(540px, calc(100vw - 36px));
+      border: 1px solid #ff007f;
+      color: #ff8acb;
+      font-size: 10px;
+      line-height: 1.55;
+    }
+    #controls {
+      right: 18px;
+      bottom: 18px;
+      border: 1px solid #00ffcc;
+      font-size: 10px;
+      color: #a0ffec;
+    }
+    h1 {
+      margin: 0 0 10px;
+      padding-bottom: 7px;
+      border-bottom: 1px dashed rgba(0,255,204,.6);
+      color: #fff;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+    .metric { margin: 5px 0; color: #a0ffec; font-size: 11px; }
+    .value { color: #ff007f; font-weight: bold; }
+    .notice { margin-top: 10px; color: #ffcf66; font-size: 10px; line-height: 1.4; }
+    @media (max-width: 760px) {
+      #controls { display: none; }
+      #bytecode-panel { right: 18px; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="hud" class="panel">
+    <h1>Ψ_MOAGI MULTIPARALLEL VM — REFERENCE VISUALIZATION</h1>
+    <div class="metric">LOGICAL VM CONTEXTS: <span class="value">1,024 TARGET</span></div>
+    <div class="metric">MATERIALIZED PROXIES: <span class="value">2,400 INSTANCES</span></div>
+    <div class="metric">SHARED MEMORY: <span class="value">NOT IMPLEMENTED IN THIS DEMO</span></div>
+    <div class="metric">PATCH STATE: <span id="patch-state" class="value">VISUAL SIMULATION ONLY</span></div>
+    <div class="metric">FRAME TELEMETRY: <span id="frame-telemetry" class="value">MEASURING…</span></div>
+    <div class="notice">This page visualizes the proposed architecture. It does not execute bytecode, spawn workers, mutate executable code, or alias SharedArrayBuffer memory with GPU buffers.</div>
+  </div>
+
+  <div id="bytecode-panel" class="panel">
+    <strong>PROPOSED 32-BIT ISA TELEMETRY — NON-EXECUTING</strong><br>
+    0x1000: 0x10 0x01 0x00 0x10 ; SPAWN virtual context<br>
+    0x1004: <span id="opcode-display">0x20 0x04 0x01 0x02 ; VADD R4 = R1 + R2</span><br>
+    0x1008: 0x40 0x00 0x05 0x01 ; EMIT_3D to CPU staging<br>
+    0x100C: 0x31 0x06 0x00 0x02 ; OPT_BENCH descriptor 0x0002
+  </div>
+
+  <div id="controls" class="panel">DRAG — ORBIT &nbsp;|&nbsp; WHEEL — ZOOM</div>
+  <div id="canvas-container"></div>
+
+  <script>
+    "use strict";
+
+    const INSTANCE_COUNT = 2400;
+    const container = document.getElementById("canvas-container");
+    const patchState = document.getElementById("patch-state");
+    const opcodeDisplay = document.getElementById("opcode-display");
+    const frameTelemetry = document.getElementById("frame-telemetry");
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x010104, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(
+      65,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.3;
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0x050518, 2.5));
+
+    const cyanLight = new THREE.PointLight(0x00ffcc, 6, 50);
+    cyanLight.position.set(0, 0, 0);
+    scene.add(cyanLight);
+
+    const magentaLight = new THREE.PointLight(0xff007f, 5, 50);
+    magentaLight.position.set(0, 5, 0);
+    scene.add(magentaLight);
+
+    const coreMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0x020208,
+      metalness: 0.9,
+      roughness: 0.1,
+      transmission: 0.6,
+      thickness: 1.2,
+      wireframe: true,
+      emissive: 0x00ffcc,
+      emissiveIntensity: 0.5
+    });
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(3, 2), coreMaterial);
+    scene.add(core);
+
+    const kernelMaterial = new THREE.MeshBasicMaterial({ color: 0xff007f });
+    const kernel = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), kernelMaterial);
+    core.add(kernel);
+
+    const particleMaterial = new THREE.MeshStandardMaterial({
+      color: 0x00ffcc,
+      roughness: 0.2,
+      metalness: 0.9,
+      emissive: 0x004433
+    });
+    const instancedMesh = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.1, 0.1, 0.1),
+      particleMaterial,
+      INSTANCE_COUNT
+    );
+    scene.add(instancedMesh);
+
+    const dummy = new THREE.Object3D();
+    const swarm = [];
+    for (let i = 0; i < INSTANCE_COUNT; i += 1) {
+      swarm.push({
+        radius: 5 + Math.random() * 15,
+        theta: Math.random() * Math.PI * 2,
+        phi: Math.acos(Math.random() * 2 - 1),
+        speed: 0.5 + Math.random() * 1.5
+      });
+    }
+
+    const cameraState = { theta: 0, phi: Math.PI / 4, distance: 38 };
+    let dragging = false;
+    let previousPointer = { x: 0, y: 0 };
+
+    function beginDrag(x, y) {
+      dragging = true;
+      previousPointer = { x, y };
+    }
+
+    function moveDrag(x, y) {
+      if (!dragging) return;
+      cameraState.theta -= (x - previousPointer.x) * 0.005;
+      cameraState.phi = Math.max(
+        0.1,
+        Math.min(Math.PI - 0.1, cameraState.phi - (y - previousPointer.y) * 0.005)
+      );
+      previousPointer = { x, y };
+    }
+
+    window.addEventListener("mousedown", event => beginDrag(event.clientX, event.clientY));
+    window.addEventListener("mousemove", event => moveDrag(event.clientX, event.clientY));
+    window.addEventListener("mouseup", () => { dragging = false; });
+    window.addEventListener("touchstart", event => {
+      if (event.touches.length === 1) beginDrag(event.touches[0].clientX, event.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener("touchmove", event => {
+      if (event.touches.length === 1) moveDrag(event.touches[0].clientX, event.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener("touchend", () => { dragging = false; });
+    window.addEventListener("wheel", event => {
+      cameraState.distance = Math.max(12, Math.min(75, cameraState.distance + event.deltaY * 0.05));
+    }, { passive: true });
+
+    const clock = new THREE.Clock();
+    let frameWindowStart = performance.now();
+    let frameWindowCount = 0;
+
+    function updateFrameTelemetry() {
+      frameWindowCount += 1;
+      const now = performance.now();
+      const windowMs = now - frameWindowStart;
+      if (windowMs < 1000) return;
+      const fps = frameWindowCount * 1000 / windowMs;
+      frameTelemetry.textContent = `${(1000 / Math.max(fps, 0.001)).toFixed(1)}ms (${fps.toFixed(0)} FPS)`;
+      frameWindowStart = now;
+      frameWindowCount = 0;
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // This alternates display states only. It is not executable-code mutation.
+      if (Math.floor(elapsed * 2) % 2 === 0) {
+        opcodeDisplay.textContent = "0x20 0x04 0x01 0x02 ; VADD R4 = R1 + R2";
+        patchState.textContent = "CANDIDATE A — VADD VISUAL";
+        kernelMaterial.color.setHex(0xff007f);
+      } else {
+        opcodeDisplay.textContent = "0x21 0x05 0x04 0x03 ; VMUL R5 = R4 * R3";
+        patchState.textContent = "CANDIDATE B — VMUL VISUAL";
+        kernelMaterial.color.setHex(0x00ffcc);
+      }
+
+      core.rotation.x = elapsed * 0.35;
+      core.rotation.y = elapsed * 0.45;
+      kernel.scale.setScalar(1 + Math.sin(elapsed * 5) * 0.12);
+
+      // Main-thread procedural transforms; no worker VM or SIMD dispatch.
+      for (let i = 0; i < INSTANCE_COUNT; i += 1) {
+        const data = swarm[i];
+        data.theta += data.speed * 0.015;
+        const x = data.radius * Math.sin(data.phi) * Math.cos(data.theta);
+        const y = data.radius * Math.cos(data.phi) + Math.sin(elapsed * 2 + i) * 0.5;
+        const z = data.radius * Math.sin(data.phi) * Math.sin(data.theta);
+
+        dummy.position.set(x, y, z);
+        dummy.lookAt(0, 0, 0);
+        dummy.scale.setScalar(0.75 + Math.sin(elapsed * 4 + i) * 0.25);
+        dummy.updateMatrix();
+        instancedMesh.setMatrixAt(i, dummy.matrix);
+      }
+      instancedMesh.instanceMatrix.needsUpdate = true;
+
+      camera.position.x = cameraState.distance * Math.sin(cameraState.phi) * Math.sin(cameraState.theta);
+      camera.position.y = cameraState.distance * Math.cos(cameraState.phi);
+      camera.position.z = cameraState.distance * Math.sin(cameraState.phi) * Math.cos(cameraState.theta);
+      camera.lookAt(0, 0, 0);
+
+      updateFrameTelemetry();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>
