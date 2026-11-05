@@ -151,3 +151,67 @@ def test_input_limits(runtime):
     with pytest.raises(ValueError,match='dimensions'):Volume.from_blocks((8,6,8),np.zeros((6,64),dtype=np.uint8))
     with pytest.raises(ValueError,match='bad JXVOL4'):Volume.parse(b'hello')
     with pytest.raises(ValueError,match='bad JXPKT4'):Archive.parse(b'hello')
+
+
+def test_halfway_rounding_matches_v4_and_exact_cpp_decode(runtime):
+    """Adversarial model: all output voxels at 126.5 (ties-away => 127)."""
+    import math
+    import struct
+    import zlib
+    _, original_model, vol, _, directory = runtime
+    raw = bytearray(original_model.read_bytes())
+    weights = np.frombuffer(raw, dtype='<f8', count=5004, offset=18)
+    weights[:] = 0.0
+    # Decoder output sigmoid(b4)*255 = 126.5 in exact arithmetic.
+    weights[4940:5004] = math.log(126.5 / 128.5)
+    # Force signed latent half-unit thresholds: round(+-0.5) => +-1.
+    half_latent = math.atanh(0.5/127.0)
+    weights[2464:2470] = half_latent
+    weights[2470:2476] = -half_latent
+    struct.pack_into('<I',raw,len(raw)-4,zlib.crc32(raw[:-4]))
+    special_model = directory/'half_tie.jxmodel'
+    special_model.write_bytes(raw)
+    codec = NeuralCodec(bytes(raw))
+    v=Volume.parse(vol.read_bytes())
+    q=codec.encode_blocks(v.blocks())
+    assert np.all(q[:,0:6]==1)
+    assert np.all(q[:,6:12]==-1)
+    predicted=codec.decode_blocks(q)
+    assert np.all(predicted==127), "halfway byte output must round away from zero"
+    # Whole-archive agreement, not just internal numeric equality.
+    native_path=directory/'tie_native_exact.jxpkt'
+    decoded_path=directory/'tie_cross_decoded.jxvol'
+    cpp_cmd(runtime,'encode',vol,special_model,native_path,'exact')
+    accelerated_packet=codec.encode(v,True).serialize()
+    assert native_path.read_bytes()==accelerated_packet
+    accelerated_path=directory/'tie_torch_exact.jxpkt'
+    accelerated_path.write_bytes(accelerated_packet)
+    cpp_cmd(runtime,'decode',accelerated_path,special_model,decoded_path)
+    assert decoded_path.read_bytes()==vol.read_bytes()
+
+
+def test_reject_short_raw_residual_with_valid_crc(runtime):
+    """A forged, CRC-valid raw residual MUST NOT broadcast across blocks."""
+    import struct
+    import zlib
+    from dataclasses import replace
+    _, model, _, codec, directory = runtime
+    v=Volume.from_blocks((8,4,4),np.zeros((2,64),dtype=np.uint8))
+    good = codec.encode(v, True)
+    # Forge raw codec 1 with only one 64-byte residual instead of 128.
+    q = good.q
+    header=bytearray(good.serialize()[:70])
+    header[53]=1
+    struct.pack_into('<Q',header,62,64)
+    forged=bytes(header)+q+bytes(64)
+    forged+=struct.pack('<I',zlib.crc32(forged))
+    with pytest.raises(ValueError, match='raw residual length'):
+        Archive.parse(forged)
+    with pytest.raises(ValueError, match='raw residual length'):
+        replace(good,codec=1,residual=bytes(64)).serialize()
+    with pytest.raises(ValueError, match='raw residual length'):
+        codec.decode(replace(good,codec=1,residual=bytes(64)))
+    app=create_app(str(model),'a-secure-test-key-123456',max_body=8192)
+    client=TestClient(app)
+    response=client.post('/v1/decode',content=forged,headers={'Authorization':'Bearer a-secure-test-key-123456'})
+    assert response.status_code==422
