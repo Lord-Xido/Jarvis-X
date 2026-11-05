@@ -1,0 +1,77 @@
+name: CubePNG Neural v6 isolated CI
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/cubepng_neural_v6/**'
+      - '.github/workflows/cubepng-neural-v6-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cpp_runtime/cubepng_neural_v6/**'
+      - '.github/workflows/cubepng-neural-v6-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cubepng-neural-v6-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    name: Linux ${{ matrix.compiler }} test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    defaults:
+      run:
+        working-directory: cpp_runtime/cubepng_neural_v6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake libpng-dev zlib1g-dev libssl-dev clang python3
+      - name: C++20 configure and strict compile
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+          cmake --build build --parallel 2
+      - name: Deterministic test fixture
+        run: python3 tests/make_fixture.py build/fixture.png
+      - name: CTest full suite
+        run: ctest --test-dir build --output-on-failure
+  asan:
+    name: Address and undefined behavior sanitizers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: cpp_runtime/cubepng_neural_v6
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y cmake g++ libpng-dev zlib1g-dev libssl-dev
+      - name: Configure sanitizers
+        run: |
+          cmake -S . -B build-sanitize -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+            -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+          cmake --build build-sanitize --parallel 2
+          python3 tests/make_fixture.py build-sanitize/fixture.png
+      - name: Smoke checks
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: |
+          ./build-sanitize/cubepng_neural self-test
+          ./build-sanitize/cubepng_neural encode build-sanitize/fixture.png build-sanitize/fixture.jx6 --mode pixels --strategy neural --level 3
+          ./build-sanitize/cubepng_neural verify build-sanitize/fixture.png build-sanitize/fixture.jx6
+          ./build-sanitize/cubepng_neural decode build-sanitize/fixture.jx6 build-sanitize/reconstructed.png
+  container:
+    name: Build hardened runtime image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build without publishing
+        run: docker build -f cpp_runtime/cubepng_neural_v6/Dockerfile -t cubepng-neural-v6:ci cpp_runtime/cubepng_neural_v6
+      - name: Container smoke test (non-root, read-only)
+        run: docker run --rm --read-only --network none --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 256m --cpus 2 cubepng-neural-v6:ci self-test

@@ -1,0 +1,7 @@
+build/
+*.jx6
+*.png
+*.csv
+*.json
+*.partial*
+benchmark_archives/
