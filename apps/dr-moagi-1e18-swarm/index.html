@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jarvis X — 10^18 3D AE/AD Swarm</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#111722;--line:#2a3447;--text:#eef3fb;--muted:#9aa8ba;--accent:#7dd3fc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}.app{max-width:1400px;margin:auto;padding:16px}h1{margin:0 0 6px;font-size:clamp(22px,3vw,34px)}.sub{color:var(--muted);margin-bottom:14px}.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,.8fr);gap:14px}@media(max-width:900px){.grid{grid-template-columns:1fr}}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}.viz{position:relative;aspect-ratio:16/10;min-height:320px;background:radial-gradient(circle,#122033,#090b10 70%)}canvas{width:100%;height:100%;display:block;touch-action:none}.badge{position:absolute;top:10px;left:10px;background:#090d14dd;border:1px solid var(--line);border-radius:10px;padding:8px 10px}.panel{padding:14px}.controls{display:grid;gap:12px}.row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}input[type=range]{width:100%}.buttons{display:flex;gap:8px;flex-wrap:wrap}button{min-height:42px;border:1px solid var(--line);border-radius:10px;background:#182131;color:var(--text);padding:8px 12px;font-weight:700;cursor:pointer}.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{border:1px solid var(--line);border-radius:10px;padding:8px;background:#151c29}.k{font-size:11px;text-transform:uppercase;color:var(--muted)}.v{font-size:18px;font-weight:800;overflow-wrap:anywhere}.note{margin-top:8px;padding:9px;border-left:3px solid #fde68a;background:#211d0e;border-radius:7px}.log{margin-top:14px;height:140px;overflow:auto;padding:10px;background:#070a0f;border:1px solid var(--line);border-radius:10px;font-family:ui-monospace,monospace;color:#cbd5e1}
+</style>
+</head>
+<body>
+<main class="app">
+<h1>Jarvis X — Virtual 10<sup>18</sup>-Cell 3D AE/AD Swarm</h1>
+<div class="sub">Logical lattice: 1,000,000 × 1,000,000 × 1,000,000. The browser renders a bounded sample while preserving exact BigInt virtual addressing.</div>
+<div class="grid">
+<section class="card"><div class="viz"><canvas id="view"></canvas><div class="badge"><b id="phase">SOURCE</b><br><span id="fps">0 fps</span></div></div></section>
+<aside class="card panel"><div class="controls">
+<div><div class="row"><label for="samples">Rendered agents</label><b id="samplesOut">6000</b></div><input id="samples" type="range" min="500" max="20000" step="500" value="6000"></div>
+<div><div class="row"><label for="alpha">Inward fold α</label><b id="alphaOut">0.280</b></div><input id="alpha" type="range" min="0.02" max="0.80" step="0.005" value="0.28"></div>
+<div><div class="row"><label for="bits">Latent quantization</label><b id="bitsOut">8 bits/axis</b></div><input id="bits" type="range" min="3" max="16" step="1" value="8"></div>
+<div><div class="row"><label for="omega">Memory coupling Ω</label><b id="omegaOut">0.18</b></div><input id="omega" type="range" min="0" max="0.60" step="0.01" value="0.18"></div>
+<div class="buttons"><button id="encode">Encode inward</button><button id="decode">Decode outward</button><button id="optimize">Auto-optimize 3D</button><button id="reset">Reset</button></div>
+<div class="metrics">
+<div class="metric"><div class="k">Virtual cells</div><div class="v">10<sup>18</sup></div></div>
+<div class="metric"><div class="k">Sample fraction</div><div class="v" id="fraction">6e-15</div></div>
+<div class="metric"><div class="k">MSE</div><div class="v" id="mse">—</div></div>
+<div class="metric"><div class="k">Fidelity</div><div class="v" id="fidelity">—</div></div>
+<div class="metric"><div class="k">Latent payload</div><div class="v" id="payload">24 bits</div></div>
+<div class="metric"><div class="k">Generation</div><div class="v" id="generation">0</div></div>
+<div class="metric"><div class="k">Best objective</div><div class="v" id="objective">—</div></div>
+<div class="metric"><div class="k">Capacity</div><div class="v" id="capacity">—</div></div>
+</div>
+<div class="note"><b>Boundary:</b> 10<sup>18</sup> is logical address-space cardinality, not the number of physical ANN operations executed per browser frame.</div>
+</div></aside></div>
+<div class="log" id="log"></div>
+</main>
+<script type="module">
+import {CAPACITY_BI,makeVirtualSample,encodeSwarm,decodeSwarm,reconstructionMSE,optimize3D} from './core.mjs';
+const $=id=>document.getElementById(id), canvas=$('view'),ctx=canvas.getContext('2d',{alpha:false});
+let source=[],latent=[],recon=[],centroid=null,phase='source',generation=0,best=null,ax=-.35,ay=.58,zoom=1,drag=false,lx=0,ly=0,last=performance.now(),fps=0;
+function cfg(){return{alpha:+$('alpha').value,bits:+$('bits').value,omega:+$('omega').value}}
+function log(s){const d=document.createElement('div');d.textContent=`[${new Date().toLocaleTimeString()}] ${s}`;$('log').prepend(d);while($('log').children.length>30)$('log').lastChild.remove()}
+function labels(){$('samplesOut').textContent=(+$('samples').value).toLocaleString();$('alphaOut').textContent=(+$('alpha').value).toFixed(3);$('bitsOut').textContent=`${$('bits').value} bits/axis`;$('omegaOut').textContent=(+$('omega').value).toFixed(2);$('payload').textContent=`${3*(+$('bits').value)} bits`;$('fraction').textContent=(source.length/1e18).toExponential(2);$('generation').textContent=generation;$('objective').textContent=best==null?'—':best.toExponential(3);$('capacity').textContent=CAPACITY_BI.toString();if(recon.length===source.length&&recon.length){const m=reconstructionMSE(source,recon);$('mse').textContent=m.toExponential(3);$('fidelity').textContent=(100/(1+100*m)).toFixed(2)+'%'}else{$('mse').textContent='—';$('fidelity').textContent='—'}}
+function make(){source=makeVirtualSample(+$('samples').value);latent=[];recon=[];phase='source';$('phase').textContent='SOURCE';labels();log(`Sampled ${source.length.toLocaleString()} agents from ${CAPACITY_BI} virtual cells.`);if(source[0])log(`Address example: (${source[0].vx},${source[0].vy},${source[0].vz}) -> ${source[0].address}`)}
+function enc(){const r=encodeSwarm(source,cfg());latent=r.latent;centroid=r.centroid;recon=[];phase='latent';$('phase').textContent='LATENT';labels();log(`Encoded inward with α=${cfg().alpha.toFixed(3)}, b=${cfg().bits}, Ω=${cfg().omega.toFixed(2)}.`)}
+function dec(){if(!latent.length)enc();recon=decodeSwarm(latent,centroid,cfg());phase='recon';$('phase').textContent='RECON';labels();log(`Decoded outward; MSE=${reconstructionMSE(source,recon).toExponential(4)}.`)}
+function opt(){const r=optimize3D(source,cfg());$('alpha').value=r.config.alpha;$('bits').value=r.config.bits;$('omega').value=r.config.omega;generation++;best=r.metrics.score;labels();enc();dec();log(`3D generation ${generation}: ${r.tested} candidates, winner Δ=[${r.direction}], J=${r.metrics.score.toExponential(4)}.`)}
+function resize(){const r=canvas.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);canvas.width=Math.max(1,Math.floor(r.width*d));canvas.height=Math.max(1,Math.floor(r.height*d))}
+function project(p,w,h){let{x,y,z}=p,c=Math.cos(ay),s=Math.sin(ay);[x,z]=[x*c-z*s,x*s+z*c];c=Math.cos(ax);s=Math.sin(ax);[y,z]=[y*c-z*s,y*s+z*c];const depth=3.2+z,sc=Math.min(w,h)*.42*zoom/depth;return{x:w/2+x*sc*2.2,y:h/2-y*sc*2.2,z,sc}}
+function draw(){resize();const w=canvas.width,h=canvas.height;ctx.fillStyle='#090b10';ctx.fillRect(0,0,w,h);const arr=phase==='latent'?latent:phase==='recon'?recon:source;const pts=arr.slice(0,12000).map(p=>project(p,w,h)).sort((a,b)=>a.z-b.z);ctx.fillStyle=phase==='latent'?'#c4b5fd':phase==='recon'?'#86efac':'#7dd3fc';for(const p of pts){ctx.globalAlpha=Math.max(.15,Math.min(.85,(p.z+2)/4));ctx.beginPath();ctx.arc(p.x,p.y,Math.max(.8,Math.min(2.6,p.sc*.018)),0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1}
+function frame(t){ay+=.0016;draw();const f=1000/Math.max(1,t-last);last=t;fps=fps?fps*.9+f*.1:f;$('fps').textContent=`${fps.toFixed(0)} fps`;requestAnimationFrame(frame)}
+$('samples').addEventListener('input',labels);$('samples').addEventListener('change',make);for(const id of['alpha','bits','omega'])$(id).addEventListener('input',labels);$('encode').addEventListener('click',enc);$('decode').addEventListener('click',dec);$('optimize').addEventListener('click',opt);$('reset').addEventListener('click',()=>{generation=0;best=null;$('alpha').value=.28;$('bits').value=8;$('omega').value=.18;make();log('Reset.');});canvas.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;ay+=(e.clientX-lx)*.008;ax+=(e.clientY-ly)*.008;lx=e.clientX;ly=e.clientY});canvas.addEventListener('pointerup',()=>drag=false);canvas.addEventListener('pointercancel',()=>drag=false);canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.5,Math.min(2.4,zoom*Math.exp(-e.deltaY*.001)))},{passive:false});
+make();requestAnimationFrame(frame);log('Jarvis X 10^18 virtual AE/AD swarm initialized.');
+</script>
+</body>
+</html>
