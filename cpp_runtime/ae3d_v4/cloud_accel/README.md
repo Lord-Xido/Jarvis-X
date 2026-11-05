@@ -25,7 +25,7 @@ The original scalar C++ `encode_q` calls a full `encode_forward`, which also run
 
 ### Supported modes and parity caveat
 
-- `cpu`: FP64 PyTorch / BLAS using trained v4 parameters. Verified exact `JXPKT4` *byte equality* with native C++ on tested 16³ and random 8³/16³ inputs, plus supplied 32³ and 64³ synthetic volumes. Byte identity for every possible input and platform is **not** mathematically proven.
+- `cpu`: FP64 PyTorch / BLAS with v4-compatible half-integer ties-away-from-zero rounding (encoder and decoder) using trained v4 parameters. Verified exact `JXPKT4` *byte equality* with native C++ on tested 16³ and random 8³/16³ inputs, plus supplied 32³ and 64³ synthetic volumes. Byte identity for every possible input and platform is **not** mathematically proven.
 - `cuda`: same FP64 Torch code and device selection. **Requires NVIDIA CUDA runtime, compatible GPU and PyTorch CUDA build. Not executed in this environment.** On GPU, floating-point reduction/rounding can change a last byte; assess cross-device C++ parity before using CUDA-generated archives for preservation-critical workloads.
 - Training and model version management remain in C++ v4. v5 is a **batched inference/codec service**, not an autonomously retraining neural platform.
 
@@ -109,18 +109,19 @@ The C++ **kernel benchmark** explicitly measures the original v4 `encode_q` loop
 
 ### Local CPU measurements (5 November 2026)
 
-Device: x86-64 local host, Torch 2.10.0+cpu, one PyTorch thread, C++ `-O3 -march=native`, 7 iterations (median):
+Device: x86-64 local host, Torch 2.10.0+cpu, one PyTorch thread, C++ `-O3 -march=native`, 7 iterations (median, rerun after half-tie rounding fix):
 
 | Volume | Blocks | Original v4 in-process encoder | v5 batched Torch in-process encoder | Approx. speedup |
 |---|---:|---:|---:|---:|
-| `32³` | 512 | 1.97 ms | 0.136 ms | 14.5× |
-| `64³` | 4,096 | 15.11 ms | 2.49 ms | 6.1× |
+| `32³` | 512 | 1.98 ms | 0.247 ms | 8.0× |
+| `64³` | 4,096 | 13.54 ms | 2.95 ms | 4.6× |
 
-These tests are *not* independent cluster benchmarks. Other hosts and batch sizes will differ. For exact decoded bytes on the tested data, observed discrepancy was zero. The v5 `--device cuda` path was **not benchmarked** because no CUDA device exists in this environment.
+Kernel timing is sensitive to CPU load, BLAS scheduling and batch size; previous runs differed. These tests are *not* independent cluster benchmarks. Other hosts and batch sizes will differ. For exact decoded bytes on the tested data, observed discrepancy was zero. The v5 `--device cuda` path was **not benchmarked** because no CUDA device exists in this environment.
 
 ## Safety and limits
 
 - 64 MiB voxel size cap for on-disk format; cloud request cap defaults to 16 MiB.
+- Raw XOR residuals are required to contain exactly one byte per voxel; malformed residual lengths are rejected before decoding or querying. Adversarial half-integer rounding and residual-length cases are included in the regression suite.
 - CRC32 is not authentication. FNV model fingerprints are not digital signatures. Do not use these to establish security against adversarial mutation.
 - Model files should be immutable and sourced from trusted storage. API keys never belong in Git history.
 - A committed source change requires updating this adapter's parity tests if v4 format or quantization semantics change.

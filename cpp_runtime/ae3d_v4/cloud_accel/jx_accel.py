@@ -170,6 +170,8 @@ class Archive:
             raise ValueError("archive payload length invalid")
         if (exact and (codec not in (1,2) or rs==0)) or (not exact and (codec!=0 or rs!=0)):
             raise ValueError("invalid residual codec")
+        if exact and codec == 1 and rs != n:
+            raise ValueError("raw residual length mismatch")
         _validate_crc(raw)
         return cls((x,y,z),(ox,oy,oz),model_hash,bool(exact),codec,raw[70:70+ls],raw[70+ls:-4])
 
@@ -178,13 +180,20 @@ class Archive:
         _origin_ok(self.dims, self.origin)
         if len(self.q)!=n//64*12 or (self.exact and (self.codec not in (1,2) or not self.residual)) or (not self.exact and (self.codec!=0 or self.residual)):
             raise ValueError("invalid archive")
+        if self.exact and self.codec == 1 and len(self.residual) != n:
+            raise ValueError("raw residual length mismatch")
         header = ARCHIVE_MAGIC + struct.pack('<IIIQQQQBBQQ',*self.dims,*self.origin,self.model_hash,int(self.exact),self.codec,len(self.q),len(self.residual))
         return _seal(header+self.q+self.residual)
 
     def decoded_residual(self) -> bytes | None:
         if not self.exact:
             return None
-        return self.residual if self.codec==1 else _rle_unpack(self.residual,_bounds(*self.dims))
+        expected=_bounds(*self.dims)
+        if self.codec == 1:
+            if len(self.residual) != expected:
+                raise ValueError("raw residual length mismatch")
+            return self.residual
+        return _rle_unpack(self.residual,expected)
 
 
 class NeuralCodec:
@@ -230,7 +239,9 @@ class NeuralCodec:
         inp=torch.as_tensor(blocks.astype(np.float64)/255.0,device=self.device,dtype=torch.float64)
         h1=torch.tanh(torch.nn.functional.linear(inp,self.w1,self.b1))
         z=torch.tanh(torch.nn.functional.linear(h1,self.w2,self.b2))
-        q=torch.round(torch.clamp(z,-1,1)*127).to(torch.int8)
+        scale=torch.clamp(z,-1,1)*127
+        # C++ std::lround: halfway cases go away from zero, unlike torch.round.
+        q=torch.where(scale>=0,torch.floor(scale+0.5),torch.ceil(scale-0.5)).to(torch.int8)
         return q.cpu().numpy()
 
     @torch.inference_mode()
@@ -238,7 +249,8 @@ class NeuralCodec:
         inp=torch.as_tensor(q.astype(np.float64)/127.0,device=self.device,dtype=torch.float64)
         h2=torch.tanh(torch.nn.functional.linear(inp,self.w3,self.b3))
         out=torch.sigmoid(torch.nn.functional.linear(h2,self.w4,self.b4))
-        out=torch.round(torch.clamp(out,0,1)*255).to(torch.uint8)
+        # v4 std::lround uses ties-away-from-zero (nonnegative byte values).
+        out=torch.floor(torch.clamp(out,0,1)*255+0.5).to(torch.uint8)
         return out.cpu().numpy()
 
     def encode_blocks(self, blocks: np.ndarray) -> np.ndarray:
