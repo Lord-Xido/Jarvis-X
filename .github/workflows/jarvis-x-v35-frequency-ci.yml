@@ -1,0 +1,38 @@
+name: JARVIS-X v3.5 Frequency VM (C++20)
+
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/jarvis_x_v35_frequency_vm/**'
+      - '.github/workflows/jarvis-x-v35-frequency-ci.yml'
+  push:
+    paths:
+      - 'cpp_runtime/jarvis_x_v35_frequency_vm/**'
+      - '.github/workflows/jarvis-x-v35-frequency-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake libssl-dev
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S cpp_runtime/jarvis_x_v35_frequency_vm -B /tmp/jx-v35-build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build /tmp/jx-v35-build --parallel 2
+      - name: Test
+        run: ctest --test-dir /tmp/jx-v35-build --output-on-failure
+      - name: Procedural export smoke test
+        run: |
+          /tmp/jx-v35-build/jarvis_x_v35 --frequency 2 --ply /tmp/jx-v35-surface.ply
+          grep -Eq '^element vertex [1-9][0-9]*$' /tmp/jx-v35-surface.ply
