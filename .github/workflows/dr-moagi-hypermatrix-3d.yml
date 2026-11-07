@@ -1,0 +1,69 @@
+name: Dr Moagi Hyper-Matrix 3D reference verification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/jarvisx/dr_moagi_hypermatrix_engine.py"
+      - "src/jarvisx/dr_moagi_3d_ann_swarm.py"
+      - "tests/test_dr_moagi_hypermatrix.py"
+      - "tests/test_dr_moagi_3d_ann_swarm.py"
+      - "docs/dr_moagi_hypermatrix_3d.md"
+      - "docs/dr_moagi_ann_swarm_3d.md"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-hypermatrix-3d.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/jarvisx/dr_moagi_hypermatrix_engine.py"
+      - "tests/test_dr_moagi_hypermatrix.py"
+      - "pyproject.toml"
+      - ".github/workflows/dr-moagi-hypermatrix-3d.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install optional numerical dependencies
+        run: python -m pip install -e ".[hypermatrix]" pytest
+      - name: Run reference invariance suite
+        run: python -m jarvisx.dr_moagi_hypermatrix_engine --self-test
+      - name: Run package integration tests
+        run: python -m pytest -q -o addopts='' tests/test_dr_moagi_hypermatrix.py tests/test_dr_moagi_3d_ann_swarm.py
+      - name: Execute bounded trainable swarm
+        run: |
+          mkdir -p hypermatrix-results
+          jarvisx-dr-moagi-swarm3d --particles 32 --minimum 10 --iterations 40 --out hypermatrix-results/swarm.npz > hypermatrix-results/swarm-report.json
+      - name: Execute bounded end-to-end sample
+        run: |
+          jarvisx-dr-moagi-hypermatrix --side 8 --steps 4 --nu 8 --nv 8 --outdir hypermatrix-results > /dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          results = json.loads(Path("hypermatrix-results/verification.json").read_text())
+          assert results["morton_bijection_test"]
+          assert results["octree"]["exact_integer_roundtrip"]
+          assert results["octree"]["independent_disk_roundtrip"]
+          assert results["graph_fixed_point"]["stopped_at_tolerance"]
+          assert results["octree"]["sha256_original"] == results["octree"]["sha256_decoded"]
+          print("Hyper-Matrix numerical verification passed")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: dr-moagi-hypermatrix-3d-reference
+          path: hypermatrix-results/
+          retention-days: 14
