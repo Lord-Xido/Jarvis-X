@@ -1,0 +1,53 @@
+name: DM3D Sparse Bit Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/windows/dm3d-sparse-bit/**"
+      - ".github/workflows/dm3d-sparse-bit-windows.yml"
+  pull_request:
+    paths:
+      - "apps/windows/dm3d-sparse-bit/**"
+      - ".github/workflows/dm3d-sparse-bit-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/windows/dm3d-sparse-bit
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build compact executable
+        run: ./build.ps1
+      - name: Verify compact executable independently
+        run: python test_executable.py --exe build/DM3D_JARVIS_X.exe --report build/acceptance-compact.json
+      - name: Build requested decimal 1 GB distribution
+        run: ./build.ps1 -PadToOneGB
+      - name: Verify final 1 GB executable independently
+        run: python test_executable.py --exe build/DM3D_JARVIS_X.exe --expected-size 1000000000 --report build/acceptance-padded.json
+      - name: Upload verified Windows distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: dm3d-sparse-bit-windows-1gb
+          path: |
+            apps/windows/dm3d-sparse-bit/build/DM3D_JARVIS_X.exe
+            apps/windows/dm3d-sparse-bit/build/DM3D_JARVIS_X.sha256
+            apps/windows/dm3d-sparse-bit/build/build-manifest.json
+            apps/windows/dm3d-sparse-bit/build/acceptance-*.json
+            apps/windows/dm3d-sparse-bit/build/README.md
+            apps/windows/dm3d-sparse-bit/build/DM3D_Demo.txt
+            apps/windows/dm3d-sparse-bit/build/DM3D_Data/demo.asm
+          compression-level: 9
+          retention-days: 14
+          if-no-files-found: error

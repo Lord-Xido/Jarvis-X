@@ -18,6 +18,16 @@ This document is the authoritative implemented-versus-experimental capability ma
 | Specification | documented mathematical or architectural proposal |
 | Future work | issue or roadmap item without a canonical implementation |
 
+## DM3D sparse-bit Windows integration candidate
+
+The isolated [Windows sparse-bit runtime](../apps/windows/dm3d-sparse-bit/README.md)
+implements bounded sparse bits, seven-point parity, a D3VM ISA, 129-bit Morton
+addressing and canonical snapshots. Classification: **integration candidate**.
+Windows CI builds and tests compact and explicitly padded 1 GB packages.
+Padding is a distribution property, not memory capacity or functionality.
+No canonical VM migration, external rerouting, GUI, GPU or production-readiness
+claim is made. The formats are not interchangeable with existing DM3D backends.
+
 ## Default-branch capabilities
 
 | Capability | Status | Evidence | Boundary |
