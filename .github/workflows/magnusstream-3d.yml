@@ -1,0 +1,71 @@
+name: MagnusStream independent 3D verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/magnusstream-3d/**'
+      - '.github/workflows/magnusstream-3d.yml'
+  pull_request:
+    paths:
+      - 'apps/magnusstream-3d/**'
+      - '.github/workflows/magnusstream-3d.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  numerical-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install numerical dependencies
+        run: python -m pip install numpy pytest
+      - name: Run 3D reference regression suite
+        run: python -m pytest -q -o addopts='' apps/magnusstream-3d/test_runtime.py
+      - name: Verify HTML embedded JavaScript parses
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class ScriptParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.collect = False
+                  self.parts = []
+              def handle_starttag(self, tag, attrs):
+                  if tag == 'script':
+                      self.collect = True
+              def handle_endtag(self, tag):
+                  if tag == 'script':
+                      self.collect = False
+              def handle_data(self, data):
+                  if self.collect:
+                      self.parts.append(data)
+          parser = ScriptParser()
+          parser.feed(Path('apps/magnusstream-3d/index.html').read_text())
+          assert parser.parts, 'Expected embedded JavaScript'
+          Path('/tmp/magnusstream-browser.js').write_text('\n'.join(parser.parts))
+          PY
+          node --check /tmp/magnusstream-browser.js
+      - name: Execute bounded 1,000-loop verification receipt
+        run: |
+          python apps/magnusstream-3d/verify_magnusstream_3d.py --loops 1000 --json /tmp/magnusstream-ci.json > /tmp/magnusstream-ci-summary.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r = json.loads(Path('/tmp/magnusstream-ci.json').read_text())
+          assert r['iterations'] == 1000
+          assert all(v is True for v in r['checks'].values())
+          assert r['final_relative_residual'] < 1e-8
+          assert r['final_reconstruction_metrics']['mse'] > 0.018
+          print('MS3D numerical verification passed; fidelity is lossy')
+          PY
