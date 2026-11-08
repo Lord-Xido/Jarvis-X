@@ -31,8 +31,10 @@ jobs:
           echo 'PASS: A17-compatible iOS app and Metal shaders compiled'
       - name: Validate independent C++ CPU oracle
         run: |
-          python3 -m pip install numpy
-          python3 experiments/neural_arena_a17pro/reference/oracle_numpy.py
+          python3 -m venv "$RUNNER_TEMP/neuralarena-venv"
+          source "$RUNNER_TEMP/neuralarena-venv/bin/activate"
+          python -m pip install numpy
+          python experiments/neural_arena_a17pro/reference/oracle_numpy.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
