@@ -1,0 +1,42 @@
+name: Omega ANN v2 reference
+on:
+  pull_request:
+    paths:
+      - "reference/omega_ann_v2/**"
+      - ".github/workflows/omega-ann-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "reference/omega_ann_v2/**"
+      - ".github/workflows/omega-ann-v2.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-omega-ann-v2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "numpy>=1.24"
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Compile and run seven deterministic tests
+        working-directory: reference/omega_ann_v2
+        run: |
+          python -m compileall -q .
+          python -m unittest -v test_omega_ann.py
+      - name: Reproduce full-volume held-out benchmark
+        working-directory: reference/omega_ann_v2
+        run: python benchmark_streaming.py
+      - name: Upload benchmark JSON (not training data)
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-ann-v2-benchmark
+          path: reference/omega_ann_v2/results/benchmark_streaming.json
+          if-no-files-found: error
