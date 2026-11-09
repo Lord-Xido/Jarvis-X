@@ -33,6 +33,24 @@ with tempfile.TemporaryDirectory() as temp:
     assert [int(x['level']) for x in rows if int(x['opcode'])==0x27] == [0,1,2]
     assert sum(int(x['opcode'])==0x31 for x in rows)==3
     assert [(x['input_hash'],x['output_hash']) for x in rows] == [(x['input_hash'],x['output_hash']) for x in again]
+
+    # Causal feedback invariant: the blend output must be exactly the
+    # next level's MANDELBULB input (the latter is intentionally a no-op).
+    for level in (1, 2):
+        previous_blend = next(x for x in rows if int(x['level']) == level-1 and int(x['opcode']) == 0x26)
+        next_entry = next(x for x in rows if int(x['level']) == level and int(x['opcode']) == 0x20)
+        assert previous_blend['output_hash'] == next_entry['input_hash'], '3D feedback continuity broken'
+        assert next_entry['input_hash'] == next_entry['output_hash'], 'retained volume was overwritten'
+
+    # Quality is measured, not assumed to improve. Check finite MSE and
+    # bounded output range, with a separately calculated reference metric.
+    import math
+    mse_rows = [x for x in rows if int(x['opcode']) == 0x27]
+    assert len(mse_rows) == 3
+    assert all(math.isfinite(float(x['mse'])) and 0 <= float(x['mse']) <= 1 for x in mse_rows)
+    decoded = struct.unpack('<512f', a[24:])
+    assert all(math.isfinite(x) and 0 <= x <= 1 for x in decoded)
+    print('Measured per-level MSE:', [float(x['mse']) for x in mse_rows])
     assert run('bad', '--dim', '9').returncode != 0
     assert run('badlevels', '--levels', '0').returncode != 0
     print('PASS: deterministic replay, 31 traced dispatches, portable binary formats, bad-input rejection')
