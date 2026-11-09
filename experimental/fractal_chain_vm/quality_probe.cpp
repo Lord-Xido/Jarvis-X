@@ -27,7 +27,7 @@ int main(int argc,char**argv){
    throw std::runtime_error("invalid reference variance");
   std::ofstream csv(output);
   if(!csv)throw std::runtime_error("cannot write quality report");
-  csv<<"levels,reference_mse,constant_0_5_baseline_mse,mean_baseline_mse,relative_to_0_5,relative_to_mean,internal_final_mse,output_hash,decoded_stddev,psnr_db\\n";
+  csv<<"levels,reference_mse,constant_0_5_baseline_mse,mean_baseline_mse,relative_to_0_5,relative_to_mean,internal_final_mse,output_hash,decoded_stddev,psnr_db\n";
   bool any_better=false;
   for(unsigned n=1;n<=levels;++n){
    jarvisx::Runtime r(dim,n,iterations);r.run();
