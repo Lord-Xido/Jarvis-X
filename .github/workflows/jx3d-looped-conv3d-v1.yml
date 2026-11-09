@@ -1,0 +1,49 @@
+name: JX3D Looped Conv3D 512 reference
+on:
+  pull_request:
+    paths:
+      - 'experimental/looped_conv3d_v1/**'
+      - '.github/workflows/jx3d-looped-conv3d-v1.yml'
+  push:
+    paths:
+      - 'experimental/looped_conv3d_v1/**'
+      - '.github/workflows/jx3d-looped-conv3d-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: jx3d-looped-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pytorch-cpu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: experimental/looped_conv3d_v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU-only PyTorch and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install numpy pytest safetensors
+      - name: Verify dimensions, loopback, checkpoint, and forced rollback
+        run: python -m pytest -q -W error test_engine.py
+      - name: Generate bounded 64-cubed and 128-cubed traces
+        run: |
+          python engine.py demo --side 64 --updates 2 --cycles 2 --out evidence/64 > evidence-64.json
+          python engine.py demo --side 128 --updates 1 --cycles 2 --out evidence/128 > evidence-128.json
+          python engine.py decode --side 64 --cycles 2 --checkpoint evidence/64/jx3d-64.safetensors --archive evidence/64/sample-64.jxz512 --out evidence/64/reconstruction.raw
+      - name: Archive reproducible evidence (not a deployment)
+        uses: actions/upload-artifact@v4
+        with:
+          name: jx3d-looped-conv3d-cpu-evidence
+          path: |
+            experimental/looped_conv3d_v1/evidence/
+            experimental/looped_conv3d_v1/evidence-64.json
+            experimental/looped_conv3d_v1/evidence-128.json
+          retention-days: 14
