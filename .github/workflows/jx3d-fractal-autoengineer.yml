@@ -40,6 +40,20 @@ jobs:
             --output engineering_artifacts/gcc \
             --depth 4 --steps 24
 
+
+      - name: Exercise epistemic TRUE FALSE UNKNOWN (gcc)
+        run: |
+          set -euo pipefail
+          python3 experimental/fractal_cloud_v2/tests/test_epistemic_gate.py \
+            /tmp/jx3d-gcc/jx3d_cloud \
+            experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv
+          python3 experimental/fractal_cloud_v2/tools/epistemic_gate.py \
+            --binary /tmp/jx3d-gcc/jx3d_cloud \
+            --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
+            --depth 2 --steps 24 --workers 2 \
+            --attempts 2 --timeout-seconds 30 \
+            --output engineering_artifacts/epistemic_gcc
+
       - name: Compile with Clang
         env:
           CXX: clang++
@@ -56,6 +70,20 @@ jobs:
             --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
             --output engineering_artifacts/clang \
             --depth 4 --steps 24
+
+
+      - name: Exercise epistemic TRUE FALSE UNKNOWN (clang)
+        run: |
+          set -euo pipefail
+          python3 experimental/fractal_cloud_v2/tests/test_epistemic_gate.py \
+            /tmp/jx3d-clang/jx3d_cloud \
+            experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv
+          python3 experimental/fractal_cloud_v2/tools/epistemic_gate.py \
+            --binary /tmp/jx3d-clang/jx3d_cloud \
+            --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
+            --depth 2 --steps 24 --workers 2 \
+            --attempts 2 --timeout-seconds 30 \
+            --output engineering_artifacts/epistemic_clang
 
       - name: Upload verification evidence
         if: always()
