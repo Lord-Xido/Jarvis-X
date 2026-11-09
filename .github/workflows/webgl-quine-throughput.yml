@@ -1,0 +1,31 @@
+name: WebGL Quine Throughput Reference
+
+on:
+  push:
+    paths:
+      - 'apps/webgl-quine-throughput/**'
+      - '.github/workflows/webgl-quine-throughput.yml'
+  pull_request:
+    paths:
+      - 'apps/webgl-quine-throughput/**'
+      - '.github/workflows/webgl-quine-throughput.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  layout-and-math:
+    strategy:
+      matrix:
+        node: ['18', '22']
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check byte layout and throughput equations
+        run: node --test apps/webgl-quine-throughput/codec.test.mjs
+      - name: CPU reference smoke benchmark (not a GPU measurement)
+        run: node apps/webgl-quine-throughput/benchmark_cpu.mjs 8192 5
