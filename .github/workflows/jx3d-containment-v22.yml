@@ -1,0 +1,70 @@
+name: JARVIS-X Omega3 Containment v2.2
+
+on:
+  pull_request:
+    paths:
+      - 'experimental/fractal_cloud_v2/tools/containment_v22.py'
+      - 'experimental/fractal_cloud_v2/tests/test_containment_v22.py'
+      - 'experimental/fractal_cloud_v2/docs/CONTAINMENT_V22.md'
+      - '.github/workflows/jx3d-containment-v22.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'experimental/fractal_cloud_v2/tools/containment_v22.py'
+      - 'experimental/fractal_cloud_v2/tests/test_containment_v22.py'
+      - 'experimental/fractal_cloud_v2/docs/CONTAINMENT_V22.md'
+      - '.github/workflows/jx3d-containment-v22.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-containment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Compile locked C++ kernel (unmodified)
+        run: |
+          set -euo pipefail
+          cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-v22-build -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/jx3d-v22-build --parallel 2
+      - name: Exercise adversarial containment regression
+        run: |
+          set -euo pipefail
+          mkdir -p engineering_artifacts/containment_v22
+          python3 experimental/fractal_cloud_v2/tests/test_containment_v22.py \
+            /tmp/jx3d-v22-build/jx3d_cloud \
+            experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
+            2>&1 | tee engineering_artifacts/containment_v22/regression.txt
+      - name: Depth-4 independent replay and signed publication check
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, sys, tempfile, time
+          sys.path.insert(0, 'experimental/fractal_cloud_v2/tools')
+          from containment_v22 import supervise, release_verify
+          with tempfile.TemporaryDirectory(prefix='jx3d-ci-key-') as d:
+              secret = Path(d) / 'secret.key'
+              secret.write_bytes(os.urandom(32)); secret.chmod(0o600)
+              output = Path('engineering_artifacts/containment_v22/depth4').resolve()
+              started = time.monotonic()
+              result = supervise('/tmp/jx3d-v22-build/jx3d_cloud',output,secret,
+                                 depth=4,steps=24,workers=4,attempts=1,
+                                 timeout=100,replay_timeout=150)
+              ok,reason = release_verify(output/'verified',secret)
+              assert result['verdict'] == 'TRUE' and ok, (result,reason)
+              print('depth4 verification: PASS; elapsed seconds:', round(time.monotonic()-started,3))
+              print('scope: fixed-genesis deterministic replay; CI test key not retained')
+          PY
+      - name: Upload test-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jx3d-containment-v22-test-evidence
+          path: engineering_artifacts/containment_v22/
+          retention-days: 14
+          if-no-files-found: warn
