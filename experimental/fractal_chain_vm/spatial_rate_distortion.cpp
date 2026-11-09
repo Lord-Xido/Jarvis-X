@@ -24,6 +24,18 @@ int main(int argc,char**argv) {
   if(!(constant_mse>0))throw std::runtime_error("reference unexpectedly constant");
   jarvisx::Runtime legacy(D,5,NITER);legacy.run();
   const double legacy_mse=sqerr(source,legacy.decoded);
+  jarvisx::Runtime integrated(D,5,NITER);
+  integrated.codec=jarvisx::Runtime::Codec::SpatialU8;
+  integrated.rd_lambda=lambda;
+  integrated.run();
+  const double integrated_mse=sqerr(source,integrated.decoded);
+  if(!std::isfinite(integrated_mse)||integrated.trace.size()!=51)
+   throw std::runtime_error("invalid integrated VM spatial trace or metric");
+  std::cout<<"VM_SPATIAL levels=5 mse="<<std::setprecision(12)<<integrated_mse
+    <<" legacy_mse="<<legacy_mse<<" selected_block="<<integrated.rd_block
+    <<" encoded_bytes="<<integrated.rd_bytes<<'\n';
+  if(!(integrated_mse<legacy_mse))
+   throw std::runtime_error("integrated spatial VM failed to beat legacy projection");
   std::ofstream csv(prefix+".csv");
   if(!csv)throw std::runtime_error("cannot create spatial-quality CSV");
   csv<<"block,payload_bytes,serialized_bytes,raw_to_encoded_ratio,mse,ratio_to_mean_baseline,objective,legacy_mse\n";
