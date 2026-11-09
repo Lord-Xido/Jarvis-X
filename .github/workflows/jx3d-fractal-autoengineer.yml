@@ -1,0 +1,67 @@
+name: JARVIS-X Omega3 Fractal Auto-Engineering
+
+on:
+  pull_request:
+    paths:
+      - "experimental/fractal_cloud_v2/**"
+      - ".github/workflows/jx3d-fractal-autoengineer.yml"
+  push:
+    branches: [main]
+    paths:
+      - "experimental/fractal_cloud_v2/**"
+      - ".github/workflows/jx3d-fractal-autoengineer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-fractal-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Compile with GCC
+        env:
+          CXX: g++
+        run: |
+          set -euo pipefail
+          cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-gcc -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/jx3d-gcc --parallel 2
+
+      - name: Verify GCC deterministic execution
+        run: |
+          set -euo pipefail
+          python3 experimental/fractal_cloud_v2/tools/engineer.py \
+            --binary /tmp/jx3d-gcc/jx3d_cloud \
+            --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
+            --output engineering_artifacts/gcc \
+            --depth 4 --steps 24
+
+      - name: Compile with Clang
+        env:
+          CXX: clang++
+        run: |
+          set -euo pipefail
+          cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-clang -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/jx3d-clang --parallel 2
+
+      - name: Verify Clang deterministic execution
+        run: |
+          set -euo pipefail
+          python3 experimental/fractal_cloud_v2/tools/engineer.py \
+            --binary /tmp/jx3d-clang/jx3d_cloud \
+            --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
+            --output engineering_artifacts/clang \
+            --depth 4 --steps 24
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jx3d-fractal-autoengineering-evidence
+          path: engineering_artifacts/
+          if-no-files-found: warn
+          retention-days: 14
