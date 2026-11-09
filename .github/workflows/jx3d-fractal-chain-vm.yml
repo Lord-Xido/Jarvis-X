@@ -1,0 +1,29 @@
+name: JX3D Fractal Chain VM
+on:
+  push:
+    paths:
+      - 'experimental/fractal_chain_vm/**'
+      - '.github/workflows/jx3d-fractal-chain-vm.yml'
+  pull_request:
+    paths:
+      - 'experimental/fractal_chain_vm/**'
+      - '.github/workflows/jx3d-fractal-chain-vm.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S experimental/fractal_chain_vm -B /tmp/jx3d-fvm-build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build /tmp/jx3d-fvm-build --parallel 2
+      - name: Verify deterministic contract
+        run: ctest --test-dir /tmp/jx3d-fvm-build --output-on-failure
