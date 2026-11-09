@@ -51,6 +51,30 @@ with tempfile.TemporaryDirectory() as temp:
     decoded = struct.unpack('<512f', a[24:])
     assert all(math.isfinite(x) and 0 <= x <= 1 for x in decoded)
     print('Measured per-level MSE:', [float(x['mse']) for x in mse_rows])
+
+    # Execute the adaptive spatial codec in the same VM bytecode chain.
+    spatial = run('spatial', '--dim', '8', '--levels', '3', '--iterations', '8', '--codec', 'spatial')
+    spatial_repeat = run('spatial-repeat', '--dim', '8', '--levels', '3',
+                         '--iterations', '8', '--codec', 'spatial')
+    assert spatial.returncode == spatial_repeat.returncode == 0, spatial.stderr
+    assert 'codec=spatial' in spatial.stdout and 'cycles=31' in spatial.stdout
+    data = (folder/'spatial.jx3b').read_bytes()
+    assert data[:4] == b'JX3B'
+    version, dim, block, length, checksum = struct.unpack('<5I', data[4:24])
+    assert version == 1 and dim == 8 and block in (2,4,8)
+    assert length == (8//block)**3 and len(data) == 24+length
+    h = 2166136261
+    for byte in data[24:]:
+        h = ((h ^ byte) * 16777619) & 0xffffffff
+    assert h == checksum, 'spatial payload checksum mismatch'
+    assert (folder/'spatial.jx3b').read_bytes() == (folder/'spatial-repeat.jx3b').read_bytes()
+    assert (folder/'spatial.jx3v').read_bytes() == (folder/'spatial-repeat.jx3v').read_bytes()
+    with (folder/'spatial.csv').open() as f:
+        spatial_rows = list(csv.DictReader(f))
+    assert len(spatial_rows) == 31
+    assert all(row['codec'] == 'spatial_u8' for row in spatial_rows)
+    assert any(int(row['block']) in (2,4,8) for row in spatial_rows)
+    assert run('badlambda', '--codec', 'spatial', '--rd-lambda', '-1').returncode != 0
     assert run('bad', '--dim', '9').returncode != 0
     assert run('badlevels', '--levels', '0').returncode != 0
     print('PASS: deterministic replay, 31 traced dispatches, portable binary formats, bad-input rejection')

@@ -5,15 +5,18 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
+#include <limits>
+#include <utility>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "spatial_codec.hpp"
 
 namespace jarvisx {
 enum Op:uint8_t { HALT=0xff, MANDELBULB=0x20, ENCODE=0x21, DECODE=0x22, PERMEATE=0x23, RECOIL=0x24, EVOLVE=0x25, BLEND=0x26, MSE=0x27, JUMP_IF=0x31 };
 struct Instr { uint8_t op,a,b,c; float f; uint32_t target; };
-struct Trace { unsigned level,pc,op; uint64_t ns,in_hash,out_hash; float mse,power; };
+struct Trace { unsigned level,pc,op; uint64_t ns,in_hash,out_hash; float mse,power; unsigned rd_block,rd_bytes; };
 static uint64_t hash(const std::vector<float>& v) {
  uint64_t h=14695981039346656037ULL; for(float x:v){uint32_t b;std::memcpy(&b,&x,4);for(unsigned k=0;k<4;++k){h^=(b>>(8*k))&255;h*=1099511628211ULL;}}return h;
 }
@@ -22,6 +25,11 @@ static void u32(std::ostream& f,uint32_t v){for(unsigned i=0;i<4;++i)f.put(char(
 struct Runtime {
  unsigned D,levels,iterations,level=0,pc=0; uint64_t cycles=0;
  float power=8,mse_value=0,latent_mean=0;
+ enum class Codec { UntrainedProjection, SpatialU8 };
+ Codec codec=Codec::UntrainedProjection;
+ double rd_lambda=0.02;
+ unsigned rd_block=0,rd_bytes=0;
+ SpatialCodec::Payload spatial_payload;
  std::vector<float> volume,decoded,latent,prior_latent,velocity;
  std::vector<Trace> trace;
  std::vector<Instr> program={
@@ -37,7 +45,12 @@ struct Runtime {
  }
  size_t count()const{return size_t(D)*D*D;}
  size_t at(unsigned z,unsigned y,unsigned x)const{return (size_t(z)*D+y)*D+x;}
- uint64_t state_hash()const{return hash(volume) ^ (hash(decoded)*0x9e3779b97f4a7c15ULL) ^ bits(power);}
+ uint64_t state_hash()const{
+  uint64_t h=hash(volume) ^ (hash(decoded)*0x9e3779b97f4a7c15ULL) ^ (hash(latent)*0xc2b2ae3d27d4eb4fULL) ^ bits(power);
+  if(codec==Codec::SpatialU8)
+   h^=(uint64_t(SpatialCodec::checksum(spatial_payload.bytes))<<32) ^ (uint64_t(rd_block)<<16) ^ rd_bytes;
+  return h;
+ }
  void mandelbulb() {
   volume.assign(count(),0);
   for(unsigned z=0;z<D;++z)for(unsigned y=0;y<D;++y)for(unsigned x=0;x<D;++x){
@@ -76,6 +89,30 @@ struct Runtime {
   return float((double(h>>11)*(1.0/9007199254740992.0)*2-1)*0.02);
  }
  void encode(unsigned width) {
+  if(codec==Codec::SpatialU8){
+   if(!std::isfinite(rd_lambda)||rd_lambda<0)throw std::invalid_argument("invalid RD lambda");
+   double best=std::numeric_limits<double>::infinity();
+   rd_block=0;rd_bytes=0;
+   for(unsigned B:{2u,4u,8u}){
+    if(D%B)continue;
+    auto candidate=SpatialCodec::encode(volume,D,B);
+    auto recon=SpatialCodec::decode(candidate);
+    double dist=0;
+    for(size_t i=0;i<count();++i){double d=double(volume[i])-recon[i];dist+=d*d;}
+    dist/=count();
+    double cost=double(SpatialCodec::serialized_size(candidate))/(count()*sizeof(float));
+    double objective=dist+rd_lambda*cost;
+    if(objective<best){
+     best=objective;spatial_payload=std::move(candidate);
+     rd_block=B;rd_bytes=unsigned(SpatialCodec::serialized_size(spatial_payload));
+    }
+   }
+   if(!rd_block)throw std::runtime_error("no spatial codec candidate");
+   latent_mean=0;
+   for(uint8_t b:spatial_payload.bytes)latent_mean+=b/255.f;
+   latent_mean/=spatial_payload.bytes.size();
+   return;
+  }
   unsigned P=D/4;std::vector<float> pooled;pooled.reserve(size_t(P)*P*P);
   for(unsigned z=0;z<P;++z)for(unsigned y=0;y<P;++y)for(unsigned x=0;x<P;++x){
    float m=0;for(unsigned dz=0;dz<4;++dz)for(unsigned dy=0;dy<4;++dy)for(unsigned dx=0;dx<4;++dx)
@@ -87,10 +124,12 @@ struct Runtime {
   latent_mean=0;for(float v:latent)latent_mean+=v;latent_mean/=width;
  }
  void recoil_latent(float k){
+  if(codec==Codec::SpatialU8)return; // Byte payload is immutable for exact decode.
   if(prior_latent.size()!=latent.size())return;
   latent_mean=0;for(size_t i=0;i<latent.size();++i){latent[i]+=k*(prior_latent[i]-latent[i]);latent_mean+=latent[i];}latent_mean/=latent.size();
  }
  void decode() {
+  if(codec==Codec::SpatialU8){decoded=SpatialCodec::decode(spatial_payload);return;}
   unsigned P=D/4;std::vector<float> pooled(size_t(P)*P*P);
   for(size_t j=0;j<pooled.size();++j){double a=0;for(size_t i=0;i<latent.size();++i)a+=latent[i]*weight(i,j);pooled[j]=float(1/(1+std::exp(-a)));}
   decoded.resize(count());
@@ -105,7 +144,7 @@ struct Runtime {
   }
  }
  void mse(){double a=0;for(size_t i=0;i<count();++i){double v=double(decoded[i])-volume[i];a+=v*v;}mse_value=float(a/count());}
- void evolve(){power=std::clamp(8.f+2*latent_mean,2.f,16.f);}
+ void evolve(){if(codec==Codec::UntrainedProjection)power=std::clamp(8.f+2*latent_mean,2.f,16.f);}
  void blend(float alpha){
   ++level;if(level==levels)return;
   auto base=decoded;mandelbulb();
@@ -132,7 +171,7 @@ struct Runtime {
    }
    if(in.op!=JUMP_IF)++pc;
    auto t1=std::chrono::steady_clock::now();
-   trace.push_back({oldlevel,oldpc,in.op,uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0).count()),before,state_hash(),mse_value,power});
+   trace.push_back({oldlevel,oldpc,in.op,uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0).count()),before,state_hash(),mse_value,power,rd_block,rd_bytes});
    ++cycles;
   }
  }
@@ -143,8 +182,9 @@ struct Runtime {
   for(float x:decoded)u32(v,bits(x));
   b.write("JXBC",4);u32(b,1);u32(b,uint32_t(program.size()));
   for(auto in:program){b.put(char(in.op));b.put(char(in.a));b.put(char(in.b));b.put(char(in.c));u32(b,bits(in.f));u32(b,in.target);}
-  t<<"level,pc,opcode,duration_ns,mse,power,input_hash,output_hash\n"<<std::setprecision(9);
-  for(auto r:trace)t<<r.level<<','<<r.pc<<','<<r.op<<','<<r.ns<<','<<r.mse<<','<<r.power<<','<<r.in_hash<<','<<r.out_hash<<'\n';
+  t<<"level,pc,opcode,duration_ns,mse,power,input_hash,output_hash,codec,block,payload_bytes\n"<<std::setprecision(9);
+  for(auto r:trace)t<<r.level<<','<<r.pc<<','<<r.op<<','<<r.ns<<','<<r.mse<<','<<r.power<<','<<r.in_hash<<','<<r.out_hash<<','<<(codec==Codec::SpatialU8?"spatial_u8":"projection")<<','<<r.rd_block<<','<<r.rd_bytes<<'\n';
+  if(codec==Codec::SpatialU8)SpatialCodec::save(spatial_payload,prefix+".jx3b");
   return bool(v)&&bool(b)&&bool(t);
  }
 };
@@ -152,7 +192,7 @@ struct Runtime {
 #ifndef JX_FRACTAL_CHAIN_NO_MAIN
 int main(int argc,char**argv){
  try{
-  unsigned d=32,l=5,n=32;std::string prefix="fractal_chain";
+  unsigned d=32,l=5,n=32;std::string prefix="fractal_chain";std::string mode="projection";double rd_lambda=0.02;
   for(int i=1;i<argc;++i){
    std::string key=argv[i];
    if(i+1>=argc)throw std::invalid_argument("missing option value");
@@ -161,12 +201,17 @@ int main(int argc,char**argv){
    else if(key=="--levels")l=std::stoul(value);
    else if(key=="--iterations")n=std::stoul(value);
    else if(key=="--prefix")prefix=value;
+   else if(key=="--codec")mode=value;
+   else if(key=="--rd-lambda")rd_lambda=std::stod(value);
    else throw std::invalid_argument("unknown option");
   }
-  jarvisx::Runtime r(d,l,n);r.run();
+  jarvisx::Runtime r(d,l,n);
+  if(mode=="spatial"){r.codec=jarvisx::Runtime::Codec::SpatialU8;r.rd_lambda=rd_lambda;}
+  else if(mode!="projection")throw std::invalid_argument("codec must be projection or spatial");
+  r.run();
   if(!r.save(prefix))throw std::runtime_error("file write failed");
   std::cout<<"JX3D_CHAIN_OK levels="<<r.level<<" cycles="<<r.cycles<<" mse="<<r.mse_value
-    <<" trace="<<r.trace.size()<<" volume_hash="<<r.state_hash()<<'\n';
+    <<" trace="<<r.trace.size()<<" volume_hash="<<r.state_hash()<<" codec="<<mode<<" block="<<r.rd_block<<" encoded_bytes="<<r.rd_bytes<<'\n';
   return 0;
  }catch(const std::exception& e){std::cerr<<"ERROR: "<<e.what()<<'\n';return 1;}
 }

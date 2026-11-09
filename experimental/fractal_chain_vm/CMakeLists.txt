@@ -17,3 +17,10 @@ if(NOT MSVC)
 endif()
 add_test(NAME fractal_fixed_reference_quality
  COMMAND jx_fractal_quality ${CMAKE_CURRENT_BINARY_DIR}/fractal_quality.csv)
+
+add_executable(jx_spatial_rd spatial_rate_distortion.cpp)
+if(NOT MSVC)
+ target_compile_options(jx_spatial_rd PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+add_test(NAME spatial_rate_distortion_guard
+ COMMAND jx_spatial_rd ${CMAKE_CURRENT_BINARY_DIR}/spatial_rd_ctest)
