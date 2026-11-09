@@ -1,0 +1,75 @@
+name: JARVIS-X Omega3 Fractal Auto-Engineering
+
+on:
+  pull_request:
+    paths:
+      - "experimental/fractal_cloud_v2/**"
+      - ".github/workflows/jx3d-fractal-autoengineer.yml"
+  push:
+    branches:
+      - main
+      - codex/deploy-jx3d-fractal-engineering-v2-20261109
+    paths:
+      - "experimental/fractal_cloud_v2/**"
+      - ".github/workflows/jx3d-fractal-autoengineer.yml"
+  workflow_dispatch:
+    inputs:
+      depth:
+        description: "Maximum recursive test depth"
+        type: choice
+        required: true
+        default: "4"
+        options: ["2", "3", "4"]
+      steps:
+        description: "Depth-4 coordination iterations (1 to 48)"
+        type: number
+        required: true
+        default: 24
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jx3d-fractal-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cloud-auto-engineering:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: ["g++", "clang++"]
+    env:
+      ENGINE_DEPTH: ${{ inputs.depth || '4' }}
+      ENGINE_STEPS: ${{ inputs.steps || '24' }}
+    steps:
+      - name: Checkout isolated source
+        uses: actions/checkout@v4
+
+      - name: Configure C++ reference engine
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build geometric runtime
+        run: cmake --build /tmp/jx3d-build --parallel 2
+
+      - name: Execute autonomous engineering gates
+        run: |
+          python3 experimental/fractal_cloud_v2/tools/engineer.py \
+            --binary /tmp/jx3d-build/jx3d_cloud \
+            --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
+            --output "engineering_artifacts/${{ matrix.compiler }}" \
+            --depth "$ENGINE_DEPTH" \
+            --steps "$ENGINE_STEPS"
+
+      - name: Publish machine-readable engineering artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jx3d-engineering-${{ matrix.compiler == 'g++' && 'gcc' || 'clang' }}
+          path: engineering_artifacts/${{ matrix.compiler }}/
+          if-no-files-found: warn
+          retention-days: 14

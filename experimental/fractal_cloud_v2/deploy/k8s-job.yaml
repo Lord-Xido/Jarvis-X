@@ -1,0 +1,35 @@
+# Single-pod reference execution; NOT a multi-node cluster runtime.
+# Replace image registry after building and pushing an approved image.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jx3d-fractal-reference-v20
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: jx3d
+          image: REPLACE_WITH_YOUR_REGISTRY/jx3d-fractal-cloud:v2.0
+          imagePullPolicy: IfNotPresent
+          args: ["--depth","3","--steps","24","--workers","4","--events","sample","--out","/data/run-v20"]
+          resources:
+            requests: {cpu: "4", memory: 512Mi}
+            limits: {cpu: "8", memory: 2Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - mountPath: /data
+              name: results
+      volumes:
+        - name: results
+          persistentVolumeClaim:
+            claimName: jx3d-results

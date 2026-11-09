@@ -1,0 +1,10 @@
+{
+  "reference_date": "2026-11-09",
+  "locked_version": "v1.0",
+  "relationship": "separate additive v2.0; originals not modified",
+  "sha256": {
+    "DrMoagi_3D_Fractal_Coordination.cpp": "6ab7fd5cee7201377459b729cb3b904ef40425f88a159bc19e935cb31d2f7359",
+    "DrMoagi_3D_Fractal_Execution_Trace.csv": "8d5274f6db13efc31ffddbc42f4e4903814461e06204c231348f2b1d618f7a2b",
+    "DrMoagi_3D_Fractal_Algebra_Geometric_Coordination.pdf": "87e7d54d579f02bf3b21f323b21c59c2b924dbe35df3014f252a375208b0b00c"
+  }
+}
