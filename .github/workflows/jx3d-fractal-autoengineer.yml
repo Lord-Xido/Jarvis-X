@@ -29,47 +29,65 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: jx3d-fractal-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  cloud-auto-engineering:
+  gcc-engineering:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        compiler: ["g++", "clang++"]
     env:
       ENGINE_DEPTH: ${{ inputs.depth || '4' }}
       ENGINE_STEPS: ${{ inputs.steps || '24' }}
+      CXX: g++
     steps:
       - name: Checkout isolated source
         uses: actions/checkout@v4
-
       - name: Configure C++ reference engine
-        env:
-          CXX: ${{ matrix.compiler }}
         run: cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-build -DCMAKE_BUILD_TYPE=Release
-
       - name: Build geometric runtime
         run: cmake --build /tmp/jx3d-build --parallel 2
-
       - name: Execute autonomous engineering gates
         run: |
           python3 experimental/fractal_cloud_v2/tools/engineer.py \
             --binary /tmp/jx3d-build/jx3d_cloud \
             --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
-            --output "engineering_artifacts/${{ matrix.compiler }}" \
+            --output engineering_artifacts/gcc \
             --depth "$ENGINE_DEPTH" \
             --steps "$ENGINE_STEPS"
-
       - name: Publish machine-readable engineering artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jx3d-engineering-${{ matrix.compiler == 'g++' && 'gcc' || 'clang' }}
-          path: engineering_artifacts/${{ matrix.compiler }}/
+          name: jx3d-engineering-gcc
+          path: engineering_artifacts/gcc/
+          if-no-files-found: warn
+          retention-days: 14
+
+  clang-engineering:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ENGINE_DEPTH: ${{ inputs.depth || '4' }}
+      ENGINE_STEPS: ${{ inputs.steps || '24' }}
+      CXX: clang++
+    steps:
+      - name: Checkout isolated source
+        uses: actions/checkout@v4
+      - name: Configure C++ reference engine
+        run: cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-build -DCMAKE_BUILD_TYPE=Release
+      - name: Build geometric runtime
+        run: cmake --build /tmp/jx3d-build --parallel 2
+      - name: Execute autonomous engineering gates
+        run: |
+          python3 experimental/fractal_cloud_v2/tools/engineer.py \
+            --binary /tmp/jx3d-build/jx3d_cloud \
+            --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
+            --output engineering_artifacts/clang \
+            --depth "$ENGINE_DEPTH" \
+            --steps "$ENGINE_STEPS"
+      - name: Publish machine-readable engineering artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jx3d-engineering-clang
+          path: engineering_artifacts/clang/
           if-no-files-found: warn
           retention-days: 14
