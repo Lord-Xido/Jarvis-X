@@ -31,3 +31,6 @@ Outputs: `output.jxbc` (versioned little-endian bytecode), `output.jx3v` (versio
 Three levels execute 31 instruction dispatches (10 per level and one HALT), and the retained blended field becomes the next level's permeation input. Regression tests cover trace continuity, byte formats, local replay parity, and invalid dimension rejection.
 
 No production, self-optimisation, learned ANN, encrypted ISA, or throughput claims.
+## Fixed-reference quality experiment
+
+`jx_fractal_quality` measures five recursion depths against the **same** initial Mandelbulb field after four permeation passes, and against a constant-0.5 reconstruction baseline. The CSV reports fixed-reference MSE, baseline MSE, relative error, each runtime's own final-step MSE, and decoded-volume hash. The fixed-reference and internal MSE are different metrics because the runtime evolves its volume. Neither a pass nor a small latent payload establishes monotonic quality improvement, trainability, or a useful codec. The quality probe is a deterministic *measurement gate*, not an optimisation success criterion.
