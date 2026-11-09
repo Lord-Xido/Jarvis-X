@@ -1,0 +1,6 @@
+build/
+demo_output/
+*.raw
+*.partial
+*.tile
+*.m3bt
