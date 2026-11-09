@@ -21,7 +21,7 @@ struct SpatialCodec {
  }
  static Payload encode(const std::vector<float>& v,unsigned D,unsigned B) {
   if(v.size()!=size_t(D)*D*D)throw std::invalid_argument("invalid 3D input");
-  unsigned N=D/B;Payload p; p.dim=D;p.block=B;p.bytes.reserve(blocks(D,B));
+  unsigned nblocks=blocks(D,B);unsigned N=D/B;Payload p; p.dim=D;p.block=B;p.bytes.reserve(nblocks);
   for(unsigned z=0;z<N;++z)for(unsigned y=0;y<N;++y)for(unsigned x=0;x<N;++x){
    double sum=0;
    for(unsigned dz=0;dz<B;++dz)for(unsigned dy=0;dy<B;++dy)for(unsigned dx=0;dx<B;++dx){
@@ -34,8 +34,9 @@ struct SpatialCodec {
   return p;
  }
  static std::vector<float> decode(const Payload& p) {
-  unsigned D=p.dim,B=p.block,N=D/B;
-  if(p.bytes.size()!=blocks(D,B))throw std::invalid_argument("invalid encoded payload length");
+  unsigned D=p.dim,B=p.block;
+  unsigned nblocks=blocks(D,B);unsigned N=D/B;
+  if(p.bytes.size()!=nblocks)throw std::invalid_argument("invalid encoded payload length");
   std::vector<float> v(size_t(D)*D*D);
   for(unsigned z=0;z<D;++z)for(unsigned y=0;y<D;++y)for(unsigned x=0;x<D;++x)
    v[index(z,y,x,D)]=p.bytes[index(z/B,y/B,x/B,N)]/255.f;
@@ -48,7 +49,7 @@ struct SpatialCodec {
   for(unsigned k=0;k<4;++k)out.put(char(x>>(k*8)));
  }
  static uint32_t get32(std::istream& in) {
-  uint32_t v=0;for(unsigned k=0;k<4;++k){int c=in.get();if(c==EOF)throw std::runtime_error("truncated spatial header");v|=uint32_t(uint8_t(c))<<(k*8);}return v;
+  uint32_t v=0;for(unsigned k=0;k<4;++k){int c=in.get();if(c==std::char_traits<char>::eof())throw std::runtime_error("truncated spatial header");v|=uint32_t(uint8_t(c))<<(k*8);}return v;
  }
  static size_t serialized_size(const Payload& p){return header_bytes+p.bytes.size();}
  static void save(const Payload& p,const std::string& path) {
