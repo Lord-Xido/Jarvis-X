@@ -5,6 +5,8 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
+#include <limits>
+#include <utility>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -43,7 +45,12 @@ struct Runtime {
  }
  size_t count()const{return size_t(D)*D*D;}
  size_t at(unsigned z,unsigned y,unsigned x)const{return (size_t(z)*D+y)*D+x;}
- uint64_t state_hash()const{return hash(volume) ^ (hash(decoded)*0x9e3779b97f4a7c15ULL) ^ bits(power);}
+ uint64_t state_hash()const{
+  uint64_t h=hash(volume) ^ (hash(decoded)*0x9e3779b97f4a7c15ULL) ^ (hash(latent)*0xc2b2ae3d27d4eb4fULL) ^ bits(power);
+  if(codec==Codec::SpatialU8)
+   h^=(uint64_t(SpatialCodec::checksum(spatial_payload.bytes))<<32) ^ (uint64_t(rd_block)<<16) ^ rd_bytes;
+  return h;
+ }
  void mandelbulb() {
   volume.assign(count(),0);
   for(unsigned z=0;z<D;++z)for(unsigned y=0;y<D;++y)for(unsigned x=0;x<D;++x){
