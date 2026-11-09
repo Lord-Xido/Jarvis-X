@@ -1,0 +1,83 @@
+name: JARVIS-X Omega3 Containment v2.3
+
+on:
+  pull_request:
+    paths:
+      - 'experimental/fractal_cloud_v2/tools/containment_v23.py'
+      - 'experimental/fractal_cloud_v2/tests/test_containment_v23.py'
+      - 'experimental/fractal_cloud_v2/docs/CONTAINMENT_V23.md'
+      - '.github/workflows/jx3d-containment-v23.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'experimental/fractal_cloud_v2/tools/containment_v23.py'
+      - 'experimental/fractal_cloud_v2/tests/test_containment_v23.py'
+      - 'experimental/fractal_cloud_v2/docs/CONTAINMENT_V23.md'
+      - '.github/workflows/jx3d-containment-v23.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  asymmetric-release-assurance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Install pinned public-key crypto dependency
+        run: |
+          set -euo pipefail
+          python3 -m venv /tmp/jx3d-v23-venv
+          /tmp/jx3d-v23-venv/bin/python -m pip install 'cryptography==46.0.4'
+          echo '/tmp/jx3d-v23-venv/bin' >> "$GITHUB_PATH"
+      - name: Compile unchanged reference C++ kernel
+        run: |
+          set -euo pipefail
+          cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-v23-build -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/jx3d-v23-build --parallel 2
+      - name: Run asymmetric publication/consumption adversarial suite
+        run: |
+          set -euo pipefail
+          mkdir -p engineering_artifacts/containment_v23
+          python3 experimental/fractal_cloud_v2/tests/test_containment_v23.py \
+            /tmp/jx3d-v23-build/jx3d_cloud \
+            experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
+            2>&1 | tee engineering_artifacts/containment_v23/regression.txt
+      - name: Check depth-4 genesis replay and Ed25519 release
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' 2>&1 | tee engineering_artifacts/containment_v23/depth4.txt
+          import os, subprocess, sys, tempfile, time
+          from pathlib import Path
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          from cryptography.hazmat.primitives.serialization import Encoding,PrivateFormat,PublicFormat,NoEncryption
+          sys.path.insert(0,'experimental/fractal_cloud_v2/tools')
+          from containment_v23 import create_release, read_release, signer_identity
+          with tempfile.TemporaryDirectory(prefix='jx3d-v23-depth4-') as d:
+              base=Path(d); out=base/'attempt'
+              started=time.monotonic()
+              subprocess.run(['/tmp/jx3d-v23-build/jx3d_cloud','--depth','4','--steps','24',
+                              '--workers','4','--events','none','--no-frames','--out',str(out)],
+                             check=True,stdout=subprocess.DEVNULL,timeout=150)
+              priv=Ed25519PrivateKey.generate()
+              secret=base/'secret.key';secret.write_bytes(priv.private_bytes(Encoding.Raw,PrivateFormat.Raw,NoEncryption()));secret.chmod(0o600)
+              kid,pub=signer_identity(priv)
+              releases=base/'releases'
+              path,manifest=create_release(out,releases,secret,sequence=7,depth=4,steps=24,proof_timeout=180)
+              policy={'schema':'jx3d.trust.v2.3','minimum_sequence':7,'trusted_keys':{kid:pub.hex()}}
+              chk,signed=read_release(path,policy)
+              assert len(chk)==320040 and signed==manifest
+              print('depth4 independent replay + Ed25519 consumer gateway: PASS')
+              print('cells: 160000; steps: 24; total seconds:',round(time.monotonic()-started,3))
+              print('scope: fixed-genesis local-runner CPU; test key discarded')
+          PY
+      - name: Upload non-secret regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jx3d-containment-v23-test-evidence
+          path: engineering_artifacts/containment_v23/
+          if-no-files-found: warn
+          retention-days: 14
