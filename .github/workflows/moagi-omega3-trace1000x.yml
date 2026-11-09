@@ -1,0 +1,30 @@
+name: Moagi Omega3 trace1000x research
+on:
+  push:
+    paths:
+      - 'research/dr_moagi_omega3_trace1000x/**'
+      - '.github/workflows/moagi-omega3-trace1000x.yml'
+  pull_request:
+    paths:
+      - 'research/dr_moagi_omega3_trace1000x/**'
+      - '.github/workflows/moagi-omega3-trace1000x.yml'
+permissions:
+  contents: read
+jobs:
+  native-tests:
+    strategy:
+      matrix:
+        compiler: [g++, clang++]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y cmake libssl-dev clang
+      - name: Configure
+        run: cmake -S research/dr_moagi_omega3_trace1000x -B build-trace -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+      - name: Build
+        run: cmake --build build-trace --parallel 2
+      - name: CTest
+        run: ctest --test-dir build-trace --output-on-failure
+      - name: Symbolic demo and replay (no 1 GB materialization)
+        run: bash research/dr_moagi_omega3_trace1000x/examples/run_demo.sh ./build-trace/moagi_trace1000x ci-demo
