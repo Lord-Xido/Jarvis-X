@@ -51,7 +51,7 @@ From this directory:
 
     python -m pip install numpy safetensors pytest
     python -m pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
-    python -m pytest -q -W error test_engine.py
+    python -m pytest -q -W error -o addopts='' test_engine.py
     python engine.py demo --side 64 --updates 2 --cycles 2 --out local/64
     python engine.py demo --side 128 --updates 1 --cycles 2 --out local/128
     python engine.py decode --side 64 --cycles 2 \
