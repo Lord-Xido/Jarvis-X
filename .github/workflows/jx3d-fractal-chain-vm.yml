@@ -31,6 +31,8 @@ jobs:
         run: |
           /tmp/jx3d-fvm-build/jx_fractal_quality /tmp/jx3d-fvm-build/fractal_quality.csv
           python3 experimental/fractal_chain_vm/quality_report.py /tmp/jx3d-fvm-build/fractal_quality.csv /tmp/jx3d-fvm-build/fractal_quality.json
+      - name: Evaluate quantized spatial 3D rate-distortion reference
+        run: /tmp/jx3d-fvm-build/jx_spatial_rd /tmp/jx3d-fvm-build/spatial_rd
       - name: Archive quality evidence
         uses: actions/upload-artifact@v4
         with:
@@ -38,4 +40,6 @@ jobs:
           path: |
             /tmp/jx3d-fvm-build/fractal_quality.csv
             /tmp/jx3d-fvm-build/fractal_quality.json
+            /tmp/jx3d-fvm-build/spatial_rd.csv
+            /tmp/jx3d-fvm-build/spatial_rd.jx3b
           retention-days: 14
