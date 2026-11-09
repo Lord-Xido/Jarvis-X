@@ -34,3 +34,9 @@ No production, self-optimisation, learned ANN, encrypted ISA, or throughput clai
 ## Fixed-reference quality experiment
 
 `jx_fractal_quality` measures five recursion depths against the **same** initial Mandelbulb field after four permeation passes, and against a constant-0.5 reconstruction baseline. The CSV reports fixed-reference MSE, baseline MSE, relative error, each runtime's own final-step MSE, and decoded-volume hash. The fixed-reference and internal MSE are different metrics because the runtime evolves its volume. Neither a pass nor a small latent payload establishes monotonic quality improvement, trainability, or a useful codec. The quality probe is a deterministic *measurement gate*, not an optimisation success criterion.
+
+### Quality-evidence gate
+
+The quality experiment now also compares against the **optimal constant-value predictor** (the reference field's mean), not merely a constant-0.5 baseline. Its five-level CSV reports reference MSE, baseline-relative MSE, decoder standard deviation and PSNR. `quality_report.py` checks metric arithmetic, notes whether improvements are monotonic, and emits machine-readable JSON. GitHub Actions prints each level's actual measured results and stores CSV/JSON as 14-day artifacts for both GCC and Clang.
+
+A green CI result confirms that the measurement pipeline runs correctly. It does **not** establish useful compression, trained autoencoding, or improved MSE. The source is a synthetic Mandelbulb volume. Compare candidate optimizers on the same input and include bit cost before claims of a production codec.
