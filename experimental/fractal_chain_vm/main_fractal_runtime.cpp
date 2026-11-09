@@ -149,6 +149,7 @@ struct Runtime {
  }
 };
 }
+#ifndef JX_FRACTAL_CHAIN_NO_MAIN
 int main(int argc,char**argv){
  try{
   unsigned d=32,l=5,n=32;std::string prefix="fractal_chain";
@@ -169,3 +170,4 @@ int main(int argc,char**argv){
   return 0;
  }catch(const std::exception& e){std::cerr<<"ERROR: "<<e.what()<<'\n';return 1;}
 }
+#endif // JX_FRACTAL_CHAIN_NO_MAIN
