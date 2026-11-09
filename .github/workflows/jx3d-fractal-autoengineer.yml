@@ -6,88 +6,62 @@ on:
       - "experimental/fractal_cloud_v2/**"
       - ".github/workflows/jx3d-fractal-autoengineer.yml"
   push:
-    branches:
-      - main
-      - codex/deploy-jx3d-fractal-engineering-v2-20261109
+    branches: [main]
     paths:
       - "experimental/fractal_cloud_v2/**"
       - ".github/workflows/jx3d-fractal-autoengineer.yml"
   workflow_dispatch:
-    inputs:
-      depth:
-        description: "Maximum recursive test depth"
-        type: choice
-        required: true
-        default: "4"
-        options: ["2", "3", "4"]
-      steps:
-        description: "Depth-4 coordination iterations (1 to 48)"
-        type: number
-        required: true
-        default: 24
 
 permissions:
   contents: read
 
 jobs:
-  gcc-engineering:
+  verify-fractal-runtime:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    env:
-      ENGINE_DEPTH: ${{ inputs.depth || '4' }}
-      ENGINE_STEPS: ${{ inputs.steps || '24' }}
-      CXX: g++
     steps:
-      - name: Checkout isolated source
+      - name: Checkout source
         uses: actions/checkout@v4
-      - name: Configure C++ reference engine
-        run: cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-build -DCMAKE_BUILD_TYPE=Release
-      - name: Build geometric runtime
-        run: cmake --build /tmp/jx3d-build --parallel 2
-      - name: Execute autonomous engineering gates
+
+      - name: Compile with GCC
+        env:
+          CXX: g++
         run: |
+          set -euo pipefail
+          cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-gcc -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/jx3d-gcc --parallel 2
+
+      - name: Verify GCC deterministic execution
+        run: |
+          set -euo pipefail
           python3 experimental/fractal_cloud_v2/tools/engineer.py \
-            --binary /tmp/jx3d-build/jx3d_cloud \
+            --binary /tmp/jx3d-gcc/jx3d_cloud \
             --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
             --output engineering_artifacts/gcc \
-            --depth "$ENGINE_DEPTH" \
-            --steps "$ENGINE_STEPS"
-      - name: Publish machine-readable engineering artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jx3d-engineering-gcc
-          path: engineering_artifacts/gcc/
-          if-no-files-found: warn
-          retention-days: 14
+            --depth 4 --steps 24
 
-  clang-engineering:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    env:
-      ENGINE_DEPTH: ${{ inputs.depth || '4' }}
-      ENGINE_STEPS: ${{ inputs.steps || '24' }}
-      CXX: clang++
-    steps:
-      - name: Checkout isolated source
-        uses: actions/checkout@v4
-      - name: Configure C++ reference engine
-        run: cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-build -DCMAKE_BUILD_TYPE=Release
-      - name: Build geometric runtime
-        run: cmake --build /tmp/jx3d-build --parallel 2
-      - name: Execute autonomous engineering gates
+      - name: Compile with Clang
+        env:
+          CXX: clang++
         run: |
+          set -euo pipefail
+          cmake -S experimental/fractal_cloud_v2 -B /tmp/jx3d-clang -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/jx3d-clang --parallel 2
+
+      - name: Verify Clang deterministic execution
+        run: |
+          set -euo pipefail
           python3 experimental/fractal_cloud_v2/tools/engineer.py \
-            --binary /tmp/jx3d-build/jx3d_cloud \
+            --binary /tmp/jx3d-clang/jx3d_cloud \
             --golden experimental/fractal_cloud_v2/tests/golden_v1_depth2_steps24.csv \
             --output engineering_artifacts/clang \
-            --depth "$ENGINE_DEPTH" \
-            --steps "$ENGINE_STEPS"
-      - name: Publish machine-readable engineering artifacts
+            --depth 4 --steps 24
+
+      - name: Upload verification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jx3d-engineering-clang
-          path: engineering_artifacts/clang/
+          name: jx3d-fractal-autoengineering-evidence
+          path: engineering_artifacts/
           if-no-files-found: warn
           retention-days: 14
