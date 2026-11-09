@@ -1,0 +1,27 @@
+name: QUINE V3 Exact Source and 3D March Verification
+
+on:
+  push:
+    paths:
+      - 'apps/quine-v3/**'
+      - '.github/workflows/quine-v3.yml'
+  pull_request:
+    paths:
+      - 'apps/quine-v3/**'
+      - '.github/workflows/quine-v3.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify 1,000 exact reproductions and bounded 3D march
+        run: |
+          node --test apps/quine-v3/quine_v3.test.js
+          node apps/quine-v3/quine_v3_verified.js
