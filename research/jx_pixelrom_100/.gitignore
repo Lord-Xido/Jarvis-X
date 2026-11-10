@@ -1,0 +1,10 @@
+build/
+runtime_output/
+__pycache__/
+*.pyc
+*.jxsf
+*.jxar
+*.ply
+JARVIS_X_PIXEL_ROM_100.png
+pixelrom_background.png
+pixelrom_manifest.json
