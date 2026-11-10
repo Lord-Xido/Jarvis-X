@@ -1,0 +1,39 @@
+name: Moagi3D geometric codec v2 reference
+on:
+  push:
+    paths:
+      - 'cpp_runtime/moagi3d_geometric_codec_v2/**'
+      - '.github/workflows/moagi3d-geometric-codec-v2.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/moagi3d_geometric_codec_v2/**'
+      - '.github/workflows/moagi3d-geometric-codec-v2.yml'
+  workflow_dispatch:
+jobs:
+  lossless-3d-roundtrip:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cpp_runtime/moagi3d_geometric_codec_v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript geometry and integrity invariants
+        run: node test_core.js
+      - name: Compile C++17 reference runtime
+        run: g++ -std=c++17 -O2 -Wall -Wextra -pedantic moagi_3d_runtime.cpp -o moagi3d
+      - name: Native C++ exact roundtrip
+        run: ./moagi3d basis.bin selftest
+      - name: JS encode to C++ decode
+        run: |
+          ./moagi3d basis.bin decode test_torus.dm3d decoded.raw
+          cmp test_input.raw decoded.raw
+      - name: C++ encode to JS decode
+        run: |
+          ./moagi3d basis.bin encode test_input.raw native.dm3d
+          node -e "const a=require('node:assert/strict'),f=require('node:fs'),c=require('./moagi_core.js');a.deepEqual(c.unpack(f.readFileSync('native.dm3d')).voxels,new Uint8Array(f.readFileSync('test_input.raw')))"
+      - name: Record codebook identity
+        run: |
+          echo '0427c0b5ad72e6c1ed51a514a8470cc0a62ab5ae5294a1cbfb8e8f0cd144773c  basis.bin' | sha256sum --check
