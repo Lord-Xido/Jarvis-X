@@ -1,0 +1,33 @@
+name: JX3D permeation swarm reference
+on:
+  pull_request:
+    paths:
+      - 'experimental/permeation_swarm_v1/**'
+      - '.github/workflows/jx3d-permeation-swarm.yml'
+  push:
+    paths:
+      - 'experimental/permeation_swarm_v1/**'
+      - '.github/workflows/jx3d-permeation-swarm.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cpu-reference:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Clang OpenMP runtime
+        if: matrix.compiler == 'clang++'
+        run: sudo apt-get update && sudo apt-get install -y libomp-dev
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S experimental/permeation_swarm_v1 -B build/swarm -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/swarm --parallel 2
+      - name: Verify physics, replay and smoke
+        run: ctest --test-dir build/swarm --output-on-failure
