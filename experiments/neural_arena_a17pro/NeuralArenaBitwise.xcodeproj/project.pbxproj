@@ -1,0 +1,87 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 56;
+ objects = {
+
+/* Begin PBXBuildFile section */
+  A10000000000000000000001 /* NeuralArenaBitwiseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* NeuralArenaBitwiseApp.swift */; };
+  A10000000000000000000002 /* BitwiseHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* BitwiseHarness.swift */; };
+  A10000000000000000000003 /* ArenaKernels.metal in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* ArenaKernels.metal */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+  A20000000000000000000001 /* NeuralArenaBitwiseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeuralArenaBitwiseApp.swift; sourceTree = "<group>"; };
+  A20000000000000000000002 /* BitwiseHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BitwiseHarness.swift; sourceTree = "<group>"; };
+  A20000000000000000000003 /* ArenaKernels.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ArenaKernels.metal; sourceTree = "<group>"; };
+  A20000000000000000000004 /* NeuralArenaBitwise.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NeuralArenaBitwise.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+  A30000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+  A40000000000000000000001 = {isa = PBXGroup; children = (A40000000000000000000002 /* NeuralArenaBitwise */, A40000000000000000000003 /* Products */); sourceTree = "<group>"; };
+  A40000000000000000000002 /* NeuralArenaBitwise */ = {isa = PBXGroup; children = (A20000000000000000000001 /* NeuralArenaBitwiseApp.swift */, A20000000000000000000002 /* BitwiseHarness.swift */, A20000000000000000000003 /* ArenaKernels.metal */); path = NeuralArenaBitwise; sourceTree = "<group>"; };
+  A40000000000000000000003 /* Products */ = {isa = PBXGroup; children = (A20000000000000000000004 /* NeuralArenaBitwise.app */); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+  A50000000000000000000001 /* NeuralArenaBitwise */ = {
+    isa = PBXNativeTarget;
+    buildConfigurationList = A80000000000000000000002 /* Build configuration list for PBXNativeTarget */;
+    buildPhases = (A60000000000000000000001 /* Sources */, A30000000000000000000001 /* Frameworks */, A60000000000000000000002 /* Resources */);
+    buildRules = ();
+    dependencies = ();
+    name = NeuralArenaBitwise;
+    productName = NeuralArenaBitwise;
+    productReference = A20000000000000000000004 /* NeuralArenaBitwise.app */;
+    productType = "com.apple.product-type.application";
+  };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+  A70000000000000000000001 /* Project object */ = {
+    isa = PBXProject;
+    attributes = {
+      BuildIndependentTargetsInParallel = YES;
+      LastUpgradeCheck = 1600;
+      TargetAttributes = { A50000000000000000000001 = { CreatedOnToolsVersion = 16.0; ProvisioningStyle = Automatic; }; };
+    };
+    buildConfigurationList = A80000000000000000000001 /* Build configuration list for PBXProject */;
+    compatibilityVersion = "Xcode 14.0";
+    developmentRegion = en;
+    hasScannedForEncodings = 0;
+    knownRegions = (en, Base);
+    mainGroup = A40000000000000000000001;
+    productRefGroup = A40000000000000000000003 /* Products */;
+    projectDirPath = "";
+    projectRoot = "";
+    targets = (A50000000000000000000001 /* NeuralArenaBitwise */);
+  };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+  A60000000000000000000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+  A60000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001 /* NeuralArenaBitwiseApp.swift in Sources */, A10000000000000000000002 /* BitwiseHarness.swift in Sources */, A10000000000000000000003 /* ArenaKernels.metal in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+  A90000000000000000000001 /* Project Debug */ = {isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CODE_SIGN_STYLE = Automatic; DEBUG_INFORMATION_FORMAT = dwarf; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; }; name = Debug; };
+  A90000000000000000000002 /* Project Release */ = {isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CODE_SIGN_STYLE = Automatic; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; SWIFT_OPTIMIZATION_LEVEL = "-O"; }; name = Release; };
+  A90000000000000000000003 /* Target Debug */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = "com.jarvisx.neuralarena.bitwise"; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
+  A90000000000000000000004 /* Target Release */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = "com.jarvisx.neuralarena.bitwise"; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+  A80000000000000000000001 /* Project configurations */ = {isa = XCConfigurationList; buildConfigurations = (A90000000000000000000001 /* Project Debug */, A90000000000000000000002 /* Project Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+  A80000000000000000000002 /* Target configurations */ = {isa = XCConfigurationList; buildConfigurations = (A90000000000000000000003 /* Target Debug */, A90000000000000000000004 /* Target Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+};
+rootObject = A70000000000000000000001 /* Project object */;
+}

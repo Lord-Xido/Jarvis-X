@@ -1,0 +1,332 @@
+{
+  "source": "Independent C++20 and NumPy numerical implementations",
+  "cases": 9,
+  "iterations_verified": 27,
+  "comparison": "all bytes identical",
+  "golden_vectors": [
+    {
+      "case": "singleton",
+      "dimensions": [
+        1,
+        1,
+        1
+      ],
+      "iteration": 1,
+      "bytes": 6,
+      "sha256": "989a4c99bf72befb1da452a49c475a9850513804a28b2b846f022b793893490e",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "singleton",
+      "dimensions": [
+        1,
+        1,
+        1
+      ],
+      "iteration": 2,
+      "bytes": 6,
+      "sha256": "989a4c99bf72befb1da452a49c475a9850513804a28b2b846f022b793893490e",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "singleton",
+      "dimensions": [
+        1,
+        1,
+        1
+      ],
+      "iteration": 3,
+      "bytes": 6,
+      "sha256": "989a4c99bf72befb1da452a49c475a9850513804a28b2b846f022b793893490e",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "thin_z",
+      "dimensions": [
+        1,
+        9,
+        5
+      ],
+      "iteration": 1,
+      "bytes": 270,
+      "sha256": "563cf5f246971d59883ca68e66c49c73dcd3d4c6380a664d86999b41855882f4",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "thin_z",
+      "dimensions": [
+        1,
+        9,
+        5
+      ],
+      "iteration": 2,
+      "bytes": 270,
+      "sha256": "f008120396cf7e2695e6e122080e7bdebdea9a82d81914700af72326c73724b7",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "thin_z",
+      "dimensions": [
+        1,
+        9,
+        5
+      ],
+      "iteration": 3,
+      "bytes": 270,
+      "sha256": "2873119b8602afd5e2fda6a6d5514c90c07293cc7a028d38cfdc3956bf66021a",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "edge_odd",
+      "dimensions": [
+        5,
+        7,
+        3
+      ],
+      "iteration": 1,
+      "bytes": 630,
+      "sha256": "fb06030331777ad9edda80370d4773bcc8dbf5e0316e9105dc5b3218cf3453db",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "edge_odd",
+      "dimensions": [
+        5,
+        7,
+        3
+      ],
+      "iteration": 2,
+      "bytes": 630,
+      "sha256": "9b25cf87d2c4e7bb68d715c6d430655e97207a6bea34792a69e3cc0c5bb70ea3",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "edge_odd",
+      "dimensions": [
+        5,
+        7,
+        3
+      ],
+      "iteration": 3,
+      "bytes": 630,
+      "sha256": "d1e10a7e31e3d228ecb84f1ae498b9e58b4bc6158934c1fc1a859a8c8d61e1d1",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "tile_impulse",
+      "dimensions": [
+        8,
+        8,
+        4
+      ],
+      "iteration": 1,
+      "bytes": 1536,
+      "sha256": "959239f7a97aeebb9b290a492e5747688c162d2f31149b9b3f709e93b02ea0f4",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "tile_impulse",
+      "dimensions": [
+        8,
+        8,
+        4
+      ],
+      "iteration": 2,
+      "bytes": 1536,
+      "sha256": "029abc6fa667b7d7b24bebb125057b3009caa4c15e86c8ba41a0a45d9675c5a6",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "tile_impulse",
+      "dimensions": [
+        8,
+        8,
+        4
+      ],
+      "iteration": 3,
+      "bytes": 1536,
+      "sha256": "d93ba27583a67d60480b535275dbde268825c0291d80dac87dff03779ef19095",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "cross_tile_impulse",
+      "dimensions": [
+        9,
+        10,
+        5
+      ],
+      "iteration": 1,
+      "bytes": 2700,
+      "sha256": "16e2e871b12bd8d5ae6716d48c0cb09c9dcebe2296ac4490a7c5060f24d1f426",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "cross_tile_impulse",
+      "dimensions": [
+        9,
+        10,
+        5
+      ],
+      "iteration": 2,
+      "bytes": 2700,
+      "sha256": "8a3d1baaea9bcbde6e2f400cc911c6c8af39af195fe761c12d5e4ab490447143",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "cross_tile_impulse",
+      "dimensions": [
+        9,
+        10,
+        5
+      ],
+      "iteration": 3,
+      "bytes": 2700,
+      "sha256": "f5f2cf08fb05346fd7b10514dc599625c7cf71653b02be50a2880bd9d1cd22bb",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "mixed_sign",
+      "dimensions": [
+        17,
+        15,
+        9
+      ],
+      "iteration": 1,
+      "bytes": 13770,
+      "sha256": "e979f362f116bcd992926efb4fcf9af649a545b63fe8e838d05a00bfd8a10c6c",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "mixed_sign",
+      "dimensions": [
+        17,
+        15,
+        9
+      ],
+      "iteration": 2,
+      "bytes": 13770,
+      "sha256": "a3f710584da93d607167aa3fa49fc475e7aa3f048b9db67440da5aa738125e71",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "mixed_sign",
+      "dimensions": [
+        17,
+        15,
+        9
+      ],
+      "iteration": 3,
+      "bytes": 13770,
+      "sha256": "f12551e10c81ab30df2b0f6de67a796048c94cdcb2cea891869d654bd19ce958",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_random",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 1,
+      "bytes": 786432,
+      "sha256": "6b51dbe2a5a09fb39f7c2589d442150702bbb3ca19ce3ad25182f91eaee436fe",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_random",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 2,
+      "bytes": 786432,
+      "sha256": "6ea0208005d77b22568880add49b29b13c314d64d80bda5021951494b480ec02",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_random",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 3,
+      "bytes": 786432,
+      "sha256": "763de43568950842782a2207fe8c6c2ef54995d7377f86f30d980c9aa443311d",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_constant",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 1,
+      "bytes": 786432,
+      "sha256": "ea5eafb72d11aa8f2eaf17b46252aa68554cfdf2036a06f45d53cac37427d007",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_constant",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 2,
+      "bytes": 786432,
+      "sha256": "ea5eafb72d11aa8f2eaf17b46252aa68554cfdf2036a06f45d53cac37427d007",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_constant",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 3,
+      "bytes": 786432,
+      "sha256": "ea5eafb72d11aa8f2eaf17b46252aa68554cfdf2036a06f45d53cac37427d007",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_checker",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 1,
+      "bytes": 786432,
+      "sha256": "db3f54c6a15d1f84b6dc00d75803f8b0aa3d3ae5a6f21d4313ee03172144299d",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_checker",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 2,
+      "bytes": 786432,
+      "sha256": "bb2fbdbc5147bb4987ed8ae5b58a8ea3dadcc9fd3dfd367202c139e98a371c3e",
+      "cpu_cpp_numpy_exact": true
+    },
+    {
+      "case": "full_checker",
+      "dimensions": [
+        64,
+        64,
+        32
+      ],
+      "iteration": 3,
+      "bytes": 786432,
+      "sha256": "40237cec386b94d4fb35d5b908ceeaac9be6ef42c049a713d35f4268ef990dfe",
+      "cpu_cpp_numpy_exact": true
+    }
+  ]
+}
