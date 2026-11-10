@@ -172,11 +172,18 @@ Snapshot load(const std::string &path) {
     if (count > payload / (12U + BRICK_BYTES) || payload != count * (12U + BRICK_BYTES))
         throw std::runtime_error("B3D1 byte length/brick count mismatch");
     is.seekg(20, std::ios::beg);
+    BrickCoord previous{};
+    bool have_previous = false;
     for (std::uint64_t i = 0; i < count; ++i) {
         BrickCoord c;
         c.x = static_cast<std::uint32_t>(read_le(is, 4));
         c.y = static_cast<std::uint32_t>(read_le(is, 4));
         c.z = static_cast<std::uint32_t>(read_le(is, 4));
+        // Writers emit sorted bricks; reject noncanonical order in every reader.
+        if (have_previous && !(previous < c))
+            throw std::runtime_error("B3D1 brick coordinates must be strictly sorted");
+        previous = c;
+        have_previous = true;
         Brick b;
         if (!is.read(reinterpret_cast<char *>(b.data.data()), BRICK_BYTES))
             throw std::runtime_error("truncated B3D1 brick");
