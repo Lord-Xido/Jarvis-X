@@ -1,0 +1,40 @@
+name: JX3D 512-latent reference
+on:
+  pull_request:
+    paths:
+      - 'experimental/latent512_3d/**'
+      - '.github/workflows/jx3d-latent512.yml'
+  push:
+    paths:
+      - 'experimental/latent512_3d/**'
+      - '.github/workflows/jx3d-latent512.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: jxl512-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  cpp17-reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S experimental/latent512_3d -B build-jxl512 -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build-jxl512 --parallel 2
+      - name: Test
+        run: ctest --test-dir build-jxl512 --output-on-failure
+      - name: Capture deterministic trace
+        run: build-jxl512/jxl512 demo | tee jxl512-trace.txt
+      - name: Archive evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: jxl512-${{ matrix.compiler }}-trace
+          path: jxl512-trace.txt
+          retention-days: 14
