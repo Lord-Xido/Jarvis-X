@@ -1,0 +1,41 @@
+name: AVX-512 volume codec v1
+
+on:
+  pull_request:
+    paths:
+      - 'experimental/avx512_volume_codec_v1/**'
+      - '.github/workflows/avx512-volume-codec-v1.yml'
+  push:
+    paths:
+      - 'experimental/avx512_volume_codec_v1/**'
+      - '.github/workflows/avx512-volume-codec-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx: ['g++', 'clang++']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, independent numerical audit, and sanitizers
+        working-directory: experimental/avx512_volume_codec_v1
+        env:
+          CXX: ${{ matrix.cxx }}
+        run: python3 verify.py --sanitize
+      - name: Preserve numerical and ISA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: avx512-volume-codec-${{ matrix.cxx }}
+          path: |
+            experimental/avx512_volume_codec_v1/build/validation_summary.json
+            experimental/avx512_volume_codec_v1/build/validation.log
+            experimental/avx512_volume_codec_v1/build/avx512_disassembly.txt
+            experimental/avx512_volume_codec_v1/build/receipt/
