@@ -1,0 +1,32 @@
+name: DM-vOmegaXi Quine v2 bounded
+on:
+  pull_request:
+    paths:
+      - 'experimental/dm_voxi_quine_v2/**'
+      - '.github/workflows/dm-voxi-quine-v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Validate quine and evolution
+        run: python -m unittest discover -s experimental/dm_voxi_quine_v2 -p 'test_*.py' -v
+      - name: Validate source reproduction in a shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd experimental/dm_voxi_quine_v2
+          python dm_quine.py --selftest
+          python dm_quine.py --quine | cmp dm_quine.py -
+          python dm_quine.py --steps 64 --seed 707 --emit-child /tmp/dm-quine-child.py
+          python /tmp/dm-quine-child.py --quine | cmp /tmp/dm-quine-child.py -
