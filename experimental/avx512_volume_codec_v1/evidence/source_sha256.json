@@ -1,0 +1,16 @@
+{
+  "experimental/avx512_volume_codec_v1/backend.hpp": "466d1cd5cb5f28a3798b74d79fac02b59b7fa934f224711aaf7fb211d9c9c7c9",
+  "experimental/avx512_volume_codec_v1/codec.hpp": "22aa911bf85f383c7d5cd01f5fd80158ff7e34f7a5f9a50447de769f79dfd843",
+  "experimental/avx512_volume_codec_v1/scalar.cpp": "3d2fa029a308c70d1f45e7a220674cb3d8604c91e1284eef6d01466d2d189976",
+  "experimental/avx512_volume_codec_v1/avx512.cpp": "8d67f8f7c69a5a3200a52cf3525adb292d7e35b08317f0825037dea1580b9a7b",
+  "experimental/avx512_volume_codec_v1/tests.cpp": "71b68103d15f3b479deeb4f8cf077a97200f955f40b32d4f3a43d36b0f9227a9",
+  "experimental/avx512_volume_codec_v1/demo.cpp": "ad8d80474f41311404b5b884e1561b939b690428a541b2b7433902bd0cbf980f",
+  "experimental/avx512_volume_codec_v1/verify.py": "6dbe35a9f8335ed555a1e0e606c51529a790b7d52d190a75360fb0857b272c21",
+  "experimental/avx512_volume_codec_v1/README.md": "d097ca305c1fdef15d4d8eb45b73abe559ed99a7c99c696adec95c0efe148654",
+  "experimental/avx512_volume_codec_v1/evidence/local_validation.json": "92659a2f6998d7a7fde0be93599cf4dc54dbb315376c185d2d93bb667276a744",
+  "experimental/avx512_volume_codec_v1/evidence/block_trace.csv": "f11824e221a701b4acd6d6a9b628536f5e079778ab410aa67c5c4103acc42bc8",
+  "docs/adr/0039-avx512-volume-pooling-codec.md": "1bb888f93c4d20444bdf1e6e64edef946a810a18772f91d2bfe191a71c6c190d",
+  ".github/workflows/avx512-volume-codec-v1.yml": "c759e0916c56fe4d957fa5e972f85157ea72ff6ea87e07c80527ecdb0b9a0885",
+  "docs/PROJECT_STATUS.md": "dc4a84da4a773d74246830068f0b94194c98cc40851eccb47c07dfa467352a0e",
+  "CHANGELOG.md": "5876ce3872ed4306afc4568e98909746d28b1ca8c1552ecd7191bc851d2eda97"
+}

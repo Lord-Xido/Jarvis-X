@@ -87,6 +87,8 @@ The `Empirical Validation` GitHub Actions workflow publishes the machine-readabl
 
 ## Active integration and administration work
 
+The [AVX-512 volume pooling codec v1](../experimental/avx512_volume_codec_v1/README.md) is an isolated integration candidate with scalar tests, optional runtime-dispatched SIMD, voxel receipts and ADR-0039. Its transform is fixed mean pooling/block replication; local AVX-512 execution and performance remain unverified.
+
 | Issue | Capability | Current classification | Required before completion |
 |---|---|---|---|
 | #48 | pull-request backlog consolidation | Governance work | classify overlaps, preserve unique evidence and reduce active drafts below ten |
