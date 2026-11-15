@@ -1,0 +1,32 @@
+name: JARVIS-X Fused 8K GCL-ANN CPU reference
+on:
+  pull_request:
+    paths:
+      - 'experimental/gcl_ann_8k/**'
+      - '.github/workflows/gcl-ann-8k.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'experimental/gcl_ann_8k/**'
+      - '.github/workflows/gcl-ann-8k.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cpu-reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: |
+          set -euo pipefail
+          cmake -S experimental/gcl_ann_8k -B /tmp/gcl8k -DCMAKE_BUILD_TYPE=Release -DGCL_ENABLE_CUDA=OFF
+          cmake --build /tmp/gcl8k --parallel 2
+          ctest --test-dir /tmp/gcl8k --output-on-failure
+          /tmp/gcl8k/gcl8k --width 64 --height 36
