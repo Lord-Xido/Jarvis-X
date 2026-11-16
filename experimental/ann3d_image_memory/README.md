@@ -1,5 +1,9 @@
 # Dr Moagi Ω³ — 3D ANN Image Memory (research demonstrator)
 
+![Eight-stage 3D ANN image memory pipeline](STEP_BY_STEP.svg)
+
+[Open the step-by-step image](STEP_BY_STEP.svg)
+
 This experimental module trains an actual **3D convolutional neural autoencoder** on a small RGB volume, quantises its latent activations, stores model weights and exact modular residuals in a compressed NumPy archive, decodes the stored archive, and checks SHA-256 of the recovered bytes.
 
 **Important:** with one 2D image the depth axis is deliberately *synthetic* (shifted/brightened slices). This is not recovered physical geometry or learned 3D scene understanding. The ANN prediction is lossy; exact reconstruction requires the residual, and the archive includes trained weights.
