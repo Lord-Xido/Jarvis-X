@@ -1,0 +1,31 @@
+name: DM-UGRE public facade C++17
+on:
+  pull_request:
+    paths:
+      - 'experimental/dm_ugre_public_facade/**'
+      - '.github/workflows/dm-ugre-public-facade.yml'
+  push:
+    paths:
+      - 'experimental/dm_ugre_public_facade/**'
+      - '.github/workflows/dm-ugre-public-facade.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    name: ${{ matrix.compiler }} / Ubuntu
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S experimental/dm_ugre_public_facade -B build/dm_ugre_facade -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/dm_ugre_facade --parallel
+      - name: Verify
+        run: ctest --test-dir build/dm_ugre_facade --output-on-failure
