@@ -1,0 +1,51 @@
+name: JARVIS-X Omega3 C++17
+on:
+  pull_request:
+    paths:
+      - 'experimental/omega3_sparse/**'
+      - '.github/workflows/omega3-sparse-cpp.yml'
+  push:
+    paths:
+      - 'experimental/omega3_sparse/**'
+      - '.github/workflows/omega3-sparse-cpp.yml'
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: ${{ matrix.compiler }} -O2 -std=c++17 -Wall -Wextra -Werror experimental/omega3_sparse/jarvis_x_omega3_complete.cpp -o /tmp/omega3
+      - name: Self-test
+        run: /tmp/omega3 --selftest
+      - name: Hierarchical address golden test
+        run: |
+          /tmp/omega3 --tile-voxel 0 1 2 3 > /tmp/voxel.txt
+          grep -Fx 'coordinate: (7553, 4034, 2051)' /tmp/voxel.txt
+          grep -Fx 'Morton-90: 132395827253' /tmp/voxel.txt
+          grep -Fx 'voxel-value-u8: 133' /tmp/voxel.txt
+      - name: Sparse persistence test
+        run: |
+          /tmp/omega3 --write /tmp/omega3-state.txt 7 8 9 201
+          test "$(/tmp/omega3 --read /tmp/omega3-state.txt 7 8 9)" = 201
+      - name: Bounded refinement roundtrip
+        run: /tmp/omega3 --refine 0 3 | grep -Fx 'codec_roundtrip=PASS'
+      - name: Source reproduction
+        run: |
+          /tmp/omega3 --quine experimental/omega3_sparse/jarvis_x_omega3_complete.cpp > /tmp/reproduced.cpp
+          cmp experimental/omega3_sparse/jarvis_x_omega3_complete.cpp /tmp/reproduced.cpp
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with ASan and UBSan
+        run: g++ -O1 -g -std=c++17 -fsanitize=address,undefined -fno-omit-frame-pointer experimental/omega3_sparse/jarvis_x_omega3_complete.cpp -o /tmp/omega3-san
+      - name: Self-test and refine
+        run: |
+          /tmp/omega3-san --selftest
+          /tmp/omega3-san --refine 0 3 | grep -Fx 'codec_roundtrip=PASS'
