@@ -444,3 +444,13 @@ option(JARVISX_BUILD_PERMEATE_3D "Build bounded C++20 3D ANN PERMEATE tile codec
 if(JARVISX_BUILD_PERMEATE_3D)
     add_subdirectory(permeate3d)
 endif()
+
+# Sparse virtual 4GiB^3 bit addressing; ANN-guided lossless 3D codec reference.
+add_executable(jarvisx-virtual3d-bit-ann
+    src/virtual3d_bit_ann_main.cpp
+)
+jarvisx_harden(jarvisx-virtual3d-bit-ann)
+add_test(NAME virtual3d-bit-ann-reference
+    COMMAND jarvisx-virtual3d-bit-ann --self-test
+)
+set_tests_properties(virtual3d-bit-ann-reference PROPERTIES TIMEOUT 120)
