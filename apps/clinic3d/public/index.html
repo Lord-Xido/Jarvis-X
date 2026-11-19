@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clinic3D | Synthetic Bitwise Staging</title>
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color:#e6f1fb;background:#07131e;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;line-height:1.5;background:radial-gradient(ellipse at top,#11354c,#07131e 64%)}
+main{max-width:1120px;margin:auto;padding:22px}h1{font-size:2.2rem;margin:0}h2{font-size:1.1rem}
+small,.muted{color:#9cb4c9}.notice{border-left:4px solid #ffbb63;background:#36251e;padding:12px 16px;margin:16px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:800px){.grid{grid-template-columns:1fr}}
+section{background:#0c2132;border:1px solid #29485b;padding:20px;border-radius:16px;margin:15px 0}
+label{display:block;margin-bottom:12px;font-weight:650}textarea,select,input{width:100%;border:1px solid #3f6074;background:#061824;color:#fff;padding:12px;border-radius:9px;margin-top:6px;font:inherit}
+button{background:#67c8de;border:0;border-radius:9px;padding:12px 18px;font:inherit;font-weight:750;color:#001825;cursor:pointer}
+button:hover{background:#9ee9f6}button:disabled{opacity:.45}canvas{width:100%;height:auto;background:#04101a;border:1px solid #29485b;border-radius:12px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#c2f8c8}
+a{color:#9bdef4}.pill{display:inline-block;border:1px solid #456578;padding:3px 9px;border-radius:20px;color:#b4d6e7;font-size:12px}
+</style></head><body><main>
+<header><span class="pill">RESEARCH SIMULATION — NO REAL PATIENT DATA</span><h1>Clinic3D</h1>
+<p class="muted">Three-stage, 3D bitwise virtual machine · Authenticated handoffs · Evidence source index</p></header>
+<p class="notice"><b>Not a medical device.</b> Do not enter personal health information.
+This demonstration cannot diagnose, triage, prescribe or give a treatment plan.
+For an emergency, contact local emergency services.</p>
+<div class="grid"><section><h2>1 · Synthetic input</h2>
+<form id="form"><label>Training fixture (fictional symptoms)
+<textarea id="text" rows="4" maxlength="2000">Jaw swelling and trouble swallowing (synthetic demonstration)</textarea></label>
+<label>Language template<select id="lang"><option value="en">English</option><option value="zu">isiZulu (unvalidated)</option><option value="st">Sesotho (unvalidated)</option><option value="af">Afrikaans (unvalidated)</option></select></label>
+<button type="submit">Execute 3D bytecode simulation</button></form></section>
+<section><h2>2 · Geometric computation</h2><canvas id="volume" width="500" height="340" aria-label="Rotating 3D lattice projection"></canvas><p class="muted">8×8×8 numeric lattice, not a patient anatomical reconstruction.</p></section></div>
+<section><h2>3 · Simulation output</h2><div id="status" role="status">No case executed.</div>
+<div id="sources"></div><details><summary>Bitwise instruction trace and stage authentication</summary><pre id="trace"></pre></details></section>
+<section><h2>Administrator (synthetic environment)</h2><p class="muted">Admin access is enabled only if the server has an externally provisioned password (minimum 16 characters). Never commit it to GitHub.</p>
+<label>Password<input id="pw" type="password" autocomplete="current-password"></label><button id="login" type="button">Sign in</button>
+<div id="adminResult" role="status"></div><button type="button" id="disable" hidden>Pause simulation</button><button type="button" id="enable" hidden>Resume simulation</button></section>
+<footer class="muted"><p>Research-only engineering testbed. Clinical source catalogue links are not automated treatment recommendations.</p></footer>
+</main><script src="/app.js" defer></script></body></html>
