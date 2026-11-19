@@ -1,0 +1,29 @@
+name: Jarvis X chaotic cloud VM
+on:
+  pull_request:
+    paths:
+      - 'apps/chaotic-exploration-cloud-vm/**'
+      - '.github/workflows/chaotic-exploration-cloud-vm.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-vm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/chaotic-exploration-cloud-vm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile native C++17 reference
+        run: g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror vm.cpp -o jarvisx_vm
+      - name: Run bounded verification
+        run: python3 -m unittest discover -s tests -v
+      - name: HTTP smoke test
+        run: |
+          python3 server.py > /tmp/jx-chaos-http.log 2>&1 &
+          pid=$!
+          trap 'kill $pid || true' EXIT
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/healthz && break || sleep .2; done
+          curl -fsS -X POST http://127.0.0.1:8080/api/execute -H 'Content-Type: application/json' -d '{"side":8,"steps":5}' | python3 -c 'import json,sys; a=json.load(sys.stdin); assert a["verified_finite"] and a["voxels"]==512'
