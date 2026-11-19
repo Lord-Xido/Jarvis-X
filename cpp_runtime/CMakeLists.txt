@@ -444,3 +444,11 @@ option(JARVISX_BUILD_PERMEATE_3D "Build bounded C++20 3D ANN PERMEATE tile codec
 if(JARVISX_BUILD_PERMEATE_3D)
     add_subdirectory(permeate3d)
 endif()
+
+# Experimental 3D VNAND-addressed, 3-bit dense autoencoder software VM.
+add_executable(jarvisx-vnand-vm
+    src/vnand_vm_main.cpp
+)
+jarvisx_harden(jarvisx-vnand-vm)
+add_test(NAME vnand-vm-reference COMMAND jarvisx-vnand-vm --self-test)
+set_tests_properties(vnand-vm-reference PROPERTIES TIMEOUT 120)
