@@ -1,0 +1,32 @@
+name: Moagi3D virtual 1e24 C++17
+
+on:
+  pull_request:
+    paths:
+      - 'experimental/moagi_3d_virtual_1e24/**'
+      - '.github/workflows/moagi3d-virtual-1e24.yml'
+  push:
+    paths:
+      - 'experimental/moagi_3d_virtual_1e24/**'
+      - '.github/workflows/moagi3d-virtual-1e24.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S experimental/moagi_3d_virtual_1e24 -B build/moagi3d -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+      - name: Build
+        run: cmake --build build/moagi3d --parallel 2
+      - name: Verify independent oracle and compiled sample
+        run: ctest --test-dir build/moagi3d --output-on-failure
