@@ -444,3 +444,27 @@ option(JARVISX_BUILD_PERMEATE_3D "Build bounded C++20 3D ANN PERMEATE tile codec
 if(JARVISX_BUILD_PERMEATE_3D)
     add_subdirectory(permeate3d)
 endif()
+
+# Research-only 3D chaotic GRU sampled-planning + exact quine reference.
+add_executable(jarvisx-investigative3d
+    src/investigative3d_quine_main.cpp
+)
+jarvisx_harden(jarvisx-investigative3d)
+
+add_test(NAME investigative3d-regressions
+    COMMAND jarvisx-investigative3d --self-test
+)
+add_test(NAME investigative3d-quine-reproduction
+    COMMAND ${CMAKE_COMMAND}
+        "-DPROGRAM=$<TARGET_FILE:jarvisx-investigative3d>"
+        "-DSOURCE=${CMAKE_CURRENT_SOURCE_DIR}/src/investigative3d_quine_main.cpp"
+        "-DGENERATED=${CMAKE_CURRENT_BINARY_DIR}/investigative3d_reproduced.cpp"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/investigative3d_quine_verify.cmake
+)
+add_test(NAME investigative3d-run-smoke
+    COMMAND jarvisx-investigative3d --steps 3
+)
+set_tests_properties(
+    investigative3d-regressions investigative3d-quine-reproduction
+    investigative3d-run-smoke PROPERTIES TIMEOUT 60
+)
