@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 jobs:
-  native-vm:
+  native-mathematics:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -16,14 +16,37 @@ jobs:
         working-directory: apps/chaotic-exploration-cloud-vm
     steps:
       - uses: actions/checkout@v4
-      - name: Compile native C++17 reference
+      - name: Compile native C++17 with strict warnings
         run: g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror vm.cpp -o jarvisx_vm
-      - name: Run bounded verification
+      - name: Test mathematical and HTTP invariants
         run: python3 -m unittest discover -s tests -v
-      - name: HTTP smoke test
+      - name: Audit 3D fields at multiple resolutions
+        run: python3 audit.py | tee "$RUNNER_TEMP/jarvisx-phi3d-audit.json"
+      - name: Execute run-to-completion batch interface
+        run: python3 batch.py | tee "$RUNNER_TEMP/jarvisx-phi3d-batch.json"
+      - name: HTTP service smoke test
         run: |
-          python3 server.py > /tmp/jx-chaos-http.log 2>&1 &
+          set -euo pipefail
+          python3 server.py > "$RUNNER_TEMP/jarvisx-phi3d-http.log" 2>&1 &
           pid=$!
-          trap 'kill $pid || true' EXIT
-          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/healthz && break || sleep .2; done
-          curl -fsS -X POST http://127.0.0.1:8080/api/execute -H 'Content-Type: application/json' -d '{"side":8,"steps":5}' | python3 -c 'import json,sys; a=json.load(sys.stdin); assert a["verified_finite"] and a["voxels"]==512'
+          trap 'kill "$pid" || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz; then break; fi
+            sleep .2
+          done
+          curl -fsS -X POST http://127.0.0.1:8080/api/execute \
+            -H 'Content-Type: application/json' \
+            -d '{"side":8,"steps":5,"emit_field":true}' \
+            | python3 -c 'import json,sys; j=json.load(sys.stdin); assert j["spatial_invariants_verified"] and j["voxels"]==512 and len(j["field_zyx"])==512'
+          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8080/api/execute \
+            -H 'Content-Type: application/json' -d '{"alpha":0.16,"beta":0.5}')
+          test "$status" = 400
+      - name: Archive CPU computation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvisx-phi3d-native-evidence
+          path: |
+            ${{ runner.temp }}/jarvisx-phi3d-audit.json
+            ${{ runner.temp }}/jarvisx-phi3d-batch.json
+            ${{ runner.temp }}/jarvisx-phi3d-http.log
+          retention-days: 14

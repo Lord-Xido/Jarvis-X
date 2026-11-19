@@ -3,7 +3,7 @@ WORKDIR /build
 COPY vm.cpp .
 RUN g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror vm.cpp -o jarvisx_vm
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 HOST=0.0.0.0
 WORKDIR /app
 COPY --from=build /build/jarvisx_vm /app/jarvisx_vm
 COPY server.py .
