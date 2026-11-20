@@ -1,0 +1,55 @@
+name: JARVIS X Ouroboros 3D Graphics VM
+on:
+  pull_request:
+    paths:
+      - "experimental/ouroboros_graphics_vm/**"
+      - ".github/workflows/jx-ouroboros-graphics-vm.yml"
+  push:
+    branches: [main]
+    paths:
+      - "experimental/ouroboros_graphics_vm/**"
+      - ".github/workflows/jx-ouroboros-graphics-vm.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  cpp17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure strict C++17
+        run: cmake -S experimental/ouroboros_graphics_vm -B build/ouroboros -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+      - name: Compile
+        run: cmake --build build/ouroboros --parallel 2
+      - name: CTest
+        run: ctest --test-dir build/ouroboros --output-on-failure
+      - name: Execute bounded 3D VM
+        run: build/ouroboros/jx_ouroboros_vm --program pulse --cycles 2400 --frames 120 --out "${{ runner.temp }}/jx_pulse"
+      - name: Independently audit rendered outputs
+        run: python3 experimental/ouroboros_graphics_vm/audit.py "${{ runner.temp }}/jx_pulse" 120 2400
+      - name: Negative input rejection
+        run: |
+          if build/ouroboros/jx_ouroboros_vm --cycles -1; then
+            echo "negative instruction count unexpectedly accepted"
+            exit 1
+          fi
+  sanitizers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with Clang ASan and UBSan
+        run: |
+          clang++ -std=c++17 -O1 -g -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror -fsanitize=address,undefined -fno-omit-frame-pointer experimental/ouroboros_graphics_vm/jarvis_x_3d_vm.cpp -o "${{ runner.temp }}/jxvm_sanitized"
+      - name: Self-test under sanitizers
+        run: "${{ runner.temp }}/jxvm_sanitized --self-test"
+      - name: Triangle raster and audited files
+        run: |
+          "${{ runner.temp }}/jxvm_sanitized" --program triangle --cycles 480 --frames 24 --out "${{ runner.temp }}/jx_triangle"
+          python3 experimental/ouroboros_graphics_vm/audit.py "${{ runner.temp }}/jx_triangle" 24 480
