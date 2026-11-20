@@ -1,0 +1,48 @@
+name: JARVIS X Joint 3D One-Shot
+on:
+  pull_request:
+    paths:
+      - "experimental/jx3d_joint_one_shot/**"
+      - ".github/workflows/jx3d-joint-one-shot.yml"
+  push:
+    branches: [main]
+    paths:
+      - "experimental/jx3d_joint_one_shot/**"
+      - ".github/workflows/jx3d-joint-one-shot.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zstd headers
+        run: sudo apt-get update -qq && sudo apt-get install -y libzstd-dev
+      - name: Strict C++17 build
+        run: |
+          cmake -S experimental/jx3d_joint_one_shot -B build/jx3d_joint -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/jx3d_joint --parallel 2
+      - name: CTest
+        run: ctest --test-dir build/jx3d_joint --output-on-failure
+      - name: Train, encode, and independently decode
+        run: |
+          build/jx3d_joint/jx3d_joint --epochs 85 --budget-ms 10000 --out /tmp/jx3d
+          build/jx3d_joint/jx3d_joint --decode /tmp/jx3d_encoded.jx3d --out /tmp/jx3d_recovered.raw
+          cmp /tmp/jx3d_original.raw /tmp/jx3d_recovered.raw
+          python3 experimental/jx3d_joint_one_shot/audit.py /tmp/jx3d
+      - name: Reject invalid arguments
+        run: |
+          if build/jx3d_joint/jx3d_joint --epochs -2; then exit 1; fi
+      - name: Clang sanitizers
+        run: |
+          clang++ -std=c++17 -O1 -g -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror -fsanitize=address,undefined -fno-omit-frame-pointer experimental/jx3d_joint_one_shot/jx3d_joint.cpp -lzstd -o /tmp/jx3d_san
+          /tmp/jx3d_san --self-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jx3d-joint-one-shot-results
+          path: |
+            /tmp/jx3d_metrics.csv
+            /tmp/jx3d_encoded.jx3d
+          retention-days: 7
