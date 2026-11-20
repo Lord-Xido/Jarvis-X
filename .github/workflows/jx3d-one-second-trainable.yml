@@ -1,0 +1,41 @@
+name: JARVIS X 3D Trainable One-Second Codec
+on:
+  pull_request:
+    paths:
+      - "experimental/one_second_3d_trainable_codec/**"
+      - ".github/workflows/jx3d-one-second-trainable.yml"
+  push:
+    branches: [main]
+    paths:
+      - "experimental/one_second_3d_trainable_codec/**"
+      - ".github/workflows/jx3d-one-second-trainable.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  strict-cpp17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure and build
+        run: |
+          cmake -S experimental/one_second_3d_trainable_codec -B build/3d_one_second -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+          cmake --build build/3d_one_second --parallel 2
+      - name: Run self-tests and one-second bounded execution
+        run: ctest --test-dir build/3d_one_second --output-on-failure
+      - name: End-to-end measured output
+        run: build/3d_one_second/jx3d --budget-ms 1000 --epochs 120 --output "${{ runner.temp }}/jx3d"
+  sanitizer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: ASan and UBSan
+        run: |
+          clang++ -std=c++17 -O1 -g -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror -fsanitize=address,undefined -fno-omit-frame-pointer experimental/one_second_3d_trainable_codec/jarvis_x_3d_one_second.cpp -o "${{ runner.temp }}/jx3d_san"
+          "${{ runner.temp }}/jx3d_san" --self-test
