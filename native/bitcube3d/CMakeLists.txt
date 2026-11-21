@@ -26,5 +26,7 @@ if(BUILD_TESTING)
   if(Python3_Interpreter_FOUND)
     add_test(NAME bitcube3d_cli_smoke
       COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/smoke.py" "$<TARGET_FILE:bitcube3d-cpp>")
+    add_test(NAME bitcube3d_cross_language_golden
+      COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/b3d1_cross_language.py" "$<TARGET_FILE:bitcube3d-cpp>")
   endif()
 endif()

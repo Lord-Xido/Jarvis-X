@@ -23,6 +23,15 @@ resident tiles, and isolated candidate execution with rollback. Its
 production isolation, verified 512:1 lossless compression, or full
 cross-backend migration.
 
+## Cross-language bitplane interoperability (B3D1)
+
+The [B3D1 cross-backend contract](docs/B3D1_CROSS_BACKEND_CONTRACT.md)
+defines a canonical 16³-bit brick interchange validated by independent
+C++17, Python and Node.js golden vectors. It verifies exact bytes,
+reversible GF(2) lifting and bounded parsing, **not** equivalence to the
+separate `DM3DROM1` format or learned ANN models. These backends remain
+architecturally distinct until their own adapters are verified.
+
 ## Canonical Dr Moagi attribution and provenance
 
 The named **Dr Moagi 3D Ephemeral-Notion Intelligence Framework v1.1** is attributed in this repository to **Matladi Maxwell Moagi (Lord-Xido)**. Its authoritative provenance, defining equations, reality-coupled verification rule and attribution boundary are recorded in [`docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md`](docs/attribution/DR_MOAGI_EPHEMERAL_NOTION_FRAMEWORK.md).

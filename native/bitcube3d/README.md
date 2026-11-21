@@ -2,6 +2,14 @@
 
 An integration candidate for Jarvis-X (tracked by [issue #440](https://github.com/Lord-Xido/Jarvis-X/issues/440)). This subsystem is independent of existing bitcode, bytecode, and C++ modules; it is not wired into Jarvis-X's default executable or service paths.
 
+## C++ ↔ Python ↔ Node.js golden interchange
+
+The [cross-backend B3D1 contract](../../docs/B3D1_CROSS_BACKEND_CONTRACT.md)
+introduces independent Python and Node.js format oracles and
+C++-executed file exchange tests using exact shared SHA-256 golden vectors.
+B3D1 remains uncompressed and unauthenticated, and is distinct from the
+`DM3DROM1` tile codec.
+
 ## Build and validate
 
 From the repository root:
