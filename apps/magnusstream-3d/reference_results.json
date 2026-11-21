@@ -1,0 +1,95 @@
+{
+  "type": "independent_reference_3d_feedback_codec",
+  "original_artifact_verified_as_real_codec": false,
+  "algorithm": "F(X) = D(M(E(X))); E=2x2x2 block mean, M=6-neighbor periodic diffusion, D=nearest-neighbor 3D reconstruction",
+  "grid_original": [
+    16,
+    16,
+    16
+  ],
+  "latent_grid": [
+    8,
+    8,
+    8
+  ],
+  "original_voxels": 4096,
+  "latent_values": 512,
+  "iterations": 1000,
+  "alpha": 0.25,
+  "raw_bytes": 16384,
+  "encoded_bytes_with_header": 2080,
+  "serialized_payload_ratio": 7.876923076923077,
+  "source_sha256_float32": "e33dfef46734eb6cc6b0b35a6c5e58b45acd0bc78175809358c3880861f0d3f9",
+  "encoded_sha256": "06d9ee25d2ea64e8a3531a32a04b78085ab489c71be61077782e4004611065d2",
+  "constant_preservation_error": 0.0,
+  "constant_codec_roundtrip_error": 0.0,
+  "global_fixed_point_error": 0.0,
+  "final_relative_residual": 9.483451187535276e-14,
+  "final_reconstruction_metrics": {
+    "mse": 0.018139784212996793,
+    "rmse": 0.1346840161748854,
+    "psnr_db": 17.413678835197032,
+    "residual": 0.4686624753921345
+  },
+  "mean_preservation_error": 0.0,
+  "variance_nonincrease_violations": 0,
+  "checkpoints": {
+    "1": {
+      "mse_vs_source": 0.0027364177931784176,
+      "relative_step": 0.18727518444251523,
+      "variance": 0.013575645572353554,
+      "mean_drift": 0.0
+    },
+    "2": {
+      "mse_vs_source": 0.0029945660202309442,
+      "relative_step": 0.031761956191008044,
+      "variance": 0.012006072951836335,
+      "mean_drift": 0.0
+    },
+    "10": {
+      "mse_vs_source": 0.006224713202914784,
+      "relative_step": 0.01408894750912923,
+      "variance": 0.005396525685648535,
+      "mean_drift": 0.0
+    },
+    "50": {
+      "mse_vs_source": 0.015241639933617438,
+      "relative_step": 0.002208908657582707,
+      "variance": 0.0003017652697323545,
+      "mean_drift": 0.0
+    },
+    "100": {
+      "mse_vs_source": 0.017556865359178726,
+      "relative_step": 0.00046173244167618945,
+      "variance": 2.061168554171825e-05,
+      "mean_drift": 0.0
+    },
+    "250": {
+      "mse_vs_source": 0.018127988807387054,
+      "relative_step": 1.087694022926032e-05,
+      "variance": 1.2181025645792897e-08,
+      "mean_drift": 0.0
+    },
+    "500": {
+      "mse_vs_source": 0.018139759851102888,
+      "relative_step": 2.2572552819014473e-08,
+      "variance": 5.246215430146712e-14,
+      "mean_drift": 0.0
+    },
+    "1000": {
+      "mse_vs_source": 0.018139784212996793,
+      "relative_step": 9.721770660019416e-14,
+      "variance": 9.731321681802023e-25,
+      "mean_drift": 0.0
+    }
+  },
+  "checks": {
+    "shape": true,
+    "constant_invariant": true,
+    "global_fixed_invariant": true,
+    "mean_preserved": true,
+    "variance_nonincreasing": true,
+    "latent_payload_smaller": true,
+    "recursive_convergence": true
+  }
+}
