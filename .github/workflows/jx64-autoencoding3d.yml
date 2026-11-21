@@ -1,0 +1,35 @@
+name: JX64 3D autoencoding CPU parity
+on:
+  pull_request:
+    paths:
+      - 'experiments/jx64_autoencoding3d/**'
+      - '.github/workflows/jx64-autoencoding3d.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  jx64-cpu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: experiments/jx64_autoencoding3d
+    steps:
+      - uses: actions/checkout@v4
+      - name: Strict C++20 build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j2
+      - name: Exact permutation and 27-tap vs separable tests
+        run: ctest --test-dir build --output-on-failure
+      - name: CPU benchmark reference
+        run: ./build/jx64_engine --decoder reference --repeat 10 | tee "$RUNNER_TEMP/jx64-reference.txt"
+      - name: CPU benchmark separable
+        run: ./build/jx64_engine --decoder separable --repeat 10 | tee "$RUNNER_TEMP/jx64-separable.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jx64-3d-cpu-benchmark
+          path: |
+            ${{ runner.temp }}/jx64-reference.txt
+            ${{ runner.temp }}/jx64-separable.txt
+          retention-days: 14

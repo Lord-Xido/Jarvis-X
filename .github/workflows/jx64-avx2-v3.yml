@@ -1,0 +1,38 @@
+name: JX64 AVX2/FMA volumetric CPU gate
+on:
+  pull_request:
+    paths:
+      - 'experiments/jx64_autoencoding3d/avx2_v3/**'
+      - '.github/workflows/jx64-avx2-v3.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-avx2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify runner AVX2 and FMA instruction support
+        run: |
+          grep -qw avx2 /proc/cpuinfo
+          grep -qw fma /proc/cpuinfo
+          grep -m1 'model name' /proc/cpuinfo
+      - name: Build strict C++20 reference and SIMD kernels
+        run: |
+          cmake -S experiments/jx64_autoencoding3d/avx2_v3 -B build/jx64avx2 -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/jx64avx2 --parallel 2
+      - name: Test numerical equivalence and deterministic execution
+        run: ctest --test-dir build/jx64avx2 --output-on-failure
+      - name: Benchmark all complete CPU pipelines
+        shell: bash
+        run: |
+          set -euo pipefail
+          for mode in scalar27 simd27 separable; do
+            build/jx64avx2/jx64avx2 "$mode" 11 | tee -a "$RUNNER_TEMP/jx64-avx2-bench.txt"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jx64-avx2-v3-cloud-cpu-benchmark
+          path: ${{ runner.temp }}/jx64-avx2-bench.txt
+          retention-days: 14
