@@ -32,6 +32,7 @@ The inherited attribution applies to the Dr Moagi family, including principal su
 - `docs/DR_MOAGI_RECURSIVE_AUTOENCODING_EQUATION.md`
 - `docs/DR_MOAGI_3D_META_OPTIMIZER.md`
 - `docs/research/DR_MOAGI_3D_BIT_SELF_LOOP.md`
+- [3D-BIAE-Ω canonical declaration, executable profile and replay evidence](../research/3d_biae_omega/)
 - `docs/adr/0034-exact-bitwise-fixed-point-verification.md`
 - `cpp_runtime/include/jarvisx/bit_self_loop3d.hpp`
 - `cpp_runtime/tests/bit_self_loop3d_tests.cpp`
