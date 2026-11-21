@@ -1003,3 +1003,13 @@ This extension is implemented by
 `jarvisx.multimodal_evidence_runtime` and
 `jarvisx.evidence_grounded_operational`, with ADR-024 defining the authority
 boundary.
+
+---
+
+## Perspective transformation and evidence-admission supplement (DM-PTVP)
+
+The [Dr Moagi Perspective Transformation & Verification Principle](DR_MOAGI_PERSPECTIVE_TRANSFORMATION_VERIFICATION.md) refines the observer contract: **physical state, measurement, reversible representation change, new viewpoint acquisition, inference and verification are distinct operations**.
+
+In a finite 3D observer reference, signed-permutation rotations preserve exact voxel identity under inversion and preserve scalar byte histograms, while weighted centroids transform equivariantly. A 2D projection is generally non-injective; agreement between two projections must not establish whole-volume identity. DM-PTVP therefore supports `VERIFIED`, `REFUTED`, and `UNDERDETERMINED` verdicts with explicit claim boundaries.
+
+This is separately tested by the opt-in C++17 target `jarvisx-perspective3d-tests` and the `dm-perspective-verification.yml` workflow. Its passing status **does not** establish scene semantics, causal completeness, or empirical performance of a trained observer model; the existing evidence and operational authorization gates remain authoritative.

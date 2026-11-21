@@ -72,3 +72,11 @@ A new claim should be promoted only with:
 7. an inference boundary preventing overstatement.
 
 Performance comparisons should additionally include warm-up policy, sample count, hardware and software environment, uncertainty estimates and a named baseline implementation.
+
+---
+
+## Complementary native perspective conformance
+
+The [DM-PTVP specification](DR_MOAGI_PERSPECTIVE_TRANSFORMATION_VERIFICATION.md) provides an additional, independently executable C++17 conformance gate in `cpp_runtime/perspective3d` and `.github/workflows/dm-perspective-verification.yml`. It checks the 24-element proper cube rotation group, exact 3D and 2D round trips, scalar invariance, vector equivariance, ambiguity from non-injective projections, and corruption rejection.
+
+This native test is **not part of** `python -m jarvisx.empirical_validation`, nor does it validate semantic image understanding or fully observed physical reality. Consult its separate JSON report and declared limitations before promoting any related claim.
