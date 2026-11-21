@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#081321">
+<title>Dr Moagi DM3D Ω | Offline 3D Multimodal ANN Kernel</title>
+<style>
+:root{color-scheme:dark;--bg:#081321;--panel:#0e2032;--panel2:#11283b;--line:#2a475d;--fg:#e7f6ff;--mut:#9cb6c8;--cyan:#54e0ea;--green:#6ae4bd;--amber:#ffc777;--purple:#b09bff;--red:#ff8da3}
+*{box-sizing:border-box}html,body{margin:0;background:radial-gradient(ellipse at 50% -25%,#1b4055 0%,#081321 65%);color:var(--fg);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+body{padding:clamp(10px,2.5vw,26px);padding-bottom:calc(35px + env(safe-area-inset-bottom,0px))}
+button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}
+.app{max-width:1420px;margin:0 auto}.top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}
+.eyebrow{color:var(--cyan);text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:800}
+h1{font-size:clamp(1.55rem,3.4vw,2.55rem);letter-spacing:-.045em;line-height:1.1;margin:5px 0 9px}
+.top p{max-width:765px;margin:0;color:var(--mut)}.tag{border:1px solid #337b82;background:#11313e;border-radius:999px;padding:8px 12px;font-size:12px;color:#bbf5f2}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.stat,.panel,.viewer{background:linear-gradient(150deg,#10283bee,#0b1c2bee);border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 38px #0002}
+.stat{padding:12px 14px}.stat label{display:block;font-size:11px;color:var(--mut)}.stat strong{display:block;margin:5px 0;font-variant-numeric:tabular-nums;font-size:clamp(1.0rem,2vw,1.5rem)}.stat small{color:#8eacbe;font-size:11px}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:12px;align-items:start}
+.panel{padding:15px;margin-bottom:12px}.panel h2,.viewer h2{font-size:14px;margin:0 0 12px;letter-spacing:.01em}.sub{color:var(--mut);font-size:12px;margin:1px 0 12px}
+.viewer{overflow:hidden;margin-bottom:12px}.viewer-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--line)}.viewer-top h2{margin:0}
+#scene{width:100%;height:355px;display:block;touch-action:none;cursor:grab;background:radial-gradient(ellipse at center,#143348,#071625 70%)}
+.viewer-bottom{padding:8px 13px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;color:var(--mut);font-size:11px}
+.mode-row{display:flex;gap:6px;flex-wrap:wrap}.mode-row button{padding:5px 9px;border-radius:7px;background:#112d42;border:1px solid #3d5b70;color:#d9ecf4;font-size:11px}.mode-row button[aria-pressed=true]{background:var(--cyan);color:#082230;border-color:var(--cyan);font-weight:750}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tab{border:1px solid #385c76;background:#0b1f30;color:#c0d3e2;padding:7px 10px;border-radius:7px;font-size:12px}.tab[aria-selected=true]{background:#326680;color:white;border-color:#71c8dc;font-weight:700}
+.field{margin-bottom:11px}.field label{display:block;font-size:12px;color:var(--mut);margin-bottom:6px}.field input:not([type=file]),.field select,.field textarea{width:100%;background:#081725;border:1px solid #36556b;border-radius:7px;padding:9px;color:var(--fg);outline:none}.field textarea{min-height:105px;resize:vertical}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--cyan)}
+.btn{border-radius:8px;border:1px solid #476a83;padding:10px 12px;background:#1d3a50;color:#f1f8ff;font-weight:700;min-height:39px;display:inline-flex;justify-content:center;align-items:center;gap:6px;font-size:12px}
+.btn:hover:not(:disabled){filter:brightness(1.13)}.btn.primary{background:linear-gradient(110deg,#61e5ea,#64aff5);color:#062337;border-color:#76dfed}.btn.purple{background:linear-gradient(110deg,#7f6fe1,#aa89ff);border-color:#b5a0ff}.btn.ghost{background:#0b2435}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.actions>.btn{flex:1}.full{width:100%}
+.filewrap{position:relative;overflow:hidden}.filewrap input{position:absolute;opacity:0;inset:0;width:100%;cursor:pointer}
+.kv{display:grid;grid-template-columns:1fr auto;gap:7px;font-size:12px}.kv span:nth-child(odd){color:var(--mut)}.kv span:nth-child(even){font-variant-numeric:tabular-nums;font-family:ui-monospace,Consolas,monospace;text-align:right;overflow-wrap:anywhere;max-width:220px}
+#sourcePreview,#outputPreview{border:1px solid #29495e;background:#071624;min-height:165px;border-radius:9px;display:flex;align-items:center;justify-content:center;overflow:auto;padding:8px;position:relative}
+.preview-pair{display:grid;grid-template-columns:1fr 1fr;gap:9px}.preview-box{min-width:0}.preview-box h3{font-size:11px;color:#a8c1d0;margin:0 0 7px;font-weight:700}
+.preview-pair img,.preview-pair video{max-width:100%;max-height:175px;object-fit:contain}.preview-pair audio{width:100%;min-width:0}.preview-pair pre{font:11px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;margin:0;width:100%}.mini-canvas{width:100%;max-height:175px;image-rendering:pixelated}
+.output{background:#091a2a;border:1px solid #31516a;padding:10px;border-radius:9px;min-height:45px;font:11px/1.55 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:#a6dae1}
+#log{max-height:200px;overflow-y:auto}.status{margin-top:11px;color:var(--green);font-size:12px;min-height:34px} .status.warn{color:var(--amber)}
+.canvas-strip{display:grid;grid-template-columns:1fr 1fr;gap:9px}.canvas-strip canvas{width:100%;height:auto;aspect-ratio:1.6;background:#091a29;border:1px solid #31516a;border-radius:9px;image-rendering:pixelated}
+input[type=range]{accent-color:var(--cyan);width:100%}.tiny{color:var(--mut);font-size:11px}.hr{height:1px;background:var(--line);margin:14px 0}
+footer{font-size:12px;color:#acc3d2;line-height:1.6;padding:14px 4px 0}footer strong{color:#e3f0f7}
+@media(max-width:920px){.layout{grid-template-columns:1fr}#scene{height:330px}}@media(max-width:550px){.stats{grid-template-columns:1fr 1fr}.panel{padding:12px}.preview-pair{grid-template-columns:1fr}#sourcePreview,#outputPreview{min-height:120px}.canvas-strip{grid-template-columns:1fr 1fr}.top{gap:10px}}
+
+/* DM3D million-cycle deterministic 3D code-line processor */
+.million{margin-top:13px;background:linear-gradient(155deg,#12283c,#0b2030 75%);border:1px solid #34728b;border-radius:14px;padding:18px}
+.million h2{font-size:19px;letter-spacing:-.025em;margin:0 0 5px}
+.million p{color:var(--mut);font-size:12px;margin:0 0 14px}
+.ml-wrap{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.9fr);gap:14px}
+.ml-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.ml-controls .field{margin-bottom:5px}.ml-controls .field select,.ml-controls .field input{max-width:100%;min-width:0}
+.ml-status{margin-top:10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ml-status div{border:1px solid #31576a;background:#081927;border-radius:10px;padding:11px;min-width:0}
+.ml-status label{display:block;font-size:11px;color:var(--mut)}.ml-status strong{font:600 17px/1.7 ui-monospace,monospace;color:#e5f9ff;overflow-wrap:anywhere}
+.ml-progress{margin:12px 0 9px;background:#061624;border:1px solid #24576c;border-radius:999px;height:13px;overflow:hidden}
+.ml-fill{height:100%;width:0;background:linear-gradient(90deg,#50d4c9,#6d9bff);transition:width .15s linear}
+.ml-console{white-space:pre-wrap;overflow-wrap:anywhere;background:#071827;border:1px solid #345266;padding:10px;border-radius:9px;min-height:73px;max-height:158px;overflow:auto;font:11px/1.5 ui-monospace,monospace;color:#ade9da}
+#ml3d{width:100%;height:270px;display:block;background:radial-gradient(ellipse at center,#14394c,#061727);border:1px solid #31546a;border-radius:11px;touch-action:none;cursor:grab}
+.ml-buttons{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0}.ml-buttons button{flex:1;min-width:96px}
+#mlEditor{height:130px;font:12px/1.6 ui-monospace,monospace}
+.ml-hint{font-size:11px!important;line-height:1.5;color:#93b4c4!important}
+.ml-small{color:#c8e6f0;font-size:11px;display:flex;justify-content:space-between;gap:9px;flex-wrap:wrap;margin-bottom:8px}
+@media(max-width:800px){.ml-wrap{grid-template-columns:1fr}.ml-status{grid-template-columns:1fr 1fr}.million{padding:12px}}
+@media(max-width:490px){.ml-controls{grid-template-columns:1fr 1fr}.ml-status strong{font-size:14px}#ml3d{height:225px}}
+
+/* Section 10: DM3D local-first cooperative browser kernel */
+.kernel{border:1px solid #466c81;border-radius:16px;padding:18px;margin-top:17px;background:linear-gradient(145deg,#10273b,#092030 62%,#0b1a2d)}
+.kernel h2{margin:0 0 7px;font-size:21px;letter-spacing:-.025em}
+.kernel h3{font-size:13px;margin:0 0 9px;color:#d2f3ff}
+.kernel-note{font-size:12px;color:#9ec5d4;max-width:900px;line-height:1.65;margin:5px 0 13px}
+.kernel-toolbar,.kernel-buttons{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.kernel-toolbar .btn,.kernel-buttons .btn{min-width:95px;flex:1}
+.kernel-badges{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}
+.kernel-badges>div{background:#071c2d;border:1px solid #2d546c;border-radius:10px;padding:10px;min-width:0}
+.kernel-badges small{display:block;color:#97b8c9;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kernel-badges strong{display:block;margin-top:4px;color:#d5fff9;font:600 14px/1.5 ui-monospace,monospace;overflow-wrap:anywhere}
+.kernel-layout{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(300px,.94fr);gap:12px}
+.kernel-card{border-radius:12px;background:#0b1d30;border:1px solid #315268;padding:13px;min-width:0}
+.kernel-card textarea,.kernel-card input,.kernel-card select{width:100%;background:#071829;color:#daf2ff;border:1px solid #35566c;border-radius:8px;padding:9px}
+#kProgram{min-height:245px;font:12px/1.55 ui-monospace,monospace;resize:vertical;tab-size:2}
+#kShell{font:12px/1.5 ui-monospace,monospace;flex:1;min-width:150px}
+.kernel-shellrow{display:flex;gap:7px;margin:8px 0}
+.kernel-shellrow button{flex:0 0 auto}
+#kTerminal{height:197px;white-space:pre-wrap;overflow:auto;font:11.5px/1.55 ui-monospace,monospace;background:#061626;border:1px solid #2a4d64;padding:11px;border-radius:9px;color:#bce6ce}
+.kernel-split{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.kernel-path{font:11px/1.6 ui-monospace,monospace;overflow-wrap:anywhere;color:#cde5f3}
+.kernel-scroll{max-height:200px;overflow:auto;border:1px solid #29485c;border-radius:9px;background:#061727}
+.kernel-table{width:100%;border-collapse:collapse;font:11px/1.5 ui-monospace,monospace}
+.kernel-table th,.kernel-table td{padding:7px 7px;text-align:left;border-bottom:1px solid #244155;vertical-align:top}
+.kernel-table th{font-size:10px;color:#9cbad0;position:sticky;top:0;background:#10283c}
+.kernel-table tr:last-child td{border-bottom:0}
+.kernel-table .k-kill{font-size:10px;padding:3px 5px;border:1px solid #416077;background:#143049;border-radius:6px;color:#f9c9c9;cursor:pointer}
+#k3d{width:100%;height:255px;border:1px solid #315369;border-radius:10px;background:radial-gradient(ellipse at center,#143a4f,#061626);touch-action:none;cursor:grab}
+.k-progress{height:9px;border-radius:8px;overflow:hidden;background:#061726;border:1px solid #244b5f;margin-top:8px}.k-progress>div{height:100%;width:0;background:linear-gradient(90deg,#58cdbc,#84a9ff)}
+.kernel-file-controls{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:9px}.kernel-file-controls label{min-width:0;flex:1}
+.kernel-file-controls .btn{margin:0;white-space:nowrap}
+.kernel-advisory{color:#a4c0ce;font-size:11px;line-height:1.55;margin:8px 0 0}
+@media(max-width:830px){.kernel-layout{grid-template-columns:1fr}.kernel-badges{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:540px){.kernel{padding:12px}.kernel-badges{grid-template-columns:repeat(2,minmax(0,1fr))}.kernel-split{grid-template-columns:1fr}.kernel-card{padding:11px}.kernel-toolbar .btn,.kernel-buttons .btn{min-width:85px}}
+
+
+.kernel-jump{display:flex;gap:9px;flex-wrap:wrap;margin:11px 0 16px}
+.kernel-jump a{display:inline-flex;align-items:center;justify-content:center;border:1px solid #47718a;border-radius:9px;background:linear-gradient(125deg,#15546b,#174257);color:#e5f9fc;padding:10px 14px;font-size:12px;font-weight:700;text-decoration:none}
+.kernel-jump a:nth-child(2){background:#112d41}
+.kernel-jump a:hover{filter:brightness(1.17)}
+\n/* 11 / Recursive self-hosted source folding and verified controlled mutation */
+.self-engine{margin-top:17px;border:1px solid #438c8b;background:linear-gradient(135deg,#102a35,#0a2030 60%,#142237);border-radius:16px;padding:18px}
+.self-engine h2{font-size:20px;margin:3px 0 8px}.self-caption{font-size:12px;color:#a5cad4;max-width:940px;line-height:1.6}
+.self-grid{display:grid;grid-template-columns:minmax(0,1.13fr) minmax(270px,.87fr);gap:14px;margin-top:14px}
+.self-card{border:1px solid #33586f;border-radius:11px;background:#0a1b2c;padding:13px;min-width:0}
+.self-card h3{margin:0 0 10px;font-size:13px;color:#d3f5fe}.self-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.self-controls label{display:block;font-size:11px;color:#a5c7d5;margin-bottom:5px}.self-controls input,.self-controls select{background:#071522;color:#e3f9ff;border:1px solid #41617a;padding:9px;border-radius:7px;width:100%;min-width:0}
+.self-buttons{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.self-buttons .btn{flex:1;min-width:128px}
+.self-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}.self-metrics>div{padding:9px;background:#071a28;border:1px solid #305a69;border-radius:8px;min-width:0}.self-metrics small{display:block;color:#99b8cb;font-size:10px}.self-metrics strong{display:block;font:600 13px ui-monospace,monospace;word-break:break-all;margin-top:5px}
+.self-progress{height:10px;background:#061626;border:1px solid #256677;border-radius:30px;overflow:hidden;margin:9px 0}.self-progress div{height:100%;width:0;background:linear-gradient(90deg,#67e5d2,#a1adff);transition:width .15s}
+#self3d{width:100%;height:270px;background:#06182b;border:1px solid #376077;border-radius:10px;touch-action:none;cursor:grab}
+#selfTrace{height:185px;overflow:auto;background:#051522;border:1px solid #355366;border-radius:8px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;color:#b7e2eb;font:11px/1.55 ui-monospace,monospace}
+.self-tip{font-size:11px;color:#9dbdcc;line-height:1.55;margin:9px 0 0}.self-import{position:relative;overflow:hidden}.self-import input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+@media(max-width:850px){.self-grid{grid-template-columns:1fr}}@media(max-width:490px){.self-engine{padding:12px}.self-buttons .btn{min-width:120px}#self3d{height:225px}}
+</style>
+</head><body><main class="app">
+<header class="top"><div><div class="eyebrow">Dr Moagi · DM3D Ω · Browser-only research runtime</div><h1>Multimodal 3D ANN · Browser Kernel</h1><p>Generate, ingest, losslessly encode, decode, and verify text, images, audio, video frames, and arbitrary files. Inspect their 90-bit-addressed 3D projection and train a small shared latent neural network directly on-device.</p></div><div class="tag">● Local-first · Offline · No external libraries</div></header>
+<nav class="kernel-jump" aria-label="Jump to processing engine"><a href="#kernelStudio">Open 3D Kernel / Console ↓</a><a href="#millionStudio">Open million-cycle processor ↓</a></nav>
+<div class="stats">
+ <div class="stat"><label>Virtual 3D voxel addresses</label><strong>2<sup>90</sup></strong><small>2<sup>30</sup> coordinates per axis; sparse only</small></div>
+ <div class="stat"><label>Source bytes</label><strong id="sourceSize">0 B</strong><small id="sourceMeta">No source loaded</small></div>
+ <div class="stat"><label>Lossless archive</label><strong id="archiveSize">—</strong><small id="compression">Encoder not run</small></div>
+ <div class="stat"><label>Round-trip</label><strong id="roundtrip">—</strong><small id="roundtripInfo">Exact byte comparison</small></div>
+</div>
+<div class="layout"><div>
+ <section class="viewer"><div class="viewer-top"><h2>01 / 3D sparse media projection</h2><div class="mode-row"><button id="viewOriginal" aria-pressed="true">Source</button><button id="viewDecoded" aria-pressed="false" disabled>Decoded</button><button id="spin">Spin: off</button></div></div><canvas id="scene" aria-label="Rotatable virtual 3D sampled voxel field"></canvas><div class="viewer-bottom"><span>Drag to orbit · Scroll to zoom · Up to 4,096 sampled bytes</span><span id="voxelCount">0 sparse nonzero voxels</span></div></section>
+ <section class="panel"><h2>02 / Media input and generation</h2><div class="tabs" role="tablist" aria-label="Media modality">
+ <button class="tab" data-tab="text" aria-selected="true">Text</button><button class="tab" data-tab="image" aria-selected="false">Image</button><button class="tab" data-tab="audio" aria-selected="false">Audio</button><button class="tab" data-tab="video" aria-selected="false">Video</button><button class="tab" data-tab="binary" aria-selected="false">Binary</button></div>
+ <div id="textOptions"><div class="field"><label for="textInput">UTF-8 text / source code</label><textarea id="textInput" spellcheck="false">DM3D Ω — Multimodal virtual machine.
+Encode → decode → verify.
+A learned latent code is approximate; a lossless archive is exact.</textarea></div></div>
+ <div id="imageOptions" hidden><p class="sub">Generated image: procedural 256 × 256 color field, saved as PNG.</p></div>
+ <div id="audioOptions" hidden><p class="sub">Generated audio: two-second, 22.05 kHz, 16-bit mono WAV synthesized locally.</p></div>
+ <div id="videoOptions" hidden><p class="sub">Generated video: 24 lossless 96 × 72 RGB animation frames, playable in this studio. This is not an MP4/WebM file.</p></div>
+ <div id="binaryOptions" hidden><p class="sub">Generated binary: deterministic pattern of 32 KiB. You can also import any file type.</p></div>
+ <div class="field"><label for="seed">Generator seed</label><input id="seed" type="number" value="2026" min="0" max="4294967295" step="1"></div>
+ <div class="actions"><button id="generate" class="btn primary">Generate selected medium</button><label class="btn filewrap">Import media / any file<input id="mediaFile" type="file" accept="*/*"></label></div>
+ <div class="tiny" style="margin-top:8px">Imports preserve original file bytes, name, and MIME type. Per-file safety limit: 24 MiB.</div></section>
+ <section class="panel"><h2>03 / Source ↔ reconstructed media</h2><div class="preview-pair"><div class="preview-box"><h3>ORIGINAL SOURCE</h3><div id="sourcePreview">No source</div></div><div class="preview-box"><h3>EXACT DECODE</h3><div id="outputPreview">Not decoded</div></div></div>
+ <div class="actions" style="margin-top:10px"><button class="btn purple" id="encode">Encode archive</button><button class="btn" id="decode" disabled>Decode & verify</button></div>
+ <div class="actions" style="margin-top:8px"><button class="btn ghost" id="saveArchive" disabled>Export .dmxm</button><label class="btn filewrap">Import .dmxm<input id="archiveFile" type="file" accept=".dmxm,application/octet-stream"></label><button class="btn ghost" id="saveDecoded" disabled>Export recovered source</button></div>
+ <p id="status" class="status" aria-live="polite">Initializing…</p>
+ </section>
+ <section class="panel"><h2>04 / ANN latent field · trainable 64 → 12 → 64</h2>
+ <p class="sub">A real, local, trainable neural autoencoder learns byte-window statistics. Its reconstruction is <strong>lossy</strong>; it does not replace the exact archive.</p>
+ <div class="field"><label for="trainSteps">Gradient updates <output id="stepLabel">400</output></label><input id="trainSteps" type="range" min="100" max="1600" value="400" step="100"></div>
+ <div class="actions"><button class="btn purple" id="trainANN">Train ANN on source</button><button class="btn" id="resetANN">Reset weights</button></div>
+ <div class="canvas-strip" style="margin-top:11px"><div><label class="tiny">Input bytes: 8 × 8 window</label><canvas width="160" height="100" id="annInput"></canvas></div><div><label class="tiny">ANN decoded approximation</label><canvas width="160" height="100" id="annOutput"></canvas></div></div>
+ <div class="kv" style="margin-top:10px"><span>Train steps completed</span><span id="annSteps">0</span><span>Current window MSE</span><span id="annLoss">—</span><span>Fitness · 8-window MSE</span><span id="fitness">—</span><span>Accepted / rejected cycles</span><span id="accepted">0 / 0</span><span>Latent dimension</span><span>12 floats</span></div>
+ <div class="hr"></div><div class="field"><label for="latentMode">ANN-driven media synthesis</label><select id="latentMode"><option value="text">Text pattern</option><option value="image">PNG image</option><option value="audio">WAV audio</option><option value="video">Animated RGB frames</option><option value="binary">Binary</option></select></div>
+ <div class="field"><label for="variation">Latent variation <output id="variationLabel">0.20</output></label><input type="range" min="0" max="1" step="0.05" value="0.2" id="variation"></div>
+ <button class="btn primary full" id="synthesize">Generate from learned latent</button>
+ </section>
+ </div><div>
+ <section class="panel"><h2>05 / Executable virtual-machine pipeline</h2><p class="sub">Bounded instruction interpreter. Each instruction calls an implemented operation; no <code>eval</code> or arbitrary user script execution.</p>
+ <div class="field"><label for="program">VM program · one instruction per line</label><textarea id="program" spellcheck="false" style="min-height:205px">MAP3D
+ENCODE
+DECODE
+VERIFY
+TRAIN 250
+LATENT
+HALT</textarea></div><div class="actions"><button id="runVM" class="btn primary">Run VM program</button><button id="selfTest" class="btn">Run self-tests</button></div><p class="tiny">Allowlist: GENERATE TEXT|IMAGE|AUDIO|VIDEO|BINARY, MAP3D, ENCODE, DECODE, VERIFY, TRAIN n, LATENT, HALT. Max 30 instructions, 500 training steps / instruction.</p>
+ <div class="hr"></div><h2>VM register state</h2><div class="kv"><span>R0 · original size</span><span id="r0">0</span><span>R1 · archive size</span><span id="r1">0</span><span>R2 · bytewise verified</span><span id="r2">0</span><span>R3 · active voxels</span><span id="r3">0</span><span>R4 · ANN loss</span><span id="r4">—</span><span>PC · instructions executed</span><span id="pc">0</span></div></section>
+ <section class="panel"><h2>06 / Invariant & integrity audit</h2><div class="kv"><span>Encoder</span><span id="codec">—</span><span>Archive CRC-32</span><span id="crc">—</span><span>Source CRC-32</span><span id="sourceCRC">—</span><span>Source SHA-256</span><span id="sha">—</span><span>Encode latency</span><span id="et">—</span><span>Decode latency</span><span id="dt">—</span><span>90-bit Morton invertibility</span><span id="mortonStatus">—</span><span>Browser codec support</span><span id="gzip">—</span></div></section>
+ <section class="panel"><h2>07 / Execution and test log</h2><div id="log" class="output" role="log" aria-live="polite">Engine booting…</div></section>
+ <section class="panel"><h2>08 / Media interoperability</h2><p class="sub">Exact archives can be exported and reimported on another device supporting this HTML engine. Images, WAV audio and native imported video can be previewed with built-in browser decoders. Generated video is a frame-sequence container; use the optional recording facility to make WebM if the browser supports it.</p><button class="btn ghost full" id="recordVideo" disabled>Record generated frames as WebM (optional)</button><p class="tiny">If unavailable, frame playback and exact .dmxm archive export still work.</p></section>
+ </div></div>
+
+<section class="million" id="millionStudio">
+  <div class="eyebrow">09 / deterministic code-line processor · virtual Ω³</div>
+  <h2>1,000,000 real 3D encode → decode → verify cycles</h2>
+  <p>Process up to one million generated HTML source lines or 64-byte windows of the active multimodal source. Every counted cycle executes both reversible transforms and verifies every original byte. Work is chunked to keep the page responsive; ANN training is a separate, measured approximation.</p>
+  <div class="ml-wrap">
+    <div>
+      <div class="ml-controls">
+        <div class="field"><label for="mlCount">Iterations / lines</label><input type="number" id="mlCount" min="1" max="1000000" step="1" value="1000000"></div>
+        <div class="field"><label for="mlMode">Source mode</label><select id="mlMode"><option value="lines">Generated HTML lines</option><option value="media">Active media byte windows</option></select></div>
+        <div class="field"><label for="mlANNRate">ANN update interval</label><select id="mlANNRate"><option selected value="auto">Genome selected</option><option value="256">Every 256</option><option value="1024">Every 1,024</option><option value="4096">Every 4,096</option><option value="0">ANN disabled</option></select></div>
+      </div>
+      <div class="field"><label for="mlEditor">Template HTML lines — editable source for the 1M-line generator</label><textarea id="mlEditor" spellcheck="false"><article class="dm3d-cell">Dr Moagi Ω³ :: ANN encoder / decoder</article>
+<output data-state="verified">Round-trip conservation</output>
+<span class="latent">64 → 12 → 64 · approximate ANN</span></textarea></div>
+      <p class="ml-hint">In line mode, each iteration generates a distinct address-labelled HTML line from the template, then encodes, decodes, and compares that actual line. Every 1,048,576 Morton indices form a 128 × 128 × 64 logical lattice mapped into the virtual 30-bit axes.</p>
+      <div class="ml-buttons">
+        <button id="mlStart" class="btn primary">Run 1M cycles</button>
+        <button id="mlPause" class="btn" disabled>Pause</button>
+        <button id="mlStop" class="btn" disabled>Stop</button>
+        <button id="mlTest" class="btn ghost">Test codec</button>
+      </div>
+      <div class="ml-progress" role="progressbar" aria-label="Million-cycle execution progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="mlProgress"><div class="ml-fill" id="mlFill"></div></div>
+      <div class="ml-small"><span id="mlPhase">Idle · configured for 1,000,000 cycles</span><span id="mlPercent">0.00%</span></div>
+      <div class="ml-status">
+        <div><label>Verified cycles</label><strong id="mlDone">0</strong></div>
+        <div><label>Failed cycles</label><strong id="mlFails">0</strong></div>
+        <div><label>Encode + decode rate</label><strong id="mlRate">—</strong></div>
+        <div><label>Data processed</label><strong id="mlBytes">0 B</strong></div>
+        <div><label>Lossless codec</label><strong id="mlCodec">raw / RLE</strong></div>
+        <div><label>ANN accepted / rejected</label><strong id="mlAccepted">0 / 0</strong></div>
+        <div><label>ANN measured MSE</label><strong id="mlLoss">—</strong></div>
+        <div><label>Verified rolling digest</label><strong id="mlHash">0x811c9dc5</strong></div>
+      </div>
+      <div class="ml-buttons"><button id="mlReport" class="btn ghost" disabled>Download audit JSON</button><button id="mlExport" class="btn ghost">Export generated HTML.gz</button></div>
+      <p class="ml-hint">Export builds the requested number of HTML lines independently and gzip-compresses them on-device. It requires browser CompressionStream support. The generated file may be large when decompressed. The rolling digest is a noncryptographic audit checksum, not a cryptographic proof.</p>
+      <div id="mlLog" role="status" aria-live="polite" class="ml-console">Engine online · no million-cycle job run yet.</div>
+    </div>
+    <div>
+      <div class="ml-small"><strong>3D Morton occupancy</strong><span id="mlGridLabel">0 / 1,048,576 logical cells visited</span></div>
+      <canvas id="ml3d" width="640" height="470" aria-label="Interactive 3D rendering of spatially distributed tested cells"></canvas>
+      <p class="ml-hint">Orbit by dragging. The visualization aggregates verified iterations into a bounded 8³ sparse-bin display; it is not a real-time rendering of a trillion-gigabyte memory allocation.</p>
+      <div class="kv"><span>Axis coordinate range</span><span>[0, 2³⁰ − 1]³</span><span>90-bit Morton addressing</span><span id="mlMorton">Ready</span><span>Last virtual address</span><span id="mlAddress">—</span><span>Execution state</span><span id="mlState">IDLE</span><span>ANN dimensions</span><span>64 → 12 → 64</span><span>Working buffers</span><span>Reused · bounded</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="kernel" id="kernelStudio">
+  <div class="eyebrow">10 / DM3D Ω · local-first, browser-sandboxed virtual kernel</div>
+  <h2>3D Multimodal ANN Kernel · KERNEL/1</h2>
+  <p class="kernel-note">A functioning user-space kernel emulator: boot services, bounded bytecode assembler, cooperative round-robin CPU scheduler, isolated process registers, 90-bit sparse 3D memory, persistent virtual files, exact multimedia syscalls, trainable ANN and million-cycle verification. Runs wholly inside this HTML file without privileged OS access.</p>
+  <div class="kernel-toolbar">
+    <button class="btn primary" id="kBoot">Boot kernel</button>
+    <button class="btn" id="kPause">Pause scheduler</button>
+    <button class="btn" id="kStep">Single-step CPU</button>
+    <button class="btn ghost" id="kClear">Reset volatile state</button>
+    <button class="btn purple" id="kTest">End-to-end kernel test</button>
+  </div>
+  <div class="kernel-badges">
+    <div><small>Kernel status</small><strong id="kBootState">OFFLINE</strong></div>
+    <div><small>Processes · active</small><strong id="kProcCount">0</strong></div>
+    <div><small>Instructions executed</small><strong id="kInstructions">0</strong></div>
+    <div><small>Sparse 3D memory</small><strong id="kVoxelCount">0 voxels</strong></div>
+    <div><small>Virtual file system</small><strong id="kFileSize">0 B</strong></div>
+  </div>
+  <div class="kernel-layout">
+    <div>
+      <div class="kernel-card">
+        <h3>Programmable kernel bytecode · bounded KASM</h3>
+        <div class="field"><label for="kProgram">Source assembler — edit and execute (no JavaScript eval)</label>
+        <textarea id="kProgram" spellcheck="false"># DM3D Ω: end-to-end operating program
+LOAD /input/hello.txt
+ENCODE /output/hello.dmxm
+DECODE /output/hello.dmxm
+VERIFY
+VSET 16 32 64 221
+VGET 16 32 64 R0
+ANNTRAIN 32
+ANNGENERATE /output/latent.bin
+BENCH 10000
+MSTORE /output/memory.d3ae
+PRINT End-to-end codec, ANN, 3D and benchmark complete
+HALT</textarea></div>
+        <div class="kernel-buttons">
+          <button class="btn primary" id="kRun">Compile &amp; schedule</button>
+          <button class="btn" id="kStoreProgram">Save source</button>
+          <button class="btn" id="kLoadProgram">Load source</button>
+          <button class="btn ghost" id="kSample">Load 1M benchmark program</button>
+        </div>
+        <div class="kernel-advisory">ISA: LOAD, GENERATE, ENCODE, DECODE, VERIFY, SAVE, VSET, VGET, VDEL, VCOUNT, MSTORE, MLOAD, ANNTRAIN, ANNGENERATE, BENCH, MOV, ADD, DEC, JMP, JNZ, PRINT, SLEEP, YIELD, HASH, HALT. Maximum 256 instructions per process and 2,000,000 dispatched instructions; no arbitrary script execution.</div>
+      </div>
+      <div class="kernel-card" style="margin-top:11px">
+        <h3>Kernel command console</h3>
+        <div id="kTerminal" role="log" aria-live="polite">Boot pending…</div>
+        <form id="kShellForm" class="kernel-shellrow"><input id="kShell" aria-label="Kernel console command" autocomplete="off" spellcheck="false" placeholder="help · ls · ps · mem · test"><button type="submit" class="btn primary">Execute</button></form>
+        <div class="kernel-buttons"><button id="kAudit" class="btn ghost">Export audit JSON</button><button id="kAttach" class="btn">Attach studio media</button></div>
+      </div>
+    </div>
+    <div>
+      <div class="kernel-card">
+        <h3>Process scheduler · independent program counters</h3>
+        <div class="kernel-scroll"><table class="kernel-table"><thead><tr><th>PID</th><th>State</th><th>PC</th><th>Opcode / progress</th><th></th></tr></thead><tbody id="kProcessRows"><tr><td colspan="5">No jobs loaded</td></tr></tbody></table></div>
+        <div class="k-progress"><div id="kProgressBar"></div></div>
+        <p class="kernel-advisory" id="kCurrentTask">No active process · cooperative time slicing</p>
+      </div>
+      <div class="kernel-card" style="margin-top:11px">
+        <h3>3D virtual memory / 90-bit Morton mapping</h3>
+        <canvas id="k3d" aria-label="Rotatable projection of sparse 90-bit Morton-indexed virtual memory"></canvas>
+        <p class="kernel-advisory">Drag to orbit, scroll to zoom. Visualizes populated addresses only; each axis admits 2³⁰ coordinates. Sparse map capped at 16,384 nonzero cells.</p>
+        <div class="kv"><span>Last Morton key</span><span class="kernel-path" id="kMorton">—</span><span>Memory self-check</span><span id="kMemCheck">—</span><span>ANN trainable weights</span><span>64 → 12 → 64</span><span>Filesystem persistence</span><span id="kPersist">Detecting…</span></div>
+      </div>
+      <div class="kernel-card" style="margin-top:11px">
+        <h3>Persistent virtual filesystem</h3>
+        <div class="kernel-scroll"><table class="kernel-table"><thead><tr><th>Path</th><th>Size</th><th>Mode</th></tr></thead><tbody id="kFileRows"><tr><td colspan="3">No files</td></tr></tbody></table></div>
+        <div class="kernel-file-controls"><input id="kPath" aria-label="Virtual file path" value="/input/hello.txt" spellcheck="false"><button class="btn" id="kDownload">Export file</button></div>
+        <div class="kernel-file-controls"><label class="btn filewrap">Import physical file into VFS<input id="kImport" type="file" accept="*/*"></label><button class="btn ghost" id="kDelete">Delete path</button></div>
+        <p class="kernel-advisory">IndexedDB-backed when supported; otherwise session memory. Per-file cap 25 MiB; total virtual-file cap 64 MiB. Files remain under browser origin storage, not operating-system root.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="self-engine" id="selfStudio">
+ <div class="eyebrow">11 / Ω³ ∮ verified inward self-hosting</div>
+ <h2>Recursive HTML/JS Kernel · Self-Encode → Decode → Audit → Clone</h2>
+ <p class="self-caption">The running engine snapshots its own executable HTML/JavaScript source, compresses and exactly reconstructs that source, validates a new copy inside an origin-isolated sandbox, and optionally tests bounded scheduler-genome mutations. Accepted source becomes the next round's input. Rejected revisions never overwrite the current kernel.</p>
+ <div class="self-grid">
+  <div>
+   <div class="self-card">
+    <h3>Source recursion controller</h3>
+    <div class="self-controls">
+     <div><label for="selfRounds">Inward recursion depth</label><input type="number" id="selfRounds" value="3" min="1" max="12" step="1"></div>
+     <div><label for="selfMode">Acceptance policy</label><select id="selfMode"><option value="verify" selected>Verified self-copy (immutable)</option><option value="evolve">Fitness-gated batch tuning</option></select></div>
+    </div>
+    <div class="self-buttons"><button class="btn primary" id="selfRun">Run inward loop</button><button class="btn" id="selfCapture">Refresh source snapshot</button><button class="btn ghost" id="selfStop" disabled>Stop</button></div>
+    <div class="self-progress" role="progressbar" aria-label="Self-hosting recursion progress" id="selfProgress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div id="selfFill"></div></div>
+    <div id="selfPhase" class="self-tip" role="status">Ready · verified code replication, no autonomous unrestricted code rewriting.</div>
+    <div class="self-metrics">
+      <div><small>Source bytes</small><strong id="selfBytes">—</strong></div>
+      <div><small>Exact round trips</small><strong id="selfPasses">0</strong></div>
+      <div><small>Accepted / rejected revisions</small><strong id="selfAccept">0 / 0</strong></div>
+      <div><small>90-bit 3D addresses checked</small><strong id="selfAddresses">0</strong></div>
+      <div><small>Source SHA-256</small><strong id="selfSha">—</strong></div>
+      <div><small>Current kernel genome</small><strong id="selfGenomeLabel">batch=2048 · stride=1024</strong></div>
+    </div>
+    <div class="self-buttons"><button class="btn" id="selfClone">Export executable HTML clone</button><button class="btn" id="selfArchive">Export lossless .dmxm archive</button><button class="btn" id="selfAudit">Export audit JSON</button><label class="btn self-import">Import exact HTML file<input id="selfImport" type="file" accept=".html,.htm,text/html"></label></div>
+    <p class="self-tip">SHA-256 covers the active self-source bytes. A DOM-derived snapshot preserves an executable page but need not match the original file's bytes. Import the original HTML file to verify its exact bytes. Testing runs in a sandboxed iframe without same-origin privileges. Downloading a clone does not replace the current file on disk.</p>
+   </div>
+   <div class="self-card" style="margin-top:11px"><h3>Reversible self-recursion audit</h3><div id="selfTrace" role="log" aria-live="polite">BOOTSTRAP · source reflection is available.</div></div>
+  </div>
+  <div>
+   <div class="self-card"><h3>3D inward recursion &amp; source attractor view</h3><canvas id="self3d" aria-label="Rotatable 3D nested self-recursion visualization"></canvas><p class="self-tip">Drag to rotate. Each nested shell denotes one measured encode/decode/reconstruction round; green passes and amber rejected revisions are measured, not predicted.</p><div class="kv"><span>Virtual source-address geometry</span><span>30 bits per axis / 90-bit Morton</span><span>Reconstruction property</span><span>Exact byte-for-byte identity</span><span>Mutation boundary</span><span>Scheduler genome only</span><span>Execution boundary</span><span>Browser sandbox</span></div></div>
+  </div>
+ </div>
+</section>
+
+<footer><strong>Engineering boundaries.</strong> The logical address space is (2<sup>30</sup>)<sup>3</sup> = 2<sup>90</sup> locations, not 2<sup>90</sup> bytes of allocated RAM. The 3D view is a sampled projection of at most 4,096 source bytes, not full-volume storage. <strong>Lossless guarantee applies to a valid .dmxm archive</strong> via exact byte comparison on locally produced archives (and checksums on imported archives); CRC-32 and SHA-256 are integrity aids, not authenticated encryption. The trainable ANN is an illustrative shared byte-level autoencoder, not a pretrained semantic multimodal foundation model. Generated animations are RGB frame sequences, not standard MP4 files. Imported files are processed locally and never uploaded.</footer>
+</main>
+<script id="dmSelfGenome" type="application/json">{"schema":"DM3D-SELF-GENOME-1","version":1,"round":0,"batch":2048,"annStride":1024,"parentSHA256":null}</script>
+<script>
+/* DM3D Core: independent from the UI; exportable for automated tests. */
+(function (root) {
+ 'use strict';
+ const AXIS_BITS = 30;
+ const AXIS = 2 ** AXIS_BITS;
+ const MAX_KEY = (1n << 90n) - 1n;
+ const MAX_ENTRIES = 16384;
+ const HEADER_SIZE = 24;
+ const SPREAD10 = new Array(1024);
+ for (let n=0;n<1024;n++) {
+   let s=0n;
+   for (let b=0;b<10;b++) if ((n >>> b) & 1) s |= 1n << BigInt(3*b);
+   SPREAD10[n]=s;
+ }
+ function assertCoordinate(n) {
+   if (!Number.isSafeInteger(n) || n<0 || n>=AXIS) throw new Error('Coordinates must be integers in [0, 2^30).');
+ }
+ function morton(x,y,z) {
+   assertCoordinate(x); assertCoordinate(y); assertCoordinate(z);
+   let result=0n;
+   for (let chunk=0;chunk<3;chunk++) {
+     const shift=10*chunk;
+     const digit=SPREAD10[(x >>> shift)&1023] | (SPREAD10[(y >>> shift)&1023]<<1n) | (SPREAD10[(z >>> shift)&1023]<<2n);
+     result |= digit << BigInt(30*chunk);
+   }
+   return result;
+ }
+ function unmorton(key) {
+   if (typeof key!=='bigint' || key<0n || key>MAX_KEY) throw new Error('Invalid 90-bit Morton address.');
+   let x=0,y=0,z=0;
+   for (let chunk=0;chunk<3;chunk++) {
+     const digits=Number((key >> BigInt(30*chunk)) & 0x3fffffffn);
+     for (let b=0;b<10;b++) {
+       const at=10*chunk+b;
+       x |= ((digits >>> (3*b))&1) << at;
+       y |= ((digits >>> (3*b+1))&1) << at;
+       z |= ((digits >>> (3*b+2))&1) << at;
+     }
+   }
+   return [x,y,z];
+ }
+ function entriesSorted(map) {
+   if (!(map instanceof Map)) throw new Error('Expected a voxel Map.');
+   if (map.size>MAX_ENTRIES) throw new Error('Maximum populated voxel count exceeded.');
+   const items=Array.from(map.entries());
+   items.sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0);
+   let prev=-1n;
+   for (const [key,value] of items) {
+     if (typeof key!=='bigint' || key<0n || key>MAX_KEY || key<=prev || !Number.isInteger(value) || value<1 || value>255) throw new Error('Invalid key or value: sparse values must be 1…255.');
+     prev=key;
+   }
+   return items;
+ }
+ function pushVarint(target, n) {
+   if (n<0n || n>MAX_KEY) throw new Error('Varint out of range.');
+   do {
+     let b=Number(n & 127n);n >>= 7n;
+     if (n!==0n) b|=128;
+     target.push(b);
+   } while (n!==0n);
+ }
+ function readVarint(bytes, state) {
+   let n=0n;
+   for (let i=0;i<13;i++) {
+     if (state.i>=bytes.length) throw new Error('Truncated varint.');
+     const b=bytes[state.i++];
+     n |= BigInt(b & 127) << BigInt(i*7);
+     if (n>MAX_KEY) throw new Error('Varint exceeds 90 bits.');
+     if ((b & 128)===0) return n;
+   }
+   throw new Error('Unterminated varint.');
+ }
+ const CRC_TABLE=new Uint32Array(256);
+ for(let i=0;i<256;i++) {
+   let v=i;
+   for(let j=0;j<8;j++)v=(v&1)?((v>>>1)^0xedb88320):(v>>>1);
+   CRC_TABLE[i]=v>>>0;
+ }
+ function crc32(bytes) {
+   let c=0xffffffff;
+   for(let i=0;i<bytes.length;i++) c=CRC_TABLE[(c^bytes[i])&255]^(c>>>8);
+   return (c^0xffffffff)>>>0;
+ }
+ function encodeDelta(items) {
+   const data=[];let prev=0n;
+   for (const [key,v] of items) { pushVarint(data,key-prev);data.push(v);prev=key; }
+   return new Uint8Array(data);
+ }
+ function encodeRuns(items) {
+   const data=[];let i=0,prev=0n;
+   while(i<items.length) {
+     const [firstKey,value]=items[i];
+     let len=1;
+     while(i+len<items.length && items[i+len][1]===value && items[i+len][0]===firstKey+BigInt(len)) len++;
+     pushVarint(data,firstKey-prev);pushVarint(data,BigInt(len));data.push(value);
+     prev=firstKey+BigInt(len-1);i+=len;
+   }
+   return new Uint8Array(data);
+ }
+ function encode(map) {
+   const items=entriesSorted(map);
+   const delta=encodeDelta(items),runs=encodeRuns(items);
+   const codec=runs.length<delta.length?1:0;
+   const payload=codec===1?runs:delta;
+   const bytes=new Uint8Array(HEADER_SIZE+payload.length);
+   bytes.set([68,51,65,69,1,codec,30,0],0); // D3AE / v1 / codec / axis bits / flags
+   const view=new DataView(bytes.buffer);
+   view.setUint32(8,items.length,true);
+   view.setUint32(12,payload.length,true);
+   const crc=crc32(payload);
+   view.setUint32(16,crc,true);
+   view.setUint32(20,0,true);
+   bytes.set(payload,HEADER_SIZE);
+   return {bytes,codec:codec===0?'Morton delta-varint':'Morton delta + RLE',crc,rawBytes:HEADER_SIZE+items.length*13};
+ }
+ function decode(binary) {
+   const bytes=binary instanceof Uint8Array?binary:new Uint8Array(binary);
+   if(bytes.byteLength<HEADER_SIZE) throw new Error('Header truncated.');
+   if(bytes[0]!==68 || bytes[1]!==51 || bytes[2]!==65 || bytes[3]!==69) throw new Error('Invalid D3AE magic.');
+   if(bytes[4]!==1 || (bytes[5]!==0 && bytes[5]!==1) || bytes[6]!==30 || bytes[7]!==0) throw new Error('Unsupported version, codec, or axis layout.');
+   const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+   const count=view.getUint32(8,true),length=view.getUint32(12,true),expected=view.getUint32(16,true);
+   if(view.getUint32(20,true)!==0) throw new Error('Reserved header bits must be zero.');
+   if(count>MAX_ENTRIES) throw new Error('File exceeds safety cap of 16,384 voxels.');
+   if(length!==bytes.length-HEADER_SIZE) throw new Error('Payload length mismatch.');
+   const payload=bytes.subarray(HEADER_SIZE), actual=crc32(payload);
+   if(expected!==actual) throw new Error('CRC-32 mismatch: binary payload is corrupted.');
+   const map=new Map(),state={i:0};let prev=0n,produced=0;
+   while(produced<count) {
+     const delta=readVarint(payload,state);
+     if(produced>0 && delta===0n) throw new Error('Unsorted or duplicated Morton address.');
+     const first=prev+delta;
+     if(first>MAX_KEY) throw new Error('Morton address overflow.');
+     let run=1;
+     if(bytes[5]===1) {
+       const value=readVarint(payload,state);
+       if(value<1n || value>BigInt(count-produced)) throw new Error('Invalid RLE count.');
+       run=Number(value);
+     }
+     if(state.i>=payload.length) throw new Error('Truncated voxel data.');
+     const value=payload[state.i++];
+     if(value===0) throw new Error('Zero-valued entry violates sparse canonical encoding.');
+     if(first+BigInt(run-1)>MAX_KEY) throw new Error('Run exceeds 90-bit address space.');
+     for(let j=0;j<run;j++) map.set(first+BigInt(j),value);
+     produced+=run; prev=first+BigInt(run-1);
+   }
+   if(state.i!==payload.length) throw new Error('Trailing payload bytes.');
+   if(map.size!==count) throw new Error('Duplicate address in decoded field.');
+   return {map,crc:actual,codec:bytes[5]===0?'Morton delta-varint':'Morton delta + RLE'};
+ }
+ function equalMaps(a,b) {
+   if(a.size!==b.size) return false;
+   for(const [key,value] of a) if(b.get(key)!==value) return false;
+   return true;
+ }
+ function fingerprint(map) {
+   // Non-cryptographic 64-bit FNV-1a over canonical 12-byte Morton key + 1-byte value.
+   let h=0xcbf29ce484222325n;
+   const mask=(1n<<64n)-1n;
+   for(const [key,value] of entriesSorted(map)) {
+     let k=key;
+     for(let j=0;j<12;j++) {h=((h ^ (k&255n))*0x100000001b3n)&mask;k >>= 8n;}
+     h=((h^BigInt(value))*0x100000001b3n)&mask;
+   }
+   return h.toString(16).padStart(16,'0');
+ }
+ root.DM3DCore={AXIS,AXIS_BITS,MAX_KEY,MAX_ENTRIES,morton,unmorton,encode,decode,equalMaps,fingerprint,crc32};
+})(window);
+</script>
+<script>
+/* DMXM v1 exact multimedia archive: byte-preserving; independently tested. */
+(function(root){
+'use strict';
+const HEAD=36, MAX=24*1024*1024, MODES=['text','image','audio','video','binary'],NAMES=['raw','packbits','delta+packbits','gzip'];
+const enc=new TextEncoder(),dec=new TextDecoder('utf-8',{fatal:true});
+function requireBytes(x){if(!(x instanceof Uint8Array))throw Error('Expected Uint8Array bytes.');if(x.length>MAX)throw Error('Source exceeds 24 MiB cap.');}
+function same(a,b){if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
+function delta(a){const b=new Uint8Array(a.length);let prev=0;for(let i=0;i<a.length;i++){b[i]=(a[i]-prev+256)&255;prev=a[i];}return b;}
+function undelta(a){const b=new Uint8Array(a.length);let prev=0;for(let i=0;i<a.length;i++){prev=(prev+a[i])&255;b[i]=prev;}return b;}
+function rleEncode(src){const out=[];let i=0;while(i<src.length){let run=1;while(run<130&&i+run<src.length&&src[i+run]===src[i])run++;if(run>=3){out.push(128+(run-3),src[i]);i+=run;continue;}const start=i;i++;while(i<src.length&&i-start<128){run=1;while(run<3&&i+run<src.length&&src[i+run]===src[i])run++;if(run>=3)break;i++;}out.push(i-start-1);for(let j=start;j<i;j++)out.push(src[j]);}return Uint8Array.from(out);}
+function rleDecode(src,limit){const out=new Uint8Array(limit);let i=0,p=0;while(i<src.length){const tag=src[i++];if(tag<128){const len=tag+1;if(i+len>src.length||p+len>limit)throw Error('Malformed literal segment.');out.set(src.subarray(i,i+len),p);i+=len;p+=len;}else{const len=tag-128+3;if(i>=src.length||p+len>limit)throw Error('Malformed run segment.');out.fill(src[i++],p,p+len);p+=len;}}if(p!==limit)throw Error('Decoded length mismatch.');return out;}
+async function gzip(data){if(!('CompressionStream' in root))return null;const stream=new Blob([data]).stream().pipeThrough(new CompressionStream('gzip'));const out=new Uint8Array(await new Response(stream).arrayBuffer());return out;}
+async function gunzip(data){if(!('DecompressionStream' in root))throw Error('This browser cannot open gzip-packed archives.');const stream=new Blob([data]).stream().pipeThrough(new DecompressionStream('gzip'));const out=new Uint8Array(await new Response(stream).arrayBuffer());if(out.length>MAX)throw Error('Unpacked data exceeds safety cap.');return out;}
+function canonMeta(meta,mode){const data={name:String(meta.name||'media.bin').slice(0,180),mime:String(meta.mime||'application/octet-stream').slice(0,140),kind:String(meta.kind||'native').slice(0,40)};if(meta.width!==undefined)data.width=Number(meta.width);if(meta.height!==undefined)data.height=Number(meta.height);if(meta.frames!==undefined)data.frames=Number(meta.frames);if(meta.fps!==undefined)data.fps=Number(meta.fps);return data;}
+function validateMeta(meta,mode){if(!meta||typeof meta!=='object'||typeof meta.name!=='string'||typeof meta.mime!=='string'||typeof meta.kind!=='string')throw Error('Invalid metadata.');if(meta.kind==='frames-rgb'){if(mode!=='video')throw Error('Frame payload requires video modality.');if(!Number.isInteger(meta.width)||!Number.isInteger(meta.height)||!Number.isInteger(meta.frames)||!Number.isInteger(meta.fps)||meta.width<1||meta.width>512||meta.height<1||meta.height>512||meta.frames<1||meta.frames>120||meta.fps<1||meta.fps>60)throw Error('Invalid frame geometry.');}}
+async function encode(bytes,mode,metadata={}){
+ requireBytes(bytes);if(!MODES.includes(mode))throw Error('Unknown modality.');const meta=canonMeta(metadata,mode);validateMeta(meta,mode);
+ if(meta.kind==='frames-rgb'&&bytes.length!==meta.width*meta.height*meta.frames*3)throw Error('Frame geometry and buffer length mismatch.');
+ let best=bytes,codec=0;const p=rleEncode(bytes);if(p.length<best.length){best=p;codec=1;}const q=rleEncode(delta(bytes));if(q.length<best.length){best=q;codec=2;}
+ try{const gz=await gzip(bytes);if(gz&&gz.length<best.length){best=gz;codec=3;}}catch(e){}
+ const metaBytes=enc.encode(JSON.stringify(meta));if(metaBytes.length>8192)throw Error('Metadata too large.');
+ const out=new Uint8Array(HEAD+metaBytes.length+best.length);out.set([68,77,88,77,1,codec,MODES.indexOf(mode),0]);const d=new DataView(out.buffer);
+ d.setUint32(8,bytes.length,true);d.setUint32(12,best.length,true);d.setUint32(16,metaBytes.length,true);
+ d.setUint32(20,root.DM3DCore.crc32(bytes),true);d.setUint32(24,root.DM3DCore.crc32(best),true);d.setUint32(28,root.DM3DCore.crc32(metaBytes),true);d.setUint32(32,0,true);
+ out.set(metaBytes,HEAD);out.set(best,HEAD+metaBytes.length);return{archive:out,codec:NAMES[codec],metadata:meta,crc:root.DM3DCore.crc32(bytes)};
+}
+async function decode(data){const b=data instanceof Uint8Array?data:new Uint8Array(data);if(b.length<HEAD)throw Error('Truncated DMXM header.');if(b[0]!==68||b[1]!==77||b[2]!==88||b[3]!==77||b[4]!==1||b[5]>3||b[6]>=MODES.length||b[7]!==0)throw Error('Invalid DMXM header, version, modality, or codec.');
+ const d=new DataView(b.buffer,b.byteOffset,b.byteLength);const originalLength=d.getUint32(8,true),payloadLength=d.getUint32(12,true),metaLength=d.getUint32(16,true);
+ if(originalLength>MAX||metaLength>8192||d.getUint32(32,true)!==0||HEAD+metaLength+payloadLength!==b.length)throw Error('Archive bounds / header invalid.');
+ const metabytes=b.subarray(HEAD,HEAD+metaLength),payload=b.subarray(HEAD+metaLength);
+ if(root.DM3DCore.crc32(metabytes)!==d.getUint32(28,true)||root.DM3DCore.crc32(payload)!==d.getUint32(24,true))throw Error('Archive payload / metadata CRC-32 mismatch.');
+ let metadata;try{metadata=JSON.parse(dec.decode(metabytes));}catch(e){throw Error('Invalid archive metadata UTF-8/JSON.');}validateMeta(metadata,MODES[b[6]]);
+ let bytes;switch(b[5]){case 0: bytes=payload.slice();break;case 1: bytes=rleDecode(payload,originalLength);break;case 2:bytes=undelta(rleDecode(payload,originalLength));break;case 3:bytes=await gunzip(payload);break;}
+ if(bytes.length!==originalLength)throw Error('Archive reconstruction length mismatch.');if(root.DM3DCore.crc32(bytes)!==d.getUint32(20,true))throw Error('Reconstructed source checksum mismatch.');
+ if(metadata.kind==='frames-rgb'&&bytes.length!==metadata.width*metadata.height*metadata.frames*3)throw Error('Invalid frame-sequence payload.');
+ return{bytes,mode:MODES[b[6]],metadata,codec:NAMES[b[5]],crc:d.getUint32(20,true)};}
+ root.DMXM={encode,decode,same,rleEncode,rleDecode,delta,undelta,MAX,MODES};
+})(window);
+</script>
+<script>
+/* Small, shared byte-window ANN with real SGD backpropagation, not an exact codec. */
+(function(root){
+'use strict';
+const DIM=64,LAT=12;
+function rng(seed){let x=seed>>>0||0x9e3779b9;return()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return(x>>>0)/4294967296;};}
+function sigmoid(x){return x>35?1:x< -35?0:1/(1+Math.exp(-x));}
+class ByteANN{
+ constructor(seed=481){this.reset(seed);}
+ reset(seed=481){const rand=rng(seed);this.e=new Float32Array(DIM*LAT);this.d=new Float32Array(DIM*LAT);this.be=new Float32Array(LAT);this.bd=new Float32Array(DIM);for(let i=0;i<this.e.length;i++)this.e[i]=(rand()-.5)*.24;for(let i=0;i<this.d.length;i++)this.d[i]=(rand()-.5)*.24;this.steps=0;}
+ input(bytes,offset=0){if(!bytes.length)throw Error('ANN requires nonempty data.');const x=new Float32Array(DIM);for(let i=0;i<DIM;i++)x[i]=bytes[(offset+i)%bytes.length]/255;return x;}
+ encode(x){const z=new Float32Array(LAT);for(let k=0;k<LAT;k++){let a=this.be[k];const b=k*DIM;for(let i=0;i<DIM;i++)a+=this.e[b+i]*x[i];z[k]=Math.tanh(a);}return z;}
+ decode(z){const y=new Float32Array(DIM);for(let i=0;i<DIM;i++){let a=this.bd[i];const b=i*LAT;for(let k=0;k<LAT;k++)a+=this.d[b+k]*z[k];y[i]=sigmoid(a);}return y;}
+ forward(x){const z=this.encode(x);return{z,y:this.decode(z)};}
+ mse(x,y){let e=0;for(let i=0;i<DIM;i++)e+=(x[i]-y[i])**2;return e/DIM;}
+ trainOne(x,lr=1.7){const {z,y}=this.forward(x);const dy=new Float32Array(DIM),dz=new Float32Array(LAT);for(let i=0;i<DIM;i++)dy[i]=(2/DIM)*(y[i]-x[i])*y[i]*(1-y[i]);for(let k=0;k<LAT;k++){let s=0;for(let i=0;i<DIM;i++)s+=dy[i]*this.d[i*LAT+k];dz[k]=s*(1-z[k]*z[k]);}
+ for(let i=0;i<DIM;i++){const b=i*LAT;for(let k=0;k<LAT;k++)this.d[b+k]-=lr*dy[i]*z[k];this.bd[i]-=lr*dy[i];}
+ for(let k=0;k<LAT;k++){const b=k*DIM;for(let i=0;i<DIM;i++)this.e[b+i]-=lr*dz[k]*x[i];this.be[k]-=lr*dz[k];}
+ this.steps++;return this.mse(x,y);}
+}
+root.DMANN={ByteANN,rng,DIM,LAT};
+})(window);
+</script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id),C=window.DM3DCore,M=window.DMXM,A=window.DMANN;
+const encoder=new TextEncoder(),utf8=new TextDecoder(),ann=new A.ByteANN();
+const fmt=n=>new Intl.NumberFormat('en-US').format(n),size=n=>n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(2)} KiB`:`${(n/1048576).toFixed(2)} MiB`;
+let mode='text',source=null,decoded=null,packed=null,mapped=new Map(),decodedMap=new Map(),projected=[],projectedDecoded=[],sceneMode='source',yaw=.60,pitch=-.28,zoom=1,spinning=false,lastFrame=0,drag=null,ioBusy=false,originKnown=false;
+let tEncode=0,tDecode=0,pc=0,runningVM=false,accepted=0,rejected=0,logs=[],previewURLs={source:null,decoded:null};
+const scene=$('scene'),context=scene.getContext('2d',{alpha:false}),palette=Array.from({length:256},(_,i)=>`hsl(${201-i*.55},87%,${54+6*Math.sin(i/255*Math.PI)}%)`);
+function note(msg){logs.unshift(`[${new Date().toLocaleTimeString()}] ${msg}`);logs=logs.slice(0,22);$('log').textContent=logs.join('\n');}
+function status(msg,bad=false){$('status').textContent=msg;$('status').classList.toggle('warn',bad);}
+function checkSeed(){const s=Number($('seed').value);if(!Number.isSafeInteger(s)||s<0||s>4294967295)throw Error('Seed must be an unsigned 32-bit integer.');return s;}
+function disableWhileBusy(b){ioBusy=b;for(const id of ['generate','encode','decode','trainANN','resetANN','synthesize','runVM','selfTest','saveArchive','saveDecoded','recordVideo'])$(id).disabled=b||(()=>{switch(id){case 'decode':return !packed;case 'saveArchive':return !packed;case 'saveDecoded':return !decoded;case 'recordVideo':return !source||source.meta.kind!=='frames-rgb'||!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream;default:return false;}})();}
+function selectMode(m){if(!M.MODES.includes(m))throw Error('Invalid modality.');mode=m;for(const button of document.querySelectorAll('[data-tab]'))button.setAttribute('aria-selected',String(button.dataset.tab===mode));for(const m2 of M.MODES)$(m2+'Options').hidden=mode!==m2;$('latentMode').value=mode;}
+function resetProduct(){decoded=null;packed=null;originKnown=true;tEncode=tDecode=0;if(!runningVM)pc=0;sceneMode='source';projectedDecoded=[];decodedMap=new Map();$('viewDecoded').disabled=true;$('viewOriginal').setAttribute('aria-pressed','true');$('viewDecoded').setAttribute('aria-pressed','false');$('roundtrip').textContent='—';$('roundtripInfo').textContent='Exact byte comparison';$('archiveSize').textContent='—';$('compression').textContent='Encoder not run';$('codec').textContent='—';$('crc').textContent='—';$('et').textContent='—';$('dt').textContent='—';$('sha').textContent='—';$('r1').textContent='0';$('r2').textContent='0';$('r4').textContent='—';$('pc').textContent='0';}
+function sparseMap(bytes){const n=Math.min(4096,bytes.length),stride=Math.max(1,Math.floor(bytes.length/n)),result=new Map();const factor=Math.floor((C.AXIS-1)/16);for(let i=0;i<n;i++){const v=bytes[i*stride];if(!v)continue;const coords=C.unmorton(BigInt(i));const x=Math.min(C.AXIS-1,Math.floor((coords[0]+.5)*factor)),y=Math.min(C.AXIS-1,Math.floor((coords[1]+.5)*factor)),z=Math.min(C.AXIS-1,Math.floor((coords[2]+.5)*factor));result.set(C.morton(x,y,z),v);}return result;}
+function voxels(map){const p=[];for(const [k,value] of map){const c=C.unmorton(k);p.push({x:2*c[0]/(C.AXIS-1)-1,y:2*c[1]/(C.AXIS-1)-1,z:2*c[2]/(C.AXIS-1)-1,value});}return p;}
+function updateRegisters(){ $('r0').textContent=source?size(source.bytes.length):'0';$('r1').textContent=packed?size(packed.archive.length):'0';$('r3').textContent=fmt(mapped.size);$('pc').textContent=pc.toString();$('annSteps').textContent=fmt(ann.steps);}
+function showMap(){if(!source)return;mapped=sparseMap(source.bytes);projected=voxels(mapped);$('voxelCount').textContent=`${fmt(mapped.size)} nonzero sampled voxels`;updateRegisters();paint();}
+function loadSource(bytes,m,meta,imported=false){if(!(bytes instanceof Uint8Array)||bytes.length>M.MAX)throw Error('Source exceeds maximum input size.');selectMode(m);source={bytes,mode:m,meta:{name:String(meta.name||'media.bin'),mime:String(meta.mime||'application/octet-stream'),kind:String(meta.kind||'native'),...(meta.width?{width:meta.width}:{}),...(meta.height?{height:meta.height}:{}),...(meta.frames?{frames:meta.frames}:{}),...(meta.fps?{fps:meta.fps}:{})}};resetProduct();showMap();$('sourceSize').textContent=size(bytes.length);$('sourceMeta').textContent=`${m} · ${source.meta.name}`;$('sourceCRC').textContent='0x'+C.crc32(bytes).toString(16).padStart(8,'0');renderMedia('sourcePreview',source,'source');$('outputPreview').textContent='Not decoded';annView();hashSource(bytes);status(`Ready: ${m} · ${size(bytes.length)} ${imported?'imported':'generated'}.`);note(`SOURCE ${m} (${size(bytes.length)}); mapped ${mapped.size} nonzero voxels.`);disableWhileBusy(ioBusy);}
+async function hashSource(bytes){if(!window.crypto||!crypto.subtle){$('sha').textContent='Unavailable';return;}try{const h=await crypto.subtle.digest('SHA-256',bytes);if(source&&source.bytes===bytes)$('sha').textContent=Array.from(new Uint8Array(h),v=>v.toString(16).padStart(2,'0')).join('').slice(0,24)+'…';}catch(e){$('sha').textContent='Unavailable';}}
+function wav(samples,rate=22050){const b=new Uint8Array(44+samples.length*2),d=new DataView(b.buffer);const w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i);};w(0,'RIFF');d.setUint32(4,b.length-8,true);w(8,'WAVE');w(12,'fmt ');d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,1,true);d.setUint32(24,rate,true);d.setUint32(28,rate*2,true);d.setUint16(32,2,true);d.setUint16(34,16,true);w(36,'data');d.setUint32(40,samples.length*2,true);for(let i=0;i<samples.length;i++){const s=Math.max(-1,Math.min(1,samples[i]));d.setInt16(44+2*i,Math.round(s*32767),true);}return b;}
+function makeImage(seed,latent=null){const cvs=document.createElement('canvas');cvs.width=cvs.height=256;const cx=cvs.getContext('2d'),data=cx.createImageData(256,256),f=latent||new Float32Array(64).fill(.5),phase=seed*.001;for(let y=0;y<256;y++)for(let x=0;x<256;x++){const j=(y*256+x)*4,v=f[(((x>>5)&7)+8*((y>>5)&7))%64],w=Math.sin(x*.047+y*.029+phase+v*6);data.data[j]=Math.max(0,Math.min(255,35+196*v+24*w));data.data[j+1]=Math.max(0,Math.min(255,110+95*Math.sin(y*.03+phase)+55*v));data.data[j+2]=Math.max(0,Math.min(255,55+185*(1-v)+18*w));data.data[j+3]=255;}cx.putImageData(data,0,0);return new Promise((resolve,reject)=>cvs.toBlob(b=>b?b.arrayBuffer().then(a=>resolve(new Uint8Array(a))):reject(Error('PNG encode unsupported.')),'image/png'));}
+function makeAudio(seed,latent=null){const n=44100,s=new Float32Array(n),v=latent||Float32Array.from({length:64},(_,i)=>(Math.sin(i*.2+seed)+1)/2);for(let i=0;i<n;i++){const t=i/22050,env=Math.min(1,t*7,(2-t)*6),f=150+340*v[(Math.floor(t*8)*7)%64];const amp=.32*Math.sin(2*Math.PI*f*t)+.16*Math.sin(2*Math.PI*(f*1.5)*t)+.07*Math.sin(2*Math.PI*(f*2.3)*t);s[i]=amp*Math.max(0,env);}return wav(s);}
+function makeFrames(seed,latent=null){const width=96,height=72,frames=24,fps=12,b=new Uint8Array(width*height*frames*3),v=latent||Float32Array.from({length:64},(_,i)=>(Math.sin(i*.1+seed)+1)/2);let k=0;for(let t=0;t<frames;t++){const phase=t/frames*2*Math.PI;for(let y=0;y<height;y++)for(let x=0;x<width;x++){const a=Math.atan2(y-height/2,x-width/2),r=Math.hypot((x-width/2)/width,(y-height/2)/height),u=v[(((x>>3)&7)+8*((y>>3)&7))%64],wave=Math.sin(11*r-4*a+phase*3+u*4);b[k++]=Math.floor(127+110*wave);b[k++]=Math.floor(110+100*Math.sin(phase+r*18+u));b[k++]=Math.floor(120+105*Math.cos(a*3-phase*2+u*5));}}return{bytes:b,meta:{name:'dm3d_animation.d3vf',mime:'application/x-dm3d-frames',kind:'frames-rgb',width,height,frames,fps}};}
+function makeText(seed,latent=null){if(!latent)return encoder.encode($('textInput').value);const chars=' abcdefghijklmnopqrstuvwxyz0123456789.,:;!?+-/(){}[]';let str='DM3D ANN-generated byte-pattern text\n';for(let y=0;y<9;y++){for(let x=0;x<64;x++){const a=latent[(y*7+x)%64],i=Math.min(chars.length-1,Math.floor(a*chars.length));str+=chars[i];}str+='\n';}return encoder.encode(str);}
+function makeBinary(seed,latent=null){const b=new Uint8Array(latent?8192:32768),r=A.rng(seed);for(let i=0;i<b.length;i++)b[i]=latent?Math.floor(latent[i%64]*255):(Math.floor((i>>5)%256+r()*8)&255);return b;}
+async function create(m,latent=null){const seed=checkSeed();if(m==='text'){loadSource(makeText(seed,latent),'text',{name:'dm3d_text.txt',mime:'text/plain;charset=utf-8',kind:'native'});}
+else if(m==='image'){const b=await makeImage(seed,latent);loadSource(b,'image',{name:'dm3d_generated.png',mime:'image/png',kind:'native'});}
+else if(m==='audio'){loadSource(makeAudio(seed,latent),'audio',{name:'dm3d_generated.wav',mime:'audio/wav',kind:'native'});}
+else if(m==='video'){const o=makeFrames(seed,latent);loadSource(o.bytes,'video',o.meta);}
+else{loadSource(makeBinary(seed,latent),'binary',{name:'dm3d_bytes.bin',mime:'application/octet-stream',kind:'native'});}}
+function mimeMode(file){const t=file.type||'',n=file.name.toLowerCase();if(t.startsWith('image/')||/\.(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(n))return'image';if(t.startsWith('audio/')||/\.(wav|mp3|ogg|m4a|flac)$/.test(n))return'audio';if(t.startsWith('video/')||/\.(mp4|webm|mov|mkv)$/.test(n))return'video';if(t.startsWith('text/')||/\.(txt|md|json|csv|xml|html|js|ts|py|cpp|c|h|css)$/.test(n))return'text';return'binary';}
+async function doEncode(){if(!source)throw Error('Generate/import a media source first.');const t=performance.now();packed=await M.encode(source.bytes,source.mode,source.meta);tEncode=performance.now()-t;$('archiveSize').textContent=size(packed.archive.length);$('compression').textContent=`${packed.codec} · ${(source.bytes.length/Math.max(1,packed.archive.length)).toFixed(2)}× vs source`;$('codec').textContent=packed.codec;$('crc').textContent='0x'+C.crc32(packed.archive).toString(16).padStart(8,'0');$('et').textContent=tEncode.toFixed(2)+' ms';$('r1').textContent=size(packed.archive.length);$('roundtrip').textContent='Pending';$('roundtripInfo').textContent='Decode to check equality';status(`Encoded ${size(source.bytes.length)} → ${size(packed.archive.length)} (${packed.codec}).`);note(`ENCODE ${source.mode}, ${packed.codec}, ${tEncode.toFixed(1)} ms.`);disableWhileBusy(ioBusy);return packed;}
+async function doDecode(){if(!packed)throw Error('Encode/import an archive first.');const t=performance.now();const result=await M.decode(packed.archive);tDecode=performance.now()-t;decoded={bytes:result.bytes,mode:result.mode,meta:result.metadata};const equal=originKnown&&source&&source.mode===decoded.mode&&M.same(source.bytes,decoded.bytes);if(originKnown){$('roundtrip').textContent=equal?'PASS':'FAIL';$('roundtripInfo').textContent=equal?'Exact full-byte equality':'Full-byte mismatch';$('r2').textContent=equal?'1':'0';}else{$('roundtrip').textContent='CRC PASS';$('roundtripInfo').textContent='Imported archive; no independent source';$('r2').textContent='0';}
+ $('dt').textContent=tDecode.toFixed(2)+' ms';decodedMap=sparseMap(decoded.bytes);projectedDecoded=voxels(decodedMap);$('viewDecoded').disabled=false;setView('decoded');renderMedia('outputPreview',decoded,'decoded');status(equal?'PASS — every source byte reconstructed exactly.':originKnown?'FAIL — source bytes differ.':'Imported archive passed integrity checks.',originKnown&&!equal);note(`DECODE ${result.mode} in ${tDecode.toFixed(1)} ms; ${originKnown?(equal?'EXACT PASS':'FAIL'):'ARCHIVE CRC PASS'}.`);disableWhileBusy(ioBusy);return result;}
+function setView(m){if(m==='decoded'&&!decoded)return;sceneMode=m;$('viewOriginal').setAttribute('aria-pressed',String(m==='source'));$('viewDecoded').setAttribute('aria-pressed',String(m==='decoded'));paint();}
+function project(x,y,z,w,h){const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);const xr=cy*x+sy*z,zr=-sy*x+cy*z,yr=cp*y-sp*zr,zz=sp*y+cp*zr;const s=Math.min(w,h)*.28*zoom/(1+zz*.17);return{x:w/2+xr*s,y:h/2-yr*s,z:zz};}
+function paint(){const rc=scene.getBoundingClientRect(),w=rc.width,h=rc.height;if(!w||!h)return;const dpr=Math.min(2,devicePixelRatio||1),W=Math.round(w*dpr),H=Math.round(h*dpr);if(scene.width!==W||scene.height!==H){scene.width=W;scene.height=H;}context.setTransform(dpr,0,0,dpr,0,0);context.fillStyle='#071a29';context.fillRect(0,0,w,h);const corners=[];for(let i=0;i<8;i++)corners.push(project(i&1?1:-1,i&2?1:-1,i&4?1:-1,w,h));context.strokeStyle='#37627d';context.lineWidth=1;for(const[a,b]of [[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]]){context.beginPath();context.moveTo(corners[a].x,corners[a].y);context.lineTo(corners[b].x,corners[b].y);context.stroke();}const pts=sceneMode==='decoded'?projectedDecoded:projected,cloud=[];for(const p of pts){const q=project(p.x,p.y,p.z,w,h);cloud.push({...q,value:p.value});}cloud.sort((a,b)=>a.z-b.z);const r=cloud.length>2500?1.45:2.3;for(const p of cloud){context.fillStyle=palette[p.value];context.beginPath();context.arc(p.x,p.y,r,0,6.2831853);context.fill();}context.font='bold 12px system-ui';for(const [x,y,z,s,col]of [[1.17,-1,-1,'X','#ee98a5'],[-1,1.17,-1,'Y','#77e1b3'],[-1,-1,1.17,'Z','#85c4ff']]){const p=project(x,y,z,w,h);context.fillStyle=col;context.fillText(s,p.x,p.y);}if(source)$('voxelCount').textContent=`${fmt(pts.length)} displayed ${sceneMode} voxels`;}
+function spinLoop(t){if(!spinning)return;if(t-lastFrame>=33){yaw+=.008;paint();lastFrame=t;}requestAnimationFrame(spinLoop);}
+function revokePreview(which){if(previewURLs[which]){URL.revokeObjectURL(previewURLs[which]);previewURLs[which]=null;}}
+function showFrames(container,media){const {bytes,meta}=media,w=meta.width,h=meta.height,frames=meta.frames,frameBytes=w*h*3;const c=document.createElement('canvas');c.width=w;c.height=h;c.className='mini-canvas';c.style.aspectRatio=`${w}/${h}`;const cx=c.getContext('2d'),im=cx.createImageData(w,h);let last=-1;function render(i){const sub=bytes.subarray(i*frameBytes,(i+1)*frameBytes);for(let p=0,j=0;p<sub.length;p+=3,j+=4){im.data[j]=sub[p];im.data[j+1]=sub[p+1];im.data[j+2]=sub[p+2];im.data[j+3]=255;}cx.putImageData(im,0,0);}render(0);container.appendChild(c);const start=performance.now();function loop(t){if(!c.isConnected)return;const frame=Math.floor(((t-start)/1000)*meta.fps)%frames;if(frame!==last){last=frame;render(frame);}requestAnimationFrame(loop);}requestAnimationFrame(loop);}
+function renderMedia(id,media,which){revokePreview(which);const c=$(id);c.textContent='';if(!media){c.textContent='No media';return;}const {bytes,mode,meta}=media;
+if(mode==='text'){const p=document.createElement('pre');p.textContent=utf8.decode(bytes.subarray(0,2400))+(bytes.length>2400?'\n[…preview truncated…]':'');c.appendChild(p);return;}
+if(meta.kind==='frames-rgb'){showFrames(c,media);return;}
+if(['image','audio','video'].includes(mode)){const u=URL.createObjectURL(new Blob([bytes],{type:meta.mime}));previewURLs[which]=u;const el=document.createElement(mode==='image'?'img':mode==='audio'?'audio':'video');el.src=u;if(mode!=='image')el.controls=true;if(mode==='video')el.playsInline=true;el.addEventListener('error',()=>{if(el.isConnected){const text=document.createElement('p');text.className='tiny';text.textContent='Native preview unavailable in this browser; source bytes remain preserved.';c.appendChild(text);}});c.appendChild(el);return;}
+const p=document.createElement('pre');p.textContent=Array.from(bytes.subarray(0,128),v=>v.toString(16).padStart(2,'0')).join(' ').replace(/((?:[a-f0-9]{2} ){16})/g,'$1\n')+(bytes.length>128?'\n…':'');c.appendChild(p);}
+function annView(){if(!source||!source.bytes.length){$('annLoss').textContent='—';return;}const x=ann.input(source.bytes),{y}=ann.forward(x);drawTile('annInput',x);drawTile('annOutput',y);const mse=ann.mse(x,y);$('annLoss').textContent=mse.toFixed(6);$('fitness').textContent=fitness(source.bytes).toFixed(6);$('r4').textContent=mse.toFixed(5);updateRegisters();}
+function drawTile(id,v){const c=$(id),ctx=c.getContext('2d');const side=8,sz=20,xoff=0,yoff=0;ctx.clearRect(0,0,c.width,c.height);for(let i=0;i<64;i++){const n=Math.max(0,Math.min(255,Math.round(255*v[i])));ctx.fillStyle=`rgb(${n},${Math.round(n*.82+25)},${255-n})`;ctx.fillRect(xoff+(i%side)*sz,yoff+Math.floor(i/side)*12.5,sz,12.5);}}
+function fitness(bytes){if(!bytes.length)return NaN;let loss=0;for(let j=0;j<8;j++){const offset=Math.floor(j*bytes.length/8),x=ann.input(bytes,offset),y=ann.forward(x).y;loss+=ann.mse(x,y);}return loss/8;}
+async function train(steps){
+ if(!source||!source.bytes.length)throw Error('ANN training requires nonempty source.');
+ if(!Number.isInteger(steps)||steps<1||steps>1600)throw Error('Training step count out of range.');
+ const bytes=source.bytes,initial=fitness(bytes),rand=A.rng((ann.steps+1)*2246822519);
+ const checkpoint={e:ann.e.slice(),d:ann.d.slice(),be:ann.be.slice(),bd:ann.bd.slice()};
+ for(let i=0;i<steps;i++){
+   const start=(i%4===0)?Math.floor(((i/4)%8)*bytes.length/8):Math.floor(rand()*bytes.length);
+   ann.trainOne(ann.input(bytes,start),1.25);
+   if(i%80===79)await new Promise(resolve=>setTimeout(resolve,0));
+ }
+ const final=fitness(bytes),accept=Number.isFinite(final)&&final<=initial;
+ if(!accept){ann.e.set(checkpoint.e);ann.d.set(checkpoint.d);ann.be.set(checkpoint.be);ann.bd.set(checkpoint.bd);rejected++;}
+ else accepted++;
+ annView();$('fitness').textContent=(accept?final:initial).toFixed(6);
+ $('accepted').textContent=`${accepted} / ${rejected}`;
+ const message=`ANN EVOLVE ${steps} SGD updates: 8-window MSE ${initial.toFixed(6)} → ${final.toFixed(6)}; ${accept?'ACCEPT':'REJECT + rollback'}.`;
+ note(message);status(message);return accept?final:initial;
+}
+function latentSample(){if(!source||!source.bytes.length)throw Error('Generate media before sampling ANN latent.');const inVec=ann.input(source.bytes),z=ann.encode(inVec),v=Number($('variation').value),rand=A.rng(checkSeed()+ann.steps+421);for(let i=0;i<z.length;i++)z[i]=Math.max(-.99,Math.min(.99,z[i]+(rand()-.5)*2*v));const out=ann.decode(z);drawTile('annOutput',out);note(`LATENT encoded ${A.DIM} → ${A.LAT} → ${A.DIM} values, variation ${v.toFixed(2)}.`);return out;}
+function fileDownload(data,name,mime){const blob=new Blob([data],{type:mime||'application/octet-stream'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=String(name||'media.bin').replace(/[\\/\x00-\x1f]/g,'_');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);}
+async function importedMedia(file){if(!file)return;if(file.size>M.MAX)throw Error('Media exceeds 24 MiB input cap.');const data=new Uint8Array(await file.arrayBuffer());const m=mimeMode(file);loadSource(data,m,{name:file.name,mime:file.type||'application/octet-stream',kind:'native'},true);}
+async function importedArchive(file){if(!file)return;if(file.size>M.MAX+15000)throw Error('Archive exceeds 24 MiB+header cap.');const bytes=new Uint8Array(await file.arrayBuffer());const result=await M.decode(bytes);loadSource(result.bytes,result.mode,result.metadata,true);packed={archive:bytes,codec:result.codec,metadata:result.metadata,crc:result.crc};originKnown=false;decoded=null;$('archiveSize').textContent=size(bytes.length);$('compression').textContent=result.codec+' · imported';$('codec').textContent=result.codec;$('crc').textContent='0x'+C.crc32(bytes).toString(16).padStart(8,'0');$('roundtrip').textContent='CRC PASS';$('roundtripInfo').textContent='Independent original not supplied';$('r1').textContent=size(bytes.length);status('Archive imported: metadata, payload, and reconstructed data CRC verified.');note(`IMPORT archive ${file.name}: CRC PASS, ${size(result.bytes.length)} reconstructed bytes.`);disableWhileBusy(ioBusy);}
+async function selfTest(){const tests=[];function ok(condition,message){if(!condition)throw Error('SELF-TEST FAILED: '+message);tests.push(message);}const u=n=>new Uint8Array(n);const mixed=u(4096);for(let i=0;i<mixed.length;i++)mixed[i]=(i*17^(i>>3))&255;const cases=[u(0),u(1),u(16000).fill(42),Uint8Array.from({length:256},(_,i)=>i),mixed,encoder.encode('DM3D Ω 漢字 🌐 exact round trip'),makeAudio(14).subarray(0,10000)];for(let i=0;i<cases.length;i++){const ar=await M.encode(cases[i],'binary',{name:'test.bin',mime:'application/octet-stream',kind:'native'});const d=await M.decode(ar.archive);ok(M.same(cases[i],d.bytes),'binary round-trip '+i+' ('+ar.codec+')');}const f=makeFrames(12),ar=await M.encode(f.bytes,'video',f.meta),de=await M.decode(ar.archive);ok(M.same(f.bytes,de.bytes),'video RGB frames round-trip');ok(de.metadata.width===96&&de.mode==='video','video metadata preserved');const damaged=ar.archive.slice();damaged[damaged.length-1]^=1;let caught=false;try{await M.decode(damaged);}catch(e){caught=true;}ok(caught,'corrupted payload rejected');for(const x of [0,C.AXIS-1,123456789])for(const y of [0,C.AXIS-1,98765432])for(const z of [0,C.AXIS-1,7654321]){const p=C.unmorton(C.morton(x,y,z));ok(p[0]===x&&p[1]===y&&p[2]===z,'90-bit Morton invertible');}const sparse=new Map([[C.morton(0,0,0),1],[C.morton(C.AXIS-1,C.AXIS-1,C.AXIS-1),255]]);ok(C.equalMaps(sparse,C.decode(C.encode(sparse).bytes).map),'legacy D3AE sparse codec round-trip');$('mortonStatus').textContent='PASS';note(`SELF-TEST PASS: ${tests.length} checks (archive, video, CRC, Morton, sparse codec).`);status(`SELF-TEST PASS: ${tests.length} checks.`);return tests.length;}
+async function runProgram(){if(!source)throw Error('Load a source before VM execution.');runningVM=true;try{const lines=$('program').value.split(/\r?\n/).map(s=>s.trim()).filter(s=>s&&!s.startsWith('#'));if(lines.length>30)throw Error('VM allows at most 30 instructions.');pc=0;for(const line of lines){const words=line.toUpperCase().split(/\s+/),op=words[0],arg=words[1];pc++;$('pc').textContent=pc.toString();if(op==='HALT'){note('VM HALT.');break;}if(op==='GENERATE'){if(!M.MODES.includes((arg||'').toLowerCase())||words.length!==2)throw Error('Invalid GENERATE modality.');await create(arg.toLowerCase());}
+else if(op==='MAP3D'){showMap();note('VM MAP3D: sparse virtual 90-bit address projection.');}
+else if(op==='ENCODE'){await doEncode();}
+else if(op==='DECODE'){await doDecode();}
+else if(op==='VERIFY'){if(!decoded||!source)throw Error('VERIFY requires decoded data.');if(originKnown&&!M.same(source.bytes,decoded.bytes))throw Error('VERIFY failed: bytes differ.');note(originKnown?'VM VERIFY PASS: exact full-source equality.':'VM VERIFY: imported archive CRC verified; no independent original.');}
+else if(op==='TRAIN'){const n=Number(arg);if(words.length!==2||!Number.isInteger(n)||n<1||n>500)throw Error('TRAIN n: integer 1…500 only.');await train(n);}
+else if(op==='LATENT'){latentSample();}
+else throw Error('VM instruction not allowed: '+op);
+ await new Promise(r=>setTimeout(r,0));}status('VM execution completed; inspect log and registers.');}finally{runningVM=false;}}
+async function recordWebM(){if(!source||source.meta.kind!=='frames-rgb')throw Error('Record requires generated frame-sequence source.');if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)throw Error('MediaRecorder/canvas capture unsupported.');const m=source.meta,c=document.createElement('canvas');c.width=m.width;c.height=m.height;const cx=c.getContext('2d'),im=cx.createImageData(m.width,m.height),stream=c.captureStream(m.fps);const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));if(!mime)throw Error('WebM MediaRecorder unsupported.');const rec=new MediaRecorder(stream,{mimeType:mime});const chunks=[];rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};const done=new Promise((resolve,reject)=>{rec.onstop=()=>resolve(new Blob(chunks,{type:mime}));rec.onerror=e=>reject(Error('MediaRecorder failed.'));});rec.start();for(let frame=0;frame<m.frames;frame++){const b=source.bytes,base=frame*m.width*m.height*3;for(let i=0,j=0;i<m.width*m.height;i++,j+=4){const k=base+i*3;im.data[j]=b[k];im.data[j+1]=b[k+1];im.data[j+2]=b[k+2];im.data[j+3]=255;}cx.putImageData(im,0,0);await new Promise(r=>setTimeout(r,1000/m.fps));}rec.stop();const blob=await done;for(const tr of stream.getTracks())tr.stop();if(!blob.size)throw Error('Recorder produced no bytes.');fileDownload(blob,'dm3d_generated.webm',mime);note(`WebM recorded: ${size(blob.size)}.`);}
+async function action(fn){if(ioBusy)return;disableWhileBusy(true);try{await fn();}catch(e){status(e.message,true);note('ERROR: '+e.message);}finally{disableWhileBusy(false);}}
+for(const b of document.querySelectorAll('[data-tab]'))b.addEventListener('click',()=>selectMode(b.dataset.tab));
+$('generate').addEventListener('click',()=>action(()=>create(mode)));
+$('mediaFile').addEventListener('change',e=>action(()=>importedMedia(e.target.files[0])).finally(()=>e.target.value=''));
+$('archiveFile').addEventListener('change',e=>action(()=>importedArchive(e.target.files[0])).finally(()=>e.target.value=''));
+$('encode').addEventListener('click',()=>action(doEncode));$('decode').addEventListener('click',()=>action(doDecode));
+$('saveArchive').addEventListener('click',()=>{if(packed)fileDownload(packed.archive,'dm3d_'+source.mode+'.dmxm','application/octet-stream');});
+$('saveDecoded').addEventListener('click',()=>{if(decoded)fileDownload(decoded.bytes,decoded.meta.name,decoded.meta.mime);});
+$('trainSteps').addEventListener('input',e=>$('stepLabel').textContent=e.target.value);$('variation').addEventListener('input',e=>$('variationLabel').textContent=Number(e.target.value).toFixed(2));
+$('trainANN').addEventListener('click',()=>action(()=>train(Number($('trainSteps').value))));
+$('resetANN').addEventListener('click',()=>{if(ioBusy)return;ann.reset(checkSeed());accepted=0;rejected=0;$('accepted').textContent='0 / 0';$('fitness').textContent=source&&source.bytes.length?fitness(source.bytes).toFixed(6):'—';annView();note('ANN weights reset.');status('ANN reset.');});
+$('synthesize').addEventListener('click',()=>action(async()=>{const v=latentSample();await create($('latentMode').value,v);note('ANN latent synthesized new '+source.mode+' source.');}));
+$('viewOriginal').addEventListener('click',()=>setView('source'));$('viewDecoded').addEventListener('click',()=>setView('decoded'));
+$('spin').addEventListener('click',()=>{spinning=!spinning;$('spin').textContent=spinning?'Spin: on':'Spin: off';if(spinning)requestAnimationFrame(spinLoop);});
+$('runVM').addEventListener('click',()=>action(runProgram));$('selfTest').addEventListener('click',()=>action(selfTest));$('recordVideo').addEventListener('click',()=>action(recordWebM));
+scene.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,yaw,pitch};scene.setPointerCapture(e.pointerId);});scene.addEventListener('pointermove',e=>{if(!drag)return;yaw=drag.y+(e.clientX-drag.x)*.008;pitch=Math.max(-1.45,Math.min(1.45,drag.pitch+(e.clientY-drag.y)*.008));paint();});scene.addEventListener('pointerup',()=>drag=null);scene.addEventListener('pointercancel',()=>drag=null);scene.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.32,Math.min(3.5,zoom*Math.exp(-e.deltaY*.001)));paint();},{passive:false});
+if(window.ResizeObserver)new ResizeObserver(paint).observe(scene);else window.addEventListener('resize',paint);
+$('gzip').textContent='CompressionStream' in window?'gzip available':'built-in RLE/raw only';
+window.DM3DStudio={generate:create,encode:doEncode,decode:doDecode,train,selfTest,runProgram,getState:()=>({source,decoded,packed,voxelCount:mapped.size,annSteps:ann.steps,pc})};
+note('DM3D Ω: browser VM, byte ANN, and multimodal archive initialized.');
+create('text').then(()=>{note('Ready for multimodal media input.');}).catch(e=>status(e.message,true));
+})();
+</script>
+
+<script>
+/* DM3D Ω Million Cycle Extension. Adds no dependencies; integrates with existing DM3DCore/DMANN. */
+(function (root) {
+'use strict';
+const $=id=>document.getElementById(id), AXIS=2**30;
+const E=new TextEncoder(),D=new TextDecoder('utf-8',{fatal:true});
+const MAX=1000000, BITS=20, CAP=8192;
+const FNV_OFFSET=0x811c9dc5, FNV_PRIME=0x01000193;
+const occupancy=new Uint32Array(512), sampled=new Uint32Array(512);
+const sourceBuf=new Uint8Array(CAP),packet=new Uint8Array(CAP*2+1),decodedBuf=new Uint8Array(CAP);
+let state='idle',runToken=0,last=null,summary=null,epoch=0, yaw=.72,pitch=-.35,zoom=1,drag=null,roll=FNV_OFFSET;
+let ann=new root.DMANN.ByteANN(2026),accepted=0,rejected=0,learned=0,lastLoss=null;
+let lines=['<span>DM3D Ω</span>'],escLines=['&lt;span&gt;DM3D Ω&lt;/span&gt;'];
+const canvas=$('ml3d'),ctx=canvas.getContext('2d');
+const fmt=x=>Number(x).toLocaleString('en-US');
+const kb=x=>x<1024?`${x} B`:x<1048576?`${(x/1024).toFixed(1)} KiB`:`${(x/1048576).toFixed(2)} MiB`;
+function assertCount(){const n=Number($('mlCount').value);if(!Number.isSafeInteger(n)||n<1||n>MAX)throw Error('Iterations must be an integer from 1 to 1,000,000.');return n;}
+function escapeHTML(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function parseLines(){const a=$('mlEditor').value.split(/\r?\n/).filter(Boolean);if(!a.length)throw Error('At least one HTML line template is required.');if(a.length>4096)throw Error('The editor supports up to 4,096 template lines.');lines=a;escLines=a.map(escapeHTML);}
+function coords(index){let x=0,y=0,z=0;for(let b=0;b<7;b++){x|=((index >>> (3*b))&1)<<b;y|=((index >>> (3*b+1))&1)<<b;z|=((index >>> (3*b+2))&1)<<b;}return{x,y,z};}
+function spatial(index){const c=coords(index);return{x:c.x*8388608,y:c.y*8388608,z:c.z*16777216};}
+function makeLine(index){const c=coords(index);return `<div data-iteration="${index}" data-xyz="${c.x},${c.y},${c.z}">${escLines[index%escLines.length]}</div>\n`;}
+// Codec: packet byte 0 = RAW, byte 1 = byte-RLE with pairs [count, value].
+// Both encoding & decoding run on every iteration, regardless of packet choice.
+function encode(src,n,out){let k=1,run=0;for(let i=0;i<n;){const v=src[i];run=1;while(i+run<n && run<255 && src[i+run]===v)run++;if(k+2>=n+1){out[0]=0;out.set(src.subarray(0,n),1);return n+1;}out[k++]=run;out[k++]=v;i+=run;}out[0]=1;return k;}
+function decode(enc,encLength,out){if(encLength<1)throw Error('Empty codec packet');const mode=enc[0];if(mode===0){const n=encLength-1;out.set(enc.subarray(1,encLength));return n;}
+ if(mode!==1 || (encLength-1)%2!==0)throw Error('Invalid RLE packet');let j=0;for(let i=1;i<encLength;i+=2){const count=enc[i],value=enc[i+1];if(!count||j+count>out.length)throw Error('Malformed RLE run');out.fill(value,j,j+count);j+=count;}return j;}
+function verify(src,n,out,m){if(m!==n)return false;for(let i=0;i<n;i++)if(src[i]!==out[i])return false;return true;}
+function hashUpdate(h,buf,n,iter){for(let i=0;i<n;i++)h=Math.imul((h^buf[i])>>>0,FNV_PRIME)>>>0;h=Math.imul((h^(iter&255))>>>0,FNV_PRIME)>>>0;h=Math.imul((h^((iter>>>8)&255))>>>0,FNV_PRIME)>>>0;h=Math.imul((h^((iter>>>16)&255))>>>0,FNV_PRIME)>>>0;return h>>>0;}
+function resize(){const dpr=Math.min(2,window.devicePixelRatio||1),rect=canvas.getBoundingClientRect(),w=Math.max(320,Math.floor(rect.width*dpr)),h=Math.max(190,Math.floor(rect.height*dpr));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}paint();}
+function project(x,y,z,W,H){const yy=y*Math.cos(pitch)-z*Math.sin(pitch),zz=y*Math.sin(pitch)+z*Math.cos(pitch);const xx=x*Math.cos(yaw)+zz*Math.sin(yaw),depth=-x*Math.sin(yaw)+zz*Math.cos(yaw);const m=Math.min(W,H)*.30*zoom/(1+depth*.14);return{x:W*.5+xx*m,y:H*.52-yy*m,depth};}
+function wire(a,b,W,H){const p=project(...a,W,H),q=project(...b,W,H);ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);}
+function paint(){const W=canvas.width,H=canvas.height;ctx.clearRect(0,0,W,H);ctx.fillStyle='#071728';ctx.fillRect(0,0,W,H);
+ const edges=[];for(const i of [-1,1])for(const j of [-1,1]){edges.push([[i,j,-1],[i,j,1]],[[i,-1,j],[i,1,j]],[[-1,i,j],[1,i,j]]);}
+ ctx.beginPath();for(const [a,b] of edges)wire(a,b,W,H);ctx.strokeStyle='rgba(105,166,196,.40)';ctx.lineWidth=1.3*(window.devicePixelRatio||1);ctx.stroke();
+ const pts=[];for(let i=0;i<512;i++){const count=occupancy[i];if(!count)continue;const x=(i&7),y=(i>>>3)&7,z=(i>>>6)&7;const p=project((x-3.5)/4,(y-3.5)/4,(z-3.5)/4,W,H);pts.push({p,count});}
+ pts.sort((a,b)=>b.p.depth-a.p.depth);for(const {p,count} of pts){const r=Math.min(7,1.6+Math.log2(count+1)*.75)*(window.devicePixelRatio||1);ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=`hsla(${175+Math.min(1,Math.log2(count+1)/13)*72},95%,70%,.88)`;ctx.fill();}
+ ctx.font=`${12*(window.devicePixelRatio||1)}px ui-monospace,monospace`;ctx.fillStyle='#aad9df';ctx.fillText('X',W-32,H*.51);ctx.fillText('Y',W*.52,25);ctx.fillText('Z',31,H-25);
+}
+function bin(c){return ((c.x>>>4)&7)|(((c.y>>>4)&7)<<3)|(((c.z>>>3)&7)<<6);}
+function snapshot(phase,done,target,start,bytes,cycles,rle,fail){const elapsed=Math.max(.001,(performance.now()-start)/1000),percent=100*done/target;
+ $('mlDone').textContent=fmt(done);$('mlFails').textContent=fmt(fail);$('mlRate').textContent=fmt(Math.round(done/elapsed))+'/s';$('mlBytes').textContent=kb(bytes);$('mlCodec').textContent=fmt(rle)+' RLE / '+fmt(cycles-rle)+' raw';$('mlAccepted').textContent=`${accepted} / ${rejected}`;$('mlLoss').textContent=lastLoss===null?'—':lastLoss.toFixed(6);$('mlHash').textContent='0x'+roll.toString(16).padStart(8,'0');$('mlPhase').textContent=`${phase} · ${fmt(done)} of ${fmt(target)} verified`;$('mlPercent').textContent=percent.toFixed(2)+'%';$('mlFill').style.width=percent+'%';$('mlProgress').setAttribute('aria-valuenow',String(Math.round(percent)));$('mlGridLabel').textContent=`${fmt(done)} / 1,048,576 logical cells visited`;paint();}
+function buttons(){const busy=state==='running'||state==='paused';$('mlStart').disabled=busy;$('mlCount').disabled=busy;$('mlMode').disabled=busy;$('mlEditor').disabled=busy;$('mlANNRate').disabled=busy;$('mlPause').disabled=!busy;$('mlPause').textContent=state==='paused'?'Resume':'Pause';$('mlStop').disabled=!busy;$('mlTest').disabled=busy;$('mlReport').disabled=!summary;$('mlExport').disabled=busy;$('mlState').textContent=state.toUpperCase();}
+function log(message){$('mlLog').textContent=`[${new Date().toLocaleTimeString()}] ${message}\n`+$('mlLog').textContent.slice(0,1200);}
+function windowInput(src,n){const x=new Float32Array(64);for(let i=0;i<64;i++)x[i]=src[i%n]/255;return x;}
+function fitness(x){return ann.mse(x,ann.forward(x).y);}
+function annCycle(src,n){const x=windowInput(src,n),before=fitness(x),oldE=ann.e.slice(),oldD=ann.d.slice(),oldBe=ann.be.slice(),oldBd=ann.bd.slice();ann.trainOne(x,.30);const after=fitness(x);if(Number.isFinite(after)&&after<=before+1e-10){accepted++;lastLoss=after;}else{ann.e.set(oldE);ann.d.set(oldD);ann.be.set(oldBe);ann.bd.set(oldBd);rejected++;lastLoss=before;}learned++;}
+function feed(i,mode,media){if(mode==='lines'){const line=makeLine(i);const {written,read}=E.encodeInto(line,sourceBuf);if(read!==line.length)throw Error('Generated HTML line exceeds '+CAP+' UTF-8 bytes.');return written;}
+ const bytes=media;if(!bytes || !bytes.length)throw Error('Selected media is empty. Generate or import data first.');const start=(i*64)%bytes.length;for(let k=0;k<64;k++)sourceBuf[k]=bytes[(start+k)%bytes.length];return 64;}
+function mediaSource(){const S=root.DM3DStudio?.getState();return S?.source?.bytes||null;}
+function setAddress(index){const c=spatial(index);$('mlAddress').textContent='('+c.x+', '+c.y+', '+c.z+')';if(root.DM3DCore){const m=root.DM3DCore.morton(c.x,c.y,c.z),r=root.DM3DCore.unmorton(m);$('mlMorton').textContent=r[0]===c.x&&r[1]===c.y&&r[2]===c.z?'90-bit PASS':'FAIL';}}
+async function run(){if(state==='running'||state==='paused')return;try{const total=assertCount(),mode=$('mlMode').value,rate=$('mlANNRate').value==='auto'?(root.DM3DGenome?.annStride||1024):Number($('mlANNRate').value);parseLines();const media=mode==='media'?mediaSource():null;if(mode==='media'&&(!media||!media.length))throw Error('A nonempty media source must be loaded before starting.');if(mode==='lines'&&E.encode(makeLine(0)).length>CAP)throw Error('Line template exceeds 8 KiB working buffer.');
+ const token=++runToken;state='running';summary=null;occupancy.fill(0);sampled.fill(0);ann.reset(2026);accepted=rejected=learned=0;lastLoss=null;roll=FNV_OFFSET;buttons();let done=0,bytes=0,encodedBytes=0,rle=0,fail=0;const start=performance.now();log(`RUN ${fmt(total)} ${mode==='lines'?'unique HTML code lines':'multimodal byte windows'}; ANN interval ${rate||'disabled'}.`);
+ async function batch(){while(done<total&&state!=='stopped'&&token===runToken){if(state==='paused'){await new Promise(resolve=>setTimeout(resolve,60));continue;}if(state!=='running')break;const deadline=performance.now()+14,limit=Math.min(total,done+Math.max(256,Math.min(8192,root.DM3DGenome?.batch||2048)));do{const i=done,n=feed(i,mode,media),packetN=encode(sourceBuf,n,packet),decodedN=decode(packet,packetN,decodedBuf);if(!verify(sourceBuf,n,decodedBuf,decodedN)){fail++;throw Error('Codec mismatch at cycle '+i);}roll=hashUpdate(roll,decodedBuf,decodedN,i);bytes+=n;encodedBytes+=packetN;if(packet[0]===1)rle++;
+ if(rate&&i%rate===0)annCycle(sourceBuf,n);
+ const c=coords(i),slot=bin(c);occupancy[slot]++;done++;}while(done<limit&&performance.now()<deadline&&state==='running'&&token===runToken);
+ if(done){setAddress(done-1);snapshot('RUNNING',done,total,start,bytes,done,rle,fail);}await new Promise(resolve=>setTimeout(resolve,0));}
+ if(token!==runToken)return;
+ if(state==='stopped'){log(`STOPPED at ${fmt(done)} of ${fmt(total)} cycles · zero detected mismatches.`);summary={target:total,completed:done,fail,bytes,encodedBytes,roll,accepted,rejected,mode,state:'stopped',durationMs:performance.now()-start};state='stopped';buttons();return;}
+ if(state!=='running')return;
+ state='complete';summary={target:total,completed:done,fail,bytes,encodedBytes,roll,accepted,rejected,annUpdates:learned,lastLoss,mode,state:'complete',durationMs:performance.now()-start,virtualAxisBits:30,virtualAddresses:'2^90'};snapshot('COMPLETE',done,total,start,bytes,done,rle,fail);log(`PASS: ${fmt(done)} exact byte-for-byte round trips · ${fmt(bytes)} source bytes · ${fmt(encodedBytes)} coded bytes · ${fmt(learned)} ANN updates · ${((performance.now()-start)/1000).toFixed(2)} s.`);buttons();}
+ batch().catch(e=>{state='error';log('ERROR: '+e.message);summary={target:total,completed:done,fail,bytes,roll,error:e.message,state:'error'};buttons();});
+ }catch(e){state='error';log('ERROR: '+e.message);buttons();}}
+function pause(){if(state==='running'){state='paused';log('PAUSED; verified count retained.');}else if(state==='paused'){state='running';log('RESUMED.');}buttons();}
+// The paused scheduler yields until resumed or stopped, retaining verified state.
+function stop(){if(state!=='running'&&state!=='paused')return;state='stopped';buttons();}
+function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),45000);}
+function report(){if(!summary)return;const proof={schema:'DM3D-1M-audit-v1',timestamp:new Date().toISOString(),...summary,rollingFNV32:'0x'+summary.roll.toString(16).padStart(8,'0'),note:'Noncryptographic rolling hash; comparisons were bytewise per cycle; no full trace retained; sparse 3D visualization.'};download(new Blob([JSON.stringify(proof,null,2)],{type:'application/json'}),'dm3d_million_audit.json');}
+async function exportGzip(){if(state==='running'||state==='paused')return;try{if(typeof CompressionStream==='undefined')throw Error('This browser does not support CompressionStream gzip.');parseLines();const count=assertCount();if(E.encode(makeLine(0)).length>CAP)throw Error('Line template exceeds 8 KiB.');$('mlExport').disabled=true;log('EXPORT: generating '+fmt(count)+' HTML lines and gzip-compressing locally.');let n=0;const stream=new ReadableStream({async pull(controller){if(n>=count){controller.enqueue(E.encode('</main></body></html>\n'));controller.close();return;}let text='';const until=Math.min(n+1024,count);if(n===0)text='<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>DM3D generated HTML code-line corpus</title></head><body><main>\n';while(n<until){text+=makeLine(n);n++;}controller.enqueue(E.encode(text));if(n%65536===0||n===count){$('mlPhase').textContent=`Export ${fmt(n)} / ${fmt(count)} lines`;}await new Promise(r=>setTimeout(r,0));}});
+ const compressed=stream.pipeThrough(new CompressionStream('gzip'));const blob=await new Response(compressed).blob();download(blob,`dm3d_${count}_html_lines.html.gz`);log(`EXPORT PASS: ${fmt(count)} HTML lines in ${kb(blob.size)} gzip archive.`);
+ }catch(e){log('EXPORT ERROR: '+e.message);}finally{buttons();}}
+function test(){if(state==='running'||state==='paused')return;try{const tests=[new Uint8Array(0),new Uint8Array(1),new Uint8Array(64).fill(81),Uint8Array.from({length:256},(_,i)=>i),E.encode('DM3D Ω — 完整 byte-for-byte test'),Uint8Array.from({length:1024},(_,i)=>(i*37+i*i)&255)];let ntests=0;for(const a of tests){if(a.length>CAP)throw Error('Test too long');const n=encode(a,a.length,packet),m=decode(packet,n,decodedBuf);if(!verify(a,a.length,decodedBuf,m))throw Error('Round-trip regression '+ntests);ntests++;}for(const v of [0,1,1023,262143,999999]){const c=coords(v),s=spatial(v),m=root.DM3DCore.morton(s.x,s.y,s.z),r=root.DM3DCore.unmorton(m);if(r[0]!==s.x||r[1]!==s.y||r[2]!==s.z)throw Error('Morton regression '+v);ntests++;}parseLines();for(const v of [0,1,999,999999]){const b=E.encode(makeLine(v)),n=encode(b,b.length,packet),length=decode(packet,n,decodedBuf);if(!verify(b,b.length,decodedBuf,length))throw Error('HTML generator regression '+v);ntests++;}log(`SELF TEST PASS: ${ntests} codec, unicode, line generator, and 90-bit spatial-address checks.`);}catch(e){log('SELF TEST FAILED: '+e.message);}}
+// Update requestAnimationFrame renders on pointer gestures only, not every compute iteration.
+let down=null;
+canvas.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,yaw,pitch};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!down)return;yaw=down.yaw+(e.clientX-down.x)*.008;pitch=Math.max(-1.4,Math.min(1.4,down.pitch+(e.clientY-down.y)*.008));paint();});
+canvas.addEventListener('pointerup',()=>down=null);canvas.addEventListener('pointercancel',()=>down=null);
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.3,Math.min(2.6,zoom*Math.exp(-e.deltaY*.001)));paint();},{passive:false});
+$('mlStart').addEventListener('click',run);$('mlPause').addEventListener('click',pause);$('mlStop').addEventListener('click',stop);$('mlTest').addEventListener('click',test);$('mlReport').addEventListener('click',report);$('mlExport').addEventListener('click',exportGzip);
+if(window.ResizeObserver)new ResizeObserver(resize).observe(canvas);else window.addEventListener('resize',resize);
+buttons();resize();root.DM3DMillion={run,test,codec:{encode,decode,verify,coords,spatial},getReport:()=>summary,getState:()=>state};
+})(window);
+</script>
+
+<script>
+/* Dr Moagi Ω³ KERNEL/1 — browser-sandboxed microkernel emulator.
+   Implements a real bounded instruction interpreter, cooperative scheduling,
+   sparse 90-bit virtual address map, IndexedDB VFS and codec/ANN syscalls.
+   No eval, remote access, implicit device permissions, or OS privilege. */
+(function(root){
+'use strict';
+const $=id=>document.getElementById(id), CORE=root.DM3DCore, MEDIA=root.DMXM, NN=root.DMANN;
+const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:false});
+const MAX_FILES=64*1024*1024,MAX_FILE=25*1024*1024,MAX_VOXELS=16384,MAX_PROCS=8;
+const MAX_SOURCE_INSTR=256,MAX_DISPATCH=2000000,MAX_BENCH=1000000;
+const FNV_OFFSET=0x811c9dc5,ALLOWED=new Set(['LOAD','GENERATE','ENCODE','DECODE','VERIFY','SAVE',
+ 'VSET','VGET','VDEL','VCOUNT','MSTORE','MLOAD','ANNTRAIN','ANNGENERATE','BENCH',
+ 'MOV','ADD','DEC','JMP','JNZ','PRINT','SLEEP','YIELD','HASH','HALT']);
+let kernelState='OFFLINE',schedulerPaused=false,db=null,storageMode='memory only';
+const files=new Map(),vram=new Map(),processes=[];let nextPID=1,execCount=0,
+  benchmarkCycles=0,rolling=FNV_OFFSET,currentPID=0,timer=null,inTick=false,
+  lastMorton='—',terminalLines=[],yaw=.66,pitch=-.43,zoom=1,drag=null;
+const canvas=$('k3d'),ctx=canvas.getContext('2d');
+function fmt(n){return Number(n).toLocaleString('en-US');}
+function size(n){return n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KiB`:`${(n/1048576).toFixed(2)} MiB`;}
+function printable(x){return String(x).replace(/[\x00-\x08\x0b\x0e-\x1f]/g,'?');}
+function log(s){terminalLines.push(`[${new Date().toLocaleTimeString()}] ${printable(s)}`);
+ if(terminalLines.length>110)terminalLines.splice(0,terminalLines.length-110);
+ $('kTerminal').textContent=terminalLines.join('\n');$('kTerminal').scrollTop=$('kTerminal').scrollHeight;}
+function validPath(p){if(typeof p!=='string'||p.length>160||!p.startsWith('/')||p==='/'||
+ /[\\\x00-\x1f]/.test(p)||p.includes('//')||p.split('/').includes('..')||p.split('/').includes('.')||
+ !/^\/[a-zA-Z0-9_./-]+$/.test(p))throw Error('Invalid virtual filesystem path: '+p);return p;}
+function getFile(p){const f=files.get(validPath(p));if(!f)throw Error('File not found: '+p);return f;}
+function totalFileBytes(){let sum=0;for(const f of files.values())sum+=f.bytes.length;return sum;}
+function toBytes(data){return data instanceof Uint8Array?data:new Uint8Array(data);}
+function inferMode(filename,mime=''){return /^text\//.test(mime)||/\.(html?|txt|json|js|css|ks|md|xml)$/i.test(filename)?'text':
+ /^image\//.test(mime)?'image':/^audio\//.test(mime)?'audio':/^video\//.test(mime)?'video':'binary';}
+function metadataOf(path,mode='binary',extra={}){return{name:path.split('/').pop(),mime:mode==='text'?'text/plain;charset=utf-8':
+ mode==='image'?'image/png':mode==='audio'?'audio/wav':'application/octet-stream',kind:'native',...extra};}
+async function openDatabase(){if(!('indexedDB' in root))return;
+ try{const opened=await new Promise((resolve,reject)=>{const r=indexedDB.open('dm3d_kernel_v1',1);
+ r.onupgradeneeded=()=>{const database=r.result;if(!database.objectStoreNames.contains('files'))database.createObjectStore('files',{keyPath:'path'});};
+ r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error||Error('IndexedDB unavailable'));
+ r.onblocked=()=>reject(Error('Database blocked'));});db=opened;
+ const existing=await new Promise((resolve,reject)=>{const t=db.transaction('files','readonly'),r=t.objectStore('files').getAll();
+ r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+ for(const raw of existing){if(!raw||!raw.path)continue;try{validPath(raw.path);
+ let bytes=toBytes(raw.bytes);if(bytes.length>MAX_FILE)continue;
+ files.set(raw.path,{path:raw.path,bytes,mode:raw.mode||'binary',metadata:raw.metadata||{},mtime:raw.mtime||0});}catch(e){}}
+ storageMode='IndexedDB persistent';
+ }catch(e){try{db?.close();}catch(_){}db=null;storageMode='session memory ('+e.message+')';}}
+async function dbWrite(obj){if(!db)return;try{await new Promise((resolve,reject)=>{const t=db.transaction('files','readwrite');
+ t.objectStore('files').put(obj);t.oncomplete=resolve;t.onerror=()=>reject(t.error||Error('Storage write failed'));
+ t.onabort=()=>reject(t.error||Error('Storage write aborted'));});}
+ catch(e){try{db.close();}catch(_){}db=null;storageMode='session memory (storage failure)';log('STORAGE: '+e.message+'; continuing in memory.');}}
+async function dbRemove(path){if(!db)return;try{await new Promise((resolve,reject)=>{const t=db.transaction('files','readwrite');
+ t.objectStore('files').delete(path);t.oncomplete=resolve;t.onerror=()=>reject(t.error||Error('Storage deletion failed'));
+ t.onabort=()=>reject(t.error||Error('Storage deletion aborted'));});}
+ catch(e){try{db.close();}catch(_){}db=null;storageMode='session memory (storage failure)';log('STORAGE: '+e.message);}}
+async function fsWrite(path,data,mode='binary',metadata={}){path=validPath(path);const bytes=toBytes(data).slice();
+ if(bytes.length>MAX_FILE)throw Error('Per-file kernel cap is 25 MiB.');
+ const current=files.get(path)?.bytes.length||0;if(totalFileBytes()-current+bytes.length>MAX_FILES)throw Error('Virtual file storage exceeds 64 MiB cap.');
+ const object={path,bytes,mode,metadata,mtime:Date.now()};files.set(path,object);await dbWrite(object);renderFiles();return object;}
+async function fsDelete(path){path=validPath(path);files.delete(path);await dbRemove(path);renderFiles();}
+function getFilePaths(){return Array.from(files.keys()).sort();}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function boot(){if(kernelState==='ONLINE')return true;if(kernelState==='BOOTING')return false;
+ kernelState='BOOTING';renderMetrics();try{await openDatabase();
+ if(!files.has('/input/hello.txt'))await fsWrite('/input/hello.txt',encoder.encode('<html><body>DM3D Ω kernel — exact multimodal round trip.</body></html>\n'),'text',metadataOf('/input/hello.txt','text'));
+ if(!files.has('/system/readme.txt'))await fsWrite('/system/readme.txt',encoder.encode('DM3D Ω KERNEL/1: cooperative browser VM, encrypted? No. Codec exact and ANN lossy. Use help in the console.\n'),'text',metadataOf('/system/readme.txt','text'));
+ // Deterministic kernel power-on self-check verifies large Morton boundary and 3D codec.
+ const coord=CORE.AXIS-1, key=CORE.morton(coord,coord,coord),rev=CORE.unmorton(key);
+ if(rev[0]!==coord||rev[1]!==coord||rev[2]!==coord)throw Error('90-bit addressing power-on check failed.');
+ const test=new Map([[CORE.morton(1,2,3),67]]);
+ if(!CORE.equalMaps(test,CORE.decode(CORE.encode(test).bytes).map))throw Error('3D codec power-on check failed.');
+ kernelState='ONLINE';schedulerPaused=false;log('BOOT PASS: KERNEL/1 online · 90-bit Morton MMU · sparse memory · bytecode CPU · '+storageMode+'.');
+ renderAll();schedule();return true;
+ }catch(e){kernelState='FAULT';log('BOOT FAILED: '+e.message);renderAll();throw e;}}
+function tokenize(line){const m=line.match(/(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s]+)/g)||[];
+ return m.map(x=>x.length>=2&&((x[0]==='"'&&x.endsWith('"'))||(x[0]==="'"&&x.endsWith("'")))?x.slice(1,-1):x);}
+function compile(source){const lines=source.split(/\r?\n/),instructions=[],labels=new Map();
+ if(source.length>64*1024)throw Error('Program source exceeds 64 KiB.');
+ for(let ln=0;ln<lines.length;ln++){const line=lines[ln].trim();if(!line||line.startsWith('#')||line.startsWith('//'))continue;
+ if(line.endsWith(':')){const name=line.slice(0,-1).trim();if(!/^[A-Za-z][A-Za-z0-9_]{0,30}$/.test(name)||labels.has(name.toLowerCase()))throw Error(`Line ${ln+1}: invalid or duplicate label.`);
+ labels.set(name.toLowerCase(),instructions.length);continue;}
+ const word=line.match(/^[A-Za-z]+/);if(!word)throw Error(`Line ${ln+1}: invalid instruction.`);
+ const op=word[0].toUpperCase();if(!ALLOWED.has(op))throw Error(`Line ${ln+1}: unknown opcode ${op}.`);
+ const args=tokenize(line.slice(word[0].length).trim());
+ const expected={LOAD:1,GENERATE:1,ENCODE:1,DECODE:1,VERIFY:0,SAVE:1,VSET:4,VGET:4,VDEL:3,VCOUNT:1,
+ MSTORE:1,MLOAD:1,ANNTRAIN:1,ANNGENERATE:1,BENCH:1,MOV:2,ADD:2,DEC:1,JMP:1,JNZ:2,
+ PRINT:-1,SLEEP:1,YIELD:0,HASH:0,HALT:0}[op];
+ if(expected>=0&&args.length!==expected)throw Error(`Line ${ln+1}: ${op} expects ${expected} argument(s), got ${args.length}.`);
+ if(op==='PRINT'&&!args.length)throw Error(`Line ${ln+1}: PRINT needs text.`);
+ instructions.push({op,args,lineNo:ln+1,raw:line});if(instructions.length>MAX_SOURCE_INSTR)throw Error('Maximum 256 assembled instructions.');}
+ if(!instructions.length)throw Error('Empty program.');
+ for(const ins of instructions)if(ins.op==='JMP'||ins.op==='JNZ'){
+ const label=ins.args[ins.op==='JMP'?0:1].toLowerCase();if(!labels.has(label))throw Error(`Line ${ins.lineNo}: unknown label ${label}.`);ins.jump=labels.get(label);}
+ return instructions;}
+function newProcess(program,label='user program'){
+ if(kernelState!=='ONLINE')throw Error('Boot kernel before running a program.');
+ if(processes.filter(p=>p.state==='READY'||p.state==='RUNNING'||p.state==='WAIT').length>=MAX_PROCS)throw Error('Maximum 8 concurrently active processes.');
+ const instructions=compile(program);
+ const p={pid:nextPID++,name:label,code:instructions,pc:0,reg:new Int32Array(8),state:'READY',
+ dispatched:0,source:null,decoded:null,archive:null,mode:'binary',metadata:null,verified:false,
+ ann:new NN.ByteANN(2026+nextPID),annAccepted:0,annRejected:0,annLoss:null,
+ bench:null,train:null,waitUntil:0,error:null,log:[],stats:{bytes:0,cycles:0,failed:0,hash:null},
+ created:Date.now()};processes.push(p);log(`PID ${p.pid}: SPAWN ${p.name} · ${instructions.length} machine instructions.`);renderAll();schedule();return p;}
+function numberArg(t,p){if(/^R[0-7]$/i.test(t))return p.reg[Number(t[1])];if(!/^-?\d+$/.test(t))throw Error('Expected decimal integer or register R0…R7: '+t);
+ const n=Number(t);if(!Number.isSafeInteger(n))throw Error('Unsafe integer immediate.');return n;}
+function registerIndex(t){if(!/^R[0-7]$/i.test(t))throw Error('Expected register R0…R7: '+t);return Number(t[1]);}
+function point(ins,p){const x=numberArg(ins.args[0],p),y=numberArg(ins.args[1],p),z=numberArg(ins.args[2],p);
+ for(const v of [x,y,z])if(!Number.isInteger(v)||v<0||v>=CORE.AXIS)throw Error('3D coordinates must be integers 0…2³⁰−1.');
+ const m=CORE.morton(x,y,z);lastMorton=m.toString();return{m,x,y,z};}
+function equals(a,b){return MEDIA.same(a,b);}
+function byteSource(p){if(!(p.source instanceof Uint8Array)||!p.source.length)throw Error('LOAD or GENERATE a nonempty input before this syscall.');return p.source;}
+function ensureANN(p){if(!p.ann)p.ann=new NN.ByteANN(2026+p.pid);return p.ann;}
+function trainingStep(p,ins){const src=byteSource(p);if(!p.train){const count=numberArg(ins.args[0],p);
+ if(!Number.isInteger(count)||count<1||count>5000)throw Error('ANNTRAIN count must be 1…5,000.');p.train={count,done:0};}
+ const t=p.train,ann=ensureANN(p),stop=Math.min(t.count,t.done+16);
+ while(t.done<stop){const x=ann.input(src,(t.done*37)%src.length),before=ann.mse(x,ann.forward(x).y),
+ e=ann.e.slice(),d=ann.d.slice(),be=ann.be.slice(),bd=ann.bd.slice();ann.trainOne(x,.30);
+ const after=ann.mse(x,ann.forward(x).y);if(Number.isFinite(after)&&after<=before+1e-10){p.annAccepted++;p.annLoss=after;}
+ else{ann.e.set(e);ann.d.set(d);ann.be.set(be);ann.bd.set(bd);p.annRejected++;p.annLoss=before;}
+ t.done++;}
+ if(t.done>=t.count){log(`PID ${p.pid}: ANN trained ${t.done} steps · accepted ${p.annAccepted}, rejected ${p.annRejected} · MSE ${(p.annLoss||0).toFixed(6)}.`);p.train=null;return true;}
+ return false;}
+function benchStep(p,ins){const src=byteSource(p);if(!p.bench){const count=numberArg(ins.args[0],p);
+ if(!Number.isInteger(count)||count<1||count>MAX_BENCH)throw Error('BENCH count must be 1…1,000,000.');
+ p.bench={count,done:0,fail:0,packet:new Uint8Array(256),buf:new Uint8Array(64),out:new Uint8Array(64),roll:FNV_OFFSET,start:performance.now()};}
+ const B=p.bench,codec=root.DM3DMillion.codec,stop=Math.min(B.count,B.done+512);
+ while(B.done<stop){const i=B.done,salt=Math.imul((i+1)>>>0,0x9e3779b1)>>>0;
+ for(let k=0;k<64;k++)B.buf[k]=src[(i*64+k)%src.length]^((salt>>>((k&3)*8))&255);
+ const coded=codec.encode(B.buf,64,B.packet),decoded=codec.decode(B.packet,coded,B.out);
+ if(!codec.verify(B.buf,64,B.out,decoded)){B.fail++;p.stats.failed++;throw Error('BENCH decode mismatch at cycle '+i);}
+ for(let j=0;j<64;j++){B.roll=Math.imul(B.roll^B.out[j],0x01000193)>>>0;}
+ B.done++;p.stats.cycles++;p.stats.bytes+=64;benchmarkCycles++;}
+ if(B.done>=B.count){p.stats.hash='0x'+B.roll.toString(16).padStart(8,'0');rolling=B.roll;
+ const s=(performance.now()-B.start)/1000;log(`PID ${p.pid}: BENCH PASS ${fmt(B.done)} byte-exact cycles / ${size(p.stats.bytes)} · ${s.toFixed(2)}s · FNV32 ${p.stats.hash}.`);
+ p.bench=null;return true;}return false;}
+async function execInstruction(p){if(p.state==='HALTED'||p.state==='ERROR'||p.state==='KILLED')return;
+ if(p.waitUntil>Date.now()){p.state='WAIT';return;}p.waitUntil=0;p.state='RUNNING';
+ const ins=p.code[p.pc];if(!ins){p.state='HALTED';log(`PID ${p.pid}: HALT (end of program).`);return;}
+ if(++p.dispatched>MAX_DISPATCH){p.state='ERROR';p.error='Dispatch cap exceeded';log(`PID ${p.pid}: ERROR dispatch cap exceeded.`);return;}
+ const a=ins.args,op=ins.op;
+ try{
+ let advance=true;
+ switch(op){
+ case 'LOAD':{const f=getFile(a[0]);p.source=f.bytes.slice();p.decoded=null;p.archive=null;p.verified=false;
+ p.mode=MEDIA.MODES.includes(f.mode)?f.mode:'binary';p.metadata={...metadataOf(f.path,p.mode),...f.metadata};
+ log(`PID ${p.pid}: LOAD ${a[0]} (${size(p.source.length)}, ${p.mode}).`);break;}
+ case 'GENERATE':{const mode=a[0].toLowerCase();if(!MEDIA.MODES.includes(mode))throw Error('GENERATE requires TEXT|IMAGE|AUDIO|VIDEO|BINARY');
+ await root.DM3DStudio.generate(mode);const item=root.DM3DStudio.getState().source;
+ if(!item)throw Error('Studio media generator failed.');p.source=item.bytes.slice();p.mode=item.mode;p.metadata={...item.meta};p.decoded=null;p.verified=false;
+ log(`PID ${p.pid}: GENERATE ${p.mode} (${size(p.source.length)}).`);break;}
+ case 'ENCODE':{const src=p.source;if(!(src instanceof Uint8Array))throw Error('ENCODE requires a loaded source.');
+ const packed=await MEDIA.encode(src,p.mode,p.metadata||metadataOf(a[0],p.mode));
+ await fsWrite(a[0],packed.archive,'binary',metadataOf(a[0],'binary',{format:'dmxm'}));p.archive=packed.archive;
+ log(`PID ${p.pid}: ENCODE ${size(src.length)} → ${size(p.archive.length)} (${packed.codec}) saved ${a[0]}.`);break;}
+ case 'DECODE':{const file=getFile(a[0]);const result=await MEDIA.decode(file.bytes);p.decoded=result.bytes;
+ p.decodedMetadata=result.metadata;p.decodedMode=result.mode;p.verified=false;
+ log(`PID ${p.pid}: DECODE ${a[0]} → ${size(result.bytes.length)}, CRC PASS.`);break;}
+ case 'VERIFY':{if(!p.source||!p.decoded)throw Error('VERIFY requires independent loaded source and decoded archive.');
+ if(!equals(p.source,p.decoded))throw Error('VERIFY FAILED: reconstructed bytes do not match original source.');p.verified=true;
+ log(`PID ${p.pid}: VERIFY PASS · ${fmt(p.source.length)} bytes compared, 0 mismatches.`);break;}
+ case 'SAVE':{if(!p.decoded)throw Error('SAVE requires DECODE output.');
+ await fsWrite(a[0],p.decoded,p.decodedMode||p.mode,p.decodedMetadata||metadataOf(a[0],p.mode));log(`PID ${p.pid}: SAVE ${a[0]}.`);break;}
+ case 'VSET':{const pt=point(ins,p),value=numberArg(a[3],p);
+ if(!Number.isInteger(value)||value<0||value>255)throw Error('VSET value must be unsigned byte 0…255.');
+ if(value&&!vram.has(pt.m)&&vram.size>=MAX_VOXELS)throw Error('Sparse voxel cap 16,384 exceeded.');
+ if(!value)vram.delete(pt.m);else vram.set(pt.m,value);$('kMemCheck').textContent='Morton reversible · PASS';break;}
+ case 'VGET':{const pt=point(ins,p),r=registerIndex(a[3]);p.reg[r]=vram.get(pt.m)||0;log(`PID ${p.pid}: VGET ${pt.x},${pt.y},${pt.z} → R${r}=${p.reg[r]}.`);break;}
+ case 'VDEL':{const pt=point(ins,p);vram.delete(pt.m);break;}
+ case 'VCOUNT':{p.reg[registerIndex(a[0])]=vram.size;break;}
+ case 'MSTORE':{const encoded=CORE.encode(vram);
+ await fsWrite(a[0],encoded.bytes,'binary',metadataOf(a[0],'binary',{format:'d3ae'}));
+ log(`PID ${p.pid}: MSTORE ${fmt(vram.size)} sparse voxels → ${size(encoded.bytes.length)} (${encoded.codec}).`);break;}
+ case 'MLOAD':{const result=CORE.decode(getFile(a[0]).bytes);vram.clear();for(const [key,val] of result.map)vram.set(key,val);
+ log(`PID ${p.pid}: MLOAD ${fmt(vram.size)} voxels from ${a[0]}.`);break;}
+ case 'ANNTRAIN':{advance=trainingStep(p,ins);break;}
+ case 'ANNGENERATE':{const src=byteSource(p),ann=ensureANN(p),x=ann.input(src),z=ann.encode(x),y=ann.decode(z);
+ const out=new Uint8Array(y.length);for(let i=0;i<y.length;i++)out[i]=Math.max(0,Math.min(255,Math.round(y[i]*255)));
+ await fsWrite(a[0],out,'binary',metadataOf(a[0],'binary',{kind:'ann-approximate'}));
+ log(`PID ${p.pid}: ANNGENERATE ${a[0]} · 64-byte lossy neural approximation.`);break;}
+ case 'BENCH':{advance=benchStep(p,ins);break;}
+ case 'MOV':{p.reg[registerIndex(a[0])]=numberArg(a[1],p)|0;break;}
+ case 'ADD':{const r=registerIndex(a[0]);p.reg[r]=(p.reg[r]+numberArg(a[1],p))|0;break;}
+ case 'DEC':{const r=registerIndex(a[0]);p.reg[r]=(p.reg[r]-1)|0;break;}
+ case 'JMP':{p.pc=ins.jump;advance=false;break;}
+ case 'JNZ':{if(numberArg(a[0],p)!==0){p.pc=ins.jump;advance=false;}break;}
+ case 'PRINT':{log(`PID ${p.pid}: ${a.join(' ')}`);break;}
+ case 'SLEEP':{const ms=numberArg(a[0],p);if(ms<0||ms>60000)throw Error('SLEEP requires 0…60,000ms.');p.waitUntil=Date.now()+ms;break;}
+ case 'YIELD':break;
+ case 'HASH':{const b=byteSource(p);if(!root.crypto?.subtle)throw Error('SHA-256 unavailable in this browser context.');
+ const h=await root.crypto.subtle.digest('SHA-256',b),hex=Array.from(new Uint8Array(h),x=>x.toString(16).padStart(2,'0')).join('');p.stats.hash=hex;log(`PID ${p.pid}: SHA-256 ${hex}.`);break;}
+ case 'HALT':{p.state='HALTED';log(`PID ${p.pid}: HALT · ${p.dispatched} dispatches · verified=${p.verified}.`);break;}
+ }
+ if(advance)p.pc++;
+ if(p.state==='RUNNING')p.state=p.waitUntil>Date.now()?'WAIT':'READY';
+ execCount++;currentPID=p.pid;
+ }catch(e){p.state='ERROR';p.error=`PC ${p.pc} (${op}): ${e.message}`;log(`PID ${p.pid}: ERROR ${p.error}`);}
+}
+function runnable(){return processes.filter(p=>p.state==='READY'||p.state==='WAIT'&&p.waitUntil<=Date.now());}
+function waiting(){return processes.some(p=>p.state==='WAIT'&&p.waitUntil>Date.now());}
+function selectProcess(){const active=runnable();if(!active.length)return null;
+ const index=active.findIndex(p=>p.pid>currentPID);return index>=0?active[index]:active[0];}
+function schedule(){if(kernelState!=='ONLINE'||schedulerPaused||timer||inTick)return;
+ if(!runnable().length&&!waiting())return;
+ timer=setTimeout(tick,runnable().length?0:Math.max(10,Math.min(100,Math.min(...processes.filter(p=>p.state==='WAIT').map(p=>p.waitUntil-Date.now())))));}
+async function tick(){timer=null;if(inTick||schedulerPaused||kernelState!=='ONLINE')return;inTick=true;
+ try{const start=performance.now();let count=0;
+ while(!schedulerPaused&&kernelState==='ONLINE'&&count++<26&&performance.now()-start<12){const p=selectProcess();if(!p)break;
+ await execInstruction(p);}}
+ finally{inTick=false;renderAll();schedule();}}
+async function singleStep(){if(kernelState!=='ONLINE')return;const wasPaused=schedulerPaused;schedulerPaused=true;if(timer){clearTimeout(timer);timer=null;}
+ const p=selectProcess();if(p){await execInstruction(p);log(`CPU STEP: PID ${p.pid} PC=${p.pc}.`);}else log('CPU STEP: no runnable process.');
+ renderAll();if(!wasPaused)log('Scheduler paused after single-step.');}
+function toggleScheduler(){if(kernelState!=='ONLINE')return;schedulerPaused=!schedulerPaused;
+ if(schedulerPaused&&timer){clearTimeout(timer);timer=null;}
+ log(schedulerPaused?'SCHEDULER PAUSED.':'SCHEDULER RESUMED.');renderAll();schedule();}
+function killPID(pid){const p=processes.find(p=>p.pid===pid);if(!p)throw Error('PID not found.');
+ if(p.state==='HALTED'||p.state==='ERROR'||p.state==='KILLED')return;p.state='KILLED';p.error='terminated by user';log(`PID ${pid}: KILLED.`);renderAll();}
+function resetVolatile(){if(timer){clearTimeout(timer);timer=null;}schedulerPaused=true;
+ for(const p of processes)if(['READY','RUNNING','WAIT'].includes(p.state))p.state='KILLED';
+ processes.length=0;currentPID=0;execCount=0;benchmarkCycles=0;rolling=FNV_OFFSET;vram.clear();lastMorton='—';
+ log('RESET: terminated all volatile processes and cleared sparse 3D RAM; virtual filesystem retained.');renderAll();}
+function renderMetrics(){const counts=processes.filter(p=>['READY','RUNNING','WAIT'].includes(p.state)).length;
+ $('kBootState').textContent=kernelState+(schedulerPaused&&kernelState==='ONLINE'?' · PAUSED':'');
+ $('kProcCount').textContent=counts+' / '+processes.length;
+ $('kInstructions').textContent=fmt(execCount);
+ $('kVoxelCount').textContent=fmt(vram.size)+' voxels';
+ $('kFileSize').textContent=size(totalFileBytes());
+ $('kMorton').textContent=lastMorton.length>24?lastMorton.slice(0,8)+'…'+lastMorton.slice(-12):lastMorton;
+ $('kPersist').textContent=storageMode;
+ $('kPause').disabled=kernelState!=='ONLINE';$('kPause').textContent=schedulerPaused?'Resume scheduler':'Pause scheduler';
+ $('kStep').disabled=kernelState!=='ONLINE';$('kBoot').disabled=kernelState==='ONLINE'||kernelState==='BOOTING';}
+function renderProcesses(){const tbody=$('kProcessRows');tbody.textContent='';if(!processes.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=5;td.textContent='No jobs loaded';tr.appendChild(td);tbody.appendChild(tr);$('kProgressBar').style.width='0%';$('kCurrentTask').textContent='No active process.';return;}
+ for(const p of processes.slice(-12).reverse()){const tr=document.createElement('tr'),desc=p.code[p.pc]?.op||'—',percent=p.bench?
+ Math.floor(p.bench.done/p.bench.count*100):p.train?Math.floor(p.train.done/p.train.count*100):Math.floor(p.pc/p.code.length*100);
+ const fields=[p.pid,p.state,`${p.pc}/${p.code.length}`,desc+(p.bench?` ${fmt(p.bench.done)}/${fmt(p.bench.count)}`:p.train?` ${p.train.done}/${p.train.count}`:'')];
+ for(const field of fields){const td=document.createElement('td');td.textContent=String(field);tr.appendChild(td);}
+ const td=document.createElement('td');if(['READY','RUNNING','WAIT'].includes(p.state)){const btn=document.createElement('button');btn.className='k-kill';btn.textContent='Kill';btn.type='button';btn.addEventListener('click',()=>killPID(p.pid));td.appendChild(btn);}tr.appendChild(td);tbody.appendChild(tr);}
+ const latest=processes[processes.length-1],progress=latest.bench?latest.bench.done/latest.bench.count*100:
+ latest.train?latest.train.done/latest.train.count*100:latest.pc/latest.code.length*100;
+ $('kProgressBar').style.width=Math.max(0,Math.min(100,progress))+'%';
+ $('kCurrentTask').textContent=`PID ${latest.pid} ${latest.state} · PC ${latest.pc} · ${fmt(latest.stats.cycles)} verified codec cycles · ${latest.verified?'exact media verified':'not yet verified'}${latest.error?' · '+latest.error:''}`;}
+function renderFiles(){const tbody=$('kFileRows');tbody.textContent='';const paths=getFilePaths();if(!paths.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=3;td.textContent='Filesystem empty';tr.appendChild(td);tbody.appendChild(tr);}else
+ for(const path of paths){const f=files.get(path),tr=document.createElement('tr');
+ for(const value of [path,size(f.bytes.length),f.mode]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}
+ tr.addEventListener('click',()=>{$('kPath').value=path;});tr.style.cursor='pointer';tbody.appendChild(tr);}
+ $('kFileSize').textContent=size(totalFileBytes());$('kPersist').textContent=storageMode;}
+function project(pt,w,h){const x=(pt[0]-.5)*2,y=(pt[1]-.5)*2,z=(pt[2]-.5)*2;
+ const ca=Math.cos(yaw),sa=Math.sin(yaw),cb=Math.cos(pitch),sb=Math.sin(pitch);
+ const xp=x*ca-z*sa,zp=x*sa+z*ca,yp=y*cb-zp*sb,depth=y*sb+zp*cb;
+ const s=Math.min(w,h)*.32*zoom/(1+.19*depth);return[w*.5+xp*s,h*.54-yp*s,depth];}
+function paint(){if(!ctx)return;const dpr=Math.min(2,root.devicePixelRatio||1),r=canvas.getBoundingClientRect(),w=Math.max(250,r.width),h=Math.max(170,r.height);
+ if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ ctx.fillStyle='#061928';ctx.fillRect(0,0,w,h);const corners=[];
+ for(let x=0;x<=1;x++)for(let y=0;y<=1;y++)for(let z=0;z<=1;z++)corners.push([x,y,z]);
+ ctx.lineWidth=1;ctx.strokeStyle='rgba(94,182,203,.43)';for(let i=0;i<8;i++)for(let j=i+1;j<8;j++){
+ const dist=Math.abs(corners[i][0]-corners[j][0])+Math.abs(corners[i][1]-corners[j][1])+Math.abs(corners[i][2]-corners[j][2]);if(dist!==1)continue;
+ const a=project(corners[i],w,h),b=project(corners[j],w,h);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+ const points=[];let n=0;for(const [m,val] of vram){if(++n>2000)break;const xyz=CORE.unmorton(m);
+ const pt=project(xyz.map(x=>x/(CORE.AXIS-1)),w,h);points.push({x:pt[0],y:pt[1],d:pt[2],v:val});}
+ points.sort((a,b)=>a.d-b.d);for(const p of points){const radius=Math.max(2,3.8*zoom)*(0.85+.3*p.d);
+ ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=`rgba(${Math.floor(80+p.v*.38)},${Math.floor(155+p.v*.33)},230,.9)`;ctx.fill();}
+ ctx.fillStyle='#9dc6d6';ctx.font='11px system-ui';ctx.fillText(`Ω³ · ${fmt(vram.size)} nonzero sparse voxels`,12,h-14);}
+function renderAll(){renderMetrics();renderProcesses();renderFiles();paint();}
+function exportFile(name,data,mime='application/octet-stream'){const url=URL.createObjectURL(new Blob([data],{type:mime}));
+ const a=document.createElement('a');a.href=url;a.download=name.replace(/[\\/\x00-\x1f]/g,'_');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}
+function audit(){return{schema:'DM3D-KERNEL-1',at:new Date().toISOString(),status:kernelState,
+  persistence:storageMode,virtualGeometry:{axisBits:30,totalAddresses:'2^90',allocatedVoxels:vram.size,maxAllocatedVoxels:MAX_VOXELS},
+  vfs:{fileCount:files.size,bytes:totalFileBytes(),maxBytes:MAX_FILES,paths:getFilePaths().map(path=>({path,size:files.get(path).bytes.length}))},
+  cpu:{dispatched:execCount,verifiedCodecCycles:benchmarkCycles,lastFNV32:'0x'+rolling.toString(16).padStart(8,'0'),schedulerPaused},
+  processes:processes.map(p=>({pid:p.pid,state:p.state,pc:p.pc,length:p.code.length,dispatches:p.dispatched,
+   registers:Array.from(p.reg),verified:p.verified,annAccepted:p.annAccepted,annRejected:p.annRejected,annMSE:p.annLoss,
+   bytesProcessed:p.stats.bytes,benchmarkCycles:p.stats.cycles,failed:p.stats.failed,checksum:p.stats.hash,error:p.error||undefined}))};}
+async function shell(command){let words=tokenize(command.trim()),op=(words.shift()||'').toLowerCase(),a=words;
+ if(!op)return;log('> '+command);
+ switch(op){
+ case 'help':log('Commands: help | boot | ps | ls | cat PATH | run | pause | resume | step | kill PID | mem | info | test | save | load | attach | rm PATH | export PATH | reset | audit');break;
+ case 'boot':await boot();break;
+ case 'ps':log(processes.length?processes.map(p=>`PID ${p.pid} ${p.state} PC ${p.pc}/${p.code.length} verified=${p.verified}`).join('\n'):'No processes.');break;
+ case 'ls':log(getFilePaths().map(p=>`${p} ${size(files.get(p).bytes.length)}`).join('\n')||'(empty)');break;
+ case 'cat':{const f=getFile(a[0]);log(decoder.decode(f.bytes.subarray(0,4096))+(f.bytes.length>4096?'\n[truncated]':''));break;}
+ case 'run':newProcess($('kProgram').value);break;
+ case 'pause':if(!schedulerPaused)toggleScheduler();break;
+ case 'resume':if(schedulerPaused)toggleScheduler();break;
+ case 'step':await singleStep();break;
+ case 'kill':killPID(Number(a[0]));break;
+ case 'mem':log(`${vram.size} allocated voxels / 2^90 virtual addresses; sparse cap ${MAX_VOXELS}. Last Morton=${lastMorton}.`);break;
+ case 'info':log(JSON.stringify({status:kernelState,files:files.size,bytes:totalFileBytes(),dispatched:execCount,cycles:benchmarkCycles,persistence:storageMode}));break;
+ case 'test':await testKernel();break;
+ case 'save':await saveProgram();break;
+ case 'load':await loadProgram();break;
+ case 'attach':await attachStudio();break;
+ case 'rm':await fsDelete(a[0]);log('Deleted '+a[0]);break;
+ case 'export':downloadVFS(a[0]);break;
+ case 'reset':resetVolatile();break;
+ case 'audit':downloadAudit();break;
+ default:throw Error('Unknown shell command. Enter help.');}}
+function downloadVFS(path){const f=getFile(path);exportFile(path.split('/').pop(),f.bytes,f.metadata.mime||'application/octet-stream');log('EXPORT '+path+' ('+size(f.bytes.length)+').');}
+function downloadAudit(){exportFile('dm3d_kernel_audit.json',encoder.encode(JSON.stringify(audit(),null,2)),'application/json');log('AUDIT JSON exported.');}
+async function attachStudio(){if(kernelState!=='ONLINE')await boot();const item=root.DM3DStudio?.getState()?.source;
+ if(!item)throw Error('Generate or import a media source in section 02 first.');
+ const name=item.meta?.name||'active.bin',path='/input/active.bin';
+ await fsWrite(path,item.bytes,item.mode,{...item.meta,name});$('kPath').value=path;
+ log(`ATTACH: ${size(item.bytes.length)} of ${item.mode} media from studio at ${path}. Run LOAD /input/active.bin.`);}
+async function saveProgram(){if(kernelState!=='ONLINE')await boot();await fsWrite('/programs/current.ks',encoder.encode($('kProgram').value),'text',metadataOf('/programs/current.ks','text'));log('Saved /programs/current.ks.');}
+async function loadProgram(){const f=getFile('/programs/current.ks');$('kProgram').value=decoder.decode(f.bytes);log('Loaded /programs/current.ks.');}
+async function testKernel(){if(kernelState!=='ONLINE')await boot();
+ const code=['LOAD /input/hello.txt','ENCODE /output/selftest.dmxm','DECODE /output/selftest.dmxm','VERIFY',
+ 'VSET 1073741823 1 32768 173','VGET 1073741823 1 32768 R0','ANNTRAIN 16','ANNGENERATE /output/selftest_latent.bin',
+ 'BENCH 2048','MSTORE /output/selftest_memory.d3ae','HALT'].join('\n');
+ const p=newProcess(code,'internal end-to-end regression');if(schedulerPaused)toggleScheduler();
+ const start=performance.now();while(['READY','RUNNING','WAIT'].includes(p.state)&&performance.now()-start<45000)await sleep(20);
+ if(['READY','RUNNING','WAIT'].includes(p.state))killPID(p.pid);
+ if(p.state!=='HALTED'||!p.verified||p.reg[0]!==173||p.stats.cycles!==2048||p.stats.failed!==0||!files.has('/output/selftest.dmxm'))
+ throw Error(`Kernel regression failed: PID=${p.pid} state=${p.state} verified=${p.verified} R0=${p.reg[0]} cycles=${p.stats.cycles} error=${p.error||'-'}`);
+ const memFile=getFile('/output/selftest_memory.d3ae'),m=CORE.decode(memFile.bytes).map;
+ if(m.get(CORE.morton(CORE.AXIS-1,1,32768))!==173)throw Error('3D sparse-memory archive round trip failed.');
+ const packed=getFile('/output/selftest.dmxm').bytes,corrupt=packed.slice();corrupt[corrupt.length-1]^=1;
+ let rejected=false;try{await MEDIA.decode(corrupt);}catch(e){rejected=true;}
+ if(!rejected)throw Error('Damaged DMXM archive was accepted.');
+ const msg=`E2E SELF-TEST PASS: exact text encode/decode, 90-bit MMU, VGET register, ANN updates, 2,048 real benchmark round trips, D3AE persistence, corrupt-archive rejection. ${((performance.now()-start)/1000).toFixed(2)}s.`;
+ log(msg);return{pass:true,pid:p.pid,cycles:p.stats.cycles,verified:p.verified,register0:p.reg[0],corruptionRejected:true,elapsedMs:performance.now()-start};}
+function clickAsync(button,fn){button.addEventListener('click',async()=>{button.disabled=true;try{await fn();renderAll();}catch(e){log('ERROR: '+e.message);}finally{button.disabled=false;renderAll();}});}
+clickAsync($('kBoot'),boot);
+clickAsync($('kRun'),async()=>{if(kernelState!=='ONLINE')await boot();newProcess($('kProgram').value);});
+clickAsync($('kStoreProgram'),saveProgram);
+clickAsync($('kLoadProgram'),loadProgram);
+clickAsync($('kTest'),testKernel);
+clickAsync($('kStep'),singleStep);
+clickAsync($('kPause'),toggleScheduler);
+clickAsync($('kClear'),resetVolatile);
+clickAsync($('kAttach'),attachStudio);
+clickAsync($('kAudit'),downloadAudit);
+clickAsync($('kDownload'),()=>downloadVFS($('kPath').value));
+clickAsync($('kDelete'),()=>fsDelete($('kPath').value));
+$('kSample').addEventListener('click',()=>{$('kProgram').value=['# One million real 3D byte-codec cycles',
+ 'LOAD /input/hello.txt','ENCODE /output/million_input.dmxm','DECODE /output/million_input.dmxm',
+ 'VERIFY','VSET 1073741823 1073741823 1073741823 255','BENCH 1000000',
+ 'PRINT 1000000 exact cycles verified','HALT'].join('\n');log('Loaded one-million-cycle KASM demonstration.');});
+$('kShellForm').addEventListener('submit',async e=>{e.preventDefault();const c=$('kShell').value;$('kShell').value='';try{if(kernelState!=='ONLINE'&&c.trim().toLowerCase()!=='boot')await boot();await shell(c);renderAll();}catch(err){log('ERROR: '+err.message);}});
+$('kImport').addEventListener('change',async e=>{const file=e.target.files[0];try{if(!file)return;if(file.size>MAX_FILE)throw Error('Physical file exceeds 25 MiB.');if(kernelState!=='ONLINE')await boot();
+ const name=file.name.replace(/[^a-zA-Z0-9_.-]/g,'_').slice(0,90)||'import.bin',path='/input/'+name;
+ await fsWrite(path,new Uint8Array(await file.arrayBuffer()),inferMode(name,file.type),{name:file.name,mime:file.type||'application/octet-stream',kind:'native'});
+ $('kPath').value=path;log('IMPORTED '+size(file.size)+' to '+path);renderAll();}catch(err){log('IMPORT ERROR: '+err.message);}finally{e.target.value='';}});
+canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,yaw,pitch};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;yaw=drag.y+(e.clientX-drag.x)*.009;pitch=Math.max(-1.5,Math.min(1.5,drag.pitch+(e.clientY-drag.y)*.009));paint();});
+canvas.addEventListener('pointerup',()=>drag=null);canvas.addEventListener('pointercancel',()=>drag=null);
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.35,Math.min(2.8,zoom*Math.exp(-e.deltaY*.001)));paint();},{passive:false});
+if(root.ResizeObserver)new ResizeObserver(paint).observe(canvas);else root.addEventListener('resize',paint);
+root.DM3DKernel={boot,newProcess,runProgram:source=>newProcess(source),compile,
+ test:testKernel,ps:()=>processes.map(p=>({pid:p.pid,state:p.state,pc:p.pc,verified:p.verified,cycles:p.stats.cycles,error:p.error})),
+ getProcess:pid=>processes.find(p=>p.pid===pid),getFile,fsWrite,fsDelete,files:getFilePaths,
+ read:async path=>getFile(path).bytes,reset:resetVolatile,pause:toggleScheduler,step:singleStep,
+ audit,shell,getState:()=>kernelState,getMode:()=>storageMode,getVoxels:()=>new Map(vram)};
+renderAll();boot().catch(e=>log('Auto-boot error: '+e.message));
+})(window);
+</script>
+
+<script>
+/* DM3D Ω³ / Self-hosting recursion engine. Bounded, auditable, offline-first. */
+(function(root){
+'use strict';
+const $=id=>document.getElementById(id);
+const UTF8=new TextEncoder(), DEC=new TextDecoder('utf-8',{fatal:true});
+const MAX_SOURCE=2*1024*1024,MAX_ROUNDS=12;
+const GENOME_OPEN='<script id="dmSelfGenome" type="application/json">';
+const SCRIPT_END='</'+'script>';
+const BATCHES=[256,512,1024,2048,4096,8192];
+let running=false,token=0,passes=0,accepted=0,rejected=0,addresses=0,source='',archive=null,records=[],sourceMethod='DOM snapshot',lastProbe=null;
+let yaw=.6,pitch=-.33,drag=null,roundPoints=[];
+const canvas=$('self3d'),ctx=canvas.getContext('2d');
+function assert(ok,msg){if(!ok)throw Error(msg);}
+function sha256(bytes){
+ const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+ let h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+ const n=bytes.length,padded=Math.ceil((n+9)/64)*64;
+ const m=new Uint8Array(padded);m.set(bytes);m[n]=0x80;
+ const high=Math.floor(n/0x20000000),low=(n*8)>>>0;
+ const view=new DataView(m.buffer);view.setUint32(padded-8,high,false);view.setUint32(padded-4,low,false);
+ const w=new Uint32Array(64),rotr=(x,k)=>(x>>>k)|(x<<(32-k));
+ for(let j=0;j<padded;j+=64){for(let t=0;t<16;t++)w[t]=view.getUint32(j+4*t,false);
+ for(let t=16;t<64;t++){let a=w[t-15],b=w[t-2];w[t]=(w[t-16]+(rotr(a,7)^rotr(a,18)^(a>>>3))+w[t-7]+(rotr(b,17)^rotr(b,19)^(b>>>10)))>>>0;}
+ let [a,b,c,d,e,f,g,k]=h;
+ for(let t=0;t<64;t++){const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&f)^(~e&g),t1=(k+S1+ch+K[t]+w[t])>>>0,S0=rotr(a,2)^rotr(a,13)^rotr(a,22),maj=(a&b)^(a&c)^(b&c),t2=(S0+maj)>>>0;k=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;}
+ h=h.map((v,i)=>(v+[a,b,c,d,e,f,g,k][i])>>>0);
+ }
+ return h.map(v=>v.toString(16).padStart(8,'0')).join('');
+}
+function validateGenome(g){assert(g&&g.schema==='DM3D-SELF-GENOME-1','Missing DM3D self-genome');assert(BATCHES.includes(g.batch),'Scheduler batch outside approved bounds');assert([256,512,1024,2048,4096].includes(g.annStride),'Unsupported ANN stride');assert(Number.isInteger(g.round)&&g.round>=0&&g.round<1000,'Invalid genome generation');return g;}
+function genomeFromText(text){const start=text.indexOf(GENOME_OPEN);assert(start>=0,'No self-genome marker in supplied source');const end=text.indexOf(SCRIPT_END,start+GENOME_OPEN.length);assert(end>=0,'Unterminated genome');return validateGenome(JSON.parse(text.slice(start+GENOME_OPEN.length,end)));}
+function genomeReplace(text,next){validateGenome(next);const a=text.indexOf(GENOME_OPEN),b=text.indexOf(SCRIPT_END,a+GENOME_OPEN.length);assert(a>=0&&b>a,'Genome markers missing');return text.slice(0,a+GENOME_OPEN.length)+JSON.stringify(next)+text.slice(b);}
+function captureDocument(){let doctype=document.doctype?'<!DOCTYPE '+document.doctype.name+'>\n':'<!doctype html>\n';return doctype+document.documentElement.outerHTML;}
+function validateSource(s){assert(typeof s==='string'&&s.length>30000&&UTF8.encode(s).length<=MAX_SOURCE,'Not a supported HTML kernel source or over 2 MiB');assert(s.includes('DM3DCore')&&s.includes('DM3DKernel')&&s.includes('DM3DMillion')&&s.includes('DM3DSelf'),'Kernel subsystem markers absent');const g=genomeFromText(s);assert(s.includes('root.DM3DGenome?.batch'),'Scheduler evolution hook missing');return g;}
+function fmt(n){return Number(n).toLocaleString('en-US');}
+function flash(msg,isError=false){$('selfPhase').textContent=msg;$('selfPhase').style.color=isError?'#ff97a7':'#a9d6dd';}
+function log(msg){const t=new Date().toLocaleTimeString();const box=$('selfTrace');box.textContent=`[${t}] ${msg}\n`+box.textContent.slice(0,11000);}
+function refreshUI(){if(!source)return;const g=genomeFromText(source);root.DM3DGenome=g;$('dmSelfGenome').textContent=JSON.stringify(g);$('selfBytes').textContent=fmt(UTF8.encode(source).length);$('selfPasses').textContent=fmt(passes);$('selfAccept').textContent=`${accepted} / ${rejected}`;$('selfAddresses').textContent=fmt(addresses);$('selfSha').textContent=sha256(UTF8.encode(source)).slice(0,24)+'…';$('selfGenomeLabel').textContent=`batch=${g.batch} · stride=${g.annStride} · gen=${g.round}`;paint();}
+function download(content,name,type){const obj=content instanceof Blob?content:new Blob([content],{type});const u=URL.createObjectURL(obj),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),15000);}
+function pos(x,y,z,w,h){const ca=Math.cos(yaw),sa=Math.sin(yaw),cb=Math.cos(pitch),sb=Math.sin(pitch);const xx=x*ca+z*sa,zz=-x*sa+z*ca,yy=y*cb-zz*sb,d=y*sb+zz*cb,f=Math.min(w,h)*.31/(1+.12*d);return[w/2+xx*f,h/2-yy*f,d];}
+function paint(){const rect=canvas.getBoundingClientRect();const W=Math.max(290,rect.width),H=Math.max(170,rect.height),dpr=Math.min(2,root.devicePixelRatio||1);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#061727';ctx.fillRect(0,0,W,H);
+ const n=Math.max(1,Math.min(12,roundPoints.length+1));
+ for(let layer=0;layer<n;layer++){const s=1-layer/(n+2)*.8,col=layer===0?'#42738f':roundPoints[layer-1]?.ok?'#6ae4bd':'#ffc777';ctx.strokeStyle=col;ctx.lineWidth=1.65;const pts=[];for(let a=0;a<8;a++)pts.push(pos((a&1?1:-1)*s,(a&2?1:-1)*s,(a&4?1:-1)*s,W,H));for(let a=0;a<8;a++)for(let b=a+1;b<8;b++){let bits=a^b;if((bits&(bits-1))!==0)continue;ctx.beginPath();ctx.moveTo(pts[a][0],pts[a][1]);ctx.lineTo(pts[b][0],pts[b][1]);ctx.stroke();}}
+ for(let i=0;i<roundPoints.length;i++){const scale=.96-i/(n+2)*.8,p=pos(scale,scale,-scale,W,H);ctx.beginPath();ctx.arc(p[0],p[1],4.4,0,Math.PI*2);ctx.fillStyle=roundPoints[i].ok?'#69f4c7':'#ffbf76';ctx.fill();}ctx.font='12px ui-monospace,monospace';ctx.fillStyle='#98c8d9';ctx.fillText('Ω³ →  SOURCE  →  ARCHIVE  →  SOURCE',12,H-16);}
+canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,yaw,pitch};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;yaw=drag.yaw+(e.clientX-drag.x)*.008;pitch=Math.max(-1.4,Math.min(1.4,drag.pitch+(e.clientY-drag.y)*.008));paint();});
+canvas.addEventListener('pointerup',()=>drag=null);canvas.addEventListener('pointercancel',()=>drag=null);
+if(root.ResizeObserver)new ResizeObserver(paint).observe(canvas);else root.addEventListener('resize',paint);
+function probeScript(id){const ident=JSON.stringify(id);
+return `(async()=>{const ident=${ident};const send=(value)=>parent.postMessage({dm3dProbe:'v1',ident,...value},'*');try{\n`+
+`const C=window.DM3DCore,M=window.DMXM,A=window.DMANN,Q=window.DM3DMillion,K=window.DM3DKernel;\n`+
+`if(!C||!M||!A||!Q||!K||!window.DM3DSelf)throw Error('Missing runtime subsystem');\n`+
+`const fail=(x)=>{if(!x)throw Error('Probe invariant failed')};\n`+
+`fail(C.AXIS===1073741824&&C.AXIS_BITS===30&&C.MAX_KEY===((1n<<90n)-1n));\n`+
+`const g=JSON.parse(document.getElementById('dmSelfGenome').textContent);fail(g.batch>=256&&g.batch<=8192);\n`+
+`const coords=[[0,0,0],[1,10,25],[123456789,987654321,81234012],[1073741823,1073741823,1073741823]];\n`+
+`for(const xyz of coords){const a=C.morton(...xyz);fail(C.unmorton(a).every((x,i)=>x===xyz[i]));}\n`+
+`const map=new Map(coords.map((xyz,i)=>[C.morton(...xyz),i+10]));fail(C.equalMaps(C.decode(C.encode(map).bytes).map,map));\n`+
+`const examples=[new Uint8Array(0),new Uint8Array(8192).fill(42),Uint8Array.from({length:8192},(_,i)=>i&255),new TextEncoder().encode('Ω³ ✓ recursive HTML; 你好')];\n`+
+`for(const b of examples){const packed=await M.encode(b,'binary',{name:'probe.bin',mime:'application/octet-stream',kind:'native'});const d=await M.decode(packed.archive);fail(M.same(b,d.bytes));}\n`+
+`const n=new A.ByteANN(12),x=Float32Array.from({length:64},(_,i)=>i/63),l0=n.mse(x,n.forward(x).y);for(let i=0;i<12;i++)n.trainOne(x,.15);const l1=n.mse(x,n.forward(x).y);fail(l1<l0);\n`+
+`const cb=Q.codec,inp=new TextEncoder().encode('DM3D Ω³ end-to-end reversible self kernel 3D'),out=new Uint8Array(1024),pkt=new Uint8Array(1024);\n`+
+`for(let i=0;i<3;i++){const n=cb.encode(inp,inp.length,pkt),m=cb.decode(pkt,n,out);fail(cb.verify(inp,inp.length,out,m));}\n`+
+`await K.boot();fail(K.getState()==='ONLINE');\n`+
+`const trials=[];for(let run=0;run<3;run++){const start=performance.now();for(let i=0;i<12288;){const until=Math.min(12288,i+g.batch);for(;i<until;i++){const n=cb.encode(inp,inp.length,pkt),m=cb.decode(pkt,n,out);fail(cb.verify(inp,inp.length,out,m));}await new Promise(r=>setTimeout(r,0));}trials.push(performance.now()-start);}\n`+
+`trials.sort((a,b)=>a-b);send({ok:true,batch:g.batch,annStride:g.annStride,ms:trials[1],cycles:12288,lossBefore:l0,lossAfter:l1,tests:4+4+4+1+3+1+3*12288,checks:4,genomeRound:g.round});\n`+
+`}catch(e){send({ok:false,error:String(e&&e.message||e)});}})();`;
+}
+async function sandboxProbe(html,ms=23000){const id='probe-'+Date.now().toString(36)+'-'+(++sandboxProbe.seq),needle=html.toLowerCase().lastIndexOf('</body>');assert(needle>0,'Candidate lacks closing BODY');const injected=html.slice(0,needle)+'<script>'+probeScript(id)+SCRIPT_END+html.slice(needle);
+ const restrictiveCSP="<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'\">";
+ const confined=injected.replace(/<head>/i,'<head>'+restrictiveCSP);
+ return new Promise((resolve,reject)=>{const frame=document.createElement('iframe');frame.setAttribute('sandbox','allow-scripts');frame.setAttribute('aria-hidden','true');frame.style.cssText='position:fixed;width:900px;height:700px;left:-10000px;top:0;opacity:0;pointer-events:none;border:0';let done=false;
+ const cleanup=()=>{if(done)return;done=true;root.removeEventListener('message',receive);clearTimeout(timeout);frame.remove();};
+ const receive=e=>{if(e.source!==frame.contentWindow||!e.data||e.data.dm3dProbe!=='v1'||e.data.ident!==id)return;const result=e.data;cleanup();if(result.ok)resolve(result);else reject(Error('Sandbox regression: '+result.error));};
+ root.addEventListener('message',receive);const timeout=setTimeout(()=>{cleanup();reject(Error('Sandbox probe timed out.'));},ms);
+ try{document.body.appendChild(frame);frame.srcdoc=confined;}catch(e){cleanup();reject(e);} });
+}
+sandboxProbe.seq=0;
+function same(a,b){return root.DMXM.same(a,b);}
+async function selfRound(text){validateSource(text);const a=UTF8.encode(text),pre=sha256(a),packed=await root.DMXM.encode(a,'text',{name:'dm3d_recursive_kernel.html',mime:'text/html;charset=utf-8',kind:'native'}),back=await root.DMXM.decode(packed.archive);assert(same(a,back.bytes),'Self-source byte comparison mismatch');assert(sha256(back.bytes)===pre,'SHA-256 reconstruction mismatch');assert(DEC.decode(back.bytes)===text,'Self-source UTF-8 identity mismatch');archive=packed.archive;return{sourceBytes:a.length,archiveBytes:archive.length,sha256:pre,codec:packed.codec};}
+function mutate(current,round){const next={...current,version:current.version+1,round:current.round+1,batch:BATCHES[(BATCHES.indexOf(current.batch)+(round%2?1:-1)+BATCHES.length)%BATCHES.length],parentSHA256:sha256(UTF8.encode(source))};return next;}
+async function capture(){if(running)throw Error('Cannot refresh source during inward loop');source=captureDocument();validateSource(source);sourceMethod='DOM-derived executable snapshot';archive=null;records=[];roundPoints=[];passes=accepted=rejected=addresses=0;refreshUI();flash('Source captured · '+fmt(UTF8.encode(source).length)+' bytes · ready for inward execution');log('SOURCE SNAPSHOT '+sourceMethod+' · SHA256 '+sha256(UTF8.encode(source)).slice(0,16)+'…');return{bytes:UTF8.encode(source).length,sha256:sha256(UTF8.encode(source))};}
+async function testStandalone(){const html=source||captureDocument();validateSource(html);return sandboxProbe(html);}
+async function run(){if(running)throw Error('Already executing');if(!source)await capture();const n=Number($('selfRounds').value);assert(Number.isSafeInteger(n)&&n>=1&&n<=MAX_ROUNDS,'Depth must be 1 to 12');const mode=$('selfMode').value;assert(mode==='verify'||mode==='evolve','Unknown policy');const mine=++token;running=true;$('selfRun').disabled=true;$('selfCapture').disabled=true;$('selfStop').disabled=false;
+ try{let base=null;if(mode==='evolve'){flash('Benchmarking accepted source in sandbox');base=await sandboxProbe(source);lastProbe=base;log('BASELINE sandbox PASS · batch '+base.batch+' · median '+base.ms.toFixed(2)+' ms');}
+ for(let i=0;i<n;i++){if(token!==mine)break;flash(`ROUND ${i+1}/${n} · lossless encode and decode`);const record=await selfRound(source);passes++;let g=genomeFromText(source),mutation='immutable',sandbox=null;
+ if(mode==='verify'){sandbox=await sandboxProbe(source);assert(sandbox.ok,'Self-hosted cloned runtime failed');addresses+=sandbox.checks;log(`ROUND ${i+1}: SHA ${record.sha256.slice(0,16)}… · ${fmt(record.sourceBytes)}→${fmt(record.archiveBytes)} B · clone PASS · unchanged source`);}
+ else {const next=mutate(g,i+1),candidate=genomeReplace(source,next);try{sandbox=await sandboxProbe(candidate);addresses+=sandbox.checks;const improved=sandbox.ms < base.ms * .98; // conservative 2% threshold
+ if(improved){const beforeMs=base.ms;const verifiedCandidate=await selfRound(candidate);source=candidate;g=next;base=sandbox;accepted++;mutation='accepted';record.acceptedSourceSHA256=verifiedCandidate.sha256;log(`ROUND ${i+1}: candidate batch ${next.batch} accepted · exact SHA ${verifiedCandidate.sha256.slice(0,12)}… · ${sandbox.ms.toFixed(2)} ms vs prior ${beforeMs.toFixed(2)} ms`);}
+ else{rejected++;mutation='rejected';log(`ROUND ${i+1}: candidate batch ${next.batch} rejected · ${sandbox.ms.toFixed(2)} ms not 2% faster than ${base.ms.toFixed(2)} ms`);}
+ }catch(e){rejected++;mutation='rejected';log(`ROUND ${i+1}: candidate rejected · ${e.message}`);}}
+ record.round=records.length+1;record.mutation=mutation;record.genome={...g};record.sandboxChecks=sandbox?.checks||0;record.sandboxCycles=sandbox?.cycles||0;record.sandboxMedianMs=sandbox?.ms||null;records.push(record);roundPoints.push({ok:mutation!=='rejected'});refreshUI();const pct=Math.round((i+1)/n*100);$('selfFill').style.width=pct+'%';$('selfProgress').setAttribute('aria-valuenow',String(pct));await new Promise(r=>setTimeout(r,0));}
+ flash(token===mine?`COMPLETE · ${passes} exact source round trips · ${accepted} accepted / ${rejected} rejected candidates`:'STOPPED · accepted source retained');
+ }catch(e){flash('STOPPED ON FAILURE: '+e.message,true);log('FAIL: '+e.message);throw e;}
+ finally{running=false;$('selfRun').disabled=false;$('selfCapture').disabled=false;$('selfStop').disabled=true;refreshUI();}
+ return getState();
+}
+function getState(){return{schema:'DM3D-SELF-AUDIT-1',at:new Date().toISOString(),sourceMethod,sourceBytes:UTF8.encode(source).length,sha256:sha256(UTF8.encode(source)),roundTripPasses:passes,accepted,rejected,addressesVerified:addresses,genome:genomeFromText(source),records:[...records],scope:'Bounded browser sandbox; verified self-snapshot and versioned mutable scheduler genome; no native OS access'}};
+async function archiveExport(){const existing=archive?await root.DMXM.decode(archive):null;if(!existing||!same(existing.bytes,UTF8.encode(source))){const r=await selfRound(source);log('ARCHIVE '+fmt(r.archiveBytes)+' bytes · full self-reconstruction PASS');}download(archive,'dm3d_recursive_self_source.dmxm','application/octet-stream');}
+function exportClone(){if(!source)throw Error('Capture source first');download(UTF8.encode(source),'dr_moagi_dm3d_recursive_kernel_clone.html','text/html;charset=utf-8');log('EXPORTED executable clone · '+fmt(UTF8.encode(source).length)+' bytes');}
+function exportAudit(){download(JSON.stringify(getState(),null,2),'dm3d_recursive_audit.json','application/json');}
+function stop(){token++;log('STOP requested; will preserve last accepted source after current sandbox operation.');flash('Stop requested · accepted source retained');}
+function guard(fn){return async()=>{try{await fn();}catch(e){flash('ERROR: '+e.message,true);log('ERROR: '+e.message);}};}
+$('selfRun').addEventListener('click',guard(run));$('selfCapture').addEventListener('click',guard(capture));$('selfStop').addEventListener('click',stop);$('selfClone').addEventListener('click',guard(exportClone));$('selfArchive').addEventListener('click',guard(archiveExport));$('selfAudit').addEventListener('click',guard(exportAudit));
+$('selfImport').addEventListener('change',async e=>{const file=e.target.files?.[0];try{if(!file)return;assert(file.size<=MAX_SOURCE,'Source file exceeds 2 MiB');assert(!running,'Import unavailable during recursion');const buf=new Uint8Array(await file.arrayBuffer()),text=DEC.decode(buf);validateSource(text);source=text;sourceMethod='Exact imported HTML file';passes=accepted=rejected=addresses=0;records=[];roundPoints=[];archive=null;refreshUI();log('EXACT FILE IMPORT '+file.name+' · SHA256 '+sha256(buf).slice(0,16)+'…');flash('Exact source file imported and ready');}catch(err){log('IMPORT FAILED: '+err.message);flash(err.message,true);}finally{e.target.value='';}});
+try{source=captureDocument();validateSource(source);refreshUI();log('SELF-HOST KERNEL ONLINE · '+fmt(UTF8.encode(source).length)+' bytes captured');}
+catch(e){flash('INITIALIZATION ERROR: '+e.message,true);log(e.message);}
+root.DM3DSelf={capture,run,testStandalone,selfRound,sha256,getSource:()=>source,getGenome:()=>genomeFromText(source),getState,getArchive:()=>archive,exportClone,exportAudit,validateSource,replaceGenome:genomeReplace,sandboxProbe};
+})(window);
+
+</script>
+</body></html>
