@@ -1,0 +1,28 @@
+name: Moagi ANN3D inward-loop reference
+on:
+  push:
+    paths:
+      - 'experimental/moagi_ann3d_inward_loop/**'
+      - '.github/workflows/moagi-ann3d-inward-loop.yml'
+  pull_request:
+    paths:
+      - 'experimental/moagi_ann3d_inward_loop/**'
+      - '.github/workflows/moagi-ann3d-inward-loop.yml'
+  workflow_dispatch:
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with GCC
+        run: |
+          cmake -S experimental/moagi_ann3d_inward_loop -B build/moagi-ann3d -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/moagi-ann3d --parallel
+      - name: Unit regression tests
+        run: ctest --test-dir build/moagi-ann3d --output-on-failure
+      - name: Finite inward-loop smoke test
+        run: ./build/moagi-ann3d/moagi_ann3d | tee moagi-ann3d-trace.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moagi-ann3d-trace
+          path: moagi-ann3d-trace.txt
