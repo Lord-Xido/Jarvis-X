@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jarvis-X | WebGL 3D Quine Throughput Laboratory</title>
+<style>
+:root{color-scheme:dark;background:#060a12;color:#e5efff;font:12px ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0}canvas{width:100vw;height:100vh;display:block}
+aside{position:fixed;top:12px;left:12px;width:min(470px,calc(100vw - 24px));max-height:65vh;overflow:auto;
+padding:14px;background:#08101bea;border:1px solid #344765;border-radius:10px;backdrop-filter:blur(6px)}
+h1{font-size:15px;color:#80bdff}p{font-size:11px;color:#a4b7d0}
+textarea{width:100%;height:92px;resize:vertical;background:#0c1729;color:#fff;border:1px solid #3b5278;border-radius:5px;padding:7px}
+button,input{background:#1e3658;border:1px solid #46658e;color:#eef6ff;padding:6px;border-radius:6px}
+button{cursor:pointer;margin:6px 3px 5px 0}button:disabled{opacity:.5}input{width:55px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font:11px ui-monospace,monospace}
+</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+</head><body>
+<canvas id="view"></canvas><aside>
+<h1>DR MOAGI / 3D QUINE THROUGHPUT</h1>
+<p>Verified WebGL RGBA8 byte transport, readback and live timing. The 3D point cloud is a byte-value visualization; no neural inference or compression.</p>
+<label for="source">Source bytes (UTF-8)</label>
+<textarea id="source">// Jarvis-X reversible GPU byte transport
+const E = bytes => bytes;
+const D = bytes => bytes;</textarea>
+<div><button id="self">Load this page source</button><button id="run">Benchmark GPU</button>
+<label for="runs">Runs</label> <input id="runs" type="number" min="2" max="30" value="6"></div>
+<button id="receipt" disabled>Download JSON receipt</button>
+<p>Two warm-up cycles excluded. Timing covers encoding, allocation, GPU pass, synchronous readback, verification and disposal; not animation or source fetching. Max 4 MiB.</p>
+<pre id="status" aria-live="polite">Initializing WebGL…</pre>
+</aside>
+<script type="module">
+import * as THREE from 'three';
+import {encodeRGBA,decodeRGBA,equalBytes,bitErrorCount,medianMs,throughputMetrics} from './codec.mjs';
+const get=id=>document.getElementById(id),status=get('status');
+const renderer=new THREE.WebGLRenderer({canvas:get('view'),antialias:false});
+renderer.setPixelRatio(1);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x060a12);
+const camera=new THREE.PerspectiveCamera(52,1,0.1,100);
+camera.position.set(4,3,8);camera.lookAt(0,0,0);
+function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+const pass=new THREE.Scene(),passCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
+uniforms:{uTex:{value:null}},
+vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
+fragmentShader:'precision highp float;uniform sampler2D uTex;varying vec2 vUv;void main(){gl_FragColor=texture2D(uTex,vUv);}'
+}));
+pass.add(quad);
+let cloud=null,receipt=null;
+function visualize(bytes){
+ if(cloud){scene.remove(cloud);cloud.geometry.dispose();cloud.material.dispose();}
+ if(!bytes.length){cloud=null;return;}
+ const stride=Math.max(1,Math.ceil(bytes.length/18000)),count=Math.ceil(bytes.length/stride);
+ const positions=new Float32Array(count*3),colors=new Float32Array(count*3);
+ const c=new THREE.Color(),cols=128,rows=Math.ceil(count/cols);
+ for(let i=0;i<count;i++){
+   const value=bytes[i*stride],j=3*i;
+   positions[j]=(i%cols)/cols*6-3;
+   positions[j+1]=Math.floor(i/cols)/rows*5-2.5;
+   positions[j+2]=2*value/255-1;
+   c.setHSL(value/255*.7,.85,.55);
+   colors[j]=c.r;colors[j+1]=c.g;colors[j+2]=c.b;
+ }
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+ geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+ cloud=new THREE.Points(geo,new THREE.PointsMaterial({size:.045,vertexColors:true,transparent:true,opacity:.95,depthWrite:false}));
+ scene.add(cloud);
+}
+function animate(){
+ if(cloud){const t=performance.now()/1000;cloud.rotation.y=t*.24;cloud.rotation.x=Math.sin(t*.17)*.2;}
+ renderer.render(scene,camera);requestAnimationFrame(animate);
+}
+animate();
+function oneRoundTrip(source){
+ const start=performance.now();
+ const packed=encodeRGBA(source),width=packed.width,height=packed.height;
+ const tex=new THREE.DataTexture(packed.data,width,height,THREE.RGBAFormat,THREE.UnsignedByteType);
+ tex.colorSpace=THREE.NoColorSpace;tex.minFilter=tex.magFilter=THREE.NearestFilter;
+ tex.generateMipmaps=false;tex.needsUpdate=true;
+ const rt=new THREE.WebGLRenderTarget(width,height,{type:THREE.UnsignedByteType,format:THREE.RGBAFormat,
+ depthBuffer:false,stencilBuffer:false,minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
+ rt.texture.colorSpace=THREE.NoColorSpace;
+ let recovered,orientation='invalid';
+ try {
+   quad.material.uniforms.uTex.value=tex;
+   renderer.setRenderTarget(rt);renderer.render(pass,passCam);
+   const raw=new Uint8Array(packed.data.length);
+   renderer.readRenderTargetPixels(rt,0,0,width,height,raw);
+   renderer.setRenderTarget(null);
+   const direct=decodeRGBA(raw,width,height,source.length);
+   if(equalBytes(source,direct)){recovered=direct;orientation='direct';}
+   else {
+     const flip=decodeRGBA(raw,width,height,source.length,true);
+     recovered=flip;if(equalBytes(source,flip))orientation='flipY';
+   }
+ } finally {renderer.setRenderTarget(null);quad.material.uniforms.uTex.value=null;rt.dispose();tex.dispose();}
+ return {recovered,orientation,width,height,elapsedMs:performance.now()-start};
+}
+async function run(){
+ get('run').disabled=true;get('receipt').disabled=true;receipt=null;
+ try {
+  const src=new TextEncoder().encode(get('source').value);
+  const runs=Number(get('runs').value);
+  if(!Number.isInteger(runs)||runs<2||runs>30)throw Error('Runs must be from 2 to 30');
+  if(src.length>4*1048576)throw Error('Source exceeds 4 MiB');
+  const layout=encodeRGBA(src);
+  if(256>renderer.capabilities.maxTextureSize||layout.height>renderer.capabilities.maxTextureSize)
+    throw Error('GPU MAX_TEXTURE_SIZE exceeded');
+  const times=[];let last;
+  for(let i=0;i<runs+2;i++){
+    last=oneRoundTrip(src);
+    if(!equalBytes(src,last.recovered))
+      throw Error('GPU byte mismatch: '+bitErrorCount(src,last.recovered)+' differing bits at cycle '+i);
+    if(i>=2)times.push(last.elapsedMs);
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+  }
+  const median=medianMs(times);
+  const metrics=throughputMetrics(src.length,last.width,1,median);
+  visualize(last.recovered);
+  receipt={backend:'WebGL RGBA8',verified:true,differingBits:0,orientation:last.orientation,
+    runs,warmup:2,samplesMs:times,medianMs:median,metrics,maxTextureSize:renderer.capabilities.maxTextureSize,
+    userAgent:navigator.userAgent,warning:'Byte transport only; not classical quine, compression, 3D ANN or FLOPs'};
+  status.textContent='✓ EXACT VERIFIED: '+src.length+' bytes / 0 differing bits\n'+
+    'RGBA '+last.width+' x '+last.height+' | orientation '+last.orientation+'\n'+
+    'Median end-to-end '+median.toFixed(3)+' ms | '+metrics.roundTripsPerSecond.toFixed(2)+' rounds/s\n'+
+    'Useful '+metrics.inputGBps.toFixed(6)+' GB/s | '+metrics.inputGbps.toFixed(6)+' Gbit/s\n'+
+    'Fragment rate '+metrics.fragmentSamplesPerSecond.toFixed(0)+'/s\n'+
+    'Estimated upload+readback lower bound '+metrics.uploadReadbackGBpsLowerBound.toFixed(6)+' GB/s\n'+
+    'Only verified recovered bytes are visualized.';
+  get('receipt').disabled=false;
+ } catch(error){status.textContent='✗ '+String(error.message||error);}
+ finally{get('run').disabled=false;}
+}
+get('run').addEventListener('click',run);
+get('self').addEventListener('click',async()=>{
+ try{const response=await fetch(location.href,{cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  get('source').value=await response.text();status.textContent='Own page source loaded as data.';}
+ catch(e){status.textContent='Self-fetch blocked: '+e.message+' — paste source instead.';}
+});
+get('receipt').addEventListener('click',()=>{
+ if(!receipt)return;
+ const url=URL.createObjectURL(new Blob([JSON.stringify(receipt,null,2)],{type:'application/json'}));
+ const a=document.createElement('a');a.href=url;a.download='moagi-webgl-receipt.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+status.textContent='WebGL ready. MAX_TEXTURE_SIZE = '+renderer.capabilities.maxTextureSize;
+</script></body></html>
