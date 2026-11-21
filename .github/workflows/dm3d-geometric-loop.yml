@@ -1,0 +1,45 @@
+name: DM3D bounded geometric loop conformance
+on:
+  push:
+    paths:
+      - 'reference/dm3d_geometric_loop/**'
+      - '.github/workflows/dm3d-geometric-loop.yml'
+  pull_request:
+    paths:
+      - 'reference/dm3d_geometric_loop/**'
+      - '.github/workflows/dm3d-geometric-loop.yml'
+  workflow_dispatch:
+jobs:
+  native-verification:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated C++17 reference with strict warnings
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/dm3d"
+          ${{ matrix.compiler }} -std=c++17 -O2 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+            reference/dm3d_geometric_loop/dm3d_geometric_loop.cpp -o "$RUNNER_TEMP/dm3d/geom"
+      - name: Native self-test
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/dm3d/geom" --self-test
+      - name: Independent process conformance
+        run: python3 reference/dm3d_geometric_loop/test_cli.py --exe "$RUNNER_TEMP/dm3d/geom"
+      - name: Reproducible JSON receipt
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/dm3d/geom" --side 8 --brick 4 --passes 8 > "$RUNNER_TEMP/dm3d/receipt.json"
+          python3 - "$RUNNER_TEMP/dm3d/receipt.json" <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1], encoding='utf8'))
+          assert data['byte_identical_recovery'] is True
+          assert len(data['passes'])==8
+          assert data['passes'][1]['fixed_point'] is True
+          assert not any(p['period_two'] for p in data['passes'])
+          print('CI_RECEIPT_VALIDATED')
+          PY
