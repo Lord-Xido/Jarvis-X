@@ -1,0 +1,34 @@
+{
+  "claims_limit": "Bounded research reference; not AGI, production secure codec, or a physical 8e12^3 bit cube",
+  "demo_archive_bytes": 18122,
+  "demo_original_bytes": 1048576,
+  "demo_verified_source_sha256": "2678a89a2be251584d9fe68691c6227e31f5552ecbd3a57641d58de37ec16f85",
+  "embedded_3d_vectors": 11706,
+  "generated_date": "2026-10-19",
+  "independent_unittest_cases": 11,
+  "name": "Dr Moagi 1 MB 3D Autoencoding/Decoding Python Engine",
+  "neural_demo": {
+    "accepted": 4,
+    "baseline_mse": 0.1623675599694252,
+    "best_mse": 0.16190242767333984,
+    "checkpoint": "/mnt/data/moagi_1mb_demo/neural_weights.pt",
+    "model_contract": "lossy-geometric-3d-only",
+    "neural": "experimental",
+    "steps": 4
+  },
+  "predictor_updates_accepted": 3,
+  "predictor_updates_rejected": 29,
+  "release": "DM3D-AEAD-v2",
+  "selftest_checks": 11769,
+  "source_bytes": 1000000,
+  "source_file": "Dr_Moagi_1MB_3D_Engine.py",
+  "source_sha256": "d5c1312b6acf0d44b0fc66772f3eccabaea0ab46676a6125476da93311f2fdf0",
+  "status": {
+    "live_web_ingestion": "not_verified",
+    "local_roundtrip": "passed",
+    "optional_neural_training": "passed",
+    "repository_deployment": "not_performed",
+    "tamper_rejection": "passed",
+    "vector_tests": "passed"
+  }
+}
