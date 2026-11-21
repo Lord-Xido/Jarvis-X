@@ -1,0 +1,13 @@
+# Run with DM3D_JARVIS_X.exe --batch DM3D_Demo.txt
+reset
+assemble demo.asm demo.d3b
+run demo.d3b
+status
+cells 7
+save demo.dm3d
+hash
+reset
+load demo.dm3d
+hash
+morton 7999999999999 7999999999999 7999999999999
+selftest
