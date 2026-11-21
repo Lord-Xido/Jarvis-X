@@ -1,0 +1,41 @@
+name: Clifford Torus 4D Live Web
+on:
+  pull_request:
+    paths:
+      - "cpp_runtime/src/clifford_torus_4d_main.cpp"
+      - "apps/clifford-torus-4d/**"
+      - ".github/workflows/clifford-torus-4d-live-web.yml"
+  push:
+    paths:
+      - "cpp_runtime/src/clifford_torus_4d_main.cpp"
+      - "apps/clifford-torus-4d/**"
+      - ".github/workflows/clifford-torus-4d-live-web.yml"
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Configure optional 4D C++ target
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: |
+          cmake -S cpp_runtime -B build/clifford-torus-live \
+            -DJARVISX_BUILD_CLIFFORD_TORUS_4D=ON \
+            -DJARVISX_BUILD_GL_VISUALIZER=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+      - name: Compile C++ engine
+        run: cmake --build build/clifford-torus-live --target jarvisx-clifford-torus4d --parallel 2
+      - name: Verify existing C++ invariants
+        run: ctest --test-dir build/clifford-torus-live -R clifford-torus-4d --output-on-failure
+      - name: Verify cross-language projected frames and live SSE bridge
+        env:
+          CLIFFORD_BIN: ${{ github.workspace }}/build/clifford-torus-live/jarvisx-clifford-torus4d
+        run: node --test apps/clifford-torus-4d/test.mjs
