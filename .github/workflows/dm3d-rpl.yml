@@ -19,7 +19,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Configure
         run: cmake -S cpp_runtime/dm3d_rpl -B build/dm3d-rpl -DCMAKE_BUILD_TYPE=Release

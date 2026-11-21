@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Configure
         run: cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release -DJARVISX_BUILD_GL_VISUALIZER=OFF
@@ -69,7 +69,7 @@ jobs:
           --output-dir bitmatrix1gib-ci
 
       - name: Upload smoke telemetry
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: bitmatrix-1gib-smoke-telemetry
           path: bitmatrix1gib-ci/
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Configure
         run: cmake -S cpp_runtime -B build/cpp-runtime -DCMAKE_BUILD_TYPE=Release -DJARVISX_BUILD_GL_VISUALIZER=OFF
@@ -97,7 +97,7 @@ jobs:
           --output-dir bitmatrix1gib-full
 
       - name: Upload full telemetry
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: bitmatrix-1gib-full-telemetry
           path: bitmatrix1gib-full/
