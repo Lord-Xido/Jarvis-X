@@ -1,0 +1,34 @@
+name: Torus Secure Codec C++
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/torus_secure_codec/**'
+      - '.github/workflows/torus-secure-codec.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cpp_runtime/torus_secure_codec/**'
+      - '.github/workflows/torus-secure-codec.yml'
+permissions:
+  contents: read
+jobs:
+  codec:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenSSL development headers
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S cpp_runtime/torus_secure_codec -B build/torus-secure -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/torus-secure --parallel 2
+      - name: Test transform and round-trips
+        run: |
+          ctest --test-dir build/torus-secure --output-on-failure
+          python3 cpp_runtime/torus_secure_codec/test_secure_codec.py build/torus-secure/torus_secure_codec
