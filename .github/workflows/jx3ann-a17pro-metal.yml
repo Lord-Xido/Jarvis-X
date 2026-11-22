@@ -1,0 +1,45 @@
+name: JX3ANN A17 Pro iOS Metal compile gate
+on:
+  pull_request:
+    paths:
+      - 'experiments/neural_arena_a17pro/**'
+      - '.github/workflows/jx3ann-a17pro-metal.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metal-ios-build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect Xcode and Metal tools
+        run: |
+          xcodebuild -version
+          xcrun --find metal || xcodebuild -downloadComponent metalToolchain
+      - name: Compile native iPhone application and BOTH Metal kernels
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project experiments/neural_arena_a17pro/NeuralArenaBitwise.xcodeproj \
+            -scheme NeuralArenaBitwise -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            -derivedDataPath "$RUNNER_TEMP/NeuralArenaBuild" \
+            build | tee "$RUNNER_TEMP/metal-ios-build.log"
+          test -f "$RUNNER_TEMP/NeuralArenaBuild/Build/Products/Release-iphoneos/NeuralArenaBitwise.app/default.metallib"
+          echo 'PASS: A17-compatible iOS app and Metal shaders compiled'
+      - name: Validate independent C++ CPU oracle
+        run: |
+          python3 -m venv "$RUNNER_TEMP/neuralarena-venv"
+          source "$RUNNER_TEMP/neuralarena-venv/bin/activate"
+          python -m pip install numpy
+          python experiments/neural_arena_a17pro/reference/oracle_numpy.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: a17pro-ios-metal-compile-evidence
+          path: |
+            ${{ runner.temp }}/metal-ios-build.log
+            ${{ runner.temp }}/NeuralArenaBuild/Build/Products/Release-iphoneos/NeuralArenaBitwise.app/default.metallib
+          retention-days: 14
