@@ -1,0 +1,43 @@
+name: DM-PTVP 3D perspective verification
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/perspective3d/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - 'docs/DR_MOAGI_PERSPECTIVE_TRANSFORMATION_VERIFICATION.md'
+      - '.github/workflows/dm-perspective-verification.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cpp_runtime/perspective3d/**'
+      - 'cpp_runtime/CMakeLists.txt'
+      - 'docs/DR_MOAGI_PERSPECTIVE_TRANSFORMATION_VERIFICATION.md'
+      - '.github/workflows/dm-perspective-verification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure native reference
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S cpp_runtime/perspective3d -B build/perspective3d -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_BUILD_TYPE=Release
+      - name: Build with warnings enabled
+        run: cmake --build build/perspective3d --parallel
+      - name: Run CTest evidence gate
+        run: ctest --test-dir build/perspective3d --output-on-failure
+      - name: Write conformance JSON
+        run: ./build/perspective3d/jarvisx-perspective3d-tests | tee build/perspective3d/conformance.json
+      - name: Publish evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dm-ptvp-${{ matrix.compiler }}
+          path: build/perspective3d/conformance.json
+          if-no-files-found: error

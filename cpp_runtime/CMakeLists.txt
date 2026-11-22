@@ -468,3 +468,10 @@ set_tests_properties(
     investigative3d-regressions investigative3d-quine-reproduction
     investigative3d-run-smoke PROPERTIES TIMEOUT 60
 )
+
+# DM-PTVP is an opt-in, bounded observer verification reference.
+# It does not change the production/runtime behavior of existing targets.
+option(JARVISX_BUILD_PERSPECTIVE3D "Build DM-PTVP bounded 3D perspective conformance" OFF)
+if(JARVISX_BUILD_PERSPECTIVE3D)
+    add_subdirectory(perspective3d)
+endif()
