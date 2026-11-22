@@ -1,0 +1,40 @@
+{
+  "name": "JX64 AVX2/FMA volumetric 3D v3",
+  "geometry": [
+    64,
+    64,
+    64
+  ],
+  "voxels": 262144,
+  "cpu": "Intel Xeon Platinum 8573C",
+  "compiler": "g++ 14.2.0 -O3 -mavx2 -mfma -fno-fast-math",
+  "measured_ms_median11": {
+    "scalar27": 8.379722,
+    "simd27": 3.454971,
+    "separable": 3.698834
+  },
+  "speedup_scalar_to_simd": 2.4254102277558913,
+  "mse": {
+    "scalar27": 0.381690949372,
+    "simd27": 0.381690950083,
+    "separable": 0.381690957689
+  },
+  "tests": {
+    "ctest": "PASS",
+    "seeds_configs": 20,
+    "voxel_comparisons": 5242880,
+    "max_abs_simd": 1.78814e-07,
+    "max_abs_separable": 2.38419e-07,
+    "asan_ubsan": "PASS",
+    "permutation_bijection": "PASS",
+    "constant_field_boundaries": "PASS",
+    "repeatability": "PASS"
+  },
+  "limits": [
+    "CPU-only x86 AVX2/FMA",
+    "not lossless",
+    "not neural training",
+    "not Apple Metal",
+    "floating point tolerance not bitwise equality"
+  ]
+}
