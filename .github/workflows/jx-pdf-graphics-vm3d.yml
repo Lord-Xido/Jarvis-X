@@ -1,0 +1,39 @@
+name: JARVIS-X PDF Graphics VM3D C++20
+on:
+  push:
+    paths:
+      - 'experimental/pdf_graphics_vm3d/**'
+      - '.github/workflows/jx-pdf-graphics-vm3d.yml'
+  pull_request:
+    paths:
+      - 'experimental/pdf_graphics_vm3d/**'
+      - '.github/workflows/jx-pdf-graphics-vm3d.yml'
+  workflow_dispatch:
+jobs:
+  reference-runtime:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: CMake configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake -S experimental/pdf_graphics_vm3d -B build/pdf_vm3d -DCMAKE_BUILD_TYPE=Release
+      - name: Build strict C++20
+        run: cmake --build build/pdf_vm3d --parallel 2
+      - name: Focused CTest
+        run: ctest --test-dir build/pdf_vm3d --output-on-failure
+      - name: Render and audit content stream
+        run: |
+          build/pdf_vm3d/jx_pdf_graphics_vm3d --content experimental/pdf_graphics_vm3d/sample.content frame.ppm trace.csv
+          python3 experimental/pdf_graphics_vm3d/audit.py frame.ppm trace.csv
+      - name: Upload deterministic visual trace
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf3d-${{ matrix.compiler }}
+          path: |
+            frame.ppm
+            trace.csv
