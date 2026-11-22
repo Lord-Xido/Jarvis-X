@@ -3,11 +3,17 @@ on:
   pull_request:
     paths:
       - "native/bitcube3d/**"
+      - "src/jarvisx/bitcube3d_b3d1.py"
+      - "tests/test_bitcube3d_b3d1.py"
+      - "tools/verify-b3d1-golden.mjs"
       - ".github/workflows/bitcube3d-cpp.yml"
   push:
     branches: [main]
     paths:
       - "native/bitcube3d/**"
+      - "src/jarvisx/bitcube3d_b3d1.py"
+      - "tests/test_bitcube3d_b3d1.py"
+      - "tools/verify-b3d1-golden.mjs"
       - ".github/workflows/bitcube3d-cpp.yml"
 permissions:
   contents: read
@@ -28,3 +34,25 @@ jobs:
         run: cmake --build build/bitcube3d --parallel 2
       - name: Test
         run: ctest --test-dir build/bitcube3d --output-on-failure
+      - name: Observe native/Python interchange latency and fidelity
+        run: >-
+          python3 native/bitcube3d/tests/b3d1_benchmark.py
+          build/bitcube3d/bitcube3d-cpp
+          --output artifacts/b3d1-ci.json
+      - name: Upload hardware-specific observational receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: b3d1-observed-${{ matrix.compiler }}
+          path: artifacts/b3d1-ci.json
+          if-no-files-found: error
+
+  javascript:
+    name: Node B3D1 independent oracle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify exact B3D1 golden snapshot bytes
+        run: node tools/verify-b3d1-golden.mjs
