@@ -1,0 +1,55 @@
+name: PDM3D Cloud Route Protocol Smoke
+
+on:
+  push:
+    branches: ['pdm3d-cloud-route-20261122']
+    paths:
+      - 'experimental/pdm3d_cloud_route/**'
+      - '.github/workflows/pdm3d-cloud-route.yml'
+  pull_request:
+    paths:
+      - 'experimental/pdm3d_cloud_route/**'
+      - '.github/workflows/pdm3d-cloud-route.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cloud-route-compatibility:
+    name: Public-safe P3D2 cloud-runner probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute synthetic 90-bit P3D2 TCP packet roundtrip and optional public HTTPS echo
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 experimental/pdm3d_cloud_route/cloud_route_probe.py \
+            --wan-probe --report pdm3d-cloud-feedback.json
+      - name: Require independent synthetic packet integrity checks
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          r=json.load(open('pdm3d-cloud-feedback.json',encoding='utf-8'))
+          assert r['loopback']['passed'] is True
+          assert r['loopback']['source_bytes'] == 42000
+          assert r['loopback']['fragments'] == 42
+          assert r['loopback']['frame_header_bytes'] == 102
+          assert r['loopback']['retry_fragments'] == 2
+          assert r['loopback']['recovery']['rejected'] == 1
+          assert r['full_cloudbitfabric_v5_executed'] is False
+          assert r['public_receiver_deployed'] is False
+          print('CLOUD_RUNNER_SYNTHETIC_PACKET_GATE=PASS')
+          print('WAN_ECHO_STATUS='+r['wan']['status'])
+          PY
+      - name: Upload machine-readable cloud routing feedback
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdm3d-cloud-route-feedback
+          path: pdm3d-cloud-feedback.json
+          if-no-files-found: warn
+          retention-days: 14
