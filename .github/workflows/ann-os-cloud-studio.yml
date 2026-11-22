@@ -21,8 +21,8 @@ jobs:
       run:
         working-directory: apps/ann-os-cloud-studio
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Install renderer and fonts
@@ -34,6 +34,6 @@ jobs:
   docker-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build production Docker image
         run: docker build --pull -t ann-os-cloud-studio:ci apps/ann-os-cloud-studio

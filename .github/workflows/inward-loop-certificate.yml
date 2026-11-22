@@ -23,8 +23,8 @@ jobs:
   replay:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install dependencies
@@ -39,7 +39,7 @@ jobs:
       - name: Replay certificate
         run: python -m jarvisx.inward_loop_certified --verify artifacts/inward-loop-certificate.json
       - name: Upload witness manifest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: inward-loop-certificate-${{ github.sha }}
           path: artifacts/inward-loop-certificate.json

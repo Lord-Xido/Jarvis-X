@@ -14,7 +14,7 @@ jobs:
   typed-ir:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Configure
         run: cmake -S cpp_runtime/dm3d_typed_ir -B build/dm3d_typed_ir -DCMAKE_BUILD_TYPE=Release
       - name: Build

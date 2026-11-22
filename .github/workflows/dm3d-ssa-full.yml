@@ -19,7 +19,7 @@ jobs:
           - os: macos-latest
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Configure
         run: cmake -S cpp_runtime/dm3d_ssa_full -B build/dm3d-ssa -DCMAKE_BUILD_TYPE=Release
       - name: Build

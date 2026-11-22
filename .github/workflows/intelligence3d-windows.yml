@@ -75,7 +75,7 @@ jobs:
           Compress-Archive -Path "$stage/*" -DestinationPath "build/intelligence3d/JarvisX-3D-10GB-Windows-x64.zip" -Force
 
       - name: Upload Windows executable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: JarvisX-3D-10GB-Windows-x64
           path: |
