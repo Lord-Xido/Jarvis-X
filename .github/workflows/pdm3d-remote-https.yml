@@ -1,0 +1,54 @@
+name: PDM3D Remote HTTPS and Bitwise Compute Verification
+
+on:
+  push:
+    branches: [pdm3d-cloud-route-20261122]
+    paths:
+      - 'experimental/pdm3d_cloud_route/edge_service.py'
+      - 'experimental/pdm3d_cloud_route/wan_p3d2_verify.py'
+      - '.github/workflows/pdm3d-remote-https.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pdm3d-remote-https
+  cancel-in-progress: false
+
+jobs:
+  synthetic-p3d2-wan:
+    name: Cloud runner to separate public HTTPS receiver
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify real HTTPS P3D2 90-bit packets from GitHub Actions to Render
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 experimental/pdm3d_cloud_route/wan_p3d2_verify.py \
+            https://pdm3d-synthetic-edge-20261122.onrender.com \
+            --report pdm3d-remote-https-evidence.json
+      - name: Verify independent source, channel and compute receipts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          r=json.load(open('pdm3d-remote-https-evidence.json'))
+          assert r['status']=='REMOTE_SYNTHETIC_P3D2_HTTPS_VERIFIED'
+          assert r['bytes']==42000 and r['packets']==42
+          assert r['frame_post_attempts']==43
+          assert r['deliberate_corruption_rejected'] and r['deliberate_loss_recovered']
+          assert r['full_private_cloudbitfabric_v6_deployed'] is False
+          assert r['persistent_user_data_stored'] is False
+          print('REMOTE_HTTPS_P3D2_SYNTHETIC_COMPUTE=PASS')
+          PY
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdm3d-remote-https-evidence
+          path: pdm3d-remote-https-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
