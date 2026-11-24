@@ -475,3 +475,9 @@ option(JARVISX_BUILD_PERSPECTIVE3D "Build DM-PTVP bounded 3D perspective conform
 if(JARVISX_BUILD_PERSPECTIVE3D)
     add_subdirectory(perspective3d)
 endif()
+
+# Bounded occupational fractional-node reference (mock execution adapters).
+add_executable(jarvisx-oos3d-equation src/jarvis_x_equation.cpp)
+jarvisx_harden(jarvisx-oos3d-equation)
+add_test(NAME oos3d-equation-regressions COMMAND jarvisx-oos3d-equation)
+set_tests_properties(oos3d-equation-regressions PROPERTIES TIMEOUT 20)
