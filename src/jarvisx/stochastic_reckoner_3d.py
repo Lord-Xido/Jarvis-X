@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from itertools import product
 from typing import Sequence
 
 Point = tuple[int, int, int]
@@ -41,7 +40,9 @@ class BeliefGrid3D:
             raise ValueError("success probability outside [0, 1]")
         self.side = side
         self.success = success
-        self.points: tuple[Point, ...] = tuple(product(range(side), repeat=3))
+        self.points: tuple[Point, ...] = tuple(
+            (x, y, z) for x in range(side) for y in range(side) for z in range(side)
+        )
         self.index = {p: i for i, p in enumerate(self.points)}
         self.destinations = {
             a: tuple(
