@@ -1,0 +1,20 @@
+name: RRAET cloud CPU reference
+on:
+  pull_request:
+    paths:
+      - 'cloud_runtime/rraet/**'
+      - '.github/workflows/rraet-cloud-reference.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 cloud_runtime/rraet/engine.py --n 8 --p 2 --steps 1000 --trace rraet_trace.jsonl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rraet-execution-trace
+          path: rraet_trace.jsonl
