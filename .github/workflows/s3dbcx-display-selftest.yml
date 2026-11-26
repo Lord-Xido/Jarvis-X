@@ -1,0 +1,19 @@
+name: S3D-BCx Display Selftest
+on:
+  push:
+    paths:
+      - 'cpp_runtime/s3dbcx_display/**'
+      - '.github/workflows/s3dbcx-display-selftest.yml'
+  pull_request:
+    paths:
+      - 'cpp_runtime/s3dbcx_display/**'
+      - '.github/workflows/s3dbcx-display-selftest.yml'
+jobs:
+  cpp17-selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile bounded C++17 VM
+        run: g++ -std=c++17 -O2 -Wall -Wextra -Werror cpp_runtime/s3dbcx_display/s3dbcx.cpp -o /tmp/s3dbcx
+      - name: Execute deterministic selftest
+        run: /tmp/s3dbcx
