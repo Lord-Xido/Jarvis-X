@@ -1,0 +1,5 @@
+__pycache__/
+*.sqlite
+*.sqlite-*
+test_output/self.html
+test_output/program.bin
