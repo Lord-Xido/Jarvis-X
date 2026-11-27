@@ -1,0 +1,33 @@
+name: Jarvis-X Nano3D predictive ANN reference
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'experimental/nano3d_predictive_ann/**'
+      - '.github/workflows/jx-nano3d-predictive-ann.yml'
+  pull_request:
+    paths:
+      - 'experimental/nano3d_predictive_ann/**'
+      - '.github/workflows/jx-nano3d-predictive-ann.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bounded-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: GCC strict C++17 configure, build, and CTest
+        run: |
+          cmake -S experimental/nano3d_predictive_ann -B build/nano3d-gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/nano3d-gcc --parallel 2
+          ctest --test-dir build/nano3d-gcc --output-on-failure
+      - name: Clang strict C++17 configure, build, and CTest
+        run: |
+          cmake -S experimental/nano3d_predictive_ann -B build/nano3d-clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/nano3d-clang --parallel 2
+          ctest --test-dir build/nano3d-clang --output-on-failure
