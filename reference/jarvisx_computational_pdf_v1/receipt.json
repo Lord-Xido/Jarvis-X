@@ -1,0 +1,66 @@
+{
+  "checks": [
+    "1000 Morton round trips + 1000 ANN codec round trips and model matches",
+    "full-file round trip",
+    "1/4 worker deterministic container and trace",
+    "all injected faults rejected; source reconstructed",
+    "corrupt container rejected; prior output preserved",
+    "truncation rejected; prior output preserved",
+    "empty file",
+    "generated WAV valid",
+    "generated PGM valid",
+    "32 native C++ VM vs Python exact residual comparisons",
+    "native rejects invalid bytecode"
+  ],
+  "count": 11,
+  "metrics": {
+    "blocks": 13,
+    "raw_bytes": 6175,
+    "container_bytes": 3865,
+    "neural_commits": 6,
+    "rollbacks": 7,
+    "elapsed_seconds": 0.04603077199999461,
+    "chain_sha256": "160d3721764ec7005086a5dea1a87fa814fc4c65dcbf072aadf7c5bd97f21ac9"
+  },
+  "fault_metrics": {
+    "blocks": 13,
+    "raw_bytes": 6175,
+    "container_bytes": 3865,
+    "neural_commits": 3,
+    "rollbacks": 10,
+    "elapsed_seconds": 0.036943254999982855,
+    "chain_sha256": "160d3721764ec7005086a5dea1a87fa814fc4c65dcbf072aadf7c5bd97f21ac9"
+  },
+  "fault_rejections": 6,
+  "sample_sha256": "5afa2b8f9a7e2b807cc296ce24d16ea7e7460f3a03e75618b918d33d6a335d58",
+  "elapsed_seconds": 2.8615992979999874,
+  "sample_trace": {
+    "baseline_bytes": 282,
+    "candidate_bytes": 366,
+    "candidate_exact": true,
+    "input_sha256": "110009dcee21620b166f3abfecb5eff7a873be729d1c2d53822e7acc5f34eb9b",
+    "learned_bias_q8": 41504,
+    "learned_weights": [
+      42,
+      88,
+      -13,
+      -2,
+      51,
+      -84,
+      44,
+      -20
+    ],
+    "mode": 0,
+    "morton90": "00000000000000000000000",
+    "origin": [
+      0,
+      0,
+      0
+    ],
+    "payload_bytes": 282,
+    "prediction_mse": 267.33984375,
+    "raw_bytes": 512,
+    "reason": "size",
+    "tile": 0
+  }
+}
