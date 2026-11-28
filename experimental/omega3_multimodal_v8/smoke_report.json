@@ -1,0 +1,103 @@
+{
+  "native": {
+    "1": {
+      "iterations": 1000000,
+      "instructions": 12000000,
+      "candidate_evaluations": 1000000,
+      "skipped": 0,
+      "accepted": 0,
+      "verified_byte_comparisons": 128000000,
+      "record_bytes": 41744062,
+      "baseline_bytes": 41744062,
+      "fixed_model_bytes": 41744062,
+      "changed_bytes": 48172698,
+      "seconds": 1.88218,
+      "hash_chain": "57f4f2cbebef425",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        503874,
+        250048,
+        0,
+        246078,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "2": {
+      "iterations": 1000000,
+      "instructions": 12000000,
+      "candidate_evaluations": 503874,
+      "skipped": 496126,
+      "accepted": 0,
+      "verified_byte_comparisons": 96247936,
+      "record_bytes": 41744062,
+      "baseline_bytes": 41744062,
+      "fixed_model_bytes": 41744062,
+      "changed_bytes": 48172698,
+      "seconds": 1.39141,
+      "hash_chain": "57f4f2cbebef425",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        503874,
+        250048,
+        0,
+        246078,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "hybrid": {
+    "image": {
+      "format": "v8",
+      "v7_envelope_bytes": 675,
+      "v8_envelope_bytes": 375,
+      "selected_bytes": 375,
+      "sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb"
+    },
+    "video": {
+      "format": "v8",
+      "v7_envelope_bytes": 1011,
+      "v8_envelope_bytes": 440,
+      "selected_bytes": 440,
+      "sha256": "38723a2e5e8a17aa7950dc008209944e898f69a7bd10a23c839d341e935fd5ca"
+    },
+    "audio": {
+      "format": "v8",
+      "v7_envelope_bytes": 819,
+      "v8_envelope_bytes": 399,
+      "selected_bytes": 399,
+      "sha256": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b"
+    },
+    "text": {
+      "format": "v8",
+      "v7_envelope_bytes": 722,
+      "v8_envelope_bytes": 382,
+      "selected_bytes": 382,
+      "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+    },
+    "geometry": {
+      "format": "v8",
+      "v7_envelope_bytes": 842,
+      "v8_envelope_bytes": 494,
+      "selected_bytes": 494,
+      "sha256": "0087f3761f303bfecc02c646ce424dacadd3f053cbd38054364ba0e2f30b02de"
+    }
+  },
+  "truncated_packet": "rejected",
+  "status": "PASS"
+}
