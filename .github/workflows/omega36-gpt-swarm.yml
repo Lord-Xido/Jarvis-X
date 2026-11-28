@@ -1,0 +1,24 @@
+name: Omega36 spatial VM and kinetic swarm
+on:
+  pull_request:
+    paths:
+      - 'cpp_runtime/omega36_gpt_swarm/**'
+      - '.github/workflows/omega36-gpt-swarm.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: cpp_runtime/omega36_gpt_swarm
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - run: g++ -std=c++17 -O3 -Wall -Wextra -Werror moagi_omega36_svm.cpp -lcrypto -o svm
+      - run: ./svm selftest
+      - run: ./svm demo
+      - run: ./svm query 999999999999 0 1 8
+      - run: python3 test_swarm.py --svm ./svm
