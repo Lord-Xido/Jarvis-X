@@ -1,0 +1,32 @@
+name: Omega3 bytecode VM
+on:
+  pull_request:
+    paths:
+      - 'engines/omega3_bytecode/**'
+      - '.github/workflows/omega3-bytecode.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'engines/omega3_bytecode/**'
+      - '.github/workflows/omega3-bytecode.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Self-test and binary CLI roundtrip
+        run: |
+          node engines/omega3_bytecode/vm.js selftest
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          printf 'JARVIS-X Omega3 binary\000\377\n' > "$work/input"
+          node engines/omega3_bytecode/vm.js encode "$work/input" "$work/encoded" 48
+          node engines/omega3_bytecode/vm.js decode "$work/encoded" "$work/output"
+          cmp "$work/input" "$work/output"
