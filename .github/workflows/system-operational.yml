@@ -95,6 +95,17 @@ jobs:
         run: cmake --build build/cpp-runtime --config Release --parallel 2
       - name: Test
         run: ctest --test-dir build/cpp-runtime -C Release --output-on-failure
+      - name: Verify million-proposal geometric residual optimizer
+        run: |
+          g++ -std=c++17 -O3 -Wall -Wextra -Wpedantic -Werror cloud_runtime/rraet/geometric.cpp -o /tmp/rraet-geometric
+          /tmp/rraet-geometric /tmp/rraet-geometric-trace.csv
+          g++ -std=c++17 -O2 -fsanitize=undefined -fno-sanitize-recover=all -Wall -Wextra -Wpedantic -Werror cloud_runtime/rraet/geometric.cpp -o /tmp/rraet-geometric-ubsan
+          /tmp/rraet-geometric-ubsan /tmp/rraet-geometric-ubsan.csv
+          cmp /tmp/rraet-geometric-trace.csv /tmp/rraet-geometric-ubsan.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rraet-million-proposal-trace
+          path: /tmp/rraet-geometric-trace.csv
 
   production-container:
     name: Production container
