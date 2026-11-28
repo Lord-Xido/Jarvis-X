@@ -1,0 +1,2426 @@
+{
+  "benchmark": {
+    "image": {
+      "iterations": 200000,
+      "instructions": 2400000,
+      "candidate_evaluations": 200000,
+      "accepted": 0,
+      "verified_byte_comparisons": 25600000,
+      "record_bytes": 14548440,
+      "baseline_bytes": 14548440,
+      "fixed_model_bytes": 14548440,
+      "changed_bytes": 12635915,
+      "seconds": 0.420915,
+      "hash_chain": "a6ec3619430799e8",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        189063,
+        10937,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.4253519619999224,
+      "independent_blocks": 256,
+      "independent_bytes": 16384,
+      "sha256": "de533a29cfd71866ad11415af7573b8ceecc31d27f8dd5037296b306295933ff",
+      "packet_file_bytes": 18646
+    },
+    "video": {
+      "iterations": 200000,
+      "instructions": 2400000,
+      "candidate_evaluations": 200000,
+      "accepted": 1,
+      "verified_byte_comparisons": 25600000,
+      "record_bytes": 13675188,
+      "baseline_bytes": 13681432,
+      "fixed_model_bytes": 13678304,
+      "changed_bytes": 11846236,
+      "seconds": 0.427554,
+      "hash_chain": "c07094f96d433a11",
+      "weights": [
+        7,
+        4,
+        5
+      ],
+      "modes": [
+        153912,
+        29688,
+        14839,
+        0,
+        1561,
+        0,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.4303470899999411,
+      "independent_blocks": 256,
+      "independent_bytes": 16384,
+      "sha256": "bdf4ed103c9e19a6bb8589392a6525aef8aaa7ccf1f58b3fca99794c8e16b250",
+      "packet_file_bytes": 17532
+    },
+    "audio": {
+      "iterations": 200000,
+      "instructions": 2400000,
+      "candidate_evaluations": 200000,
+      "accepted": 0,
+      "verified_byte_comparisons": 25600000,
+      "record_bytes": 14576570,
+      "baseline_bytes": 14576570,
+      "fixed_model_bytes": 14576570,
+      "changed_bytes": 12739841,
+      "seconds": 0.389285,
+      "hash_chain": "3bd1ed62b610d093",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        199219,
+        781,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.39217954700006885,
+      "independent_blocks": 256,
+      "independent_bytes": 16384,
+      "sha256": "35c9e4930191882c840ba40ff3ec4825ff4bcd22f02b260fd6f41a18f3fddbcb",
+      "packet_file_bytes": 18682
+    },
+    "text": {
+      "iterations": 200000,
+      "instructions": 2400000,
+      "candidate_evaluations": 200000,
+      "accepted": 0,
+      "verified_byte_comparisons": 25600000,
+      "record_bytes": 9677431,
+      "baseline_bytes": 9677431,
+      "fixed_model_bytes": 9677431,
+      "changed_bytes": 9222629,
+      "seconds": 0.491624,
+      "hash_chain": "82cbf64b3c55e1bf",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        96876,
+        50000,
+        50000,
+        3124,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.49469726500001343,
+      "independent_blocks": 256,
+      "independent_bytes": 16384,
+      "sha256": "c27276996cad9d1d7601b70e6ff9eb1cc9644af43ca2e3ff962267b8d0bac9e3",
+      "packet_file_bytes": 12411
+    },
+    "geometry": {
+      "iterations": 200000,
+      "instructions": 2400000,
+      "candidate_evaluations": 200000,
+      "accepted": 0,
+      "verified_byte_comparisons": 25600000,
+      "record_bytes": 4272885,
+      "baseline_bytes": 4272885,
+      "fixed_model_bytes": 4272885,
+      "changed_bytes": 3336660,
+      "seconds": 0.441219,
+      "hash_chain": "353fb9f28bc30d15",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        20307,
+        167977,
+        10154,
+        1562,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.443880537999803,
+      "independent_blocks": 256,
+      "independent_bytes": 16384,
+      "sha256": "62e44d09e57f7102500e280da7a6069f762ce21dffaad6efdf342dcba38eb24e",
+      "packet_file_bytes": 5494
+    }
+  },
+  "regression": {
+    "image": {
+      "iterations": 1590,
+      "instructions": 19080,
+      "candidate_evaluations": 1590,
+      "accepted": 3,
+      "verified_byte_comparisons": 9768960,
+      "record_bytes": 3675272,
+      "baseline_bytes": 3675391,
+      "fixed_model_bytes": 3675332,
+      "changed_bytes": 4564830,
+      "seconds": 1.44734,
+      "hash_chain": "25209c16c463730a",
+      "weights": [
+        7,
+        7,
+        2
+      ],
+      "modes": [
+        59,
+        6,
+        0,
+        0,
+        0,
+        1502,
+        6,
+        6,
+        11
+      ],
+      "wall_seconds": 1.4560668750000332,
+      "independent_blocks": 1590,
+      "independent_bytes": 4884480,
+      "sha256": "5fa6a5e45fb07e1badebd3af22d841470e5bb8c9e3dcbe657baf8f80e5e61635",
+      "packet_file_bytes": 3675296,
+      "original_bytes": 4720056,
+      "original_shape": [
+        1,
+        941,
+        1672,
+        3
+      ],
+      "tile_counts": [
+        1,
+        30,
+        53
+      ],
+      "source_sha256": "91a6f77649ff75b02c669a5a77875ab21fefc40191e92d2b8b671c794a71a342",
+      "padding_bytes": 164424,
+      "legacy_packet_bytes": 3809833,
+      "metadata": {
+        "kind": "image",
+        "name": "a_hyper_detailed_ultra_realistic_cinematic_4k_sc.png",
+        "width": 1672,
+        "height": 941,
+        "shape": [
+          1,
+          941,
+          1672,
+          3
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "91a6f77649ff75b02c669a5a77875ab21fefc40191e92d2b8b671c794a71a342",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 559,
+      "v8_total_with_metadata": 3675855,
+      "selected_format": "v8",
+      "selected_bytes": 3675855
+    },
+    "video": {
+      "iterations": 3600,
+      "instructions": 43200,
+      "candidate_evaluations": 3600,
+      "accepted": 0,
+      "verified_byte_comparisons": 88473600,
+      "record_bytes": 1438123,
+      "baseline_bytes": 1438123,
+      "fixed_model_bytes": 1438123,
+      "changed_bytes": 1609087,
+      "seconds": 3.93405,
+      "hash_chain": "b46edbdb91ca07cb",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        0,
+        0,
+        27,
+        0,
+        0,
+        75,
+        3498,
+        0,
+        0
+      ],
+      "wall_seconds": 4.043975514000067,
+      "independent_blocks": 3600,
+      "independent_bytes": 44236800,
+      "sha256": "3ee92887c31f3a95c1a90276bda2f4eca5af87eaf31032b6bdd1487481e40996",
+      "packet_file_bytes": 1438147,
+      "original_bytes": 41472000,
+      "original_shape": [
+        240,
+        180,
+        320,
+        3
+      ],
+      "tile_counts": [
+        60,
+        6,
+        10
+      ],
+      "source_sha256": "497e25a4846a974dcd557ca971421db1e823f43f28e33991e2597b1b817cc9f8",
+      "padding_bytes": 2764800,
+      "legacy_packet_bytes": 1858413,
+      "metadata": {
+        "kind": "video",
+        "name": "JARVIS-X_240_Frame_Storyboard.mp4",
+        "source_dimensions": [
+          1920,
+          1080
+        ],
+        "width": 320,
+        "height": 180,
+        "fps": "60/1",
+        "shape": [
+          240,
+          180,
+          320,
+          3
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "497e25a4846a974dcd557ca971421db1e823f43f28e33991e2597b1b817cc9f8",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 585,
+      "v8_total_with_metadata": 1438732,
+      "selected_format": "v8",
+      "selected_bytes": 1438732
+    },
+    "audio": {
+      "iterations": 16,
+      "instructions": 192,
+      "candidate_evaluations": 16,
+      "accepted": 0,
+      "verified_byte_comparisons": 131072,
+      "record_bytes": 50222,
+      "baseline_bytes": 50222,
+      "fixed_model_bytes": 50222,
+      "changed_bytes": 65173,
+      "seconds": 0.0137989,
+      "hash_chain": "2bff71b07392c27c",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        14,
+        0,
+        0
+      ],
+      "wall_seconds": 0.016577723000182232,
+      "independent_blocks": 16,
+      "independent_bytes": 65536,
+      "sha256": "59fcea910d3484631a6797ab408f97a7d1fbda9e741752315c56861a0b32361c",
+      "packet_file_bytes": 50246,
+      "original_bytes": 64512,
+      "original_shape": [
+        63,
+        32,
+        32,
+        1
+      ],
+      "tile_counts": [
+        16,
+        1,
+        1
+      ],
+      "source_sha256": "59bf70dc0bc7643ce748e7e4b530587fd43f734066ca3fea14eea7a115593f74",
+      "padding_bytes": 1024,
+      "legacy_packet_bytes": 66908,
+      "metadata": {
+        "kind": "audio",
+        "name": "input.wav",
+        "rate": 16000,
+        "channels": 1,
+        "sample_width": 2,
+        "samples": 32000,
+        "length": 64000,
+        "shape": [
+          63,
+          32,
+          32,
+          1
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "59bf70dc0bc7643ce748e7e4b530587fd43f734066ca3fea14eea7a115593f74",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 561,
+      "v8_total_with_metadata": 50807,
+      "selected_format": "v8",
+      "selected_bytes": 50807
+    },
+    "text": {
+      "iterations": 3,
+      "instructions": 36,
+      "candidate_evaluations": 3,
+      "accepted": 0,
+      "verified_byte_comparisons": 24576,
+      "record_bytes": 881,
+      "baseline_bytes": 881,
+      "fixed_model_bytes": 881,
+      "changed_bytes": 11897,
+      "seconds": 0.00228618,
+      "hash_chain": "3c7254ae85b82cb8",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.00514560899978278,
+      "independent_blocks": 3,
+      "independent_bytes": 12288,
+      "sha256": "5f73af84d56910b1831d15a28a2b2788f4b0351235a65b87244e9aadfdbdad46",
+      "packet_file_bytes": 905,
+      "original_bytes": 10240,
+      "original_shape": [
+        10,
+        32,
+        32,
+        1
+      ],
+      "tile_counts": [
+        3,
+        1,
+        1
+      ],
+      "source_sha256": "65e2cc25389db8b898f32e36d990e0332a0f3c88333426271bfa5b3b4f4ae3ee",
+      "padding_bytes": 2048,
+      "legacy_packet_bytes": 3292,
+      "metadata": {
+        "kind": "text",
+        "name": "input.txt",
+        "length": 9900,
+        "shape": [
+          10,
+          32,
+          32,
+          1
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "65e2cc25389db8b898f32e36d990e0332a0f3c88333426271bfa5b3b4f4ae3ee",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 499,
+      "v8_total_with_metadata": 1404,
+      "selected_format": "v8",
+      "selected_bytes": 1404
+    },
+    "geometry": {
+      "iterations": 40,
+      "instructions": 480,
+      "candidate_evaluations": 40,
+      "accepted": 0,
+      "verified_byte_comparisons": 327680,
+      "record_bytes": 3412,
+      "baseline_bytes": 3412,
+      "fixed_model_bytes": 3412,
+      "changed_bytes": 4840,
+      "seconds": 0.0152214,
+      "hash_chain": "9c1cf81d908e1ff",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        0,
+        25,
+        2,
+        0,
+        0,
+        12,
+        1,
+        0,
+        0
+      ],
+      "wall_seconds": 0.017606973000056314,
+      "independent_blocks": 40,
+      "independent_bytes": 163840,
+      "sha256": "fe73bc3f6497f453d9162406893bbf0e903a44c3b530efd9539adbbafa6093ae",
+      "packet_file_bytes": 3436,
+      "original_bytes": 64000,
+      "original_shape": [
+        40,
+        40,
+        40,
+        1
+      ],
+      "tile_counts": [
+        10,
+        2,
+        2
+      ],
+      "source_sha256": "c597cebdcf18688d213f8c764c41c5510d3303ee283d38f0cec3824fa6231ae2",
+      "padding_bytes": 99840,
+      "legacy_packet_bytes": 4413,
+      "metadata": {
+        "kind": "geometry",
+        "name": "input_geometry.npy",
+        "geometry_shape": [
+          40,
+          40,
+          40
+        ],
+        "shape": [
+          40,
+          40,
+          40,
+          1
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "c597cebdcf18688d213f8c764c41c5510d3303ee283d38f0cec3824fa6231ae2",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 527,
+      "v8_total_with_metadata": 3963,
+      "selected_format": "v8",
+      "selected_bytes": 3963
+    },
+    "file": {
+      "iterations": 556,
+      "instructions": 6672,
+      "candidate_evaluations": 556,
+      "accepted": 0,
+      "verified_byte_comparisons": 4554752,
+      "record_bytes": 2265905,
+      "baseline_bytes": 2265905,
+      "fixed_model_bytes": 2265905,
+      "changed_bytes": 2259207,
+      "seconds": 0.426672,
+      "hash_chain": "ebac69a7236c47e7",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        549,
+        3,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.4316671370002041,
+      "independent_blocks": 556,
+      "independent_bytes": 2277376,
+      "sha256": "4cb895daa233047d248743d252122c4d423fad60b3ea62bf48fa5dd15585264c",
+      "packet_file_bytes": 2265929,
+      "original_bytes": 2274304,
+      "original_shape": [
+        2221,
+        32,
+        32,
+        1
+      ],
+      "tile_counts": [
+        556,
+        1,
+        1
+      ],
+      "source_sha256": "e94485068f3c036a8621273115b50686b9ecbed66edf490f62db679384495cc7",
+      "padding_bytes": 3072,
+      "legacy_packet_bytes": 2344292,
+      "metadata": {
+        "kind": "file",
+        "name": "a_hyper_detailed_ultra_realistic_cinematic_4k_sc.png",
+        "length": 2273600,
+        "shape": [
+          2221,
+          32,
+          32,
+          1
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "e94485068f3c036a8621273115b50686b9ecbed66edf490f62db679384495cc7",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 549,
+      "v8_total_with_metadata": 2266478,
+      "selected_format": "v8",
+      "selected_bytes": 2266478
+    },
+    "gen_image": {
+      "iterations": 40,
+      "instructions": 480,
+      "candidate_evaluations": 40,
+      "accepted": 0,
+      "verified_byte_comparisons": 245760,
+      "record_bytes": 48452,
+      "baseline_bytes": 48452,
+      "fixed_model_bytes": 48452,
+      "changed_bytes": 108232,
+      "seconds": 0.0261164,
+      "hash_chain": "b26af0a00992134e",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        40,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.03046487000005982,
+      "independent_blocks": 40,
+      "independent_bytes": 122880,
+      "sha256": "95b9745e46ca6a997e571d61f0a637e1fbe18ce502f01d0b8d7bc171983667a8",
+      "packet_file_bytes": 48476,
+      "original_bytes": 110592,
+      "original_shape": [
+        1,
+        144,
+        256,
+        3
+      ],
+      "tile_counts": [
+        1,
+        5,
+        8
+      ],
+      "source_sha256": "38f678d069ce28bad42ea5a85669f497174695fdf92ebb0439c6231dec92e860",
+      "padding_bytes": 12288,
+      "legacy_packet_bytes": 52778,
+      "metadata": {
+        "kind": "image",
+        "name": "generated.png",
+        "width": 256,
+        "height": 144,
+        "shape": [
+          1,
+          144,
+          256,
+          3
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "38f678d069ce28bad42ea5a85669f497174695fdf92ebb0439c6231dec92e860",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 516,
+      "v8_total_with_metadata": 48992,
+      "selected_format": "v8",
+      "selected_bytes": 48992
+    },
+    "gen_video": {
+      "iterations": 2400,
+      "instructions": 28800,
+      "candidate_evaluations": 2400,
+      "accepted": 0,
+      "verified_byte_comparisons": 58982400,
+      "record_bytes": 9842032,
+      "baseline_bytes": 9842032,
+      "fixed_model_bytes": 9842032,
+      "changed_bytes": 21261311,
+      "seconds": 4.83955,
+      "hash_chain": "429452ca3d828a4",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2130,
+        261,
+        9,
+        0
+      ],
+      "wall_seconds": 4.884952830999964,
+      "independent_blocks": 2400,
+      "independent_bytes": 29491200,
+      "sha256": "a2b083833d8c89f783e423d2c9299359e9ffa8da3fb0c6136d1fd3230c4cc55f",
+      "packet_file_bytes": 9842056,
+      "original_bytes": 26542080,
+      "original_shape": [
+        240,
+        144,
+        256,
+        3
+      ],
+      "tile_counts": [
+        60,
+        5,
+        8
+      ],
+      "source_sha256": "1a78ae89af48d78f8400f0ecefa33c21cb583873a28d61ca0f9804811cae3e95",
+      "padding_bytes": 2949120,
+      "legacy_packet_bytes": 8561650,
+      "metadata": {
+        "kind": "video",
+        "name": "generated.mp4",
+        "source_dimensions": [
+          256,
+          144
+        ],
+        "width": 256,
+        "height": 144,
+        "fps": "60/1",
+        "shape": [
+          240,
+          144,
+          256,
+          3
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "1a78ae89af48d78f8400f0ecefa33c21cb583873a28d61ca0f9804811cae3e95",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 562,
+      "v8_total_with_metadata": 9842618,
+      "selected_format": "v7",
+      "selected_bytes": 8561650
+    },
+    "gen_audio": {
+      "iterations": 32,
+      "instructions": 384,
+      "candidate_evaluations": 32,
+      "accepted": 0,
+      "verified_byte_comparisons": 262144,
+      "record_bytes": 128104,
+      "baseline_bytes": 128104,
+      "fixed_model_bytes": 128104,
+      "changed_bytes": 130482,
+      "seconds": 0.0288073,
+      "hash_chain": "9b80d85e5607c3bb",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        10,
+        1,
+        0,
+        0,
+        0,
+        0,
+        21,
+        0,
+        0
+      ],
+      "wall_seconds": 0.03401010800007498,
+      "independent_blocks": 32,
+      "independent_bytes": 131072,
+      "sha256": "f3cfbe451e80359ec9e006214da736308a7b26ca880b8a8568e680cfca388504",
+      "packet_file_bytes": 128128,
+      "original_bytes": 128000,
+      "original_shape": [
+        125,
+        32,
+        32,
+        1
+      ],
+      "tile_counts": [
+        32,
+        1,
+        1
+      ],
+      "source_sha256": "510729ad3ebc5a9ad24f59af905ccdc0aece5fdfb84d702fa91903c9efcb3ad7",
+      "padding_bytes": 3072,
+      "legacy_packet_bytes": 133164,
+      "metadata": {
+        "kind": "audio",
+        "name": "generated.wav",
+        "rate": 16000,
+        "channels": 1,
+        "sample_width": 2,
+        "samples": 64000,
+        "length": 128000,
+        "shape": [
+          125,
+          32,
+          32,
+          1
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "510729ad3ebc5a9ad24f59af905ccdc0aece5fdfb84d702fa91903c9efcb3ad7",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 567,
+      "v8_total_with_metadata": 128695,
+      "selected_format": "v8",
+      "selected_bytes": 128695
+    },
+    "gen_text": {
+      "iterations": 1,
+      "instructions": 12,
+      "candidate_evaluations": 1,
+      "accepted": 0,
+      "verified_byte_comparisons": 2048,
+      "record_bytes": 73,
+      "baseline_bytes": 73,
+      "fixed_model_bytes": 73,
+      "changed_bytes": 55,
+      "seconds": 0.000511825,
+      "hash_chain": "fc5bcf7e4fcb3e75",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "wall_seconds": 0.003640580999899612,
+      "independent_blocks": 1,
+      "independent_bytes": 1024,
+      "sha256": "f259742ceedad0401c654bd3a3b635b7864a3eea9b31bb70bf5b79dfc8c4e8fd",
+      "packet_file_bytes": 97,
+      "original_bytes": 1024,
+      "original_shape": [
+        1,
+        32,
+        32,
+        1
+      ],
+      "tile_counts": [
+        1,
+        1,
+        1
+      ],
+      "source_sha256": "f259742ceedad0401c654bd3a3b635b7864a3eea9b31bb70bf5b79dfc8c4e8fd",
+      "padding_bytes": 0,
+      "legacy_packet_bytes": 581,
+      "metadata": {
+        "kind": "text",
+        "name": "generated.txt",
+        "length": 55,
+        "shape": [
+          1,
+          32,
+          32,
+          1
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "f259742ceedad0401c654bd3a3b635b7864a3eea9b31bb70bf5b79dfc8c4e8fd",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 500,
+      "v8_total_with_metadata": 597,
+      "selected_format": "v7",
+      "selected_bytes": 581
+    },
+    "gen_geometry": {
+      "iterations": 40,
+      "instructions": 480,
+      "candidate_evaluations": 40,
+      "accepted": 0,
+      "verified_byte_comparisons": 327680,
+      "record_bytes": 2925,
+      "baseline_bytes": 2925,
+      "fixed_model_bytes": 2925,
+      "changed_bytes": 3856,
+      "seconds": 0.0313653,
+      "hash_chain": "8cec0de940a3fd5",
+      "weights": [
+        6,
+        5,
+        5
+      ],
+      "modes": [
+        0,
+        34,
+        0,
+        0,
+        0,
+        5,
+        1,
+        0,
+        0
+      ],
+      "wall_seconds": 0.036839576999909696,
+      "independent_blocks": 40,
+      "independent_bytes": 163840,
+      "sha256": "56334c1023675fbb71f32a9bb570a47bcf8bd969e42953b61a6226b0b93d07fe",
+      "packet_file_bytes": 2949,
+      "original_bytes": 64000,
+      "original_shape": [
+        40,
+        40,
+        40,
+        1
+      ],
+      "tile_counts": [
+        10,
+        2,
+        2
+      ],
+      "source_sha256": "f12688e0cf7c0ddd418b8e7bc0488dd29e23d77cd72fa136a60fe2da6405a13d",
+      "padding_bytes": 99840,
+      "legacy_packet_bytes": 4208,
+      "metadata": {
+        "kind": "geometry",
+        "name": "generated_geometry.npy",
+        "geometry_shape": [
+          40,
+          40,
+          40
+        ],
+        "shape": [
+          40,
+          40,
+          40,
+          1
+        ],
+        "model": {
+          "w1": [
+            [
+              -41,
+              56,
+              192,
+              15,
+              100,
+              -99,
+              -157,
+              -61
+            ],
+            [
+              68,
+              -4,
+              -26,
+              129,
+              98,
+              -16,
+              64,
+              53
+            ],
+            [
+              -37,
+              -143,
+              -98,
+              -94,
+              138,
+              -20,
+              54,
+              80
+            ],
+            [
+              -30,
+              17,
+              -7,
+              -53,
+              87,
+              -102,
+              -26,
+              0
+            ],
+            [
+              56,
+              -21,
+              17,
+              -139,
+              19,
+              -105,
+              69,
+              104
+            ]
+          ],
+          "b1": [
+            -31271,
+            25563,
+            1156,
+            -165,
+            156,
+            -14066,
+            7555,
+            -31940
+          ],
+          "w2": [
+            -34,
+            -74,
+            141,
+            78,
+            94,
+            -12,
+            -16,
+            22
+          ],
+          "b2": 7825
+        },
+        "sha256": "f12688e0cf7c0ddd418b8e7bc0488dd29e23d77cd72fa136a60fe2da6405a13d",
+        "isa": "S3D-BCx-v7-functional",
+        "packet": "S3M7"
+      },
+      "v8_metadata_bytes": 531,
+      "v8_total_with_metadata": 3480,
+      "selected_format": "v8",
+      "selected_bytes": 3480
+    }
+  },
+  "negative": {
+    "truncation": "rejected",
+    "trailing": "rejected",
+    "magic": "rejected",
+    "mode": "rejected",
+    "crc": "rejected",
+    "payload": "rejected"
+  },
+  "benchmark_total": {
+    "iterations": 1000000,
+    "instructions": 12000000,
+    "candidate_evaluations": 1000000,
+    "accepted": 1,
+    "verified_byte_comparisons": 128000000,
+    "record_bytes": 56750514,
+    "baseline_bytes": 56756758,
+    "fixed_model_bytes": 56753630,
+    "seconds": 2.170597,
+    "independent_blocks": 1280,
+    "independent_bytes": 81920
+  },
+  "seconds_total": 14.551962158999913,
+  "hybrid": {
+    "image": {
+      "format": "v8",
+      "v7_envelope_bytes": 3810023,
+      "v8_envelope_bytes": 3676044,
+      "selected_bytes": 3676044,
+      "sha256": "91a6f77649ff75b02c669a5a77875ab21fefc40191e92d2b8b671c794a71a342"
+    },
+    "video": {
+      "format": "v8",
+      "v7_envelope_bytes": 1858603,
+      "v8_envelope_bytes": 1438921,
+      "selected_bytes": 1438921,
+      "sha256": "497e25a4846a974dcd557ca971421db1e823f43f28e33991e2597b1b817cc9f8"
+    },
+    "audio": {
+      "format": "v8",
+      "v7_envelope_bytes": 67098,
+      "v8_envelope_bytes": 50996,
+      "selected_bytes": 50996,
+      "sha256": "59bf70dc0bc7643ce748e7e4b530587fd43f734066ca3fea14eea7a115593f74"
+    },
+    "text": {
+      "format": "v8",
+      "v7_envelope_bytes": 3482,
+      "v8_envelope_bytes": 1593,
+      "selected_bytes": 1593,
+      "sha256": "65e2cc25389db8b898f32e36d990e0332a0f3c88333426271bfa5b3b4f4ae3ee"
+    },
+    "geometry": {
+      "format": "v8",
+      "v7_envelope_bytes": 4603,
+      "v8_envelope_bytes": 4152,
+      "selected_bytes": 4152,
+      "sha256": "c597cebdcf18688d213f8c764c41c5510d3303ee283d38f0cec3824fa6231ae2"
+    },
+    "file": {
+      "format": "v8",
+      "v7_envelope_bytes": 2344482,
+      "v8_envelope_bytes": 2266667,
+      "selected_bytes": 2266667,
+      "sha256": "e94485068f3c036a8621273115b50686b9ecbed66edf490f62db679384495cc7"
+    },
+    "gen_image": {
+      "format": "v8",
+      "v7_envelope_bytes": 52968,
+      "v8_envelope_bytes": 49181,
+      "selected_bytes": 49181,
+      "sha256": "38f678d069ce28bad42ea5a85669f497174695fdf92ebb0439c6231dec92e860"
+    },
+    "gen_video": {
+      "format": "v7",
+      "v7_envelope_bytes": 8561840,
+      "v8_envelope_bytes": 9842807,
+      "selected_bytes": 8561840,
+      "sha256": "1a78ae89af48d78f8400f0ecefa33c21cb583873a28d61ca0f9804811cae3e95"
+    },
+    "gen_audio": {
+      "format": "v8",
+      "v7_envelope_bytes": 133354,
+      "v8_envelope_bytes": 128884,
+      "selected_bytes": 128884,
+      "sha256": "510729ad3ebc5a9ad24f59af905ccdc0aece5fdfb84d702fa91903c9efcb3ad7"
+    },
+    "gen_text": {
+      "format": "v7",
+      "v7_envelope_bytes": 771,
+      "v8_envelope_bytes": 786,
+      "selected_bytes": 771,
+      "sha256": "f259742ceedad0401c654bd3a3b635b7864a3eea9b31bb70bf5b79dfc8c4e8fd"
+    },
+    "gen_geometry": {
+      "format": "v8",
+      "v7_envelope_bytes": 4398,
+      "v8_envelope_bytes": 3669,
+      "selected_bytes": 3669,
+      "sha256": "f12688e0cf7c0ddd418b8e7bc0488dd29e23d77cd72fa136a60fe2da6405a13d"
+    }
+  },
+  "neural_refinement": {
+    "steps": 1000,
+    "initial_mse": [
+      0.001598843839019537,
+      0.004489714279770851,
+      0.00016968541604001075,
+      0.00013713202497456223
+    ],
+    "final_mse": [
+      0.0012447446351870894,
+      0.003613532753661275,
+      6.401681457646191e-05,
+      5.668436278938316e-05
+    ],
+    "labels": [
+      "aggregate",
+      "visual",
+      "audio",
+      "geometry"
+    ],
+    "accepted_checkpoints": 10,
+    "curve": [
+      {
+        "step": 100,
+        "mse": [
+          0.0015014755772426724,
+          0.004272571299225092,
+          0.0001351554528810084,
+          9.669952123658732e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 200,
+        "mse": [
+          0.0014540599659085274,
+          0.004173547960817814,
+          0.0001067300618160516,
+          8.190198423108086e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 300,
+        "mse": [
+          0.0014232218964025378,
+          0.004100343678146601,
+          9.381520794704556e-05,
+          7.550654845545068e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 400,
+        "mse": [
+          0.001395640429109335,
+          0.004035353660583496,
+          8.495857764501125e-05,
+          6.660942744929343e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 500,
+        "mse": [
+          0.0013760138535872102,
+          0.00396865326911211,
+          7.93507497292012e-05,
+          8.003732364159077e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 600,
+        "mse": [
+          0.001338343252427876,
+          0.0038784341886639595,
+          8.046163566177711e-05,
+          5.613434768747538e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 700,
+        "mse": [
+          0.0013074713060632348,
+          0.0037936188746243715,
+          6.700019002892077e-05,
+          6.179491174407303e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 800,
+        "mse": [
+          0.0012896645348519087,
+          0.003718065796419978,
+          7.530197035521269e-05,
+          7.562585960840806e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 900,
+        "mse": [
+          0.0012559833703562617,
+          0.0036576418206095695,
+          6.059079896658659e-05,
+          4.971716771251522e-05
+        ],
+        "accepted": true
+      },
+      {
+        "step": 1000,
+        "mse": [
+          0.0012447446351870894,
+          0.003613532753661275,
+          6.401681457646191e-05,
+          5.668436278938316e-05
+        ],
+        "accepted": true
+      }
+    ],
+    "validation_samples": 12288,
+    "selection_guard": "aggregate decrease; each modality <= 102% initial MSE",
+    "note": "fixed selection validation set; not independent final generalization test"
+  },
+  "generation": {
+    "video_frames": 240,
+    "video_dimensions": [
+      256,
+      144
+    ],
+    "audio_samples": 64000,
+    "geometry_shape": [
+      40,
+      40,
+      40
+    ],
+    "occupied_voxels": 8187,
+    "generated_text": "the engine generates geometry and projects the volume",
+    "video_unique_frames": 240,
+    "audio_peak": 23898
+  },
+  "new_generated_tests": {
+    "image": {
+      "format": "v8",
+      "v7_envelope_bytes": 50053,
+      "v8_envelope_bytes": 46144,
+      "selected_bytes": 46144,
+      "sha256": "8bfe0f7c6107705cf89c6683ba85ef123a91f8fbee1077a7cc7f2ac80a205d69",
+      "raw_bytes": 110592,
+      "roundtrip_errors": 0,
+      "export_reingest_errors": 0
+    },
+    "video": {
+      "format": "v7",
+      "v7_envelope_bytes": 8502298,
+      "v8_envelope_bytes": 10056410,
+      "selected_bytes": 8502298,
+      "sha256": "31ae346bfc27ce5f6200c1b5fd399d68a3f9db541b2aebb3d3f118156b04bdaf",
+      "raw_bytes": 26542080,
+      "roundtrip_errors": 0,
+      "export_reingest_errors": 0
+    },
+    "audio": {
+      "format": "v8",
+      "v7_envelope_bytes": 133354,
+      "v8_envelope_bytes": 128583,
+      "selected_bytes": 128583,
+      "sha256": "044332cba5c204030d50496f9d80cdbd1d71f250b1ff6ce61f2c9501a69ce75e",
+      "raw_bytes": 128000,
+      "roundtrip_errors": 0,
+      "export_reingest_errors": 0
+    },
+    "text": {
+      "format": "v8",
+      "v7_envelope_bytes": 771,
+      "v8_envelope_bytes": 467,
+      "selected_bytes": 467,
+      "sha256": "f259742ceedad0401c654bd3a3b635b7864a3eea9b31bb70bf5b79dfc8c4e8fd",
+      "raw_bytes": 1024,
+      "roundtrip_errors": 0,
+      "export_reingest_errors": 0
+    },
+    "geometry": {
+      "format": "v8",
+      "v7_envelope_bytes": 4431,
+      "v8_envelope_bytes": 3391,
+      "selected_bytes": 3391,
+      "sha256": "fafa331d5ca234d6511df1f9f0eb48affa21747af29db5045257f7048098099d",
+      "raw_bytes": 64000,
+      "roundtrip_errors": 0,
+      "export_reingest_errors": 0
+    }
+  },
+  "refinement_seconds": 18.87798986400003,
+  "neural_holdout": {
+    "seed": 8802,
+    "samples": 24576,
+    "labels": [
+      "aggregate",
+      "visual",
+      "audio",
+      "geometry"
+    ],
+    "mse": {
+      "generator.pt": [
+        0.0014798043994233012,
+        0.004138950724154711,
+        0.00017430401931051165,
+        0.00012615788727998734
+      ],
+      "generator_refined.pt": [
+        0.0011488901218399405,
+        0.003327439771965146,
+        6.685570406261832e-05,
+        5.2374962251633406e-05
+      ]
+    }
+  },
+  "pruning": {
+    "image": {
+      "standard": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 200000,
+        "skipped": 0,
+        "accepted": 0,
+        "verified_byte_comparisons": 25600000,
+        "record_bytes": 14548440,
+        "baseline_bytes": 14548440,
+        "fixed_model_bytes": 14548440,
+        "changed_bytes": 12635915,
+        "seconds": 0.421412,
+        "hash_chain": "a6ec3619430799e8",
+        "weights": [
+          6,
+          5,
+          5
+        ],
+        "modes": [
+          189063,
+          10937,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "pruned": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 200000,
+        "skipped": 0,
+        "accepted": 0,
+        "verified_byte_comparisons": 25600000,
+        "record_bytes": 14548440,
+        "baseline_bytes": 14548440,
+        "fixed_model_bytes": 14548440,
+        "changed_bytes": 12635915,
+        "seconds": 0.432308,
+        "hash_chain": "a6ec3619430799e8",
+        "weights": [
+          6,
+          5,
+          5
+        ],
+        "modes": [
+          189063,
+          10937,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "standard_median_seconds": 0.439909,
+      "pruned_median_seconds": 0.432308,
+      "sample_packet_sha256": "0d7b65fc1e99fa27f43e40247287b77e2f1309dafde1616b7c20142459d0e04b"
+    },
+    "video": {
+      "standard": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 200000,
+        "skipped": 0,
+        "accepted": 1,
+        "verified_byte_comparisons": 25600000,
+        "record_bytes": 13675188,
+        "baseline_bytes": 13681432,
+        "fixed_model_bytes": 13678304,
+        "changed_bytes": 11846236,
+        "seconds": 0.446637,
+        "hash_chain": "c07094f96d433a11",
+        "weights": [
+          7,
+          4,
+          5
+        ],
+        "modes": [
+          153912,
+          29688,
+          14839,
+          0,
+          1561,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "pruned": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 194533,
+        "skipped": 5467,
+        "accepted": 1,
+        "verified_byte_comparisons": 25250112,
+        "record_bytes": 13675188,
+        "baseline_bytes": 13681432,
+        "fixed_model_bytes": 13678304,
+        "changed_bytes": 11846236,
+        "seconds": 0.442417,
+        "hash_chain": "c07094f96d433a11",
+        "weights": [
+          7,
+          4,
+          5
+        ],
+        "modes": [
+          153912,
+          29688,
+          14839,
+          0,
+          1561,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "standard_median_seconds": 0.446637,
+      "pruned_median_seconds": 0.442417,
+      "sample_packet_sha256": "74c85d94e7c8287954d93ca319ea311ad009d5636353acf42a88b40aac6b021f"
+    },
+    "audio": {
+      "standard": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 200000,
+        "skipped": 0,
+        "accepted": 0,
+        "verified_byte_comparisons": 25600000,
+        "record_bytes": 14576570,
+        "baseline_bytes": 14576570,
+        "fixed_model_bytes": 14576570,
+        "changed_bytes": 12739841,
+        "seconds": 0.404175,
+        "hash_chain": "3bd1ed62b610d093",
+        "weights": [
+          6,
+          5,
+          5
+        ],
+        "modes": [
+          199219,
+          781,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "pruned": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 200000,
+        "skipped": 0,
+        "accepted": 0,
+        "verified_byte_comparisons": 25600000,
+        "record_bytes": 14576570,
+        "baseline_bytes": 14576570,
+        "fixed_model_bytes": 14576570,
+        "changed_bytes": 12739841,
+        "seconds": 0.383954,
+        "hash_chain": "3bd1ed62b610d093",
+        "weights": [
+          6,
+          5,
+          5
+        ],
+        "modes": [
+          199219,
+          781,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "standard_median_seconds": 0.40224,
+      "pruned_median_seconds": 0.394634,
+      "sample_packet_sha256": "2a6048777aef6e1872b40cd6cf2548c7601cf72c5ac834b4b5b9a986f8e6af65"
+    },
+    "text": {
+      "standard": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 200000,
+        "skipped": 0,
+        "accepted": 0,
+        "verified_byte_comparisons": 25600000,
+        "record_bytes": 9677431,
+        "baseline_bytes": 9677431,
+        "fixed_model_bytes": 9677431,
+        "changed_bytes": 9222629,
+        "seconds": 0.467688,
+        "hash_chain": "82cbf64b3c55e1bf",
+        "weights": [
+          6,
+          5,
+          5
+        ],
+        "modes": [
+          96876,
+          50000,
+          50000,
+          3124,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "pruned": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 150000,
+        "skipped": 50000,
+        "accepted": 0,
+        "verified_byte_comparisons": 22400000,
+        "record_bytes": 9677431,
+        "baseline_bytes": 9677431,
+        "fixed_model_bytes": 9677431,
+        "changed_bytes": 9222629,
+        "seconds": 0.407561,
+        "hash_chain": "82cbf64b3c55e1bf",
+        "weights": [
+          6,
+          5,
+          5
+        ],
+        "modes": [
+          96876,
+          50000,
+          50000,
+          3124,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "standard_median_seconds": 0.472368,
+      "pruned_median_seconds": 0.41389,
+      "sample_packet_sha256": "7b8427adff76f2662bf7e5d3ca6de91589d8e9ef86de002da9572a96008369cf"
+    },
+    "geometry": {
+      "standard": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 200000,
+        "skipped": 0,
+        "accepted": 0,
+        "verified_byte_comparisons": 25600000,
+        "record_bytes": 4272885,
+        "baseline_bytes": 4272885,
+        "fixed_model_bytes": 4272885,
+        "changed_bytes": 3336660,
+        "seconds": 0.429338,
+        "hash_chain": "353fb9f28bc30d15",
+        "weights": [
+          6,
+          5,
+          5
+        ],
+        "modes": [
+          20307,
+          167977,
+          10154,
+          1562,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "pruned": {
+        "iterations": 200000,
+        "instructions": 2400000,
+        "candidate_evaluations": 55457,
+        "skipped": 144543,
+        "accepted": 0,
+        "verified_byte_comparisons": 16349248,
+        "record_bytes": 4272885,
+        "baseline_bytes": 4272885,
+        "fixed_model_bytes": 4272885,
+        "changed_bytes": 3336660,
+        "seconds": 0.292085,
+        "hash_chain": "353fb9f28bc30d15",
+        "weights": [
+          6,
+          5,
+          5
+        ],
+        "modes": [
+          20307,
+          167977,
+          10154,
+          1562,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "standard_median_seconds": 0.446052,
+      "pruned_median_seconds": 0.288852,
+      "sample_packet_sha256": "c98a157044601188d2665c4961f6c89dd2815433daecb5da970f1eb28ad3822e"
+    }
+  },
+  "pruning_total": {
+    "standard_median_sum_seconds": 2.2072060000000002,
+    "pruned_median_sum_seconds": 1.9721009999999999,
+    "skipped": 200010,
+    "comparison_repetitions_per_policy_per_modality": 3,
+    "additional_iterations": 6000000,
+    "sampled_packet_hashes_equal": true,
+    "full_run_summary_equal": true
+  }
+}

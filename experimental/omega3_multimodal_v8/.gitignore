@@ -1,0 +1,12 @@
+core
+__pycache__/
+*.pt
+legacy_packets/
+results/
+generated/
+preview/
+output/
+*.s3b
+*.s3m
+*.s3h
+*.raw
