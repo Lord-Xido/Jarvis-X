@@ -1,0 +1,41 @@
+name: RRAET million geometric optimization
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloud_runtime/rraet/**'
+      - '.github/workflows/rraet-million.yml'
+  pull_request:
+    paths:
+      - 'cloud_runtime/rraet/**'
+      - 'src/jarvisx/stochastic_reckoner_3d.py'
+      - '.github/workflows/rraet-million.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile
+        run: g++ -std=c++17 -O3 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror cloud_runtime/rraet/million_optimizer.cpp -o rraet
+      - name: Million proposals per geometry and deterministic replay
+        run: |
+          set -euo pipefail
+          for n in 16 8 4; do
+            ./rraet "$n" 1000000 "trace$n.csv" | tee "result$n.txt"
+          done
+          ./rraet 16 1000000 replay.csv > replay.txt
+          cmp trace16.csv replay.csv
+          cmp result16.txt replay.txt
+          sha256sum trace*.csv > trace-sha256.txt
+          gzip -n trace*.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rraet-million-evidence
+          path: |
+            trace*.csv.gz
+            trace-sha256.txt
+            result*.txt
